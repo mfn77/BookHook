@@ -407,6 +407,12 @@
         <div class="auth-error" id="passwordError"></div>
         <button class="secondary" id="changePasswordBtn">Şifreyi Değiştir</button>
       </div>
+
+      <div class="card">
+        <h2>Hesabımı Sil</h2>
+        <p class="muted">Bu işlem kalıcıdır ve geri alınamaz. Hesabın ve giriş bilgilerin tamamen silinir.</p>
+        <button class="secondary" id="deleteMyAccountBtn" style="border-color:var(--cloth-dark); color:var(--cloth-dark);">Hesabımı Kalıcı Olarak Sil</button>
+      </div>
     </section>
 
     <!-- ORTAK: BİLDİRİMLER -->
@@ -429,7 +435,7 @@ import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
   signInWithEmailAndPassword, signOut, sendPasswordResetEmail,
   updatePassword, reauthenticateWithCredential, EmailAuthProvider,
-  GoogleAuthProvider, signInWithPopup
+  GoogleAuthProvider, signInWithPopup, deleteUser, reauthenticateWithPopup
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, addDoc,
@@ -502,7 +508,17 @@ let subscribedTodayKey = null;
 let manualGrid = {}; // uid -> ['', 'read', 'skip', ...] length 7
 let manualHistoryCache = [];
 
-function activeUids(){ return Object.keys(usersCache).filter(uid=>!usersCache[uid].banned); }
+function activeUids(){ return Object.keys(usersCache).filter(uid=>!usersCache[uid].banned && !usersCache[uid].deleted); }
+function avatarHtmlFromProfile(profile, size){
+  size = size || 22;
+  const name = (profile && profile.name) || '?';
+  const initial = name.trim().charAt(0).toUpperCase() || '?';
+  if(profile && profile.photoURL){
+    return `<img src="${profile.photoURL}" alt="" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px;" />`;
+  }
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:var(--gold);color:#fff;font-size:${Math.round(size*0.5)}px;font-family:'Fraunces',serif;font-weight:700;vertical-align:middle;margin-right:6px;">${escapeHtml(initial)}</span>`;
+}
+function avatarHtml(uid, size){ return avatarHtmlFromProfile(usersCache[uid], size); }
 
 function showToast(msg){
   const host = document.getElementById('toastHost');
@@ -706,7 +722,7 @@ function renderHeader(){
   const monday = getMonday(nowLogical());
   const dates = weekDates(monday);
   document.getElementById('weekRangeLabel').textContent = `${fmtShort(dates[0])} — ${fmtShort(dates[6])}`;
-  document.getElementById('whoamiName').textContent = myProfile.name;
+  document.getElementById('whoamiName').innerHTML = avatarHtmlFromProfile(myProfile,18) + escapeHtml(myProfile.name);
   document.getElementById('whoamiRole').textContent = myProfile.role==='admin' ? 'YÖNETİCİ' : 'ÜYE';
 }
 
@@ -836,7 +852,7 @@ function renderAdminToday(){
     return `
     <div class="member-row">
       <div>
-        <div class="member-name">${escapeHtml(u.name)} ${u.role==='admin'?'<span class="role-chip">yönetici</span>':''}</div>
+        <div class="member-name">${avatarHtml(uid)}${escapeHtml(u.name)} ${u.role==='admin'?'<span class="role-chip">yönetici</span>':''}</div>
       </div>
       <div class="stamp-btns">
         <button class="stamp-btn read ${st==='read'?'selected':''}" data-uid="${uid}" data-status="read">✓</button>
@@ -908,7 +924,7 @@ async function renderEditPastTab(){
     const st = rec ? rec.status : undefined;
     const autoTag = rec && rec.auto ? '<span class="chip pending" title="Otomatik işaretlenmiş, henüz kendisi cevap vermemiş">otomatik</span>' : (!rec ? '<span class="chip pending">cevap yok</span>' : '');
     return `<div class="member-row">
-      <div><div class="member-name">${escapeHtml(usersCache[uid].name)}</div><div class="member-meta">${autoTag}</div></div>
+      <div><div class="member-name">${avatarHtml(uid)}${escapeHtml(usersCache[uid].name)}</div><div class="member-meta">${autoTag}</div></div>
       <div class="stamp-btns">
         <button class="stamp-btn read ${st==='read'?'selected':''}" data-uid="${uid}" data-status="read">✓</button>
         <button class="stamp-btn skip ${st==='skip'?'selected':''}" data-uid="${uid}" data-status="skip">✕</button>
@@ -947,7 +963,7 @@ async function renderAdminWeek(){
       else if(miss===1) statusChip = `<span class="chip warn">Pas (1)</span>`;
       else statusChip = `<span class="chip ok">Temiz</span>`;
     }
-    return `<tr><td class="name-cell">${escapeHtml(usersCache[uid].name)}</td>${cells}<td>${statusChip}</td></tr>`;
+    return `<tr><td class="name-cell">${avatarHtml(uid,18)}${escapeHtml(usersCache[uid].name)}</td>${cells}<td>${statusChip}</td></tr>`;
   }).join('');
   table.innerHTML = head + rows;
 }
@@ -1031,7 +1047,7 @@ function renderManualTab(){
       else if(miss===1) statusChip = `<span class="chip warn">Pas (1)</span>`;
       else statusChip = `<span class="chip ok">Temiz</span>`;
     }
-    return `<tr><td class="name-cell">${escapeHtml(usersCache[uid].name)}</td>${cells}<td>${statusChip}</td></tr>`;
+    return `<tr><td class="name-cell">${avatarHtml(uid,18)}${escapeHtml(usersCache[uid].name)}</td>${cells}<td>${statusChip}</td></tr>`;
   }).join('');
   table.innerHTML = head + rows;
   table.querySelectorAll('.stamp-mini.clickable').forEach(cell=>{
@@ -1104,18 +1120,19 @@ async function renderAdminMembers(){
   const list = document.getElementById('membersList');
   const uids = Object.keys(usersCache);
   if(uids.length===0){ list.innerHTML = `<p class="muted">Henüz üye yok.</p>`; return; }
-  const adminCount = uids.filter(u=>usersCache[u].role==='admin' && !usersCache[u].banned).length;
+  const adminCount = uids.filter(u=>usersCache[u].role==='admin' && !usersCache[u].banned && !usersCache[u].deleted).length;
   list.innerHTML = uids.map(uid=>{
     const u = usersCache[uid];
     const isSelf = uid===currentUid;
     return `<div class="member-row">
       <div>
-        <div class="member-name">${escapeHtml(u.name)} ${u.role==='admin'?'<span class="role-chip">yönetici</span>':''} ${u.banned?'<span class="chip banned">BANLI</span>':''}</div>
+        <div class="member-name">${avatarHtml(uid)}${escapeHtml(u.name)} ${u.role==='admin'?'<span class="role-chip">yönetici</span>':''} ${u.banned && !u.deleted?'<span class="chip banned">BANLI</span>':''} ${u.deleted?'<span class="chip banned">SİLİNDİ</span>':''}</div>
         <div class="member-meta">${escapeHtml(u.email||'')}</div>
       </div>
-      <div class="row" style="flex:0 0 auto; width:auto;">
-        <button class="secondary tiny" data-toggle-role="${uid}" ${isSelf?'disabled title="Kendi rolünü buradan değiştiremezsin"':''}>${u.role==='admin' ? 'Üye Yap' : 'Yönetici Yap'}</button>
-        <button class="secondary tiny" data-toggle-ban="${uid}" ${isSelf?'disabled title="Kendini banlayamazsın"':''}>${u.banned ? 'Banı Kaldır' : 'Banla'}</button>
+      <div class="row" style="flex:0 0 auto; width:auto; flex-wrap:wrap;">
+        <button class="secondary tiny" data-toggle-role="${uid}" ${isSelf||u.deleted?'disabled':''} ${isSelf?'title="Kendi rolünü buradan değiştiremezsin"':''}>${u.role==='admin' ? 'Üye Yap' : 'Yönetici Yap'}</button>
+        <button class="secondary tiny" data-toggle-ban="${uid}" ${isSelf||u.deleted?'disabled':''} ${isSelf?'title="Kendini banlayamazsın"':''}>${u.banned ? 'Banı Kaldır' : 'Banla'}</button>
+        <button class="secondary tiny" data-toggle-delete="${uid}" ${isSelf?'disabled title="Kendi hesabını Profilim sekmesinden silebilirsin"':''} style="border-color:var(--cloth-dark); color:var(--cloth-dark);">${u.deleted ? 'Geri Yükle' : 'Sil'}</button>
       </div>
     </div>`;
   }).join('');
@@ -1141,6 +1158,22 @@ async function renderAdminMembers(){
       showToast(willBan ? `${u.name} banlandı.` : `${u.name}'in banı kaldırıldı.`);
     });
   });
+  list.querySelectorAll('[data-toggle-delete]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const uid = btn.dataset.toggleDelete;
+      const u = usersCache[uid];
+      if(!u.deleted && u.role==='admin' && adminCount<=1){ alert('Tek aktif yönetici sensin, önce başka birini yönetici yapmalısın.'); return; }
+      if(u.deleted){
+        if(!confirm(`${u.name} geri yüklensin mi? Tekrar giriş yapabilecek.`)) return;
+        await updateDoc(doc(db,'users',uid), {deleted:false, banned:false});
+        showToast(`${u.name} geri yüklendi.`);
+      } else {
+        if(!confirm(`${u.name} hesabı silinsin mi?\n\nNot: Firebase'in yapısı yüzünden bir yöneticinin başka birinin giriş kaydını tam silmesi mümkün değil (bunu sadece kişi kendisi yapabilir). Bu işlem erişimini kalıcı olarak kapatır ve profilini gizler; istersen sonra "Geri Yükle" ile açabilirsin.`)) return;
+        await updateDoc(doc(db,'users',uid), {deleted:true, banned:true});
+        showToast(`${u.name} silindi.`);
+      }
+    });
+  });
 }
 
 /* ============ ADMIN: KİTAP KURTLARI ============ */
@@ -1153,7 +1186,7 @@ async function renderAdminWorms(){
   results.sort((a,b)=>b.streak-a.streak);
   list.innerHTML = results.map(r=>{
     const badge = r.streak>=30 ? `<span title="Kitap kurdu">🐛</span>` : '';
-    return `<div class="worm-row"><div>${badge} ${escapeHtml(r.name)}</div><div class="worm-streak">${r.streak} gün</div></div>`;
+    return `<div class="worm-row"><div>${badge} ${avatarHtml(r.uid)}${escapeHtml(r.name)}</div><div class="worm-streak">${r.streak} gün</div></div>`;
   }).join('');
 }
 
@@ -1226,7 +1259,7 @@ async function renderMemberWeekAll(){
       else if(miss===1) statusChip = `<span class="chip warn">Pas (1)</span>`;
       else statusChip = `<span class="chip ok">Temiz</span>`;
     }
-    return `<tr><td class="name-cell">${escapeHtml(usersCache[uid].name)}</td>${cells}<td>${statusChip}</td></tr>`;
+    return `<tr><td class="name-cell">${avatarHtml(uid,18)}${escapeHtml(usersCache[uid].name)}</td>${cells}<td>${statusChip}</td></tr>`;
   }).join('');
   table.innerHTML = head + rows;
 }
@@ -1331,6 +1364,39 @@ document.getElementById('changePasswordBtn').addEventListener('click', async ()=
   }catch(err){ errBox.textContent = friendlyAuthError(err); }
 });
 
+async function performSelfDelete(){
+  await deleteDoc(doc(db,'users',currentUid));
+  await deleteUser(auth.currentUser);
+}
+document.getElementById('deleteMyAccountBtn').addEventListener('click', async ()=>{
+  if(myProfile.role==='admin'){
+    const remainingAdmins = Object.keys(usersCache).filter(u=>usersCache[u].role==='admin' && !usersCache[u].banned && !usersCache[u].deleted && u!==currentUid).length;
+    if(remainingAdmins===0){ alert('Tek aktif yöneticisin. Hesabını silmeden önce başka birini yönetici yapmalısın.'); return; }
+  }
+  if(!confirm('Hesabını tamamen ve kalıcı olarak silmek istediğine EMİN misin? Bu işlem geri alınamaz.')) return;
+  const typed = prompt('Onaylamak için büyük harflerle "SİL" yaz:');
+  if(typed !== 'SİL'){ if(typed!==null) alert('Onay metni eşleşmedi, işlem iptal edildi.'); return; }
+  try{
+    await performSelfDelete();
+  }catch(err){
+    if(err.code === 'auth/requires-recent-login'){
+      try{
+        if(isGoogleUser()){
+          await reauthenticateWithPopup(auth.currentUser, new GoogleAuthProvider());
+        } else {
+          const pass = prompt('Güvenlik için şifreni tekrar gir:');
+          if(!pass) return;
+          const cred = EmailAuthProvider.credential(auth.currentUser.email, pass);
+          await reauthenticateWithCredential(auth.currentUser, cred);
+        }
+        await performSelfDelete();
+      }catch(err2){ alert('Hesap silinemedi: ' + (err2.message||err2)); }
+    } else {
+      alert('Hesap silinemedi: ' + (err.message||err));
+    }
+  }
+});
+
 /* ============ ORTAK: GRUP KURALLARI ============ */
 async function renderRulesTab(){
   const displayBox = document.getElementById('rulesDisplay');
@@ -1392,7 +1458,7 @@ async function renderRuleRequestsList(){
         <button class="secondary tiny" data-reject="${it.id}">Reddet</button>
       </div>` : '';
     return `<div class="member-row" style="display:block;">
-      <div class="member-name">${escapeHtml(it.name)} ${statusChip}</div>
+      <div class="member-name">${avatarHtml(it.uid)}${escapeHtml(it.name)} ${statusChip}</div>
       <div class="muted" style="margin-top:4px;">${escapeHtml(it.text)}</div>
       ${adminBtns}
     </div>`;
@@ -1433,9 +1499,9 @@ async function renderGiftsTab(){
         const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
         let req = null;
         try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
-        html += `<div class="receipt"><div class="rweek"><span>${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: <span class="giver">${escapeHtml(p.giverName)}</span> → <span class="receiver">${escapeHtml(p.receiverName)}</span></span></div>`;
+        html += `<div class="receipt"><div class="rweek"><span>${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: <span class="giver">${avatarHtml(p.giverUid)}${escapeHtml(p.giverName)}</span> → <span class="receiver">${avatarHtml(p.receiverUid)}${escapeHtml(p.receiverName)}</span></span></div>`;
         html += req
-          ? `<div class="muted">Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>`
+          ? `<div class="muted">Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>`
           : `<div class="empty-note">Alıcı henüz istek formunu doldurmadı.</div>`;
         html += `</div>`;
       }
@@ -1444,60 +1510,76 @@ async function renderGiftsTab(){
     return;
   }
 
-  intro.textContent = 'Hediye alacaksan kitap isteğini burada gönder; hediye vereceksen alıcının isteğini burada göreceksin.';
-  if(drawsCache.length===0){ content.innerHTML = `<div class="empty-state">Henüz kura çekilmedi.</div>`; return; }
+  // ÜYE görünümü — sadece en son çekilen (en güncel) haftaya bakılır
+  intro.textContent = 'Bu haftanın hediye kitap durumu.';
+  if(drawsCache.length===0){ content.innerHTML = `<div class="empty-state"><span class="big">🎁</span>Henüz kura çekilmedi.</div>`; return; }
+
+  const latest = drawsCache[0];
+  let myPairAsReceiver = null, myPairAsGiver = null;
+  (latest.pairs||[]).forEach(p=>{
+    if(p.receiverUid===currentUid) myPairAsReceiver = p;
+    if(p.giverUid===currentUid) myPairAsGiver = p;
+  });
+
+  if(!myPairAsReceiver && !myPairAsGiver){
+    content.innerHTML = `<div class="empty-state"><span class="big">🎁</span>Bu hafta hediye kitap kazanamadınız.</div>`;
+    return;
+  }
 
   let html = '';
-  let foundAny = false;
-  for(const d of drawsCache){
-    if(!d.pairs) continue;
-    for(const p of d.pairs){
-      if(p.receiverUid===currentUid){
-        foundAny = true;
-        const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
-        let req = null;
-        try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
-        html += `<div class="receipt">
-          <div class="rweek">${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: <span class="giver">${escapeHtml(p.giverName)}</span> sana kitap hediye edecek</div>
-          <div class="gift-form" data-week="${d.weekStart}" data-giver="${p.giverUid}" data-receiver="${p.receiverUid}">
-            <div class="field"><label>İstediğin kitap</label><input type="text" class="gf-book" value="${escapeHtml(req?.bookTitle||'')}" /></div>
-            <div class="field"><label>Site (opsiyonel)</label><input type="text" class="gf-site" value="${escapeHtml(req?.site||'')}" placeholder="örn. trendyol, d&r..." /></div>
-            <div class="field"><label>Adres</label><input type="text" class="gf-address" value="${escapeHtml(req?.address||'')}" /></div>
-            <div class="field"><label>Telefon</label><input type="text" class="gf-phone" value="${escapeHtml(req?.phone||'')}" /></div>
-            <button class="primary gf-submit">${req?'Güncelle':'Gönder'}</button>
-            ${req?'<span class="chip ok" style="margin-left:8px;">Gönderildi</span>':''}
-          </div>
-        </div>`;
-      }
-      if(p.giverUid===currentUid && p.receiverUid){
-        foundAny = true;
-        const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
-        let req = null;
-        try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
-        html += `<div class="receipt"><div class="rweek">${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: ${escapeHtml(p.receiverName)}'e kitap hediye edeceksin</div>`;
-        html += req
-          ? `<div class="muted">İstediği kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>`
-          : `<div class="empty-note">${escapeHtml(p.receiverName)} henüz istek formunu doldurmadı.</div>`;
-        html += `</div>`;
-      }
-    }
+
+  if(myPairAsReceiver){
+    const p = myPairAsReceiver;
+    const reqId = `${latest.weekStart}_${p.giverUid}_${p.receiverUid}`;
+    let req = null;
+    try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+    const prefillName = req?.recipientName || myProfile.name || '';
+    const prefillAddress = req?.address || myProfile.address || '';
+    const prefillPhone = req?.phone || myProfile.phone || '';
+    html += `<div class="receipt">
+      <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${avatarHtml(p.giverUid)}${escapeHtml(p.giverName)}</span> sana kitap hediye edecek</div>
+      <div class="gift-form" data-week="${latest.weekStart}" data-giver="${p.giverUid}" data-receiver="${p.receiverUid}">
+        <div class="field"><label>Ad Soyad</label><input type="text" class="gf-name" value="${escapeHtml(prefillName)}" /></div>
+        <div class="field"><label>İstediğin kitap</label><input type="text" class="gf-book" value="${escapeHtml(req?.bookTitle||'')}" /></div>
+        <div class="field"><label>Site (opsiyonel)</label><input type="text" class="gf-site" value="${escapeHtml(req?.site||'')}" placeholder="örn. trendyol, d&r..." /></div>
+        <div class="field"><label>Adres</label><input type="text" class="gf-address" value="${escapeHtml(prefillAddress)}" /></div>
+        <div class="field"><label>Telefon</label><input type="text" class="gf-phone" value="${escapeHtml(prefillPhone)}" /></div>
+        <p class="muted" style="font-size:12px;">Bilgiler Profilim sekmendeki kayıtlı bilgilerden otomatik dolduruldu, istersen değiştirip yine de gönderebilirsin.</p>
+        <button class="primary gf-submit">${req?'Güncelle':'Gönder'}</button>
+        ${req?'<span class="chip ok" style="margin-left:8px;">Gönderildi</span>':''}
+      </div>
+    </div>`;
   }
-  content.innerHTML = foundAny ? html : `<div class="empty-state"><span class="big">🎁</span>Şu anda ne hediye alacağın ne de vereceğin bir durum var.</div>`;
+
+  if(myPairAsGiver && myPairAsGiver.receiverUid){
+    const p = myPairAsGiver;
+    const reqId = `${latest.weekStart}_${p.giverUid}_${p.receiverUid}`;
+    let req = null;
+    try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+    html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${avatarHtml(p.receiverUid)}${escapeHtml(p.receiverName)}'e kitap hediye edeceksin</div>`;
+    html += req
+      ? `<div class="muted">Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>İstediği kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>`
+      : `<div class="empty-note">${escapeHtml(p.receiverName)} henüz istek formunu doldurmadı.</div>`;
+    html += `</div>`;
+  }
+
+  content.innerHTML = html;
 
   content.querySelectorAll('.gift-form').forEach(formEl=>{
     formEl.querySelector('.gf-submit').addEventListener('click', async ()=>{
       const weekStart = formEl.dataset.week, giverUid = formEl.dataset.giver, receiverUid = formEl.dataset.receiver;
       const reqId = `${weekStart}_${giverUid}_${receiverUid}`;
+      const recipientName = formEl.querySelector('.gf-name').value.trim();
       const bookTitle = formEl.querySelector('.gf-book').value.trim();
       const site = formEl.querySelector('.gf-site').value.trim();
       const address = formEl.querySelector('.gf-address').value.trim();
       const phone = formEl.querySelector('.gf-phone').value.trim();
-      if(!bookTitle || !address || !phone){ alert('Kitap adı, adres ve telefon alanları zorunlu.'); return; }
+      if(!recipientName || !bookTitle || !address || !phone){ alert('Ad soyad, kitap adı, adres ve telefon alanları zorunlu.'); return; }
       try{
         await setDoc(doc(db,'giftRequests',reqId), {
           weekStart, giverUid, receiverUid,
           giverName: usersCache[giverUid]?.name||'', receiverName: usersCache[receiverUid]?.name||'',
-          bookTitle, site, address, phone, updatedAt: new Date().toISOString()
+          recipientName, bookTitle, site, address, phone, updatedAt: new Date().toISOString()
         });
         await notifyUser(giverUid, `${myProfile.name} hediye kitap isteğini gönderdi: "${bookTitle}". "Hediye Kitap" sekmesinden bak.`);
         showToast('İstek gönderildi.');
@@ -1519,7 +1601,7 @@ async function renderMemberWorms(){
     list.innerHTML = `<div class="empty-state"><span class="big">🐛</span>Henüz 30 günü aşan kimse yok. İlk olabilirsin!</div>`;
     return;
   }
-  list.innerHTML = worms.map(r=>`<div class="worm-row"><div>🐛 ${escapeHtml(r.name)}</div><div class="worm-streak">${r.streak} gün</div></div>`).join('');
+  list.innerHTML = worms.map(r=>`<div class="worm-row"><div>🐛 ${avatarHtml(r.uid)}${escapeHtml(r.name)}</div><div class="worm-streak">${r.streak} gün</div></div>`).join('');
 }
 
 /* ============ GİRİŞ / AUTH DURUM TAKİBİ ============ */
@@ -1557,7 +1639,9 @@ onAuthStateChanged(auth, async (user)=>{
   if(myProfile.banned){
     await signOut(auth);
     const notice = document.getElementById('bannedNotice');
-    notice.textContent = 'Bu hesap yönetici tarafından askıya alınmış. Sorularını kulüp yöneticine iletebilirsin.';
+    notice.textContent = myProfile.deleted
+      ? 'Bu hesap silinmiş. Yeniden erişim için kulüp yöneticine ulaş.'
+      : 'Bu hesap yönetici tarafından askıya alınmış. Sorularını kulüp yöneticine iletebilirsin.';
     notice.style.display='block';
     loadingScreen.style.display='none';
     authScreen.style.display='block';
