@@ -204,6 +204,22 @@
         <p class="muted">Herhangi bir üyeyi senin yerine de işaretleyebilir, daha önce kendisi işaretlemiş olsa bile değiştirebilirsin. Aynı butona tekrar basarsan işaret kalkar.</p>
         <div id="todayList"></div>
       </div>
+
+      <div class="card">
+        <h2>Benim Durumum</h2>
+        <p class="muted" id="aDateNote"></p>
+      </div>
+
+      <div class="card">
+        <h2>Haftalık Geçmişim</h2>
+        <p class="muted">Cevap vermediğin geçmiş günler otomatik "okumadı" olarak görünür.</p>
+        <div class="row" style="align-items:center; margin-bottom:10px;">
+          <button class="secondary tiny" id="aWeekPrevBtn" style="flex:0 0 auto;">◀ Önceki Hafta</button>
+          <div class="mono" id="aWeekRangeLabel" style="text-align:center; flex:1;"></div>
+          <button class="secondary tiny" id="aWeekNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
+        </div>
+        <div class="libcard"><table class="weekgrid" id="aOwnWeekGrid"></table></div>
+      </div>
     </section>
 
     <section class="tab" id="tab-editpast">
@@ -632,6 +648,7 @@ setInterval(()=>{
 }, 5*60*1000);
 
 /* ============ ADMIN: BUGÜN ============ */
+let adminWeekOffset = 0; // 0 = bu hafta, -1 = önceki hafta, ...
 function renderAdminToday(){
   const list = document.getElementById('todayList');
   const uids = activeUids();
@@ -653,7 +670,39 @@ function renderAdminToday(){
   list.querySelectorAll('.stamp-btn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{ await markStatus(btn.dataset.uid, btn.dataset.status); });
   });
+
+  const ld = nowLogical();
+  const dowLabel = DOW[ld.getDay()===0?6:ld.getDay()-1];
+  const dateLabel = `${dowLabel} ${pad(ld.getDate())}.${pad(ld.getMonth()+1)}.${ld.getFullYear()}`;
+  const noteEl = document.getElementById('aDateNote');
+  if(noteEl){
+    const myStatus = todayAnswers[currentUid];
+    const myStatusText = myStatus==='read' ? 'Bugün için "Okudum" işaretlendin.' : myStatus==='skip' ? 'Bugün için "Okumadım" işaretlendin.' : 'Bugün için henüz işaretleme yapılmadı.';
+    noteEl.textContent = `Bugünün okuma tarihi: ${dateLabel}. İşaretlemeler yarın sabah 06:00'a kadar geçerli; 06:00'dan sonraki işaretleme bir sonraki güne yazılır. 06:00'a kadar hiç işaretleme yapılmazsa o gün otomatik "okumadı" sayılır. ${myStatusText}`;
+  }
+  adminWeekOffset = 0;
+  renderAdminOwnWeek();
 }
+async function renderAdminOwnWeek(){
+  const baseMonday = getMonday(nowLogical());
+  const monday = addDays(baseMonday, adminWeekOffset*7);
+  const dates = weekDates(monday);
+  document.getElementById('aWeekRangeLabel').textContent = `${fmtShort(dates[0])} — ${fmtShort(dates[6])}` + (adminWeekOffset===0 ? ' (bu hafta)' : '');
+  document.getElementById('aWeekNextBtn').disabled = adminWeekOffset>=0;
+  const table = document.getElementById('aOwnWeekGrid');
+  table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
+  const perDate = await Promise.all(dates.map(fetchDayAnswers));
+  let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
+  let cells = perDate.map(map=>{
+    const rec = map[currentUid];
+    if(rec && rec.status==='read') return `<td><span class="stamp-mini read">✓</span></td>`;
+    if(rec && rec.status==='skip') return `<td><span class="stamp-mini skip ${rec.auto?'auto':''}" title="${rec.auto?'Otomatik okumadı':''}">✕</span></td>`;
+    return `<td><span class="stamp-mini empty">·</span></td>`;
+  }).join('');
+  table.innerHTML = head + `<tr>${cells}</tr>`;
+}
+document.getElementById('aWeekPrevBtn').addEventListener('click', ()=>{ adminWeekOffset -= 1; renderAdminOwnWeek(); });
+document.getElementById('aWeekNextBtn').addEventListener('click', ()=>{ if(adminWeekOffset<0){ adminWeekOffset += 1; renderAdminOwnWeek(); } });
 
 /* ============ ADMIN: GEÇMİŞ CEVAPLARI DÜZENLE ============ */
 async function markStatusForDate(uid, dateStr, status){
