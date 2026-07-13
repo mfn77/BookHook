@@ -166,6 +166,7 @@
       <div class="field"><label>Şifre</label><input type="password" id="loginPassword" /></div>
       <div class="auth-error" id="loginError"></div>
       <button class="primary" id="loginBtn" style="width:100%;">Giriş Yap</button>
+      <div style="text-align:center; margin-top:10px;"><a href="#" id="forgotPasswordLink" class="mono" style="font-size:12px; color:var(--ink-70);">Şifremi unuttum</a></div>
     </div>
   </div>
 
@@ -177,6 +178,11 @@
       <div class="auth-error" id="signupError"></div>
       <button class="primary" id="signupBtn" style="width:100%;">Üye Ol</button>
     </div>
+  </div>
+
+  <div class="card" style="text-align:center;">
+    <div class="muted" style="margin-bottom:10px;">veya</div>
+    <button class="secondary" id="googleAuthBtn" style="width:100%;">🔵 Google ile Giriş Yap / Üye Ol</button>
   </div>
 </div>
 
@@ -190,6 +196,7 @@
     <div class="whoami">
       <div id="whoamiName">—</div>
       <div><span class="rolechip" id="whoamiRole">—</span></div>
+      <div style="margin-top:4px;"><span id="notifBadge" class="chip danger" style="display:none;">🔔 0</span></div>
       <button id="logoutBtn">Çıkış</button>
     </div>
   </header>
@@ -340,6 +347,76 @@
         <div id="mWormsList"></div>
       </div>
     </section>
+
+    <!-- ORTAK: HEDİYE KİTAP -->
+    <section class="tab" id="tab-gifts">
+      <div class="card">
+        <h2>🎁 Hediye Kitap</h2>
+        <p class="muted" id="giftsIntro"></p>
+        <div id="giftsContent"></div>
+      </div>
+    </section>
+
+    <!-- ORTAK: GRUP KURALLARI -->
+    <section class="tab" id="tab-rules">
+      <div class="card">
+        <h2>📋 Grup Kuralları</h2>
+        <div id="rulesDisplay" class="muted"></div>
+        <div id="rulesAdminEdit" style="display:none; margin-top:14px;">
+          <div class="field"><label>Kuralları düzenle</label>
+            <textarea id="rulesTextarea" rows="8" style="width:100%; font-family:'Source Serif 4',serif; font-size:14.5px; padding:10px; border:1.5px solid var(--line); border-radius:8px;"></textarea>
+          </div>
+          <button class="primary" id="rulesSaveBtn">Kaydet</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Kural Önerisi Gönder</h2>
+        <div class="field">
+          <textarea id="ruleRequestText" rows="3" placeholder="Önerini yaz..." style="width:100%; font-family:'Source Serif 4',serif; font-size:14.5px; padding:10px; border:1.5px solid var(--line); border-radius:8px;"></textarea>
+        </div>
+        <button class="secondary" id="ruleRequestBtn">Öneri Gönder</button>
+      </div>
+
+      <div class="card">
+        <h2 id="ruleRequestsTitle">Kural Önerileri</h2>
+        <div id="ruleRequestsList"></div>
+      </div>
+    </section>
+
+    <!-- ORTAK: PROFİLİM -->
+    <section class="tab" id="tab-profile">
+      <div class="card">
+        <h2>Profilim</h2>
+        <div style="text-align:center; margin-bottom:14px;">
+          <img id="profilePhotoPreview" src="./icon-192.png" alt="" style="width:88px;height:88px;border-radius:50%;object-fit:cover;box-shadow:var(--shadow);" />
+          <div style="margin-top:8px;"><input type="file" id="profilePhotoInput" accept="image/*" /></div>
+        </div>
+        <div class="field"><label>Adın</label><input type="text" id="profileName" /></div>
+        <div class="field"><label>Telefon</label><input type="text" id="profilePhone" /></div>
+        <div class="field"><label>Adres</label><input type="text" id="profileAddress" /></div>
+        <div class="auth-error" id="profileError"></div>
+        <button class="primary" id="profileSaveBtn">Bilgileri Kaydet</button>
+      </div>
+
+      <div class="card">
+        <h2>Şifre Değiştir</h2>
+        <p class="muted">Google ile giriş yaptıysan bu alanı kullanamazsın, şifreni Google hesabından yönetirsin.</p>
+        <div class="field"><label>Mevcut Şifre</label><input type="password" id="curPassword" /></div>
+        <div class="field"><label>Yeni Şifre (en az 6 karakter)</label><input type="password" id="newPassword" /></div>
+        <div class="auth-error" id="passwordError"></div>
+        <button class="secondary" id="changePasswordBtn">Şifreyi Değiştir</button>
+      </div>
+    </section>
+
+    <!-- ORTAK: BİLDİRİMLER -->
+    <section class="tab" id="tab-notifs">
+      <div class="card">
+        <h2>🔔 Bildirimler</h2>
+        <button class="secondary tiny" id="markAllReadBtn" style="margin-bottom:10px;">Tümünü okundu yap</button>
+        <div id="notifsList"></div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -350,12 +427,17 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
-  signInWithEmailAndPassword, signOut
+  signInWithEmailAndPassword, signOut, sendPasswordResetEmail,
+  updatePassword, reauthenticateWithCredential, EmailAuthProvider,
+  GoogleAuthProvider, signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, addDoc,
-  collection, onSnapshot, query, orderBy, runTransaction
+  collection, onSnapshot, query, orderBy, limit, where, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getStorage, ref as storageRef, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDpRov8Qs7rPQ7lILyhs7DuRHdQpTJZWJ4",
@@ -370,6 +452,7 @@ const ADMIN_EMAIL = "furkan.nayman77@gmail.com"; // Bu email ile üye olan kişi
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 /* ======================================================================= */
 
 /* ============ TARİH YARDIMCILARI (gün 06:00'a kadar sürer) ============ */
@@ -414,7 +497,7 @@ let usersCache = {};
 let todayAnswers = {};
 let drawsCache = [];
 let activeTab = null;
-let unsubUsers = null, unsubToday = null;
+let unsubUsers = null, unsubToday = null, unsubNotifs = null;
 let subscribedTodayKey = null;
 let manualGrid = {}; // uid -> ['', 'read', 'skip', ...] length 7
 let manualHistoryCache = [];
@@ -430,6 +513,52 @@ function showToast(msg){
   host.appendChild(el);
   setTimeout(()=>{ if(el.parentNode) el.remove(); }, 9000);
 }
+
+/* ============ BİLDİRİM SİSTEMİ (uygulama içi) ============ */
+async function notifyUser(uid, message){
+  if(!uid) return;
+  try{ await addDoc(collection(db,'notifications',uid,'items'), { message, read:false, createdAt:new Date().toISOString() }); }
+  catch(e){ /* bildirim gönderilemese de ana işlemi bozmasın */ }
+}
+async function notifyAdmins(message){
+  const adminUids = Object.keys(usersCache).filter(u=>usersCache[u].role==='admin' && !usersCache[u].banned);
+  await Promise.all(adminUids.map(uid=>notifyUser(uid,message)));
+}
+function subscribeNotifs(){
+  if(unsubNotifs) unsubNotifs();
+  unsubNotifs = onSnapshot(collection(db,'notifications',currentUid,'items'), (snap)=>{
+    let unread=0;
+    snap.forEach(d=>{ if(!d.data().read) unread++; });
+    const badge = document.getElementById('notifBadge');
+    if(unread>0){ badge.style.display='inline-block'; badge.textContent = `🔔 ${unread}`; }
+    else { badge.style.display='none'; }
+    if(activeTab==='notifs') renderNotifsTab();
+  });
+}
+async function renderNotifsTab(){
+  const box = document.getElementById('notifsList');
+  box.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  let snap;
+  try{ snap = await getDocs(query(collection(db,'notifications',currentUid,'items'), orderBy('createdAt','desc'), limit(50))); }
+  catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; return; }
+  const items = [];
+  snap.forEach(d=> items.push({id:d.id, ref:d.ref, ...d.data()}));
+  if(items.length===0){ box.innerHTML = `<div class="empty-state"><span class="big">🔔</span>Henüz bildirim yok.</div>`; return; }
+  box.innerHTML = items.map(it=>{
+    const dt = new Date(it.createdAt);
+    const dtLabel = isNaN(dt.getTime()) ? '' : `${pad(dt.getDate())}.${pad(dt.getMonth()+1)} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    return `<div class="member-row" style="display:block; ${it.read?'opacity:0.55;':''}">
+      <div class="muted mono" style="font-size:10.5px;">${dtLabel}</div>
+      <div>${escapeHtml(it.message)}</div>
+    </div>`;
+  }).join('');
+}
+document.getElementById('markAllReadBtn').addEventListener('click', async ()=>{
+  let snap;
+  try{ snap = await getDocs(collection(db,'notifications',currentUid,'items')); }catch(e){ return; }
+  await Promise.all(snap.docs.map(d=> updateDoc(d.ref, {read:true}).catch(()=>{})));
+  renderNotifsTab();
+});
 
 /* ============ AUTH EKRANI ============ */
 const authScreen = document.getElementById('authScreen');
@@ -468,7 +597,7 @@ document.getElementById('signupBtn').onclick = async ()=>{
   try{
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     const role = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'member';
-    await setDoc(doc(db,'users',cred.user.uid), { name, email, role, banned:false, createdAt: new Date().toISOString() });
+    await setDoc(doc(db,'users',cred.user.uid), { name, email, role, banned:false, phone:'', address:'', photoURL:'', createdAt: new Date().toISOString() });
   }catch(err){ errBox.textContent = friendlyAuthError(err); }
 };
 
@@ -484,21 +613,56 @@ document.getElementById('loginBtn').onclick = async ()=>{
 
 document.getElementById('logoutBtn').onclick = ()=> signOut(auth);
 
+document.getElementById('forgotPasswordLink').addEventListener('click', async (e)=>{
+  e.preventDefault();
+  const emailField = document.getElementById('loginEmail');
+  let email = emailField.value.trim();
+  if(!email){ email = prompt('Şifre sıfırlama linki gönderilecek e-posta adresini yaz:') || ''; email = email.trim(); }
+  if(!email) return;
+  try{
+    await sendPasswordResetEmail(auth, email);
+    alert(`${email} adresine şifre sıfırlama linki gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et.`);
+  }catch(err){ alert(friendlyAuthError(err)); }
+});
+
+document.getElementById('googleAuthBtn').addEventListener('click', async ()=>{
+  const provider = new GoogleAuthProvider();
+  try{
+    await signInWithPopup(auth, provider);
+  }catch(err){
+    if(err.code && err.code.includes('unauthorized-domain')){
+      alert('Bu site adresi Firebase\'de yetkili domainler listesinde değil. Firebase konsolu → Authentication → Settings → Authorized domains kısmına bu sitenin adresini eklemen gerekiyor.');
+    } else if(err.code && err.code.includes('popup-closed-by-user')){
+      // kullanıcı pencereyi kapattı, sessizce geç
+    } else {
+      alert(friendlyAuthError(err));
+    }
+  }
+});
+
 /* ============ TAB TANIMLARI ============ */
 const ADMIN_TABS = [
   {id:'today', label:'Bugün'},
   {id:'editpast', label:'Geçmiş Düzenle'},
   {id:'week', label:'Bu Hafta'},
   {id:'draws', label:'Kura'},
+  {id:'gifts', label:'Hediye Kitap'},
   {id:'manual', label:'Manuel Kura'},
   {id:'members', label:'Üyeler'},
-  {id:'worms', label:'Kitap Kurtları'}
+  {id:'worms', label:'Kitap Kurtları'},
+  {id:'rules', label:'Grup Kuralları'},
+  {id:'profile', label:'Profilim'},
+  {id:'notifs', label:'Bildirimler'}
 ];
 const MEMBER_TABS = [
   {id:'msurvey', label:'Anket'},
   {id:'mtoday', label:'Bu Hafta (Herkes)'},
   {id:'mlastweek', label:'Geçen Hafta'},
-  {id:'mworms', label:'Kitap Kurtları'}
+  {id:'gifts', label:'Hediye Kitap'},
+  {id:'mworms', label:'Kitap Kurtları'},
+  {id:'rules', label:'Grup Kuralları'},
+  {id:'profile', label:'Profilim'},
+  {id:'notifs', label:'Bildirimler'}
 ];
 
 function buildNav(){
@@ -532,6 +696,10 @@ function renderTab(id){
   else if(id==='mtoday') renderMemberWeekAll();
   else if(id==='mlastweek') renderMemberLastWeek();
   else if(id==='mworms') renderMemberWorms();
+  else if(id==='gifts') renderGiftsTab();
+  else if(id==='rules') renderRulesTab();
+  else if(id==='profile') renderProfileTab();
+  else if(id==='notifs') renderNotifsTab();
 }
 
 function renderHeader(){
@@ -601,12 +769,21 @@ async function finalizeWeek(monday, force){
   const stats = await computeWeekStats(monday);
   const {giverCount, safeCount, pairs} = runLottery(stats);
   const data = { weekStart:wk, weekEnd: toStr(addDays(monday,6)), giverCount, safeCount, pairs, generatedAt: new Date().toISOString() };
+  let didWrite = false;
   await runTransaction(db, async (tx)=>{
     const snap = await tx.get(ref);
     if(snap.exists() && !force) return;
     tx.set(ref, data);
+    didWrite = true;
   });
-  return {already:false, data};
+  if(didWrite){
+    const rangeLabel = `${fmtShort(data.weekStart)}–${fmtShort(data.weekEnd)}`;
+    await Promise.all(pairs.map(async p=>{
+      if(p.giverUid) await notifyUser(p.giverUid, `Kura çekildi (${rangeLabel}): cezalısın, ${p.receiverName||'—'} için kitap hediyesi vereceksin. "Hediye Kitap" sekmesine bak.`);
+      if(p.receiverUid) await notifyUser(p.receiverUid, `Kura çekildi (${rangeLabel}): tebrikler, ${p.giverName} sana kitap hediye edecek! "Hediye Kitap" sekmesinden isteğini gönderebilirsin.`);
+    }));
+  }
+  return {already:!didWrite, data};
 }
 async function loadDraws(){
   const snap = await getDocs(query(collection(db,'draws'), orderBy('weekStart','desc')));
@@ -1001,8 +1178,8 @@ function renderMemberSurvey(){
   memberWeekOffset = 0;
   renderMemberOwnWeek();
 }
-document.getElementById('mReadBtn').addEventListener('click', async ()=>{ await markStatus(currentUid,'read'); renderMemberSurvey(); });
-document.getElementById('mSkipBtn').addEventListener('click', async ()=>{ await markStatus(currentUid,'skip'); renderMemberSurvey(); });
+document.getElementById('mReadBtn').addEventListener('click', async ()=>{ await markStatus(currentUid,'read'); renderMemberSurvey(); notifyAdmins(`${myProfile.name} bugün "Okudum" işaretledi.`); });
+document.getElementById('mSkipBtn').addEventListener('click', async ()=>{ await markStatus(currentUid,'skip'); renderMemberSurvey(); notifyAdmins(`${myProfile.name} bugün "Okumadım" işaretledi.`); });
 
 async function renderMemberOwnWeek(){
   const baseMonday = getMonday(nowLogical());
@@ -1074,6 +1251,262 @@ async function renderMemberLastWeek(){
   box.innerHTML = `<div class="receipt"><div class="rweek">Hafta: ${rangeLabel}</div>${body}</div>`;
 }
 
+/* ============ ORTAK: PROFİLİM ============ */
+function isGoogleUser(){
+  return !!(auth.currentUser && auth.currentUser.providerData.some(p=>p.providerId==='google.com'));
+}
+function renderProfileTab(){
+  document.getElementById('profileName').value = myProfile.name || '';
+  document.getElementById('profilePhone').value = myProfile.phone || '';
+  document.getElementById('profileAddress').value = myProfile.address || '';
+  document.getElementById('profilePhotoPreview').src = myProfile.photoURL || './icon-192.png';
+  document.getElementById('profileError').textContent = '';
+  document.getElementById('passwordError').textContent = '';
+  const pwCard = document.getElementById('changePasswordBtn').closest('.card');
+  pwCard.style.display = isGoogleUser() ? 'none' : 'block';
+}
+function resizeImageFile(file, maxSize){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w=img.width, h=img.height;
+        if(w>h){ if(w>maxSize){ h=Math.round(h*maxSize/w); w=maxSize; } }
+        else { if(h>maxSize){ w=Math.round(w*maxSize/h); h=maxSize; } }
+        const canvas = document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        canvas.toBlob(blob=> blob?resolve(blob):reject(new Error('Dönüştürme başarısız')), 'image/jpeg', 0.85);
+      };
+      img.onerror = ()=>reject(new Error('Görsel okunamadı'));
+      img.src = reader.result;
+    };
+    reader.onerror = ()=>reject(new Error('Dosya okunamadı'));
+    reader.readAsDataURL(file);
+  });
+}
+document.getElementById('profilePhotoInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const blob = await resizeImageFile(file, 300);
+    const ref = storageRef(storage, `avatars/${currentUid}.jpg`);
+    await uploadBytes(ref, blob);
+    const url = await getDownloadURL(ref);
+    await updateDoc(doc(db,'users',currentUid), {photoURL:url});
+    myProfile.photoURL = url;
+    document.getElementById('profilePhotoPreview').src = url;
+    showToast('Profil fotoğrafı güncellendi.');
+  }catch(err){ alert('Fotoğraf yüklenemedi: ' + (err.message||err) + '\n\nFirebase Storage etkin mi kontrol et.'); }
+});
+document.getElementById('profileSaveBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('profileName').value.trim();
+  const phone = document.getElementById('profilePhone').value.trim();
+  const address = document.getElementById('profileAddress').value.trim();
+  const errBox = document.getElementById('profileError');
+  errBox.textContent = '';
+  if(!name){ errBox.textContent = 'İsim boş olamaz.'; return; }
+  try{
+    await updateDoc(doc(db,'users',currentUid), {name, phone, address});
+    myProfile.name = name; myProfile.phone = phone; myProfile.address = address;
+    document.getElementById('whoamiName').textContent = name;
+    showToast('Profilin güncellendi.');
+  }catch(err){ errBox.textContent = 'Kaydedilemedi: ' + (err.message||err); }
+});
+document.getElementById('changePasswordBtn').addEventListener('click', async ()=>{
+  const curPass = document.getElementById('curPassword').value;
+  const newPass = document.getElementById('newPassword').value;
+  const errBox = document.getElementById('passwordError');
+  errBox.textContent = '';
+  if(!curPass || !newPass){ errBox.textContent = 'Her iki alanı da doldur.'; return; }
+  if(newPass.length<6){ errBox.textContent = 'Yeni şifre en az 6 karakter olmalı.'; return; }
+  try{
+    const cred = EmailAuthProvider.credential(auth.currentUser.email, curPass);
+    await reauthenticateWithCredential(auth.currentUser, cred);
+    await updatePassword(auth.currentUser, newPass);
+    document.getElementById('curPassword').value='';
+    document.getElementById('newPassword').value='';
+    showToast('Şifren değiştirildi.');
+  }catch(err){ errBox.textContent = friendlyAuthError(err); }
+});
+
+/* ============ ORTAK: GRUP KURALLARI ============ */
+async function renderRulesTab(){
+  const displayBox = document.getElementById('rulesDisplay');
+  displayBox.textContent = 'Yükleniyor…';
+  let rulesText = '';
+  try{
+    const snap = await getDoc(doc(db,'settings','groupRules'));
+    rulesText = snap.exists() ? (snap.data().text || '') : '';
+  }catch(e){}
+  displayBox.textContent = rulesText || 'Henüz kural eklenmemiş.';
+  const editBox = document.getElementById('rulesAdminEdit');
+  if(myProfile.role==='admin'){
+    editBox.style.display='block';
+    document.getElementById('rulesTextarea').value = rulesText;
+  } else {
+    editBox.style.display='none';
+  }
+  document.getElementById('ruleRequestsTitle').textContent = myProfile.role==='admin' ? 'Gelen Kural Önerileri' : 'Gönderdiğim Öneriler';
+  await renderRuleRequestsList();
+}
+document.getElementById('rulesSaveBtn').addEventListener('click', async ()=>{
+  const text = document.getElementById('rulesTextarea').value;
+  try{
+    await setDoc(doc(db,'settings','groupRules'), {text, updatedAt:new Date().toISOString(), updatedBy: myProfile.name});
+    showToast('Kurallar güncellendi.');
+    renderRulesTab();
+  }catch(err){ alert('Kaydedilemedi: '+(err.message||err)); }
+});
+document.getElementById('ruleRequestBtn').addEventListener('click', async ()=>{
+  const text = document.getElementById('ruleRequestText').value.trim();
+  if(!text) return;
+  try{
+    await addDoc(collection(db,'ruleRequests'), { uid:currentUid, name: myProfile.name, text, status:'pending', createdAt:new Date().toISOString() });
+    document.getElementById('ruleRequestText').value='';
+    showToast('Öneri gönderildi.');
+    if(myProfile.role!=='admin') await notifyAdmins(`${myProfile.name} yeni bir kural önerisi gönderdi: "${text}"`);
+    renderRulesTab();
+  }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
+});
+async function renderRuleRequestsList(){
+  const box = document.getElementById('ruleRequestsList');
+  box.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  let snap;
+  try{
+    if(myProfile.role==='admin'){
+      snap = await getDocs(query(collection(db,'ruleRequests'), orderBy('createdAt','desc')));
+    } else {
+      snap = await getDocs(query(collection(db,'ruleRequests'), where('uid','==',currentUid), orderBy('createdAt','desc')));
+    }
+  }catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; return; }
+  const items = [];
+  snap.forEach(d=> items.push({id:d.id, ...d.data()}));
+  if(items.length===0){ box.innerHTML = `<p class="muted">Henüz öneri yok.</p>`; return; }
+  box.innerHTML = items.map(it=>{
+    const statusChip = it.status==='approved' ? '<span class="chip ok">Onaylandı</span>' : it.status==='rejected' ? '<span class="chip danger">Reddedildi</span>' : '<span class="chip pending">Bekliyor</span>';
+    const adminBtns = myProfile.role==='admin' && it.status==='pending' ? `
+      <div class="row" style="margin-top:6px;">
+        <button class="secondary tiny" data-approve="${it.id}">Onayla</button>
+        <button class="secondary tiny" data-reject="${it.id}">Reddet</button>
+      </div>` : '';
+    return `<div class="member-row" style="display:block;">
+      <div class="member-name">${escapeHtml(it.name)} ${statusChip}</div>
+      <div class="muted" style="margin-top:4px;">${escapeHtml(it.text)}</div>
+      ${adminBtns}
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-approve]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const it = items.find(x=>x.id===btn.dataset.approve);
+      await updateDoc(doc(db,'ruleRequests',btn.dataset.approve), {status:'approved'});
+      if(it) await notifyUser(it.uid, `Kural önerin onaylandı: "${it.text}"`);
+      renderRuleRequestsList();
+    });
+  });
+  box.querySelectorAll('[data-reject]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const it = items.find(x=>x.id===btn.dataset.reject);
+      await updateDoc(doc(db,'ruleRequests',btn.dataset.reject), {status:'rejected'});
+      if(it) await notifyUser(it.uid, `Kural önerin reddedildi: "${it.text}"`);
+      renderRuleRequestsList();
+    });
+  });
+}
+
+/* ============ ORTAK: HEDİYE KİTAP ============ */
+async function renderGiftsTab(){
+  const intro = document.getElementById('giftsIntro');
+  const content = document.getElementById('giftsContent');
+  content.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  await loadDraws();
+
+  if(myProfile.role==='admin'){
+    intro.textContent = 'Tüm haftalardaki hediye kitap istekleri.';
+    if(drawsCache.length===0){ content.innerHTML = `<div class="empty-state">Henüz kura çekilmedi.</div>`; return; }
+    let html = '';
+    for(const d of drawsCache){
+      if(!d.pairs) continue;
+      for(const p of d.pairs){
+        if(!p.receiverUid) continue;
+        const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
+        let req = null;
+        try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+        html += `<div class="receipt"><div class="rweek"><span>${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: <span class="giver">${escapeHtml(p.giverName)}</span> → <span class="receiver">${escapeHtml(p.receiverName)}</span></span></div>`;
+        html += req
+          ? `<div class="muted">Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>`
+          : `<div class="empty-note">Alıcı henüz istek formunu doldurmadı.</div>`;
+        html += `</div>`;
+      }
+    }
+    content.innerHTML = html || `<div class="empty-state">Kayıtlı hediye yok.</div>`;
+    return;
+  }
+
+  intro.textContent = 'Hediye alacaksan kitap isteğini burada gönder; hediye vereceksen alıcının isteğini burada göreceksin.';
+  if(drawsCache.length===0){ content.innerHTML = `<div class="empty-state">Henüz kura çekilmedi.</div>`; return; }
+
+  let html = '';
+  let foundAny = false;
+  for(const d of drawsCache){
+    if(!d.pairs) continue;
+    for(const p of d.pairs){
+      if(p.receiverUid===currentUid){
+        foundAny = true;
+        const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
+        let req = null;
+        try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+        html += `<div class="receipt">
+          <div class="rweek">${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: <span class="giver">${escapeHtml(p.giverName)}</span> sana kitap hediye edecek</div>
+          <div class="gift-form" data-week="${d.weekStart}" data-giver="${p.giverUid}" data-receiver="${p.receiverUid}">
+            <div class="field"><label>İstediğin kitap</label><input type="text" class="gf-book" value="${escapeHtml(req?.bookTitle||'')}" /></div>
+            <div class="field"><label>Site (opsiyonel)</label><input type="text" class="gf-site" value="${escapeHtml(req?.site||'')}" placeholder="örn. trendyol, d&r..." /></div>
+            <div class="field"><label>Adres</label><input type="text" class="gf-address" value="${escapeHtml(req?.address||'')}" /></div>
+            <div class="field"><label>Telefon</label><input type="text" class="gf-phone" value="${escapeHtml(req?.phone||'')}" /></div>
+            <button class="primary gf-submit">${req?'Güncelle':'Gönder'}</button>
+            ${req?'<span class="chip ok" style="margin-left:8px;">Gönderildi</span>':''}
+          </div>
+        </div>`;
+      }
+      if(p.giverUid===currentUid && p.receiverUid){
+        foundAny = true;
+        const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
+        let req = null;
+        try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+        html += `<div class="receipt"><div class="rweek">${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: ${escapeHtml(p.receiverName)}'e kitap hediye edeceksin</div>`;
+        html += req
+          ? `<div class="muted">İstediği kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>`
+          : `<div class="empty-note">${escapeHtml(p.receiverName)} henüz istek formunu doldurmadı.</div>`;
+        html += `</div>`;
+      }
+    }
+  }
+  content.innerHTML = foundAny ? html : `<div class="empty-state"><span class="big">🎁</span>Şu anda ne hediye alacağın ne de vereceğin bir durum var.</div>`;
+
+  content.querySelectorAll('.gift-form').forEach(formEl=>{
+    formEl.querySelector('.gf-submit').addEventListener('click', async ()=>{
+      const weekStart = formEl.dataset.week, giverUid = formEl.dataset.giver, receiverUid = formEl.dataset.receiver;
+      const reqId = `${weekStart}_${giverUid}_${receiverUid}`;
+      const bookTitle = formEl.querySelector('.gf-book').value.trim();
+      const site = formEl.querySelector('.gf-site').value.trim();
+      const address = formEl.querySelector('.gf-address').value.trim();
+      const phone = formEl.querySelector('.gf-phone').value.trim();
+      if(!bookTitle || !address || !phone){ alert('Kitap adı, adres ve telefon alanları zorunlu.'); return; }
+      try{
+        await setDoc(doc(db,'giftRequests',reqId), {
+          weekStart, giverUid, receiverUid,
+          giverName: usersCache[giverUid]?.name||'', receiverName: usersCache[receiverUid]?.name||'',
+          bookTitle, site, address, phone, updatedAt: new Date().toISOString()
+        });
+        await notifyUser(giverUid, `${myProfile.name} hediye kitap isteğini gönderdi: "${bookTitle}". "Hediye Kitap" sekmesinden bak.`);
+        showToast('İstek gönderildi.');
+        renderGiftsTab();
+      }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
+    });
+  });
+}
+
 /* ============ ÜYE: KİTAP KURTLARI ============ */
 async function renderMemberWorms(){
   const list = document.getElementById('mWormsList');
@@ -1093,9 +1526,11 @@ async function renderMemberWorms(){
 onAuthStateChanged(auth, async (user)=>{
   if(unsubUsers){ unsubUsers(); unsubUsers=null; }
   if(unsubToday){ unsubToday(); unsubToday=null; subscribedTodayKey=null; }
+  if(unsubNotifs){ unsubNotifs(); unsubNotifs=null; }
 
   if(!user){
     currentUid = null; myProfile = null;
+    document.getElementById('notifBadge').style.display='none';
     loadingScreen.style.display='none';
     authScreen.style.display='block';
     appRoot.style.display='none';
@@ -1107,10 +1542,15 @@ onAuthStateChanged(auth, async (user)=>{
   authScreen.style.display='none';
   appRoot.style.display='none';
 
-  const profSnap = await getDoc(doc(db,'users',user.uid));
+  let profSnap = await getDoc(doc(db,'users',user.uid));
   if(!profSnap.exists()){
-    await signOut(auth);
-    return;
+    const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'Üye');
+    const role = (user.email && user.email.toLowerCase()===ADMIN_EMAIL.toLowerCase()) ? 'admin' : 'member';
+    await setDoc(doc(db,'users',user.uid), {
+      name: defaultName, email: user.email||'', role, banned:false,
+      phone:'', address:'', photoURL: user.photoURL||'', createdAt: new Date().toISOString()
+    });
+    profSnap = await getDoc(doc(db,'users',user.uid));
   }
   myProfile = profSnap.data();
 
@@ -1132,6 +1572,7 @@ onAuthStateChanged(auth, async (user)=>{
     if(activeTab) renderTab(activeTab);
   });
   resubscribeToday();
+  subscribeNotifs();
 
   loadingScreen.style.display='none';
   appRoot.style.display='block';
