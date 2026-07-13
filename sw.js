@@ -1,5 +1,5 @@
-const CACHE = "kitap-kulubu-v2";
-const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./favicon.png", "./apple-touch-icon.png"];
+const CACHE = "kitap-kulubu-v3";
+const ASSETS = ["./manifest.json", "./icon-192.png", "./icon-512.png", "./favicon.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -15,9 +15,25 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  // Sadece kendi sitemizin statik dosyalarını önbellekle.
-  // Firebase / Google servislerine giden isteklere hiç dokunma (canlı veri akışını bozmasın).
   if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
+
+  const isHtml = e.request.mode === "navigate" || url.pathname.endsWith(".html") || url.pathname.endsWith("/");
+
+  if (isHtml) {
+    // HTML: her zaman önce ağdan taze sürümü çekmeye çalış, sadece ağ yoksa (offline) önbelleğe düş.
+    e.respondWith(
+      fetch(e.request, { cache: "no-store" })
+        .then((res) => {
+          const clone = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, clone));
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Statik dosyalar (ikonlar, manifest): önce önbellek, yoksa ağdan çek.
   e.respondWith(
     caches.match(e.request).then((cached) => {
       return (
