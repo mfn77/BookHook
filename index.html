@@ -1492,93 +1492,122 @@ async function renderGiftsTab(){
   content.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
   await loadDraws();
 
-  if(myProfile.role==='admin'){
-    intro.textContent = 'Bekleyen hediye kitap istekleri (tamamlananlar aşağıda geçmişte).';
-    let html = '';
-    if(drawsCache.length===0){
-      html = `<div class="empty-state">Henüz kura çekilmedi.</div>`;
-    } else {
-      for(const d of drawsCache){
-        if(!d.pairs) continue;
-        for(const p of d.pairs){
-          if(!p.receiverUid) continue;
-          const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
-          let req = null;
-          try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
-          if(req && req.shipped) continue; // tamamlananlar geçmişte gösterilir
-          html += `<div class="receipt"><div class="rweek"><span>${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: <span class="giver">${avatarHtml(p.giverUid)}${escapeHtml(p.giverName)}</span> → <span class="receiver">${avatarHtml(p.receiverUid)}${escapeHtml(p.receiverName)}</span></span></div>`;
-          html += req
-            ? `<div class="muted">Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>`
-            : `<div class="empty-note">Alıcı henüz istek formunu doldurmadı.</div>`;
-          html += `</div>`;
-        }
-      }
-      if(!html) html = `<div class="empty-state">Bekleyen hediye yok.</div>`;
-    }
-    content.innerHTML = html;
-    await renderGiftHistory(true);
-    return;
-  }
-
-  // ÜYE görünümü — sadece en son çekilen (en güncel) haftaya bakılır
-  intro.textContent = 'Bu haftanın hediye kitap durumu.';
-  let html = '';
-  if(drawsCache.length===0){
-    html = `<div class="empty-state"><span class="big">🎁</span>Henüz kura çekilmedi.</div>`;
-  } else {
+  let personalHtml = '';
+  if(drawsCache.length>0){
     const latest = drawsCache[0];
     let myPairAsReceiver = null, myPairAsGiver = null;
     (latest.pairs||[]).forEach(p=>{
       if(p.receiverUid===currentUid) myPairAsReceiver = p;
       if(p.giverUid===currentUid) myPairAsGiver = p;
     });
+    personalHtml = await buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver);
+  }
 
-    if(!myPairAsReceiver && !myPairAsGiver){
-      html = `<div class="empty-state"><span class="big">🎁</span>Bu hafta hediye kitap kazanamadınız.</div>`;
+  let adminHtml = '';
+  if(myProfile.role==='admin'){
+    adminHtml = await buildAdminPendingHtml();
+  }
+
+  intro.textContent = myProfile.role==='admin'
+    ? 'Önce kendi durumun (varsa), altında tüm kulübün bekleyen istekleri.'
+    : 'Bu haftanın hediye kitap durumu.';
+
+  if(!personalHtml && !adminHtml){
+    content.innerHTML = drawsCache.length===0
+      ? `<div class="empty-state"><span class="big">🎁</span>Henüz kura çekilmedi.</div>`
+      : `<div class="empty-state"><span class="big">🎁</span>Bu hafta hediye kitap kazanamadınız.</div>`;
+  } else {
+    let combined = personalHtml || '';
+    if(adminHtml){
+      combined += `<h3 style="font-family:'Fraunces',serif; margin:18px 0 8px;">Tüm Kulüp — Bekleyen İstekler</h3>${adminHtml}`;
+    }
+    content.innerHTML = combined;
+  }
+
+  wireGiftFormHandlers(content);
+  await renderGiftHistory(myProfile.role==='admin');
+}
+
+async function buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver){
+  let html = '';
+  if(myPairAsReceiver){
+    const p = myPairAsReceiver;
+    const reqId = `${latest.weekStart}_${p.giverUid}_${p.receiverUid}`;
+    let req = null;
+    try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+    if(req && req.received){
+      // tamamlandı, geçmişte görünür
+    } else if(req && req.shipped){
+      html += `<div class="receipt">
+        <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${avatarHtml(p.giverUid)}${escapeHtml(p.giverName)}</span> kitabını gönderdi 📮</div>
+        <div class="muted">Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></div>
+        <button class="primary gf-received" data-reqid="${reqId}" data-giver="${p.giverUid}" style="margin-top:8px;">📬 Kitabı Aldım</button>
+      </div>`;
     } else {
-      if(myPairAsReceiver){
-        const p = myPairAsReceiver;
-        const reqId = `${latest.weekStart}_${p.giverUid}_${p.receiverUid}`;
-        let req = null;
-        try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
-        if(!(req && req.shipped)){
-          const prefillName = req?.recipientName || myProfile.name || '';
-          const prefillAddress = req?.address || myProfile.address || '';
-          const prefillPhone = req?.phone || myProfile.phone || '';
-          html += `<div class="receipt">
-            <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${avatarHtml(p.giverUid)}${escapeHtml(p.giverName)}</span> sana kitap hediye edecek</div>
-            <div class="gift-form" data-week="${latest.weekStart}" data-giver="${p.giverUid}" data-receiver="${p.receiverUid}">
-              <div class="field"><label>Ad Soyad</label><input type="text" class="gf-name" value="${escapeHtml(prefillName)}" /></div>
-              <div class="field"><label>İstediğin kitap</label><input type="text" class="gf-book" value="${escapeHtml(req?.bookTitle||'')}" /></div>
-              <div class="field"><label>Site (opsiyonel)</label><input type="text" class="gf-site" value="${escapeHtml(req?.site||'')}" placeholder="örn. trendyol, d&r..." /></div>
-              <div class="field"><label>Adres</label><input type="text" class="gf-address" value="${escapeHtml(prefillAddress)}" /></div>
-              <div class="field"><label>Telefon</label><input type="text" class="gf-phone" value="${escapeHtml(prefillPhone)}" /></div>
-              <p class="muted" style="font-size:12px;">Bilgiler Profilim sekmendeki kayıtlı bilgilerden otomatik dolduruldu, istersen değiştirip yine de gönderebilirsin.</p>
-              <button class="primary gf-submit">${req?'Güncelle':'Gönder'}</button>
-              ${req?'<span class="chip ok" style="margin-left:8px;">Gönderildi</span>':''}
-            </div>
-          </div>`;
-        }
-      }
-      if(myPairAsGiver && myPairAsGiver.receiverUid){
-        const p = myPairAsGiver;
-        const reqId = `${latest.weekStart}_${p.giverUid}_${p.receiverUid}`;
-        let req = null;
-        try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
-        if(!(req && req.shipped)){
-          html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${avatarHtml(p.receiverUid)}${escapeHtml(p.receiverName)}'e kitap hediye edeceksin</div>`;
-          html += req
-            ? `<div class="muted">Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>İstediği kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>
-              <button class="secondary gf-shipped" data-reqid="${reqId}" data-receiver="${p.receiverUid}" style="margin-top:8px;">📮 Kitabı Gönderdim</button>`
-            : `<div class="empty-note">${escapeHtml(p.receiverName)} henüz istek formunu doldurmadı.</div>`;
-          html += `</div>`;
-        }
-      }
-      if(!html) html = `<div class="empty-state"><span class="big">✅</span>Bu haftaki hediyen tamamlandı, aşağıda "Geçmiş Hediyeler"de görebilirsin.</div>`;
+      const prefillName = req?.recipientName || myProfile.name || '';
+      const prefillAddress = req?.address || myProfile.address || '';
+      const prefillPhone = req?.phone || myProfile.phone || '';
+      html += `<div class="receipt">
+        <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${avatarHtml(p.giverUid)}${escapeHtml(p.giverName)}</span> sana kitap hediye edecek</div>
+        <div class="gift-form" data-week="${latest.weekStart}" data-giver="${p.giverUid}" data-receiver="${p.receiverUid}">
+          <div class="field"><label>Ad Soyad</label><input type="text" class="gf-name" value="${escapeHtml(prefillName)}" /></div>
+          <div class="field"><label>İstediğin kitap</label><input type="text" class="gf-book" value="${escapeHtml(req?.bookTitle||'')}" /></div>
+          <div class="field"><label>Site (opsiyonel)</label><input type="text" class="gf-site" value="${escapeHtml(req?.site||'')}" placeholder="örn. trendyol, d&r..." /></div>
+          <div class="field"><label>Adres</label><input type="text" class="gf-address" value="${escapeHtml(prefillAddress)}" /></div>
+          <div class="field"><label>Telefon</label><input type="text" class="gf-phone" value="${escapeHtml(prefillPhone)}" /></div>
+          <p class="muted" style="font-size:12px;">Bilgiler Profilim sekmendeki kayıtlı bilgilerden otomatik dolduruldu, istersen değiştirip yine de gönderebilirsin.</p>
+          <button class="primary gf-submit">${req?'Güncelle':'Gönder'}</button>
+        </div>
+      </div>`;
     }
   }
-  content.innerHTML = html;
+  if(myPairAsGiver && myPairAsGiver.receiverUid){
+    const p = myPairAsGiver;
+    const reqId = `${latest.weekStart}_${p.giverUid}_${p.receiverUid}`;
+    let req = null;
+    try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+    if(req && req.received){
+      // tamamlandı, geçmişte görünür
+    } else if(req && req.shipped){
+      html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${avatarHtml(p.receiverUid)}${escapeHtml(p.receiverName)}'e gönderdiğini işaretledin</div><div class="empty-note">📬 Alıcı onayı bekleniyor.</div></div>`;
+    } else if(req){
+      html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${avatarHtml(p.receiverUid)}${escapeHtml(p.receiverName)}'e kitap hediye edeceksin</div>
+        <div class="muted">Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>İstediği kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>
+        <button class="secondary gf-shipped" data-reqid="${reqId}" data-receiver="${p.receiverUid}" style="margin-top:8px;">📮 Kitabı Gönderdim</button>
+      </div>`;
+    } else {
+      html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${avatarHtml(p.receiverUid)}${escapeHtml(p.receiverName)}'e kitap hediye edeceksin</div><div class="empty-note">${escapeHtml(p.receiverName)} henüz istek formunu doldurmadı.</div></div>`;
+    }
+  }
+  return html;
+}
 
+async function buildAdminPendingHtml(){
+  if(drawsCache.length===0) return '';
+  let html = '';
+  for(const d of drawsCache){
+    if(!d.pairs) continue;
+    for(const p of d.pairs){
+      if(!p.receiverUid) continue;
+      const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
+      let req = null;
+      try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+      if(req && req.received) continue; // tamamlanan geçmişte gösterilir
+      html += `<div class="receipt"><div class="rweek"><span>${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: <span class="giver">${avatarHtml(p.giverUid)}${escapeHtml(p.giverName)}</span> → <span class="receiver">${avatarHtml(p.receiverUid)}${escapeHtml(p.receiverName)}</span></span></div>`;
+      if(req && req.shipped){
+        html += `<div class="empty-note">📮 Gönderildi, alıcı onayı bekleniyor.</div>`;
+      } else if(req){
+        html += `<div class="muted">Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>`;
+      } else {
+        html += `<div class="empty-note">Alıcı henüz istek formunu doldurmadı.</div>`;
+      }
+      html += `</div>`;
+    }
+  }
+  return html || `<div class="empty-state">Bekleyen hediye yok.</div>`;
+}
+
+function wireGiftFormHandlers(content){
   content.querySelectorAll('.gift-form').forEach(formEl=>{
     formEl.querySelector('.gf-submit').addEventListener('click', async ()=>{
       const weekStart = formEl.dataset.week, giverUid = formEl.dataset.giver, receiverUid = formEl.dataset.receiver;
@@ -1593,7 +1622,7 @@ async function renderGiftsTab(){
         await setDoc(doc(db,'giftRequests',reqId), {
           weekStart, giverUid, receiverUid,
           giverName: usersCache[giverUid]?.name||'', receiverName: usersCache[receiverUid]?.name||'',
-          recipientName, bookTitle, site, address, phone, shipped:false, updatedAt: new Date().toISOString()
+          recipientName, bookTitle, site, address, phone, shipped:false, received:false, updatedAt: new Date().toISOString()
         });
         await notifyUser(giverUid, `${myProfile.name} hediye kitap isteğini gönderdi: "${bookTitle}". "Hediye Kitap" sekmesinden bak.`);
         showToast('İstek gönderildi.');
@@ -1603,17 +1632,26 @@ async function renderGiftsTab(){
   });
   content.querySelectorAll('.gf-shipped').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
-      if(!confirm('Kitabı gönderdiğini onaylıyor musun? Onayladıktan sonra adres/telefon bilgileri kaybolur, bu hediye sadece "Geçmiş Hediyeler" kısmında görünür.')) return;
+      if(!confirm('Kitabı gönderdiğini onaylıyor musun? Alıcı, aldığını onayladığında bu hediye geçmişe taşınacak.')) return;
       try{
         await updateDoc(doc(db,'giftRequests',btn.dataset.reqid), {shipped:true, shippedAt:new Date().toISOString()});
-        await notifyUser(btn.dataset.receiver, `${myProfile.name} hediye kitabını gönderdi! 📮`);
+        await notifyUser(btn.dataset.receiver, `${myProfile.name} hediye kitabını gönderdi! Aldığında "Hediye Kitap" sekmesinden onaylamayı unutma.`);
         showToast('Kitap gönderildi olarak işaretlendi.');
         renderGiftsTab();
       }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); }
     });
   });
-
-  await renderGiftHistory(false);
+  content.querySelectorAll('.gf-received').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm('Kitabı aldığını onaylıyor musun? Onayladıktan sonra bu hediye geçmişe taşınacak.')) return;
+      try{
+        await updateDoc(doc(db,'giftRequests',btn.dataset.reqid), {received:true, receivedAt:new Date().toISOString()});
+        await notifyUser(btn.dataset.giver, `${myProfile.name} hediye kitabını aldığını onayladı. 🎉`);
+        showToast('Alındı olarak işaretlendi, teşekkürler!');
+        renderGiftsTab();
+      }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); }
+    });
+  });
 }
 
 async function renderGiftHistory(isAdminView){
@@ -1622,12 +1660,12 @@ async function renderGiftHistory(isAdminView){
   let items = [];
   try{
     if(isAdminView){
-      const snap = await getDocs(query(collection(db,'giftRequests'), where('shipped','==',true)));
+      const snap = await getDocs(query(collection(db,'giftRequests'), where('received','==',true)));
       snap.forEach(d=> items.push(d.data()));
     } else {
       const [snapG, snapR] = await Promise.all([
-        getDocs(query(collection(db,'giftRequests'), where('giverUid','==',currentUid), where('shipped','==',true))),
-        getDocs(query(collection(db,'giftRequests'), where('receiverUid','==',currentUid), where('shipped','==',true)))
+        getDocs(query(collection(db,'giftRequests'), where('giverUid','==',currentUid), where('received','==',true))),
+        getDocs(query(collection(db,'giftRequests'), where('receiverUid','==',currentUid), where('received','==',true)))
       ]);
       const seen = new Set();
       [...snapG.docs, ...snapR.docs].forEach(d=>{
@@ -1635,10 +1673,10 @@ async function renderGiftHistory(isAdminView){
       });
     }
   }catch(e){ host.innerHTML = `<p class="muted">Yüklenemedi.</p>`; return; }
-  items.sort((a,b)=> new Date(b.shippedAt||0) - new Date(a.shippedAt||0));
+  items.sort((a,b)=> new Date(b.receivedAt||0) - new Date(a.receivedAt||0));
   if(items.length===0){ host.innerHTML = `<p class="muted">Henüz tamamlanmış hediye yok.</p>`; return; }
   host.innerHTML = items.map(it=>{
-    const dt = it.shippedAt ? new Date(it.shippedAt) : null;
+    const dt = it.receivedAt ? new Date(it.receivedAt) : null;
     const dtLabel = dt && !isNaN(dt.getTime()) ? `${pad(dt.getDate())}.${pad(dt.getMonth()+1)}.${dt.getFullYear()}` : '';
     return `<div class="member-row" style="display:block;">
       <div class="muted mono" style="font-size:10.5px;">${dtLabel}</div>
