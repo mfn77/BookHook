@@ -243,13 +243,13 @@
 <div id="appRoot" style="display:none;">
   <header class="top">
     <div>
-      <p class="eyebrow">Kitap Kulübü &middot; Haftalık Okuma Defteri</p>
       <h1><img src="./icon-192.png" alt="" style="width:28px;height:28px;border-radius:7px;vertical-align:-6px;margin-right:6px;" />BookHook</h1>
-      <div class="weekrange mono" id="weekRangeLabel">—</div>
     </div>
     <div class="whoami">
-      <div id="whoamiName">—</div>
-      <div><span class="rolechip" id="whoamiRole">—</span></div>
+      <div id="whoamiClickable" style="cursor:pointer;">
+        <div id="whoamiName">—</div>
+        <div><span class="rolechip" id="whoamiRole">—</span></div>
+      </div>
       <div style="margin-top:6px; display:flex; gap:6px; justify-content:flex-end;">
         <button id="notifBellBtn" style="position:relative; background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font-size:16px; color:var(--ink);">🔔<span id="hamburgerBadge" style="display:none; position:absolute; top:-6px; right:-6px; background:var(--cloth); color:#fff; font-size:9px; border-radius:10px; padding:1px 4px; font-family:'Roboto Mono',monospace;">0</span></button>
         <button id="hamburgerBtn" style="background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font-size:16px; color:var(--ink);">☰</button>
@@ -585,12 +585,28 @@ function setTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
   try{ localStorage.setItem('bookhook_theme', theme); }catch(e){}
 }
+function getAutoThemeEnabled(){ try{ return localStorage.getItem('bookhook_theme_auto')==='true'; }catch(e){ return false; } }
+function setAutoThemeEnabled(v){ try{ localStorage.setItem('bookhook_theme_auto', v?'true':'false'); }catch(e){} }
+function computeAutoTheme(){
+  const h = new Date().getHours();
+  return (h>=8 && h<20) ? 'light' : 'dark';
+}
+function applyAutoThemeIfEnabled(){
+  if(getAutoThemeEnabled()){
+    document.documentElement.setAttribute('data-theme', computeAutoTheme());
+  }
+}
 function initTheme(){
+  if(getAutoThemeEnabled()){
+    document.documentElement.setAttribute('data-theme', computeAutoTheme());
+    return;
+  }
   const stored = getStoredTheme();
   const theme = stored || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   document.documentElement.setAttribute('data-theme', theme);
 }
 initTheme();
+setInterval(applyAutoThemeIfEnabled, 5*60*1000);
 
 function pad(n){return n<10?"0"+n:""+n;}
 function toStr(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
@@ -922,11 +938,19 @@ function buildHamburgerMenu(){
   const items = myProfile.role==='admin' ? HAMBURGER_ADMIN_EXTRA : HAMBURGER_MEMBER_EXTRA;
   const menu = document.getElementById('hamburgerMenu');
   const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  const isAuto = getAutoThemeEnabled();
   menu.innerHTML = items.map(it=>`<button data-tab="${it.id}">${it.label}</button>`).join('')
-    + `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--line);">
+    + `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--line); ${isAuto?'opacity:0.5;':''}">
         <span style="font-family:'Roboto',sans-serif; font-size:14px; color:var(--ink);">🌙 Karanlık Tema</span>
         <label class="theme-switch">
-          <input type="checkbox" id="themeToggleCheckbox" ${isDark?'checked':''}>
+          <input type="checkbox" id="themeToggleCheckbox" ${isDark?'checked':''} ${isAuto?'disabled':''}>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--line);">
+        <span style="font-family:'Roboto',sans-serif; font-size:13px; color:var(--ink); max-width:150px;">🕗 Saate Göre Otomatik (08:00-20:00 aydınlık)</span>
+        <label class="theme-switch">
+          <input type="checkbox" id="autoThemeCheckbox" ${isAuto?'checked':''}>
           <span class="slider"></span>
         </label>
       </div>`;
@@ -939,7 +963,20 @@ function buildHamburgerMenu(){
   document.getElementById('themeToggleCheckbox').addEventListener('change', (e)=>{
     setTheme(e.target.checked ? 'dark' : 'light');
   });
+  document.getElementById('autoThemeCheckbox').addEventListener('change', (e)=>{
+    setAutoThemeEnabled(e.target.checked);
+    if(e.target.checked){
+      document.documentElement.setAttribute('data-theme', computeAutoTheme());
+    } else {
+      setTheme(document.documentElement.getAttribute('data-theme'));
+    }
+    buildHamburgerMenu();
+  });
 }
+document.getElementById('whoamiClickable').addEventListener('click', ()=>{
+  document.getElementById('hamburgerMenu').style.display='none';
+  if(document.getElementById('tab-profile')) switchTab('profile');
+});
 document.getElementById('notifBellBtn').addEventListener('click', (e)=>{
   e.stopPropagation();
   document.getElementById('hamburgerMenu').style.display='none';
@@ -1039,9 +1076,6 @@ function renderTab(id){
 }
 
 function renderHeader(){
-  const monday = getMonday(nowLogical());
-  const dates = weekDates(monday);
-  document.getElementById('weekRangeLabel').textContent = `${fmtShort(dates[0])} — ${fmtShort(dates[6])}`;
   document.getElementById('whoamiName').innerHTML = avatarHtmlFromProfile(myProfile,18) + escapeHtml(myProfile.name);
   document.getElementById('whoamiRole').textContent = myProfile.role==='admin' ? 'YÖNETİCİ' : 'ÜYE';
 }
