@@ -96,6 +96,8 @@
   .stamp-mini.clickable{cursor:pointer;}
   .stamp-mini.auto{opacity:0.6; box-shadow:inset 0 0 0 2px rgba(255,255,255,0.55);}
   button:disabled{opacity:0.4; cursor:default;}
+  .user-chip{cursor:pointer; border-radius:6px; padding:1px 3px; margin:-1px -3px;}
+  .user-chip:hover{background:rgba(184,145,47,0.18);}
   button.primary{
     font-family:'Fraunces', serif; font-weight:600; font-size:14.5px; background:var(--ink); color:var(--card);
     border:none; border-radius:8px; padding:11px 16px; cursor:pointer;
@@ -196,7 +198,7 @@
     <div class="whoami">
       <div id="whoamiName">—</div>
       <div><span class="rolechip" id="whoamiRole">—</span></div>
-      <div style="margin-top:4px;"><span id="notifBadge" class="chip danger" style="display:none;">🔔 0</span></div>
+      <div style="margin-top:4px;"><span id="notifBadge" class="chip danger" style="display:none; cursor:pointer;">🔔 0</span></div>
       <button id="logoutBtn">Çıkış</button>
     </div>
   </header>
@@ -399,6 +401,8 @@
         <div class="field"><label>Adın</label><input type="text" id="profileName" /></div>
         <div class="field"><label>Telefon</label><input type="text" id="profilePhone" /></div>
         <div class="field"><label>Adres</label><input type="text" id="profileAddress" /></div>
+        <div class="field"><label>Hakkımda (kısa bir bilgi, herkes görebilir)</label><input type="text" id="profileBio" placeholder="örn. bilim kurgu ve tarih kitapları severim" /></div>
+        <div class="field"><label>Şu An Okuduğun Kitap</label><input type="text" id="profileReading" placeholder="örn. Suç ve Ceza" /></div>
         <div class="auth-error" id="profileError"></div>
         <button class="primary" id="profileSaveBtn">Bilgileri Kaydet</button>
       </div>
@@ -427,10 +431,55 @@
         <div id="notifsList"></div>
       </div>
     </section>
+
+    <!-- ORTAK: KİTAP ÖNERİLERİ -->
+    <section class="tab" id="tab-recs">
+      <div class="card">
+        <h2>📚 Şahsi Kitap Önerisi Gönder</h2>
+        <p class="muted">Bu öneri ve ona yapılan yorumları sadece sen ve seçtiğin kişi görebilir — yönetici de dahil kimse başkası göremez.</p>
+        <div class="field"><label>Kime?</label>
+          <select id="recPersonalTarget" style="width:100%; padding:10px; border:1.5px solid var(--line); border-radius:8px; font-family:'Source Serif 4',serif; font-size:15px; background:#fff;"></select>
+        </div>
+        <div class="field"><label>Kitap Adı</label><input type="text" id="recPersonalBook" /></div>
+        <div class="field"><label>Not (opsiyonel)</label><input type="text" id="recPersonalNote" placeholder="neden önerdiğini kısaca yaz" /></div>
+        <button class="primary" id="recPersonalSendBtn">Gönder</button>
+      </div>
+
+      <div class="card">
+        <h2>Şahsi Önerilerim</h2>
+        <div id="recPersonalList"></div>
+      </div>
+
+      <div class="card">
+        <h2>📢 Gruba Kitap Önerisi Gönder</h2>
+        <p class="muted">Bu öneriyi ve yorumları kulüpteki herkes görebilir.</p>
+        <div class="field"><label>Kitap Adı</label><input type="text" id="recGroupBook" /></div>
+        <div class="field"><label>Not (opsiyonel)</label><input type="text" id="recGroupNote" placeholder="neden önerdiğini kısaca yaz" /></div>
+        <button class="primary" id="recGroupSendBtn">Gruba Gönder</button>
+      </div>
+
+      <div class="card">
+        <h2>Grup Önerileri</h2>
+        <div id="recGroupList"></div>
+      </div>
+    </section>
   </main>
 </div>
 
 <div id="toastHost"></div>
+
+<div id="profileModal" style="display:none; position:fixed; inset:0; background:rgba(36,49,75,0.55); z-index:200; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:360px; width:100%; position:relative; margin-bottom:0;">
+    <button id="profileModalClose" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-70);">✕</button>
+    <div style="text-align:center;">
+      <img id="profileModalPhoto" src="./icon-192.png" alt="" style="width:88px;height:88px;border-radius:50%;object-fit:cover;box-shadow:var(--shadow);" />
+      <h2 id="profileModalName" style="margin:10px 0 4px; font-size:20px;"></h2>
+      <span class="role-chip" id="profileModalRole"></span>
+    </div>
+    <div class="muted" id="profileModalBio" style="margin-top:14px;"></div>
+    <div class="muted" id="profileModalReading" style="margin-top:8px;"></div>
+  </div>
+</div>
 
 <script type="module">
 /* ================= FIREBASE AYARLARI — BURAYI DOLDUR ================= */
@@ -443,11 +492,14 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, addDoc,
-  collection, onSnapshot, query, orderBy, limit, where, runTransaction
+  collection, onSnapshot, query, orderBy, limit, where, runTransaction, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getStorage, ref as storageRef, uploadBytes, getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+import {
+  getMessaging, getToken, onMessage, isSupported as isMessagingSupported
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDpRov8Qs7rPQ7lILyhs7DuRHdQpTJZWJ4",
@@ -458,6 +510,7 @@ const firebaseConfig = {
   appId: "1:611511209042:web:3fa319fb5ee6ca5daba38b"
 };
 const ADMIN_EMAIL = "furkan.nayman77@gmail.com"; // Bu email ile üye olan kişi otomatik YÖNETİCİ olur
+const FCM_VAPID_KEY = "BURAYA_VAPID_KEY_YAZ"; // Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -523,6 +576,27 @@ function avatarHtmlFromProfile(profile, size){
   return `<span style="display:inline-flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:var(--gold);color:#fff;font-size:${Math.round(size*0.5)}px;font-family:'Fraunces',serif;font-weight:700;vertical-align:middle;margin-right:6px;">${escapeHtml(initial)}</span>`;
 }
 function avatarHtml(uid, size){ return avatarHtmlFromProfile(usersCache[uid], size); }
+function userChipHtml(uid, size){
+  const u = usersCache[uid];
+  const name = (u && u.name) || '?';
+  return `<span class="user-chip" data-uid="${uid}">${avatarHtmlFromProfile(u,size)}${escapeHtml(name)}</span>`;
+}
+function openProfileModal(uid){
+  const u = usersCache[uid];
+  if(!u) return;
+  document.getElementById('profileModalPhoto').src = u.photoURL || './icon-192.png';
+  document.getElementById('profileModalName').textContent = u.name || '?';
+  document.getElementById('profileModalRole').textContent = u.role==='admin' ? 'YÖNETİCİ' : 'ÜYE';
+  document.getElementById('profileModalBio').textContent = u.bio ? u.bio : 'Henüz bir bilgi eklenmemiş.';
+  document.getElementById('profileModalReading').textContent = u.currentlyReading ? `📖 Şu an okuyor: ${u.currentlyReading}` : '📖 Şu an ne okuduğunu paylaşmamış.';
+  document.getElementById('profileModal').style.display='flex';
+}
+document.getElementById('profileModalClose').addEventListener('click', ()=>{ document.getElementById('profileModal').style.display='none'; });
+document.getElementById('profileModal').addEventListener('click', (e)=>{ if(e.target.id==='profileModal') document.getElementById('profileModal').style.display='none'; });
+document.body.addEventListener('click', (e)=>{
+  const chip = e.target.closest('.user-chip');
+  if(chip && chip.dataset.uid) openProfileModal(chip.dataset.uid);
+});
 
 function showToast(msg){
   const host = document.getElementById('toastHost');
@@ -535,14 +609,14 @@ function showToast(msg){
 }
 
 /* ============ BİLDİRİM SİSTEMİ (uygulama içi) ============ */
-async function notifyUser(uid, message){
+async function notifyUser(uid, message, linkTab){
   if(!uid) return;
-  try{ await addDoc(collection(db,'notifications',uid,'items'), { message, read:false, createdAt:new Date().toISOString() }); }
+  try{ await addDoc(collection(db,'notifications',uid,'items'), { message, linkTab: linkTab||null, read:false, createdAt:new Date().toISOString() }); }
   catch(e){ /* bildirim gönderilemese de ana işlemi bozmasın */ }
 }
-async function notifyAdmins(message){
+async function notifyAdmins(message, linkTab){
   const adminUids = Object.keys(usersCache).filter(u=>usersCache[u].role==='admin' && !usersCache[u].banned);
-  await Promise.all(adminUids.map(uid=>notifyUser(uid,message)));
+  await Promise.all(adminUids.map(uid=>notifyUser(uid,message,linkTab)));
 }
 function subscribeNotifs(){
   if(unsubNotifs) unsubNotifs();
@@ -554,6 +628,35 @@ function subscribeNotifs(){
     else { badge.style.display='none'; }
     if(activeTab==='notifs') renderNotifsTab();
   });
+}
+
+/* ============ GERÇEK TELEFON BİLDİRİMİ (Firebase Cloud Messaging) ============ */
+async function setupPushNotifications(){
+  try{
+    const supported = await isMessagingSupported();
+    if(!supported) return; // Safari eski sürüm / desteklenmeyen tarayıcı vs.
+    if(FCM_VAPID_KEY.includes('BURAYA_')) return; // henüz kurulmamış, sessizce atla
+
+    if(Notification.permission === 'default'){
+      const perm = await Notification.requestPermission();
+      if(perm !== 'granted') return;
+    }
+    if(Notification.permission !== 'granted') return;
+
+    const swReg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, { vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: swReg });
+    if(token){
+      await updateDoc(doc(db,'users',currentUid), { fcmTokens: arrayUnion(token) }).catch(()=>{});
+    }
+    onMessage(messaging, (payload)=>{
+      // Uygulama açıkken gelen bildirimler (foreground) tarayıcı tarafından otomatik gösterilmez, biz gösteriyoruz.
+      const title = payload.notification?.title || 'BookHook';
+      const body = payload.notification?.body || '';
+      showToast(`🔔 ${body || title}`);
+      if(activeTab) renderTab(activeTab);
+    });
+  }catch(e){ /* push kurulamazsa uygulama içi bildirimler zaten çalışmaya devam eder */ }
 }
 async function renderNotifsTab(){
   const box = document.getElementById('notifsList');
@@ -567,12 +670,22 @@ async function renderNotifsTab(){
   box.innerHTML = items.map(it=>{
     const dt = new Date(it.createdAt);
     const dtLabel = isNaN(dt.getTime()) ? '' : `${pad(dt.getDate())}.${pad(dt.getMonth()+1)} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-    return `<div class="member-row" style="display:block; ${it.read?'opacity:0.55;':''}">
+    const clickable = it.linkTab ? ' style="cursor:pointer;" data-notif-id="'+it.id+'" data-notif-tab="'+it.linkTab+'"' : '';
+    return `<div class="member-row notif-row" style="display:block; ${it.read?'opacity:0.55;':''}"${clickable}>
       <div class="muted mono" style="font-size:10.5px;">${dtLabel}</div>
       <div>${escapeHtml(it.message)}</div>
     </div>`;
   }).join('');
+  box.querySelectorAll('.notif-row[data-notif-tab]').forEach(row=>{
+    row.addEventListener('click', async ()=>{
+      const tab = row.dataset.notifTab;
+      const id = row.dataset.notifId;
+      try{ await updateDoc(doc(db,'notifications',currentUid,'items',id), {read:true}); }catch(e){}
+      if(document.getElementById('tab-'+tab)) switchTab(tab);
+    });
+  });
 }
+document.getElementById('notifBadge').addEventListener('click', ()=>{ if(document.getElementById('tab-notifs')) switchTab('notifs'); });
 document.getElementById('markAllReadBtn').addEventListener('click', async ()=>{
   let snap;
   try{ snap = await getDocs(collection(db,'notifications',currentUid,'items')); }catch(e){ return; }
@@ -671,6 +784,7 @@ const ADMIN_TABS = [
   {id:'members', label:'Üyeler'},
   {id:'worms', label:'Kitap Kurtları'},
   {id:'rules', label:'Grup Kuralları'},
+  {id:'recs', label:'Kitap Önerileri'},
   {id:'profile', label:'Profilim'},
   {id:'notifs', label:'Bildirimler'}
 ];
@@ -681,6 +795,7 @@ const MEMBER_TABS = [
   {id:'gifts', label:'Hediye Kitap'},
   {id:'mworms', label:'Kitap Kurtları'},
   {id:'rules', label:'Grup Kuralları'},
+  {id:'recs', label:'Kitap Önerileri'},
   {id:'profile', label:'Profilim'},
   {id:'notifs', label:'Bildirimler'}
 ];
@@ -720,6 +835,7 @@ function renderTab(id){
   else if(id==='rules') renderRulesTab();
   else if(id==='profile') renderProfileTab();
   else if(id==='notifs') renderNotifsTab();
+  else if(id==='recs') renderRecsTab();
 }
 
 function renderHeader(){
@@ -799,8 +915,8 @@ async function finalizeWeek(monday, force){
   if(didWrite){
     const rangeLabel = `${fmtShort(data.weekStart)}–${fmtShort(data.weekEnd)}`;
     await Promise.all(pairs.map(async p=>{
-      if(p.giverUid) await notifyUser(p.giverUid, `Kura çekildi (${rangeLabel}): cezalısın, ${p.receiverName||'—'} için kitap hediyesi vereceksin. "Hediye Kitap" sekmesine bak.`);
-      if(p.receiverUid) await notifyUser(p.receiverUid, `Kura çekildi (${rangeLabel}): tebrikler, ${p.giverName} sana kitap hediye edecek! "Hediye Kitap" sekmesinden isteğini gönderebilirsin.`);
+      if(p.giverUid) await notifyUser(p.giverUid, `Kura çekildi (${rangeLabel}): cezalısın, ${p.receiverName||'—'} için kitap hediyesi vereceksin. "Hediye Kitap" sekmesine bak.`, 'gifts');
+      if(p.receiverUid) await notifyUser(p.receiverUid, `Kura çekildi (${rangeLabel}): tebrikler, ${p.giverName} sana kitap hediye edecek! "Hediye Kitap" sekmesinden isteğini gönderebilirsin.`, 'gifts');
     }));
   }
   return {already:!didWrite, data};
@@ -835,12 +951,16 @@ function resubscribeToday(){
     if(activeTab) renderTab(activeTab);
   });
 }
-setInterval(()=>{
+setInterval(async ()=>{
   if(!currentUid) return;
   if(todayStr() !== subscribedTodayKey){
     resubscribeToday();
     renderHeader();
     if(activeTab) renderTab(activeTab);
+    if(myProfile && myProfile.role==='admin'){
+      const n = await autoFillPastDays(3);
+      if(n>0) showToast(`${n} eksik işaretleme otomatik "okumadı" olarak dolduruldu.`);
+    }
   }
 }, 5*60*1000);
 
@@ -856,7 +976,7 @@ function renderAdminToday(){
     return `
     <div class="member-row">
       <div>
-        <div class="member-name">${avatarHtml(uid)}${escapeHtml(u.name)} ${u.role==='admin'?'<span class="role-chip">yönetici</span>':''}</div>
+        <div class="member-name">${userChipHtml(uid)} ${u.role==='admin'?'<span class="role-chip">yönetici</span>':''}</div>
       </div>
       <div class="stamp-btns">
         <button class="stamp-btn read ${st==='read'?'selected':''}" data-uid="${uid}" data-status="read">✓</button>
@@ -928,7 +1048,7 @@ async function renderEditPastTab(){
     const st = rec ? rec.status : undefined;
     const autoTag = rec && rec.auto ? '<span class="chip pending" title="Otomatik işaretlenmiş, henüz kendisi cevap vermemiş">otomatik</span>' : (!rec ? '<span class="chip pending">cevap yok</span>' : '');
     return `<div class="member-row">
-      <div><div class="member-name">${avatarHtml(uid)}${escapeHtml(usersCache[uid].name)}</div><div class="member-meta">${autoTag}</div></div>
+      <div><div class="member-name">${userChipHtml(uid)}</div><div class="member-meta">${autoTag}</div></div>
       <div class="stamp-btns">
         <button class="stamp-btn read ${st==='read'?'selected':''}" data-uid="${uid}" data-status="read">✓</button>
         <button class="stamp-btn skip ${st==='skip'?'selected':''}" data-uid="${uid}" data-status="skip">✕</button>
@@ -967,7 +1087,7 @@ async function renderAdminWeek(){
       else if(miss===1) statusChip = `<span class="chip warn">Pas (1)</span>`;
       else statusChip = `<span class="chip ok">Temiz</span>`;
     }
-    return `<tr><td class="name-cell">${avatarHtml(uid,18)}${escapeHtml(usersCache[uid].name)}</td>${cells}<td>${statusChip}</td></tr>`;
+    return `<tr><td class="name-cell">${userChipHtml(uid,18)}</td>${cells}<td>${statusChip}</td></tr>`;
   }).join('');
   table.innerHTML = head + rows;
 }
@@ -1051,7 +1171,7 @@ function renderManualTab(){
       else if(miss===1) statusChip = `<span class="chip warn">Pas (1)</span>`;
       else statusChip = `<span class="chip ok">Temiz</span>`;
     }
-    return `<tr><td class="name-cell">${avatarHtml(uid,18)}${escapeHtml(usersCache[uid].name)}</td>${cells}<td>${statusChip}</td></tr>`;
+    return `<tr><td class="name-cell">${userChipHtml(uid,18)}</td>${cells}<td>${statusChip}</td></tr>`;
   }).join('');
   table.innerHTML = head + rows;
   table.querySelectorAll('.stamp-mini.clickable').forEach(cell=>{
@@ -1130,7 +1250,7 @@ async function renderAdminMembers(){
     const isSelf = uid===currentUid;
     return `<div class="member-row">
       <div>
-        <div class="member-name">${avatarHtml(uid)}${escapeHtml(u.name)} ${u.role==='admin'?'<span class="role-chip">yönetici</span>':''} ${u.banned && !u.deleted?'<span class="chip banned">BANLI</span>':''} ${u.deleted?'<span class="chip banned">SİLİNDİ</span>':''}</div>
+        <div class="member-name">${userChipHtml(uid)} ${u.role==='admin'?'<span class="role-chip">yönetici</span>':''} ${u.banned && !u.deleted?'<span class="chip banned">BANLI</span>':''} ${u.deleted?'<span class="chip banned">SİLİNDİ</span>':''}</div>
         <div class="member-meta">${escapeHtml(u.email||'')}</div>
       </div>
       <div class="row" style="flex:0 0 auto; width:auto; flex-wrap:wrap;">
@@ -1190,7 +1310,7 @@ async function renderAdminWorms(){
   results.sort((a,b)=>b.streak-a.streak);
   list.innerHTML = results.map(r=>{
     const badge = r.streak>=30 ? `<span title="Kitap kurdu">🐛</span>` : '';
-    return `<div class="worm-row"><div>${badge} ${avatarHtml(r.uid)}${escapeHtml(r.name)}</div><div class="worm-streak">${r.streak} gün</div></div>`;
+    return `<div class="worm-row"><div>${badge} ${userChipHtml(r.uid)}</div><div class="worm-streak">${r.streak} gün</div></div>`;
   }).join('');
 }
 
@@ -1215,8 +1335,8 @@ function renderMemberSurvey(){
   memberWeekOffset = 0;
   renderMemberOwnWeek();
 }
-document.getElementById('mReadBtn').addEventListener('click', async ()=>{ await markStatus(currentUid,'read'); renderMemberSurvey(); notifyAdmins(`${myProfile.name} bugün "Okudum" işaretledi.`); });
-document.getElementById('mSkipBtn').addEventListener('click', async ()=>{ await markStatus(currentUid,'skip'); renderMemberSurvey(); notifyAdmins(`${myProfile.name} bugün "Okumadım" işaretledi.`); });
+document.getElementById('mReadBtn').addEventListener('click', async ()=>{ await markStatus(currentUid,'read'); renderMemberSurvey(); notifyAdmins(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week'); });
+document.getElementById('mSkipBtn').addEventListener('click', async ()=>{ await markStatus(currentUid,'skip'); renderMemberSurvey(); notifyAdmins(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week'); });
 
 async function renderMemberOwnWeek(){
   const baseMonday = getMonday(nowLogical());
@@ -1263,7 +1383,7 @@ async function renderMemberWeekAll(){
       else if(miss===1) statusChip = `<span class="chip warn">Pas (1)</span>`;
       else statusChip = `<span class="chip ok">Temiz</span>`;
     }
-    return `<tr><td class="name-cell">${avatarHtml(uid,18)}${escapeHtml(usersCache[uid].name)}</td>${cells}<td>${statusChip}</td></tr>`;
+    return `<tr><td class="name-cell">${userChipHtml(uid,18)}</td>${cells}<td>${statusChip}</td></tr>`;
   }).join('');
   table.innerHTML = head + rows;
 }
@@ -1296,6 +1416,8 @@ function renderProfileTab(){
   document.getElementById('profileName').value = myProfile.name || '';
   document.getElementById('profilePhone').value = myProfile.phone || '';
   document.getElementById('profileAddress').value = myProfile.address || '';
+  document.getElementById('profileBio').value = myProfile.bio || '';
+  document.getElementById('profileReading').value = myProfile.currentlyReading || '';
   document.getElementById('profilePhotoPreview').src = myProfile.photoURL || './icon-192.png';
   document.getElementById('profileError').textContent = '';
   document.getElementById('passwordError').textContent = '';
@@ -1341,13 +1463,15 @@ document.getElementById('profileSaveBtn').addEventListener('click', async ()=>{
   const name = document.getElementById('profileName').value.trim();
   const phone = document.getElementById('profilePhone').value.trim();
   const address = document.getElementById('profileAddress').value.trim();
+  const bio = document.getElementById('profileBio').value.trim();
+  const currentlyReading = document.getElementById('profileReading').value.trim();
   const errBox = document.getElementById('profileError');
   errBox.textContent = '';
   if(!name){ errBox.textContent = 'İsim boş olamaz.'; return; }
   try{
-    await updateDoc(doc(db,'users',currentUid), {name, phone, address});
-    myProfile.name = name; myProfile.phone = phone; myProfile.address = address;
-    document.getElementById('whoamiName').textContent = name;
+    await updateDoc(doc(db,'users',currentUid), {name, phone, address, bio, currentlyReading});
+    myProfile.name = name; myProfile.phone = phone; myProfile.address = address; myProfile.bio = bio; myProfile.currentlyReading = currentlyReading;
+    document.getElementById('whoamiName').innerHTML = avatarHtmlFromProfile(myProfile,18) + escapeHtml(myProfile.name);
     showToast('Profilin güncellendi.');
   }catch(err){ errBox.textContent = 'Kaydedilemedi: ' + (err.message||err); }
 });
@@ -1436,7 +1560,7 @@ document.getElementById('ruleRequestBtn').addEventListener('click', async ()=>{
     await addDoc(collection(db,'ruleRequests'), { uid:currentUid, name: myProfile.name, text, status:'pending', createdAt:new Date().toISOString() });
     document.getElementById('ruleRequestText').value='';
     showToast('Öneri gönderildi.');
-    if(myProfile.role!=='admin') await notifyAdmins(`${myProfile.name} yeni bir kural önerisi gönderdi: "${text}"`);
+    if(myProfile.role!=='admin') await notifyAdmins(`${myProfile.name} yeni bir kural önerisi gönderdi: "${text}"`, 'rules');
     renderRulesTab();
   }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
 });
@@ -1462,7 +1586,7 @@ async function renderRuleRequestsList(){
         <button class="secondary tiny" data-reject="${it.id}">Reddet</button>
       </div>` : '';
     return `<div class="member-row" style="display:block;">
-      <div class="member-name">${avatarHtml(it.uid)}${escapeHtml(it.name)} ${statusChip}</div>
+      <div class="member-name">${userChipHtml(it.uid)} ${statusChip}</div>
       <div class="muted" style="margin-top:4px;">${escapeHtml(it.text)}</div>
       ${adminBtns}
     </div>`;
@@ -1471,7 +1595,7 @@ async function renderRuleRequestsList(){
     btn.addEventListener('click', async ()=>{
       const it = items.find(x=>x.id===btn.dataset.approve);
       await updateDoc(doc(db,'ruleRequests',btn.dataset.approve), {status:'approved'});
-      if(it) await notifyUser(it.uid, `Kural önerin onaylandı: "${it.text}"`);
+      if(it) await notifyUser(it.uid, `Kural önerin onaylandı: "${it.text}"`, 'rules');
       renderRuleRequestsList();
     });
   });
@@ -1479,7 +1603,7 @@ async function renderRuleRequestsList(){
     btn.addEventListener('click', async ()=>{
       const it = items.find(x=>x.id===btn.dataset.reject);
       await updateDoc(doc(db,'ruleRequests',btn.dataset.reject), {status:'rejected'});
-      if(it) await notifyUser(it.uid, `Kural önerin reddedildi: "${it.text}"`);
+      if(it) await notifyUser(it.uid, `Kural önerin reddedildi: "${it.text}"`, 'rules');
       renderRuleRequestsList();
     });
   });
@@ -1539,7 +1663,7 @@ async function buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver){
       // tamamlandı, geçmişte görünür
     } else if(req && req.shipped){
       html += `<div class="receipt">
-        <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${avatarHtml(p.giverUid)}${escapeHtml(p.giverName)}</span> kitabını gönderdi 📮</div>
+        <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${userChipHtml(p.giverUid)}</span> kitabını gönderdi 📮</div>
         <div class="muted">Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></div>
         <button class="primary gf-received" data-reqid="${reqId}" data-giver="${p.giverUid}" style="margin-top:8px;">📬 Kitabı Aldım</button>
       </div>`;
@@ -1548,7 +1672,7 @@ async function buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver){
       const prefillAddress = req?.address || myProfile.address || '';
       const prefillPhone = req?.phone || myProfile.phone || '';
       html += `<div class="receipt">
-        <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${avatarHtml(p.giverUid)}${escapeHtml(p.giverName)}</span> sana kitap hediye edecek</div>
+        <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${userChipHtml(p.giverUid)}</span> sana kitap hediye edecek</div>
         <div class="gift-form" data-week="${latest.weekStart}" data-giver="${p.giverUid}" data-receiver="${p.receiverUid}">
           <div class="field"><label>Ad Soyad</label><input type="text" class="gf-name" value="${escapeHtml(prefillName)}" /></div>
           <div class="field"><label>İstediğin kitap</label><input type="text" class="gf-book" value="${escapeHtml(req?.bookTitle||'')}" /></div>
@@ -1569,14 +1693,14 @@ async function buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver){
     if(req && req.received){
       // tamamlandı, geçmişte görünür
     } else if(req && req.shipped){
-      html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${avatarHtml(p.receiverUid)}${escapeHtml(p.receiverName)}'e gönderdiğini işaretledin</div><div class="empty-note">📬 Alıcı onayı bekleniyor.</div></div>`;
+      html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${userChipHtml(p.receiverUid)}'e gönderdiğini işaretledin</div><div class="empty-note">📬 Alıcı onayı bekleniyor.</div></div>`;
     } else if(req){
-      html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${avatarHtml(p.receiverUid)}${escapeHtml(p.receiverName)}'e kitap hediye edeceksin</div>
+      html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${userChipHtml(p.receiverUid)}'e kitap hediye edeceksin</div>
         <div class="muted">Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>İstediği kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>
         <button class="secondary gf-shipped" data-reqid="${reqId}" data-receiver="${p.receiverUid}" style="margin-top:8px;">📮 Kitabı Gönderdim</button>
       </div>`;
     } else {
-      html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${avatarHtml(p.receiverUid)}${escapeHtml(p.receiverName)}'e kitap hediye edeceksin</div><div class="empty-note">${escapeHtml(p.receiverName)} henüz istek formunu doldurmadı.</div></div>`;
+      html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${userChipHtml(p.receiverUid)}'e kitap hediye edeceksin</div><div class="empty-note">${escapeHtml(p.receiverName)} henüz istek formunu doldurmadı.</div></div>`;
     }
   }
   return html;
@@ -1593,7 +1717,7 @@ async function buildAdminPendingHtml(){
       let req = null;
       try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
       if(req && req.received) continue; // tamamlanan geçmişte gösterilir
-      html += `<div class="receipt"><div class="rweek"><span>${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: <span class="giver">${avatarHtml(p.giverUid)}${escapeHtml(p.giverName)}</span> → <span class="receiver">${avatarHtml(p.receiverUid)}${escapeHtml(p.receiverName)}</span></span></div>`;
+      html += `<div class="receipt"><div class="rweek"><span>${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: <span class="giver">${userChipHtml(p.giverUid)}</span> → <span class="receiver">${userChipHtml(p.receiverUid)}</span></span></div>`;
       if(req && req.shipped){
         html += `<div class="empty-note">📮 Gönderildi, alıcı onayı bekleniyor.</div>`;
       } else if(req){
@@ -1624,7 +1748,7 @@ function wireGiftFormHandlers(content){
           giverName: usersCache[giverUid]?.name||'', receiverName: usersCache[receiverUid]?.name||'',
           recipientName, bookTitle, site, address, phone, shipped:false, received:false, updatedAt: new Date().toISOString()
         });
-        await notifyUser(giverUid, `${myProfile.name} hediye kitap isteğini gönderdi: "${bookTitle}". "Hediye Kitap" sekmesinden bak.`);
+        await notifyUser(giverUid, `${myProfile.name} hediye kitap isteğini gönderdi: "${bookTitle}". "Hediye Kitap" sekmesinden bak.`, 'gifts');
         showToast('İstek gönderildi.');
         renderGiftsTab();
       }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
@@ -1635,7 +1759,7 @@ function wireGiftFormHandlers(content){
       if(!confirm('Kitabı gönderdiğini onaylıyor musun? Alıcı, aldığını onayladığında bu hediye geçmişe taşınacak.')) return;
       try{
         await updateDoc(doc(db,'giftRequests',btn.dataset.reqid), {shipped:true, shippedAt:new Date().toISOString()});
-        await notifyUser(btn.dataset.receiver, `${myProfile.name} hediye kitabını gönderdi! Aldığında "Hediye Kitap" sekmesinden onaylamayı unutma.`);
+        await notifyUser(btn.dataset.receiver, `${myProfile.name} hediye kitabını gönderdi! Aldığında "Hediye Kitap" sekmesinden onaylamayı unutma.`, 'gifts');
         showToast('Kitap gönderildi olarak işaretlendi.');
         renderGiftsTab();
       }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); }
@@ -1646,7 +1770,7 @@ function wireGiftFormHandlers(content){
       if(!confirm('Kitabı aldığını onaylıyor musun? Onayladıktan sonra bu hediye geçmişe taşınacak.')) return;
       try{
         await updateDoc(doc(db,'giftRequests',btn.dataset.reqid), {received:true, receivedAt:new Date().toISOString()});
-        await notifyUser(btn.dataset.giver, `${myProfile.name} hediye kitabını aldığını onayladı. 🎉`);
+        await notifyUser(btn.dataset.giver, `${myProfile.name} hediye kitabını aldığını onayladı. 🎉`, 'gifts');
         showToast('Alındı olarak işaretlendi, teşekkürler!');
         renderGiftsTab();
       }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); }
@@ -1680,10 +1804,175 @@ async function renderGiftHistory(isAdminView){
     const dtLabel = dt && !isNaN(dt.getTime()) ? `${pad(dt.getDate())}.${pad(dt.getMonth()+1)}.${dt.getFullYear()}` : '';
     return `<div class="member-row" style="display:block;">
       <div class="muted mono" style="font-size:10.5px;">${dtLabel}</div>
-      <div style="margin-top:2px;">${avatarHtml(it.giverUid)}${escapeHtml(it.giverName)} — <span class="chip ok">Hediye kitap gönderildi</span></div>
-      <div style="margin-top:4px;">${avatarHtml(it.receiverUid)}${escapeHtml(it.receiverName)} — <span class="chip ok">Hediye kitap alındı</span></div>
+      <div style="margin-top:2px;">${userChipHtml(it.giverUid)} — <span class="chip ok">Hediye kitap gönderildi</span></div>
+      <div style="margin-top:4px;">${userChipHtml(it.receiverUid)} — <span class="chip ok">Hediye kitap alındı</span></div>
     </div>`;
   }).join('');
+}
+
+/* ============ ORTAK: KİTAP ÖNERİLERİ ============ */
+async function renderRecsTab(){
+  const select = document.getElementById('recPersonalTarget');
+  const others = activeUids().filter(uid=>uid!==currentUid);
+  select.innerHTML = others.length
+    ? others.map(uid=>`<option value="${uid}">${escapeHtml(usersCache[uid].name)}</option>`).join('')
+    : '<option value="">(başka üye yok)</option>';
+
+  await renderPersonalRecs();
+  await renderGroupRecs();
+}
+
+document.getElementById('recPersonalSendBtn').addEventListener('click', async ()=>{
+  const toUid = document.getElementById('recPersonalTarget').value;
+  const bookTitle = document.getElementById('recPersonalBook').value.trim();
+  const note = document.getElementById('recPersonalNote').value.trim();
+  if(!toUid){ alert('Bir kişi seç.'); return; }
+  if(!bookTitle){ alert('Kitap adı yaz.'); return; }
+  try{
+    await addDoc(collection(db,'recommendations'), {
+      scope:'personal', fromUid: currentUid, fromName: myProfile.name,
+      toUid, toName: usersCache[toUid]?.name||'', bookTitle, note, createdAt: new Date().toISOString()
+    });
+    document.getElementById('recPersonalBook').value='';
+    document.getElementById('recPersonalNote').value='';
+    await notifyUser(toUid, `${myProfile.name} sana bir kitap önerdi: "${bookTitle}"`, 'recs');
+    showToast('Öneri gönderildi.');
+    renderPersonalRecs();
+  }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
+});
+
+document.getElementById('recGroupSendBtn').addEventListener('click', async ()=>{
+  const bookTitle = document.getElementById('recGroupBook').value.trim();
+  const note = document.getElementById('recGroupNote').value.trim();
+  if(!bookTitle){ alert('Kitap adı yaz.'); return; }
+  try{
+    await addDoc(collection(db,'recommendations'), {
+      scope:'group', fromUid: currentUid, fromName: myProfile.name,
+      bookTitle, note, createdAt: new Date().toISOString()
+    });
+    document.getElementById('recGroupBook').value='';
+    document.getElementById('recGroupNote').value='';
+    showToast('Grup önerisi gönderildi.');
+    renderGroupRecs();
+  }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
+});
+
+async function fetchRecComments(recId){
+  let items = [];
+  try{
+    const snap = await getDocs(collection(db,'recommendations',recId,'comments'));
+    snap.forEach(d=> items.push({id:d.id, ...d.data()}));
+  }catch(e){}
+  items.sort((a,b)=> new Date(a.createdAt) - new Date(b.createdAt));
+  return items;
+}
+
+async function renderRecCard(it, isGroup){
+  const comments = await fetchRecComments(it.id);
+  const canDelete = isGroup
+    ? (it.fromUid===currentUid || myProfile.role==='admin')
+    : (it.fromUid===currentUid || it.toUid===currentUid);
+  const directionLabel = isGroup
+    ? `${userChipHtml(it.fromUid)} gruba önerdi`
+    : (it.fromUid===currentUid ? `Sen ${userChipHtml(it.toUid)} kişisine önerdin` : `${userChipHtml(it.fromUid)} sana önerdi`);
+  const dt = new Date(it.createdAt);
+  const dtLabel = isNaN(dt.getTime()) ? '' : `${pad(dt.getDate())}.${pad(dt.getMonth()+1)}.${dt.getFullYear()}`;
+  const commentsHtml = comments.map(c=>{
+    const canDeleteComment = c.uid===currentUid || (isGroup && myProfile.role==='admin');
+    return `<div style="padding:6px 0; border-top:1px dotted var(--line); font-size:13.5px;">
+      ${userChipHtml(c.uid)}: ${escapeHtml(c.text)}
+      ${canDeleteComment?`<button data-del-comment="${it.id}|${c.id}" style="border:none;background:none;color:var(--cloth-dark);cursor:pointer;font-size:11px;margin-left:6px;">✕</button>`:''}
+    </div>`;
+  }).join('');
+  return `<div class="receipt" data-rec-id="${it.id}">
+    <div class="rweek"><span>${directionLabel} &middot; ${dtLabel}</span>${canDelete?`<button class="secondary tiny" data-del-rec="${it.id}">Sil</button>`:''}</div>
+    <div style="font-weight:600; margin-top:4px;">${escapeHtml(it.bookTitle)}</div>
+    ${it.note?`<div class="muted" style="margin-top:2px;">${escapeHtml(it.note)}</div>`:''}
+    <div style="margin-top:8px;">${commentsHtml}</div>
+    <div class="row" style="margin-top:8px;">
+      <input type="text" class="rec-comment-input" placeholder="Yorum yaz..." data-rec-id="${it.id}" />
+      <button class="secondary tiny rec-comment-send" data-rec-id="${it.id}" style="flex:0 0 auto;">Gönder</button>
+    </div>
+  </div>`;
+}
+
+function wireRecCards(box, items, isGroup){
+  box.querySelectorAll('[data-del-rec]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm('Bu öneri (ve tüm yorumları) silinsin mi?')) return;
+      try{ await deleteDoc(doc(db,'recommendations',btn.dataset.delRec)); }
+      catch(e){ alert('Silinemedi: '+(e.message||e)); return; }
+      isGroup ? renderGroupRecs() : renderPersonalRecs();
+    });
+  });
+  box.querySelectorAll('[data-del-comment]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const [recId, commentId] = btn.dataset.delComment.split('|');
+      if(!confirm('Yorum silinsin mi?')) return;
+      try{ await deleteDoc(doc(db,'recommendations',recId,'comments',commentId)); }
+      catch(e){ alert('Silinemedi: '+(e.message||e)); return; }
+      isGroup ? renderGroupRecs() : renderPersonalRecs();
+    });
+  });
+  box.querySelectorAll('.rec-comment-send').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const recId = btn.dataset.recId;
+      const input = box.querySelector(`.rec-comment-input[data-rec-id="${recId}"]`);
+      const text = input.value.trim();
+      if(!text) return;
+      try{
+        await addDoc(collection(db,'recommendations',recId,'comments'), { uid: currentUid, name: myProfile.name, text, createdAt: new Date().toISOString() });
+        const it = items.find(x=>x.id===recId);
+        if(it){
+          if(isGroup){
+            if(it.fromUid!==currentUid) await notifyUser(it.fromUid, `${myProfile.name}, "${it.bookTitle}" önerine yorum yaptı.`, 'recs');
+          } else {
+            const otherUid = it.fromUid===currentUid ? it.toUid : it.fromUid;
+            await notifyUser(otherUid, `${myProfile.name}, "${it.bookTitle}" önerisine yorum yaptı.`, 'recs');
+          }
+        }
+        input.value='';
+        isGroup ? renderGroupRecs() : renderPersonalRecs();
+      }catch(err){ alert('Yorum gönderilemedi: '+(err.message||err)); }
+    });
+  });
+}
+
+async function renderPersonalRecs(){
+  const box = document.getElementById('recPersonalList');
+  box.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  let items = [];
+  try{
+    const [snapFrom, snapTo] = await Promise.all([
+      getDocs(query(collection(db,'recommendations'), where('scope','==','personal'), where('fromUid','==',currentUid))),
+      getDocs(query(collection(db,'recommendations'), where('scope','==','personal'), where('toUid','==',currentUid)))
+    ]);
+    const seen = new Set();
+    [...snapFrom.docs, ...snapTo.docs].forEach(d=>{
+      if(!seen.has(d.id)){ seen.add(d.id); items.push({id:d.id, ...d.data()}); }
+    });
+  }catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; return; }
+  items.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+  if(items.length===0){ box.innerHTML = `<p class="muted">Henüz şahsi öneri yok.</p>`; return; }
+  const cards = await Promise.all(items.map(it=>renderRecCard(it,false)));
+  box.innerHTML = cards.join('');
+  wireRecCards(box, items, false);
+}
+
+async function renderGroupRecs(){
+  const box = document.getElementById('recGroupList');
+  box.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  let items = [];
+  try{
+    const snap = await getDocs(query(collection(db,'recommendations'), where('scope','==','group')));
+    snap.forEach(d=> items.push({id:d.id, ...d.data()}));
+  }catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; return; }
+  items.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+  items = items.slice(0,50);
+  if(items.length===0){ box.innerHTML = `<p class="muted">Henüz grup önerisi yok.</p>`; return; }
+  const cards = await Promise.all(items.map(it=>renderRecCard(it,true)));
+  box.innerHTML = cards.join('');
+  wireRecCards(box, items, true);
 }
 
 /* ============ ÜYE: KİTAP KURTLARI ============ */
@@ -1698,7 +1987,7 @@ async function renderMemberWorms(){
     list.innerHTML = `<div class="empty-state"><span class="big">🐛</span>Henüz 30 günü aşan kimse yok. İlk olabilirsin!</div>`;
     return;
   }
-  list.innerHTML = worms.map(r=>`<div class="worm-row"><div>🐛 ${avatarHtml(r.uid)}${escapeHtml(r.name)}</div><div class="worm-streak">${r.streak} gün</div></div>`).join('');
+  list.innerHTML = worms.map(r=>`<div class="worm-row"><div>🐛 ${userChipHtml(r.uid)}</div><div class="worm-streak">${r.streak} gün</div></div>`).join('');
 }
 
 /* ============ GİRİŞ / AUTH DURUM TAKİBİ ============ */
@@ -1747,6 +2036,15 @@ onAuthStateChanged(auth, async (user)=>{
     document.getElementById('bannedNotice').style.display='none';
   }
 
+  // Önce üye listesini bir kerelik senkron olarak çekiyoruz (onSnapshot'ın ilk verisi
+  // asenkron geldiği için, hemen altındaki otomatik-doldurma/kura işlemleri boş listeyle
+  // çalışıp hiçbir şey yapmıyordu — bu satırlar o hatayı çözüyor).
+  try{
+    const initialUsersSnap = await getDocs(collection(db,'users'));
+    usersCache = {};
+    initialUsersSnap.forEach(d=> usersCache[d.id] = d.data());
+  }catch(e){}
+
   unsubUsers = onSnapshot(collection(db,'users'), (snap)=>{
     usersCache = {};
     snap.forEach(d=> usersCache[d.id] = d.data());
@@ -1754,6 +2052,7 @@ onAuthStateChanged(auth, async (user)=>{
   });
   resubscribeToday();
   subscribeNotifs();
+  setupPushNotifications();
 
   loadingScreen.style.display='none';
   appRoot.style.display='block';
