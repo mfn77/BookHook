@@ -15,16 +15,29 @@
 <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Roboto+Mono:wght@400;500;600&family=Google+Sans+Code:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#F1F3F4; --paper-2:#E8EAED; --card:#FFFFFF;
+    --paper:#F7F4EE; --paper-2:#EFEAE0; --card:#FFFFFF;
     --ink:#202124; --ink-70:#5F6368;
     --cloth:#D93025; --cloth-dark:#A50E0E;
     --gold:#00897B; --gold-dark:#00695C; --forest:#188038; --forest-dark:#0F5C29;
     --rust:#EA8600; --rust-dark:#B25900;
-    --line:#DADCE0;
+    --line:#DDD6C7;
     --shadow: 0 1px 2px rgba(60,64,67,.30), 0 1px 3px 1px rgba(60,64,67,.15);
     --shadow-lg: 0 1px 3px rgba(60,64,67,.30), 0 4px 8px 3px rgba(60,64,67,.15);
     --ease: cubic-bezier(.4,0,.2,1);
+    color-scheme: light;
   }
+  html[data-theme="dark"]{
+    --paper:#202124; --paper-2:#292A2D; --card:#303134;
+    --ink:#E8EAED; --ink-70:#9AA0A6;
+    --cloth:#F28B82; --cloth-dark:#F6AEA9;
+    --gold:#80CBC4; --gold-dark:#4DB6AC; --forest:#81C995; --forest-dark:#A8DAB5;
+    --rust:#FDD663; --rust-dark:#FEE8B0;
+    --line:#3C4043;
+    --shadow: 0 1px 2px rgba(0,0,0,.5), 0 1px 3px 1px rgba(0,0,0,.3);
+    --shadow-lg: 0 1px 3px rgba(0,0,0,.5), 0 4px 8px 3px rgba(0,0,0,.3);
+    color-scheme: dark;
+  }
+  html, body{ transition: background-color .25s var(--ease); }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
@@ -61,6 +74,12 @@
     font-family:'Roboto', sans-serif; font-size:14px; font-weight:500; color:var(--ink); cursor:pointer;
   }
   #hamburgerMenu button:hover{background:rgba(0,137,123,0.08);}
+  .theme-switch{ position:relative; display:inline-block; width:40px; height:22px; flex:0 0 auto; }
+  .theme-switch input{ opacity:0; width:0; height:0; }
+  .theme-switch .slider{ position:absolute; cursor:pointer; inset:0; background:var(--line); border-radius:22px; transition:.2s var(--ease); }
+  .theme-switch .slider:before{ content:""; position:absolute; height:16px; width:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s var(--ease); box-shadow:0 1px 2px rgba(0,0,0,.3); }
+  .theme-switch input:checked + .slider{ background:var(--gold); }
+  .theme-switch input:checked + .slider:before{ transform:translateX(18px); }
   .badge-row{display:flex; gap:4px; justify-content:center; margin-bottom:6px; flex-wrap:wrap;}
   .badge-row .badge-icon{font-size:15px; filter:drop-shadow(0 1px 1px rgba(0,0,0,.15));}
   .badge-row.big .badge-icon{font-size:22px;}
@@ -140,7 +159,7 @@
   button.tiny{font-size:11.5px; padding:6px 12px; border-radius:14px;}
   input[type=text], input[type=email], input[type=password], input[type=date]{
     font-family:'Roboto', sans-serif; font-size:15px; padding:10px 12px; border:1.5px solid var(--line);
-    border-radius:10px; width:100%; background:#fff; color:var(--ink);
+    border-radius:10px; width:100%; background:var(--card); color:var(--ink);
   }
   input:focus, select:focus, textarea:focus{
     outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(0,137,123,0.14);
@@ -403,7 +422,7 @@
         <div id="rulesDisplay" class="muted" style="white-space:pre-wrap;"></div>
         <div id="rulesAdminEdit" style="display:none; margin-top:14px;">
           <div class="field"><label>Kuralları düzenle</label>
-            <textarea id="rulesTextarea" rows="8" style="width:100%; font-family:'Source Serif 4',serif; font-size:14.5px; padding:10px; border:1.5px solid var(--line); border-radius:8px;"></textarea>
+            <textarea id="rulesTextarea" rows="8" style="width:100%; font-family:'Roboto',sans-serif; font-size:14.5px; padding:10px; border:1.5px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink);"></textarea>
           </div>
           <button class="primary" id="rulesSaveBtn">Kaydet</button>
         </div>
@@ -412,7 +431,7 @@
       <div class="card">
         <h2>Kural Önerisi Gönder</h2>
         <div class="field">
-          <textarea id="ruleRequestText" rows="3" placeholder="Önerini yaz..." style="width:100%; font-family:'Source Serif 4',serif; font-size:14.5px; padding:10px; border:1.5px solid var(--line); border-radius:8px;"></textarea>
+          <textarea id="ruleRequestText" rows="3" placeholder="Önerini yaz..." style="width:100%; font-family:'Roboto',sans-serif; font-size:14.5px; padding:10px; border:1.5px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink);"></textarea>
         </div>
         <button class="secondary" id="ruleRequestBtn">Öneri Gönder</button>
       </div>
@@ -466,7 +485,7 @@
         <h2>📚 Şahsi Kitap Önerisi Gönder</h2>
         <p class="muted">Bu öneri ve ona yapılan yorumları sadece sen ve seçtiğin kişi görebilir — yönetici de dahil kimse başkası göremez.</p>
         <div class="field"><label>Kime?</label>
-          <select id="recPersonalTarget" style="width:100%; padding:10px; border:1.5px solid var(--line); border-radius:8px; font-family:'Source Serif 4',serif; font-size:15px; background:#fff;"></select>
+          <select id="recPersonalTarget" style="width:100%; padding:10px; border:1.5px solid var(--line); border-radius:8px; font-family:'Roboto',sans-serif; font-size:15px; background:var(--card); color:var(--ink);"></select>
         </div>
         <div class="field"><label>Kitap Adı</label><input type="text" id="recPersonalBook" /></div>
         <div class="field"><label>Not (opsiyonel)</label><input type="text" id="recPersonalNote" placeholder="neden önerdiğini kısaca yaz" /></div>
@@ -560,6 +579,19 @@ const storage = getStorage(app);
 
 /* ============ TARİH YARDIMCILARI (gün 06:00'a kadar sürer) ============ */
 const DOW = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
+/* ============ KARANLIK / AYDINLIK TEMA ============ */
+function getStoredTheme(){ try{ return localStorage.getItem('bookhook_theme'); }catch(e){ return null; } }
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  try{ localStorage.setItem('bookhook_theme', theme); }catch(e){}
+}
+function initTheme(){
+  const stored = getStoredTheme();
+  const theme = stored || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+}
+initTheme();
+
 function pad(n){return n<10?"0"+n:""+n;}
 function toStr(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
 function fromStr(s){const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d);}
@@ -613,7 +645,7 @@ function avatarHtmlFromProfile(profile, size){
   if(profile && profile.photoURL){
     return `<img src="${profile.photoURL}" alt="" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px;" />`;
   }
-  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:var(--gold);color:#fff;font-size:${Math.round(size*0.5)}px;font-family:'Fraunces',serif;font-weight:700;vertical-align:middle;margin-right:6px;">${escapeHtml(initial)}</span>`;
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:var(--gold);color:#fff;font-size:${Math.round(size*0.5)}px;font-family:'Roboto',sans-serif;font-weight:700;vertical-align:middle;margin-right:6px;">${escapeHtml(initial)}</span>`;
 }
 function avatarHtml(uid, size){ return avatarHtmlFromProfile(usersCache[uid], size); }
 function userChipHtml(uid, size){
@@ -889,12 +921,23 @@ const HAMBURGER_MEMBER_EXTRA = [
 function buildHamburgerMenu(){
   const items = myProfile.role==='admin' ? HAMBURGER_ADMIN_EXTRA : HAMBURGER_MEMBER_EXTRA;
   const menu = document.getElementById('hamburgerMenu');
-  menu.innerHTML = items.map(it=>`<button data-tab="${it.id}">${it.label}</button>`).join('');
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  menu.innerHTML = items.map(it=>`<button data-tab="${it.id}">${it.label}</button>`).join('')
+    + `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--line);">
+        <span style="font-family:'Roboto',sans-serif; font-size:14px; color:var(--ink);">🌙 Karanlık Tema</span>
+        <label class="theme-switch">
+          <input type="checkbox" id="themeToggleCheckbox" ${isDark?'checked':''}>
+          <span class="slider"></span>
+        </label>
+      </div>`;
   menu.querySelectorAll('button[data-tab]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       switchTab(btn.dataset.tab);
       menu.style.display='none';
     });
+  });
+  document.getElementById('themeToggleCheckbox').addEventListener('change', (e)=>{
+    setTheme(e.target.checked ? 'dark' : 'light');
   });
 }
 document.getElementById('notifBellBtn').addEventListener('click', (e)=>{
@@ -1876,7 +1919,7 @@ async function renderGiftsTab(){
   } else {
     let combined = personalHtml || '';
     if(adminHtml){
-      combined += `<h3 style="font-family:'Fraunces',serif; margin:18px 0 8px;">Tüm Kulüp — Bekleyen İstekler</h3>${adminHtml}`;
+      combined += `<h3 style="font-family:'Roboto',sans-serif; font-weight:500; margin:18px 0 8px;">Tüm Kulüp — Bekleyen İstekler</h3>${adminHtml}`;
     }
     content.innerHTML = combined;
   }
