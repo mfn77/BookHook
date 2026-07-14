@@ -18,7 +18,7 @@
     --paper:#F1F3F4; --paper-2:#E8EAED; --card:#FFFFFF;
     --ink:#202124; --ink-70:#5F6368;
     --cloth:#D93025; --cloth-dark:#A50E0E;
-    --gold:#1A73E8; --forest:#188038; --forest-dark:#0F5C29;
+    --gold:#00897B; --gold-dark:#00695C; --forest:#188038; --forest-dark:#0F5C29;
     --rust:#EA8600; --rust-dark:#B25900;
     --line:#DADCE0;
     --shadow: 0 1px 2px rgba(60,64,67,.30), 0 1px 3px 1px rgba(60,64,67,.15);
@@ -60,11 +60,11 @@
     display:block; width:100%; text-align:left; padding:12px 16px; border:none; background:none;
     font-family:'Roboto', sans-serif; font-size:14px; font-weight:500; color:var(--ink); cursor:pointer;
   }
-  #hamburgerMenu button:hover{background:rgba(26,115,232,0.08);}
+  #hamburgerMenu button:hover{background:rgba(0,137,123,0.08);}
   .badge-row{display:flex; gap:4px; justify-content:center; margin-bottom:6px; flex-wrap:wrap;}
   .badge-row .badge-icon{font-size:15px; filter:drop-shadow(0 1px 1px rgba(0,0,0,.15));}
   .badge-row.big .badge-icon{font-size:22px;}
-  .whoami .rolechip{display:inline-block; margin-top:4px; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:600; letter-spacing:.03em; border:none; color:var(--gold); background:rgba(26,115,232,0.12);}
+  .whoami .rolechip{display:inline-block; margin-top:4px; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:600; letter-spacing:.03em; border:none; color:var(--gold); background:rgba(0,137,123,0.12);}
   .whoami button{
     margin-top:0; font-family:'Roboto', sans-serif; font-size:12px; font-weight:500; background:var(--paper-2);
     border:none; color:var(--ink-70); border-radius:16px; padding:5px 12px; cursor:pointer;
@@ -124,7 +124,7 @@
   .stamp-mini.auto{opacity:0.6; box-shadow:inset 0 0 0 2px rgba(255,255,255,0.55);}
   button:disabled{opacity:0.4; cursor:default;}
   .user-chip{cursor:pointer; border-radius:8px; padding:1px 4px; margin:-1px -4px;}
-  .user-chip:hover{background:rgba(26,115,232,0.10);}
+  .user-chip:hover{background:rgba(0,137,123,0.10);}
   button.primary{
     font-family:'Roboto', sans-serif; font-weight:500; font-size:14px; background:var(--gold); color:#fff;
     border:none; border-radius:20px; padding:11px 20px; cursor:pointer; box-shadow:none;
@@ -136,14 +136,14 @@
     font-family:'Roboto', sans-serif; font-weight:500; font-size:13.5px; background:transparent; color:var(--gold);
     border:1.5px solid var(--gold); border-radius:20px; padding:9px 16px; cursor:pointer;
   }
-  button.secondary:hover:not(:disabled){background:rgba(26,115,232,0.06);}
+  button.secondary:hover:not(:disabled){background:rgba(0,137,123,0.06);}
   button.tiny{font-size:11.5px; padding:6px 12px; border-radius:14px;}
   input[type=text], input[type=email], input[type=password], input[type=date]{
     font-family:'Roboto', sans-serif; font-size:15px; padding:10px 12px; border:1.5px solid var(--line);
     border-radius:10px; width:100%; background:#fff; color:var(--ink);
   }
   input:focus, select:focus, textarea:focus{
-    outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(26,115,232,0.14);
+    outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(0,137,123,0.14);
   }
   .row{display:flex; gap:8px; flex-wrap:wrap;}
   .row > *{flex:1;}
@@ -164,12 +164,12 @@
     box-shadow:var(--shadow-lg); z-index:50; display:flex; justify-content:space-between; align-items:center; gap:10px;
     animation: fadeInUp .25s var(--ease);
   }
-  .toast button{background:none; border:none; color:#8AB4F8; font-weight:600; cursor:pointer; font-size:13px; font-family:'Roboto', sans-serif;}
+  .toast button{background:none; border:none; color:#80CBC4; font-weight:600; cursor:pointer; font-size:13px; font-family:'Roboto', sans-serif;}
   .empty-state{text-align:center; padding:30px 10px; color:var(--ink-70);}
   .empty-state .big{font-size:34px; display:block; margin-bottom:8px;}
   ul.plain{margin:6px 0; padding-left:18px;}
   ul.plain li{margin-bottom:4px; font-size:13.5px; color:var(--ink-70);}
-  .role-chip{font-family:'Roboto', sans-serif; font-size:10px; font-weight:600; letter-spacing:.03em; padding:3px 10px; border-radius:20px; border:none; color:var(--gold); background:rgba(26,115,232,0.12);}
+  .role-chip{font-family:'Roboto', sans-serif; font-size:10px; font-weight:600; letter-spacing:.03em; padding:3px 10px; border-radius:20px; border:none; color:var(--gold); background:rgba(0,137,123,0.12);}
   .auth-wrap{ max-width:400px; margin:40px auto; padding:0 16px;}
   .auth-toggle{display:flex; gap:6px; margin-bottom:14px; background:var(--paper-2); border-radius:20px; padding:4px;}
   .auth-toggle button{flex:1; padding:9px; border-radius:16px; border:none; background:none; font-family:'Roboto',sans-serif; font-weight:500; cursor:pointer; color:var(--ink-70);}
@@ -232,7 +232,8 @@
       <div id="whoamiName">—</div>
       <div><span class="rolechip" id="whoamiRole">—</span></div>
       <div style="margin-top:6px; display:flex; gap:6px; justify-content:flex-end;">
-        <button id="hamburgerBtn" style="position:relative; background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font-size:16px; color:var(--ink);">☰<span id="hamburgerBadge" style="display:none; position:absolute; top:-6px; right:-6px; background:var(--cloth); color:#fff; font-size:9px; border-radius:10px; padding:1px 4px; font-family:'IBM Plex Mono',monospace;">0</span></button>
+        <button id="notifBellBtn" style="position:relative; background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font-size:16px; color:var(--ink);">🔔<span id="hamburgerBadge" style="display:none; position:absolute; top:-6px; right:-6px; background:var(--cloth); color:#fff; font-size:9px; border-radius:10px; padding:1px 4px; font-family:'Roboto Mono',monospace;">0</span></button>
+        <button id="hamburgerBtn" style="background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font-size:16px; color:var(--ink);">☰</button>
         <button id="logoutBtn">Çıkış</button>
       </div>
       <div id="hamburgerMenu" style="display:none;"></div>
@@ -888,19 +889,19 @@ const HAMBURGER_MEMBER_EXTRA = [
 function buildHamburgerMenu(){
   const items = myProfile.role==='admin' ? HAMBURGER_ADMIN_EXTRA : HAMBURGER_MEMBER_EXTRA;
   const menu = document.getElementById('hamburgerMenu');
-  menu.innerHTML = items.map(it=>`<button data-tab="${it.id}">${it.label}</button>`).join('')
-    + `<button id="hamburgerNotifBtn">🔔 Bildirimler</button>`;
+  menu.innerHTML = items.map(it=>`<button data-tab="${it.id}">${it.label}</button>`).join('');
   menu.querySelectorAll('button[data-tab]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       switchTab(btn.dataset.tab);
       menu.style.display='none';
     });
   });
-  document.getElementById('hamburgerNotifBtn').addEventListener('click', ()=>{
-    menu.style.display='none';
-    openNotifModal();
-  });
 }
+document.getElementById('notifBellBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  document.getElementById('hamburgerMenu').style.display='none';
+  openNotifModal();
+});
 document.getElementById('hamburgerBtn').addEventListener('click', (e)=>{
   e.stopPropagation();
   const menu = document.getElementById('hamburgerMenu');
@@ -948,21 +949,24 @@ function switchTab(id){
 
 /* ============ SEKMELER ARASI KAYDIRMA (SWIPE) ============ */
 (function setupSwipeNav(){
-  let touchStartX=0, touchStartY=0, touchStartTime=0;
-  const mainEl = document.querySelector('main');
-  if(!mainEl) return;
-  mainEl.addEventListener('touchstart', (e)=>{
-    if(e.touches.length!==1) return;
+  let touchStartX=null, touchStartY=0, touchStartTime=0;
+  document.addEventListener('touchstart', (e)=>{
+    if(e.touches.length!==1){ touchStartX=null; return; }
+    const t = e.target;
+    if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal')){
+      touchStartX=null; return;
+    }
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
     touchStartTime = Date.now();
   }, {passive:true});
-  mainEl.addEventListener('touchend', (e)=>{
-    if(!myProfile) return;
+  document.addEventListener('touchend', (e)=>{
+    if(touchStartX===null || !myProfile) return;
     const touch = e.changedTouches[0];
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
     const dt = Date.now() - touchStartTime;
+    touchStartX = null;
     if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)*1.5 && dt < 600){
       const order = getTabOrder();
       const idx = order.indexOf(activeTab);
