@@ -45,7 +45,22 @@
   }
   header.top h1{ margin:0; font-size:26px; font-weight:700; color:var(--ink); letter-spacing:0.01em; display:flex; align-items:center;}
   header.top .weekrange{ margin-top:6px; font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-70);}
-  .whoami{ text-align:right; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-70); flex:0 0 auto; }
+  .whoami{ text-align:right; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-70); flex:0 0 auto; position:relative; }
+  #hamburgerMenu{
+    position:absolute; top:100%; right:0; margin-top:6px; background:var(--card);
+    border:1px solid var(--line); border-radius:8px; box-shadow:var(--shadow);
+    z-index:60; min-width:190px; overflow:hidden; text-align:left;
+  }
+  #hamburgerMenu button{
+    display:block; width:100%; text-align:left; padding:10px 14px; border:none; background:none;
+    font-family:'Fraunces', serif; font-size:14px; color:var(--ink); cursor:pointer;
+    border-bottom:1px solid var(--line);
+  }
+  #hamburgerMenu button:last-child{border-bottom:none;}
+  #hamburgerMenu button:hover{background:var(--paper-2);}
+  .badge-row{display:flex; gap:3px; justify-content:center; margin-bottom:6px; flex-wrap:wrap;}
+  .badge-row .badge-icon{font-size:15px;}
+  .badge-row.big .badge-icon{font-size:20px;}
   .whoami .rolechip{display:inline-block; margin-top:4px; padding:2px 8px; border-radius:20px; font-size:10px; border:1px solid var(--gold); color:var(--cloth-dark); background:#F1E7CE;}
   .whoami button{
     margin-top:6px; font-family:'IBM Plex Mono', monospace; font-size:11px; background:none;
@@ -198,8 +213,11 @@
     <div class="whoami">
       <div id="whoamiName">—</div>
       <div><span class="rolechip" id="whoamiRole">—</span></div>
-      <div style="margin-top:4px;"><span id="notifBadge" class="chip danger" style="display:none; cursor:pointer;">🔔 0</span></div>
-      <button id="logoutBtn">Çıkış</button>
+      <div style="margin-top:6px; display:flex; gap:6px; justify-content:flex-end;">
+        <button id="hamburgerBtn" style="position:relative; background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font-size:16px; color:var(--ink);">☰<span id="hamburgerBadge" style="display:none; position:absolute; top:-6px; right:-6px; background:var(--cloth); color:#fff; font-size:9px; border-radius:10px; padding:1px 4px; font-family:'IBM Plex Mono',monospace;">0</span></button>
+        <button id="logoutBtn">Çıkış</button>
+      </div>
+      <div id="hamburgerMenu" style="display:none;"></div>
     </div>
   </header>
 
@@ -212,11 +230,7 @@
         <h2>Bugün kim okudu?</h2>
         <p class="muted">Herhangi bir üyeyi senin yerine de işaretleyebilir, daha önce kendisi işaretlemiş olsa bile değiştirebilirsin. Aynı butona tekrar basarsan işaret kalkar.</p>
         <div id="todayList"></div>
-      </div>
-
-      <div class="card">
-        <h2>Benim Durumum</h2>
-        <p class="muted" id="aDateNote"></p>
+        <p class="muted" id="aDateNote" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--line);"></p>
       </div>
 
       <div class="card">
@@ -395,6 +409,7 @@
       <div class="card">
         <h2>Profilim</h2>
         <div style="text-align:center; margin-bottom:14px;">
+          <div class="badge-row big" id="profileMyBadges"></div>
           <img id="profilePhotoPreview" src="./icon-192.png" alt="" style="width:88px;height:88px;border-radius:50%;object-fit:cover;box-shadow:var(--shadow);" />
           <div style="margin-top:8px;"><input type="file" id="profilePhotoInput" accept="image/*" /></div>
         </div>
@@ -424,15 +439,7 @@
     </section>
 
     <!-- ORTAK: BİLDİRİMLER -->
-    <section class="tab" id="tab-notifs">
-      <div class="card">
-        <h2>🔔 Bildirimler</h2>
-        <p class="muted" id="pushStatusNote"></p>
-        <button class="primary" id="enablePushBtn" style="margin-bottom:10px;">📱 Telefon Bildirimlerini Aç</button>
-        <button class="secondary tiny" id="markAllReadBtn" style="margin-bottom:10px;">Tümünü okundu yap</button>
-        <div id="notifsList"></div>
-      </div>
-    </section>
+
 
     <!-- ORTAK: KİTAP ÖNERİLERİ -->
     <section class="tab" id="tab-recs">
@@ -474,12 +481,24 @@
   <div class="card" style="max-width:360px; width:100%; position:relative; margin-bottom:0;">
     <button id="profileModalClose" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-70);">✕</button>
     <div style="text-align:center;">
+      <div class="badge-row big" id="profileModalBadges"></div>
       <img id="profileModalPhoto" src="./icon-192.png" alt="" style="width:88px;height:88px;border-radius:50%;object-fit:cover;box-shadow:var(--shadow);" />
       <h2 id="profileModalName" style="margin:10px 0 4px; font-size:20px;"></h2>
       <span class="role-chip" id="profileModalRole"></span>
     </div>
     <div class="muted" id="profileModalBio" style="margin-top:14px;"></div>
     <div class="muted" id="profileModalReading" style="margin-top:8px;"></div>
+  </div>
+</div>
+
+<div id="notifModal" style="display:none; position:fixed; inset:0; background:rgba(36,49,75,0.55); z-index:200; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:400px; width:100%; max-height:80vh; overflow-y:auto; position:relative; margin-bottom:0;">
+    <button id="notifModalClose" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-70);">✕</button>
+    <h2>🔔 Bildirimler</h2>
+    <p class="muted" id="pushStatusNote"></p>
+    <button class="primary" id="enablePushBtn" style="margin-bottom:10px;">📱 Telefon Bildirimlerini Aç</button>
+    <button class="secondary tiny" id="markAllReadBtn" style="margin-bottom:10px;">Tümünü okundu yap</button>
+    <div id="notifsList"></div>
   </div>
 </div>
 
@@ -591,6 +610,7 @@ function openProfileModal(uid){
   document.getElementById('profileModalRole').textContent = u.role==='admin' ? 'YÖNETİCİ' : 'ÜYE';
   document.getElementById('profileModalBio').textContent = u.bio ? u.bio : 'Henüz bir bilgi eklenmemiş.';
   document.getElementById('profileModalReading').textContent = u.currentlyReading ? `📖 Şu an okuyor: ${u.currentlyReading}` : '📖 Şu an ne okuduğunu paylaşmamış.';
+  document.getElementById('profileModalBadges').innerHTML = badgeRowHtml(u.badges, 20);
   document.getElementById('profileModal').style.display='flex';
 }
 document.getElementById('profileModalClose').addEventListener('click', ()=>{ document.getElementById('profileModal').style.display='none'; });
@@ -625,12 +645,18 @@ function subscribeNotifs(){
   unsubNotifs = onSnapshot(collection(db,'notifications',currentUid,'items'), (snap)=>{
     let unread=0;
     snap.forEach(d=>{ if(!d.data().read) unread++; });
-    const badge = document.getElementById('notifBadge');
-    if(unread>0){ badge.style.display='inline-block'; badge.textContent = `🔔 ${unread}`; }
+    const badge = document.getElementById('hamburgerBadge');
+    if(unread>0){ badge.style.display='inline-block'; badge.textContent = unread>99?'99+':String(unread); }
     else { badge.style.display='none'; }
-    if(activeTab==='notifs') renderNotifsTab();
+    if(document.getElementById('notifModal').style.display==='flex') renderNotifsTab();
   });
 }
+function openNotifModal(){
+  document.getElementById('notifModal').style.display='flex';
+  renderNotifsTab();
+}
+document.getElementById('notifModalClose').addEventListener('click', ()=>{ document.getElementById('notifModal').style.display='none'; });
+document.getElementById('notifModal').addEventListener('click', (e)=>{ if(e.target.id==='notifModal') document.getElementById('notifModal').style.display='none'; });
 
 /* ============ GERÇEK TELEFON BİLDİRİMİ (Firebase Cloud Messaging) ============ */
 async function registerPushToken(){
@@ -718,11 +744,12 @@ async function renderNotifsTab(){
       const tab = row.dataset.notifTab;
       const id = row.dataset.notifId;
       try{ await updateDoc(doc(db,'notifications',currentUid,'items',id), {read:true}); }catch(e){}
+      document.getElementById('notifModal').style.display='none';
       if(document.getElementById('tab-'+tab)) switchTab(tab);
     });
   });
 }
-document.getElementById('notifBadge').addEventListener('click', ()=>{ if(document.getElementById('tab-notifs')) switchTab('notifs'); });
+
 document.getElementById('enablePushBtn').addEventListener('click', enablePushNotifications);
 document.getElementById('markAllReadBtn').addEventListener('click', async ()=>{
   let snap;
@@ -814,17 +841,10 @@ document.getElementById('googleAuthBtn').addEventListener('click', async ()=>{
 /* ============ TAB TANIMLARI ============ */
 const ADMIN_TABS = [
   {id:'today', label:'Bugün'},
-  {id:'editpast', label:'Geçmiş Düzenle'},
   {id:'week', label:'Bu Hafta'},
-  {id:'draws', label:'Kura'},
   {id:'gifts', label:'Hediye Kitap'},
-  {id:'manual', label:'Manuel Kura'},
-  {id:'members', label:'Üyeler'},
   {id:'worms', label:'Kitap Kurtları'},
-  {id:'rules', label:'Grup Kuralları'},
-  {id:'recs', label:'Kitap Önerileri'},
-  {id:'profile', label:'Profilim'},
-  {id:'notifs', label:'Bildirimler'}
+  {id:'recs', label:'Kitap Önerileri'}
 ];
 const MEMBER_TABS = [
   {id:'msurvey', label:'Anket'},
@@ -832,11 +852,48 @@ const MEMBER_TABS = [
   {id:'mlastweek', label:'Geçen Hafta'},
   {id:'gifts', label:'Hediye Kitap'},
   {id:'mworms', label:'Kitap Kurtları'},
-  {id:'rules', label:'Grup Kuralları'},
-  {id:'recs', label:'Kitap Önerileri'},
-  {id:'profile', label:'Profilim'},
-  {id:'notifs', label:'Bildirimler'}
+  {id:'recs', label:'Kitap Önerileri'}
 ];
+const HAMBURGER_ADMIN_EXTRA = [
+  {id:'editpast', label:'Geçmiş Düzenle'},
+  {id:'draws', label:'Kura'},
+  {id:'manual', label:'Manuel Kura'},
+  {id:'members', label:'Üyeler'},
+  {id:'rules', label:'Grup Kuralları'},
+  {id:'profile', label:'Profilim'}
+];
+const HAMBURGER_MEMBER_EXTRA = [
+  {id:'rules', label:'Grup Kuralları'},
+  {id:'profile', label:'Profilim'}
+];
+
+function buildHamburgerMenu(){
+  const items = myProfile.role==='admin' ? HAMBURGER_ADMIN_EXTRA : HAMBURGER_MEMBER_EXTRA;
+  const menu = document.getElementById('hamburgerMenu');
+  menu.innerHTML = items.map(it=>`<button data-tab="${it.id}">${it.label}</button>`).join('')
+    + `<button id="hamburgerNotifBtn">🔔 Bildirimler</button>`;
+  menu.querySelectorAll('button[data-tab]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      switchTab(btn.dataset.tab);
+      menu.style.display='none';
+    });
+  });
+  document.getElementById('hamburgerNotifBtn').addEventListener('click', ()=>{
+    menu.style.display='none';
+    openNotifModal();
+  });
+}
+document.getElementById('hamburgerBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  const menu = document.getElementById('hamburgerMenu');
+  menu.style.display = menu.style.display==='block' ? 'none' : 'block';
+});
+document.body.addEventListener('click', (e)=>{
+  const menu = document.getElementById('hamburgerMenu');
+  if(menu && menu.style.display==='block' && !e.target.closest('#hamburgerMenu') && !e.target.closest('#hamburgerBtn')){
+    menu.style.display='none';
+  }
+});
 
 function buildNav(){
   const tabs = myProfile.role === 'admin' ? ADMIN_TABS : MEMBER_TABS;
@@ -845,6 +902,7 @@ function buildNav(){
   nav.querySelectorAll('button').forEach(btn=>{
     btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
   });
+  buildHamburgerMenu();
   switchTab(tabs[0].id);
 }
 
@@ -872,7 +930,6 @@ function renderTab(id){
   else if(id==='gifts') renderGiftsTab();
   else if(id==='rules') renderRulesTab();
   else if(id==='profile') renderProfileTab();
-  else if(id==='notifs') renderNotifsTab();
   else if(id==='recs') renderRecsTab();
 }
 
@@ -977,6 +1034,48 @@ async function computeStreak(uid, maxDays){
     else break;
   }
   return streak;
+}
+
+/* ============ ROZET SİSTEMİ ============ */
+const BADGE_DEFS = [
+  {key:'b3',  days:3,  icon:'🔥', label:'3 gün aralıksız'},
+  {key:'b5',  days:5,  icon:'⭐', label:'5 gün aralıksız'},
+  {key:'b7',  days:7,  icon:'🎯', label:'1 hafta aralıksız'},
+  {key:'b14', days:14, icon:'💎', label:'2 hafta aralıksız'},
+  {key:'b21', days:21, icon:'🏆', label:'3 hafta aralıksız'},
+  {key:'b30', days:30, icon:'🐛', label:'Kitap Kurdu (1 ay aralıksız)'}
+];
+function badgeRowHtml(badgesObj, size){
+  if(!badgesObj) return '';
+  size = size || 15;
+  const earned = BADGE_DEFS.filter(d=>badgesObj[d.key]);
+  if(earned.length===0) return '';
+  return `<span class="badge-row" style="display:inline-flex;">` +
+    earned.map(d=>`<span class="badge-icon" title="${d.label}" style="font-size:${size}px;">${d.icon}</span>`).join('') +
+  `</span>`;
+}
+async function checkAndAwardBadges(uid, streak){
+  const u = usersCache[uid];
+  if(!u) return;
+  const badges = u.badges || {};
+  const updates = {};
+  const newlyEarned = [];
+  BADGE_DEFS.forEach(def=>{
+    if(streak>=def.days && !badges[def.key]){
+      updates['badges.'+def.key] = new Date().toISOString();
+      newlyEarned.push(def);
+    }
+  });
+  if(newlyEarned.length===0) return;
+  try{
+    await updateDoc(doc(db,'users',uid), updates);
+    u.badges = {...badges};
+    Object.keys(updates).forEach(k=>{ u.badges[k.replace('badges.','')] = updates[k]; });
+    const uTab = u.role==='admin' ? 'worms' : 'mworms';
+    for(const def of newlyEarned){
+      await notifyUser(uid, `🎉 Tebrikler! "${def.label}" rozetini kazandın!`, uTab);
+    }
+  }catch(e){ /* rozet kaydedilemezse sessizce geç */ }
 }
 
 /* ============ GÜN GEÇİŞİNİ (06:00) TAKİP ET ============ */
@@ -1340,17 +1439,44 @@ async function renderAdminMembers(){
 
 /* ============ ADMIN: KİTAP KURTLARI ============ */
 document.getElementById('calcStreaksBtn').addEventListener('click', renderAdminWorms);
-async function renderAdminWorms(){
-  const list = document.getElementById('wormsList');
+async function renderWormsShared(containerId){
+  const list = document.getElementById(containerId);
   list.innerHTML = `<div class="empty-state">Hesaplanıyor…</div>`;
   const uids = activeUids();
-  const results = await Promise.all(uids.map(async uid=>({uid, name:usersCache[uid].name, streak: await computeStreak(uid)})));
+  const results = await Promise.all(uids.map(async uid=>{
+    const streak = await computeStreak(uid);
+    await checkAndAwardBadges(uid, streak);
+    return {uid, streak};
+  }));
   results.sort((a,b)=>b.streak-a.streak);
-  list.innerHTML = results.map(r=>{
-    const badge = r.streak>=30 ? `<span title="Kitap kurdu">🐛</span>` : '';
-    return `<div class="worm-row"><div>${badge} ${userChipHtml(r.uid)}</div><div class="worm-streak">${r.streak} gün</div></div>`;
-  }).join('');
+
+  const now = new Date();
+  const currentBookworms = results.filter(r=>{
+    const achievedAt = usersCache[r.uid]?.badges?.b30;
+    if(!achievedAt) return false;
+    const days = (now - new Date(achievedAt)) / (1000*60*60*24);
+    return days <= 30;
+  });
+
+  let html = '';
+  if(currentBookworms.length>0){
+    html += `<div style="margin-bottom:16px;">
+      <div class="chip ok" style="margin-bottom:8px;">🐛 Güncel Kitap Kurtları (son 1 ay içinde kazanılmış)</div>
+      ${currentBookworms.map(r=>`<div class="worm-row"><div>${userChipHtml(r.uid)} ${badgeRowHtml(usersCache[r.uid].badges)}</div><div class="worm-streak">${r.streak} gün</div></div>`).join('')}
+    </div>
+    <div style="border-top:1px dashed var(--line); margin-bottom:12px;"></div>`;
+  }
+
+  if(results.length===0){
+    html += `<div class="empty-state">Henüz üye yok.</div>`;
+  } else {
+    html += results.map(r=>{
+      return `<div class="worm-row"><div>${userChipHtml(r.uid)} ${badgeRowHtml(usersCache[r.uid].badges)}</div><div class="worm-streak">${r.streak} gün</div></div>`;
+    }).join('');
+  }
+  list.innerHTML = html;
 }
+async function renderAdminWorms(){ await renderWormsShared('wormsList'); }
 
 /* ============ ÜYE: ANKET ============ */
 let memberWeekOffset = 0; // 0 = bu hafta, -1 = önceki hafta, ...
@@ -1373,7 +1499,13 @@ function renderMemberSurvey(){
   memberWeekOffset = 0;
   renderMemberOwnWeek();
 }
-document.getElementById('mReadBtn').addEventListener('click', async ()=>{ await markStatus(currentUid,'read'); renderMemberSurvey(); notifyAdmins(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week'); });
+document.getElementById('mReadBtn').addEventListener('click', async ()=>{
+  await markStatus(currentUid,'read');
+  renderMemberSurvey();
+  notifyAdmins(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week');
+  const s = await computeStreak(currentUid);
+  await checkAndAwardBadges(currentUid, s);
+});
 document.getElementById('mSkipBtn').addEventListener('click', async ()=>{ await markStatus(currentUid,'skip'); renderMemberSurvey(); notifyAdmins(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week'); });
 
 async function renderMemberOwnWeek(){
@@ -1457,6 +1589,7 @@ function renderProfileTab(){
   document.getElementById('profileBio').value = myProfile.bio || '';
   document.getElementById('profileReading').value = myProfile.currentlyReading || '';
   document.getElementById('profilePhotoPreview').src = myProfile.photoURL || './icon-192.png';
+  document.getElementById('profileMyBadges').innerHTML = badgeRowHtml(myProfile.badges, 20);
   document.getElementById('profileError').textContent = '';
   document.getElementById('passwordError').textContent = '';
   const pwCard = document.getElementById('changePasswordBtn').closest('.card');
@@ -2014,19 +2147,7 @@ async function renderGroupRecs(){
 }
 
 /* ============ ÜYE: KİTAP KURTLARI ============ */
-async function renderMemberWorms(){
-  const list = document.getElementById('mWormsList');
-  list.innerHTML = `<div class="empty-state">Hesaplanıyor…</div>`;
-  const uids = activeUids();
-  const results = await Promise.all(uids.map(async uid=>({uid, name:usersCache[uid].name, streak: await computeStreak(uid)})));
-  results.sort((a,b)=>b.streak-a.streak);
-  const worms = results.filter(r=>r.streak>=30);
-  if(worms.length===0){
-    list.innerHTML = `<div class="empty-state"><span class="big">🐛</span>Henüz 30 günü aşan kimse yok. İlk olabilirsin!</div>`;
-    return;
-  }
-  list.innerHTML = worms.map(r=>`<div class="worm-row"><div>🐛 ${userChipHtml(r.uid)}</div><div class="worm-streak">${r.streak} gün</div></div>`).join('');
-}
+async function renderMemberWorms(){ await renderWormsShared('mWormsList'); }
 
 /* ============ GİRİŞ / AUTH DURUM TAKİBİ ============ */
 onAuthStateChanged(auth, async (user)=>{
@@ -2036,7 +2157,7 @@ onAuthStateChanged(auth, async (user)=>{
 
   if(!user){
     currentUid = null; myProfile = null;
-    document.getElementById('notifBadge').style.display='none';
+    document.getElementById('hamburgerBadge').style.display='none';
     loadingScreen.style.display='none';
     authScreen.style.display='block';
     appRoot.style.display='none';
