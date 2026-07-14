@@ -427,6 +427,8 @@
     <section class="tab" id="tab-notifs">
       <div class="card">
         <h2>🔔 Bildirimler</h2>
+        <p class="muted" id="pushStatusNote"></p>
+        <button class="primary" id="enablePushBtn" style="margin-bottom:10px;">📱 Telefon Bildirimlerini Aç</button>
         <button class="secondary tiny" id="markAllReadBtn" style="margin-bottom:10px;">Tümünü okundu yap</button>
         <div id="notifsList"></div>
       </div>
@@ -631,34 +633,69 @@ function subscribeNotifs(){
 }
 
 /* ============ GERÇEK TELEFON BİLDİRİMİ (Firebase Cloud Messaging) ============ */
+async function registerPushToken(){
+  const swReg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+  const messaging = getMessaging(app);
+  const token = await getToken(messaging, { vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: swReg });
+  if(token){
+    await updateDoc(doc(db,'users',currentUid), { fcmTokens: arrayUnion(token) }).catch(()=>{});
+  }
+  onMessage(messaging, (payload)=>{
+    // Uygulama açıkken gelen bildirimler (foreground) tarayıcı tarafından otomatik gösterilmez, biz gösteriyoruz.
+    const title = payload.notification?.title || 'BookHook';
+    const body = payload.notification?.body || '';
+    showToast(`🔔 ${body || title}`);
+    if(activeTab) renderTab(activeTab);
+  });
+}
+// Girişte sessizce çalışır: izin ZATEN verilmişse token'ı tazeler. İzin isteme (requestPermission)
+// tarayıcı kısıtlaması yüzünden burada YAPILMAZ — o yalnızca "Bildirimleri Aç" butonuyla, doğrudan
+// bir tıklama içinde tetiklenmeli, yoksa tarayıcı sessizce reddediyor.
 async function setupPushNotifications(){
   try{
     const supported = await isMessagingSupported();
-    if(!supported) return; // Safari eski sürüm / desteklenmeyen tarayıcı vs.
-    if(FCM_VAPID_KEY.includes('BURAYA_')) return; // henüz kurulmamış, sessizce atla
-
-    if(Notification.permission === 'default'){
-      const perm = await Notification.requestPermission();
-      if(perm !== 'granted') return;
-    }
+    if(!supported) return;
+    if(FCM_VAPID_KEY.includes('BURAYA_')) return;
     if(Notification.permission !== 'granted') return;
-
-    const swReg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-    const messaging = getMessaging(app);
-    const token = await getToken(messaging, { vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: swReg });
-    if(token){
-      await updateDoc(doc(db,'users',currentUid), { fcmTokens: arrayUnion(token) }).catch(()=>{});
-    }
-    onMessage(messaging, (payload)=>{
-      // Uygulama açıkken gelen bildirimler (foreground) tarayıcı tarafından otomatik gösterilmez, biz gösteriyoruz.
-      const title = payload.notification?.title || 'BookHook';
-      const body = payload.notification?.body || '';
-      showToast(`🔔 ${body || title}`);
-      if(activeTab) renderTab(activeTab);
-    });
+    await registerPushToken();
   }catch(e){ /* push kurulamazsa uygulama içi bildirimler zaten çalışmaya devam eder */ }
 }
+// Kullanıcının doğrudan tıklamasıyla çalışır — izin isteme burada, tıklamanın hemen içinde yapılır.
+async function enablePushNotifications(){
+  try{
+    const supported = await isMessagingSupported();
+    if(!supported){ alert('Bu tarayıcı telefon bildirimlerini desteklemiyor.'); return; }
+    if(FCM_VAPID_KEY.includes('BURAYA_')){ alert('VAPID anahtarı henüz ayarlanmamış.'); return; }
+    if(Notification.permission === 'denied'){
+      alert('Bu site için bildirimleri daha önce reddetmişsin. Tarayıcının adres çubuğundaki kilit/site bilgisi simgesinden bildirim iznini "İzin ver" yapıp tekrar dene.');
+      return;
+    }
+    if(Notification.permission === 'default'){
+      const perm = await Notification.requestPermission();
+      if(perm !== 'granted'){ showToast('Bildirim izni verilmedi.'); renderNotifsTab(); return; }
+    }
+    await registerPushToken();
+    showToast('Telefon bildirimleri açıldı! 🔔');
+    renderNotifsTab();
+  }catch(e){ alert('Bildirimler açılamadı: ' + (e.message||e)); }
+}
 async function renderNotifsTab(){
+  const statusNote = document.getElementById('pushStatusNote');
+  const enableBtn = document.getElementById('enablePushBtn');
+  if(!('Notification' in window)){
+    statusNote.textContent = 'Bu tarayıcı telefon bildirimlerini desteklemiyor.';
+    enableBtn.style.display = 'none';
+  } else if(Notification.permission === 'granted'){
+    statusNote.textContent = '✅ Telefon bildirimleri açık.';
+    enableBtn.style.display = 'none';
+  } else if(Notification.permission === 'denied'){
+    statusNote.textContent = '🚫 Bildirimler bu site için reddedilmiş. Adres çubuğundaki site simgesinden izni değiştirip sayfayı yenile.';
+    enableBtn.style.display = 'none';
+  } else {
+    statusNote.textContent = 'Telefon bildirimleri henüz açık değil.';
+    enableBtn.style.display = 'inline-block';
+  }
+
   const box = document.getElementById('notifsList');
   box.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
   let snap;
@@ -686,6 +723,7 @@ async function renderNotifsTab(){
   });
 }
 document.getElementById('notifBadge').addEventListener('click', ()=>{ if(document.getElementById('tab-notifs')) switchTab('notifs'); });
+document.getElementById('enablePushBtn').addEventListener('click', enablePushNotifications);
 document.getElementById('markAllReadBtn').addEventListener('click', async ()=>{
   let snap;
   try{ snap = await getDocs(collection(db,'notifications',currentUid,'items')); }catch(e){ return; }
