@@ -1614,10 +1614,11 @@ async function renderAdminMembers(){
   list.innerHTML = uids.map(uid=>{
     const u = usersCache[uid];
     const isSelf = uid===currentUid;
+    const joinDs = joinDateStrOf(uid) || '—';
     return `<div class="member-row">
       <div>
         <div class="member-name">${userChipHtml(uid)} ${u.role==='admin'?'<span class="role-chip">yönetici</span>':''} ${u.banned && !u.deleted?'<span class="chip banned">BANLI</span>':''} ${u.deleted?'<span class="chip banned">SİLİNDİ</span>':''}</div>
-        <div class="member-meta">${escapeHtml(u.email||'')}</div>
+        <div class="member-meta">${escapeHtml(u.email||'')} &middot; Katılım: ${joinDs} <button data-edit-join="${uid}" style="border:none;background:none;color:var(--gold);cursor:pointer;font-size:10.5px;text-decoration:underline;">düzenle</button></div>
       </div>
       <div class="row" style="flex:0 0 auto; width:auto; flex-wrap:wrap;">
         <button class="secondary tiny" data-toggle-role="${uid}" ${isSelf||u.deleted?'disabled':''} ${isSelf?'title="Kendi rolünü buradan değiştiremezsin"':''}>${u.role==='admin' ? 'Üye Yap' : 'Yönetici Yap'}</button>
@@ -1626,6 +1627,23 @@ async function renderAdminMembers(){
       </div>
     </div>`;
   }).join('');
+  list.querySelectorAll('[data-edit-join]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const uid = btn.dataset.editJoin;
+      const u = usersCache[uid];
+      const current = joinDateStrOf(uid) || CLUB_START_DATE;
+      const input = prompt(`${u.name} için gerçek katılım tarihini gir (YYYY-AA-GG):`, current);
+      if(!input) return;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(input)){ alert('Tarih formatı YYYY-AA-GG olmalı, örn: 2026-07-06'); return; }
+      const newCreatedAt = new Date(input+'T12:00:00').toISOString();
+      try{
+        await updateDoc(doc(db,'users',uid), {createdAt:newCreatedAt});
+        u.createdAt = newCreatedAt;
+        showToast(`${u.name} için katılım tarihi güncellendi: ${input}`);
+        renderAdminMembers();
+      }catch(err){ alert('Güncellenemedi: '+(err.message||err)); }
+    });
+  });
   list.querySelectorAll('[data-toggle-role]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const uid = btn.dataset.toggleRole;
