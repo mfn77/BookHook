@@ -1054,7 +1054,7 @@ function switchTab(id){
   document.addEventListener('touchstart', (e)=>{
     if(e.touches.length!==1){ touchStartX=null; return; }
     const t = e.target;
-    if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal')){
+    if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.libcard')){
       touchStartX=null; return;
     }
     touchStartX = e.touches[0].clientX;
