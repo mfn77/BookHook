@@ -70,7 +70,7 @@
   button:not(:disabled):active{ transform: scale(0.96); }
   input, select, textarea{ transition: border-color .15s var(--ease), box-shadow .15s var(--ease); }
 
-  .app-shell{ display:flex; min-height:100vh; align-items:stretch; }
+  .app-shell{ display:flex; min-height:100vh; align-items:stretch; max-width:100vw; overflow-x:hidden; }
   .sidebar{
     width:78px; flex:0 0 auto; display:flex; flex-direction:column; align-items:center;
     background:rgba(var(--card-bg),0.55); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
@@ -79,7 +79,7 @@
   }
   .sidebar-header{ margin-bottom:14px; flex:0 0 auto; }
   .sidebar-logo{ width:34px; height:34px; border-radius:10px; display:block; }
-  .content-col{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .content-col{ flex:1; min-width:0; max-width:100%; display:flex; flex-direction:column; overflow-x:hidden; }
   @media (max-width:380px){
     .sidebar{ width:62px; }
     .sidebar-tabs.tabs button{ height:48px !important; font-size:8.3px !important; }
@@ -101,13 +101,15 @@
     position:sticky; top:0; z-index:9;
   }
   .header-title-area{ font-family:'Cantarell',sans-serif; font-weight:700; font-size:15px; color:var(--ink); flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .whoami{ display:flex; align-items:center; gap:7px; font-family:'Cantarell', sans-serif; font-size:12px; color:var(--ink-70); flex:0 0 auto; position:relative; font-weight:600; text-align:left; }
+  .whoami{ display:flex; align-items:center; gap:7px; font-family:'Cantarell', sans-serif; font-size:12px; color:var(--ink-70); flex:0 1 auto; min-width:0; position:relative; font-weight:600; text-align:left; }
   .header-pill{
     display:inline-flex; align-items:center; gap:6px; height:38px; padding:0 14px;
     background:var(--paper-2); border:1px solid var(--line); border-radius:999px;
-    color:var(--ink); font-weight:600; font-size:13px; cursor:default;
+    color:var(--ink); font-weight:600; font-size:13px; cursor:default; min-width:0;
   }
-  .header-pill.icon-pill{ padding:0; width:38px; justify-content:center; font-size:16px; cursor:pointer; position:relative; }
+  .header-pill.icon-pill{ padding:0; width:38px; flex:0 0 auto; justify-content:center; font-size:16px; cursor:pointer; position:relative; }
+  #whoamiClickable{ min-width:0; overflow:hidden; }
+  #whoamiName{ max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle; }
   #whoamiClickable:hover, .icon-pill:hover{ background:var(--line); }
   #logoutBtn.header-pill{ cursor:pointer; background:none; border:1.5px solid var(--cloth); color:var(--cloth-dark); }
   #logoutBtn.header-pill:hover{ background:rgba(224,27,36,0.08); }
@@ -148,7 +150,7 @@
   .sidebar-tabs.tabs button.active{ background:var(--gold); color:#fff; }
   .sidebar-tabs.tabs button.active .tab-icon{ filter:brightness(0) invert(1); }
   .sidebar-tabs.tabs button:hover:not(.active){ background:var(--paper-2); color:var(--ink); }
-  .card{ position:relative; }
+  .card{ position:relative; max-width:100%; overflow-x:hidden; }
   .card h2{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .card-info-btn{
     width:22px; height:22px; border-radius:50%; border:1.5px solid var(--ink-70); background:none;
@@ -172,9 +174,10 @@
   }
   .card h2{margin:0 0 12px; font-size:16px; font-weight:700; color:var(--ink);}
   .muted{color:var(--ink-70); font-size:13px; line-height:1.55;}
-  .member-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line); gap:10px; flex-wrap:wrap;}
+  .member-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line); gap:10px; flex-wrap:wrap; min-width:0; max-width:100%;}
   .member-row:last-child{border-bottom:none;}
-  .member-name{font-weight:600; font-size:15px;}
+  .member-row > div:first-child{ min-width:0; flex:1 1 auto; overflow-wrap:anywhere; }
+  .member-name{font-weight:600; font-size:15px; overflow-wrap:anywhere;}
   .member-meta{font-family:'Roboto Mono', monospace; font-size:10.5px; color:var(--ink-70); margin-top:2px;}
   .stamp-btns{display:flex; gap:8px; flex:0 0 auto;}
   .stamp-btn{
@@ -776,6 +779,19 @@ document.body.addEventListener('click', (e)=>{
   if(chip && chip.dataset.uid) openProfileModal(chip.dataset.uid);
 });
 
+// Bir konteynerin daha önce içerik gösterip göstermediğini işaretler. İlk seferinde
+// "Yükleniyor…" gösterilir; sonraki ziyaretlerde önceki içerik ekranda kalmaya devam
+// eder, veri arka planda tazelenip sessizce günceller — böylece her sekmeye geçişte
+// boş/"yükleniyor" ekranı görülmez.
+function keepOrLoading(containerId, loadingText){
+  const el = document.getElementById(containerId);
+  if(el && el.dataset.loaded !== '1'){
+    el.innerHTML = `<div class="empty-state">${loadingText || 'Yükleniyor…'}</div>`;
+  }
+  return el;
+}
+function markLoaded(el){ if(el) el.dataset.loaded = '1'; }
+
 function showToast(msg){
   const host = document.getElementById('toastHost');
   const el = document.createElement('div');
@@ -878,14 +894,13 @@ async function renderNotifsTab(){
     enableBtn.style.display = 'inline-block';
   }
 
-  const box = document.getElementById('notifsList');
-  box.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  const box = keepOrLoading('notifsList');
   let snap;
   try{ snap = await getDocs(query(collection(db,'notifications',currentUid,'items'), orderBy('createdAt','desc'), limit(50))); }
-  catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; return; }
+  catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; markLoaded(box); return; }
   const items = [];
   snap.forEach(d=> items.push({id:d.id, ref:d.ref, ...d.data()}));
-  if(items.length===0){ box.innerHTML = `<div class="empty-state"><span class="big">🔔</span>Henüz bildirim yok.</div>`; return; }
+  if(items.length===0){ box.innerHTML = `<div class="empty-state"><span class="big">🔔</span>Henüz bildirim yok.</div>`; markLoaded(box); return; }
   box.innerHTML = items.map(it=>{
     const dt = new Date(it.createdAt);
     const dtLabel = isNaN(dt.getTime()) ? '' : `${pad(dt.getDate())}.${pad(dt.getMonth()+1)} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
@@ -904,6 +919,7 @@ async function renderNotifsTab(){
       if(document.getElementById('tab-'+tab)) switchTab(tab);
     });
   });
+  markLoaded(box);
 }
 
 document.getElementById('enablePushBtn').addEventListener('click', enablePushNotifications);
@@ -1463,7 +1479,7 @@ async function renderAdminOwnWeek(){
   document.getElementById('aWeekRangeLabel').textContent = `${fmtShort(dates[0])} — ${fmtShort(dates[6])}` + (adminWeekOffset===0 ? ' (bu hafta)' : '');
   document.getElementById('aWeekNextBtn').disabled = adminWeekOffset>=0;
   const table = document.getElementById('aOwnWeekGrid');
-  table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
+  if(table.dataset.loaded !== '1') table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const joinDs = joinDateStrOf(currentUid);
   let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
@@ -1475,6 +1491,7 @@ async function renderAdminOwnWeek(){
     return `<td><span class="stamp-mini empty">·</span></td>`;
   }).join('');
   table.innerHTML = head + `<tr>${cells}</tr>`;
+  markLoaded(table);
 }
 document.getElementById('aWeekPrevBtn').addEventListener('click', ()=>{ adminWeekOffset -= 1; renderAdminOwnWeek(); });
 document.getElementById('aWeekNextBtn').addEventListener('click', ()=>{ if(adminWeekOffset<0){ adminWeekOffset += 1; renderAdminOwnWeek(); } });
@@ -1496,11 +1513,10 @@ if(!editPastDateInput.value) editPastDateInput.value = toStr(addDays(nowLogical(
 editPastDateInput.addEventListener('change', renderEditPastTab);
 async function renderEditPastTab(){
   const dateStr = editPastDateInput.value || toStr(addDays(nowLogical(),-1));
-  const list = document.getElementById('editPastList');
-  list.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  const list = keepOrLoading('editPastList');
   const map = await fetchDayAnswers(dateStr);
   const uids = activeUids();
-  if(uids.length===0){ list.innerHTML = `<div class="empty-state">Henüz üye yok.</div>`; return; }
+  if(uids.length===0){ list.innerHTML = `<div class="empty-state">Henüz üye yok.</div>`; markLoaded(list); return; }
   list.innerHTML = uids.map(uid=>{
     const rec = map[uid];
     const st = rec ? rec.status : undefined;
@@ -1513,6 +1529,7 @@ async function renderEditPastTab(){
       </div>
     </div>`;
   }).join('');
+  markLoaded(list);
   list.querySelectorAll('.stamp-btn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       await markStatusForDate(btn.dataset.uid, dateStr, btn.dataset.status);
@@ -1524,12 +1541,12 @@ async function renderEditPastTab(){
 /* ============ ADMIN: BU HAFTA ============ */
 async function renderAdminWeek(){
   const table = document.getElementById('weekGrid');
-  table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
+  if(table.dataset.loaded !== '1') if(table.dataset.loaded !== '1') table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
   const monday = getMonday(nowLogical());
   const dates = weekDates(monday);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const uids = activeUids();
-  if(uids.length===0){ table.innerHTML = `<tr><td class="empty-state">Henüz üye yok.</td></tr>`; return; }
+  if(uids.length===0){ table.innerHTML = `<tr><td class="empty-state">Henüz üye yok.</td></tr>`; markLoaded(table); return; }
   let head = `<tr><th style="text-align:left;">Üye</th>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `<th>Durum</th></tr>`;
   let rows = uids.map(uid=>{
     const joinDs = joinDateStrOf(uid);
@@ -1552,6 +1569,7 @@ async function renderAdminWeek(){
     return `<tr><td class="name-cell">${userChipHtml(uid,18)}</td>${cells}<td>${statusChip}</td></tr>`;
   }).join('');
   table.innerHTML = head + rows;
+  markLoaded(table);
 }
 document.getElementById('refreshWeekBtn').addEventListener('click', renderAdminWeek);
 
@@ -1616,7 +1634,7 @@ function renderManualTab(){
   ensureManualGrid();
   const table = document.getElementById('manualGridTable');
   const uids = activeUids();
-  if(uids.length===0){ table.innerHTML = `<tr><td class="empty-state">Henüz üye yok.</td></tr>`; return; }
+  if(uids.length===0){ table.innerHTML = `<tr><td class="empty-state">Henüz üye yok.</td></tr>`; markLoaded(table); return; }
   let head = `<tr><th style="text-align:left;">Üye</th>` + [1,2,3,4,5,6,7].map(n=>`<th>G${n}</th>`).join('') + `<th>Durum</th></tr>`;
   let rows = uids.map(uid=>{
     const arr = manualGrid[uid];
@@ -1790,8 +1808,7 @@ async function renderAdminMembers(){
 /* ============ ADMIN: KİTAP KURTLARI ============ */
 document.getElementById('calcStreaksBtn').addEventListener('click', renderAdminWorms);
 async function renderWormsShared(containerId, historyContainerId){
-  const list = document.getElementById(containerId);
-  list.innerHTML = `<div class="empty-state">Hesaplanıyor…</div>`;
+  const list = keepOrLoading(containerId, 'Hesaplanıyor…');
   const uids = activeUids();
   const results = await Promise.all(uids.map(async uid=>{
     const streak = await computeStreak(uid);
@@ -1807,6 +1824,7 @@ async function renderWormsShared(containerId, historyContainerId){
       return `<div class="worm-row"><div>${userChipHtml(r.uid)}</div><div class="worm-streak">${r.streak} gün</div></div>`;
     }).join('');
   }
+  markLoaded(list);
 
   const historyBox = document.getElementById(historyContainerId);
   if(historyBox){
@@ -1825,6 +1843,7 @@ async function renderWormsShared(containerId, historyContainerId){
       }).join('');
       historyBox.innerHTML = `<table class="weekgrid">${head}${body}</table>`;
     }
+    markLoaded(historyBox);
   }
 }
 async function renderAdminWorms(){ await renderWormsShared('wormsList','wormsHistory'); }
@@ -1866,7 +1885,7 @@ async function renderMemberOwnWeek(){
   document.getElementById('mWeekRangeLabel').textContent = `${fmtShort(dates[0])} — ${fmtShort(dates[6])}` + (memberWeekOffset===0 ? ' (bu hafta)' : '');
   document.getElementById('mWeekNextBtn').disabled = memberWeekOffset>=0;
   const table = document.getElementById('mOwnWeekGrid');
-  table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
+  if(table.dataset.loaded !== '1') table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const joinDs = joinDateStrOf(currentUid);
   let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
@@ -1878,6 +1897,7 @@ async function renderMemberOwnWeek(){
     return `<td><span class="stamp-mini empty">·</span></td>`;
   }).join('');
   table.innerHTML = head + `<tr>${cells}</tr>`;
+  markLoaded(table);
 }
 document.getElementById('mWeekPrevBtn').addEventListener('click', ()=>{ memberWeekOffset -= 1; renderMemberOwnWeek(); });
 document.getElementById('mWeekNextBtn').addEventListener('click', ()=>{ if(memberWeekOffset<0){ memberWeekOffset += 1; renderMemberOwnWeek(); } });
@@ -1885,12 +1905,12 @@ document.getElementById('mWeekNextBtn').addEventListener('click', ()=>{ if(membe
 /* ============ ÜYE: BU HAFTA (HERKES) ============ */
 async function renderMemberWeekAll(){
   const table = document.getElementById('mWeekGridAll');
-  table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
+  if(table.dataset.loaded !== '1') table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
   const monday = getMonday(nowLogical());
   const dates = weekDates(monday);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const uids = activeUids();
-  if(uids.length===0){ table.innerHTML = `<tr><td class="empty-state">Henüz üye yok.</td></tr>`; return; }
+  if(uids.length===0){ table.innerHTML = `<tr><td class="empty-state">Henüz üye yok.</td></tr>`; markLoaded(table); return; }
   let head = `<tr><th style="text-align:left;">Üye</th>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `<th>Durum</th></tr>`;
   let rows = uids.map(uid=>{
     const joinDs = joinDateStrOf(uid);
@@ -1913,14 +1933,14 @@ async function renderMemberWeekAll(){
     return `<tr><td class="name-cell">${userChipHtml(uid,18)}</td>${cells}<td>${statusChip}</td></tr>`;
   }).join('');
   table.innerHTML = head + rows;
+  markLoaded(table);
 }
 
 /* ============ ÜYE: GEÇEN HAFTA ============ */
 async function renderMemberLastWeek(){
-  const box = document.getElementById('mLastWeekBox');
-  box.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  const box = keepOrLoading('mLastWeekBox');
   await loadDraws();
-  if(drawsCache.length===0){ box.innerHTML = `<div class="empty-state"><span class="big">🎁</span>Henüz tamamlanmış bir hafta yok.</div>`; return; }
+  if(drawsCache.length===0){ box.innerHTML = `<div class="empty-state"><span class="big">🎁</span>Henüz tamamlanmış bir hafta yok.</div>`; markLoaded(box); return; }
   const d = drawsCache[0];
   const rangeLabel = `${fmtShort(d.weekStart)} — ${fmtShort(d.weekEnd)}`;
   let body;
@@ -1933,6 +1953,7 @@ async function renderMemberLastWeek(){
     }).join('');
   }
   box.innerHTML = `<div class="receipt"><div class="rweek">Hafta: ${rangeLabel}</div>${body}</div>`;
+  markLoaded(box);
 }
 
 /* ============ ORTAK: PROFİLİM ============ */
@@ -2055,13 +2076,14 @@ document.getElementById('deleteMyAccountBtn').addEventListener('click', async ()
 /* ============ ORTAK: GRUP KURALLARI ============ */
 async function renderRulesTab(){
   const displayBox = document.getElementById('rulesDisplay');
-  displayBox.textContent = 'Yükleniyor…';
+  if(displayBox.dataset.loaded !== '1') displayBox.textContent = 'Yükleniyor…';
   let rulesText = '';
   try{
     const snap = await getDoc(doc(db,'settings','groupRules'));
     rulesText = snap.exists() ? (snap.data().text || '') : '';
   }catch(e){}
   displayBox.textContent = rulesText || 'Henüz kural eklenmemiş.';
+  displayBox.dataset.loaded = '1';
   const editBox = document.getElementById('rulesAdminEdit');
   if(myProfile.role==='admin'){
     editBox.style.display='block';
@@ -2092,8 +2114,7 @@ document.getElementById('ruleRequestBtn').addEventListener('click', async ()=>{
   }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
 });
 async function renderRuleRequestsList(){
-  const box = document.getElementById('ruleRequestsList');
-  box.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  const box = keepOrLoading('ruleRequestsList');
   let snap;
   try{
     if(myProfile.role==='admin'){
@@ -2101,10 +2122,10 @@ async function renderRuleRequestsList(){
     } else {
       snap = await getDocs(query(collection(db,'ruleRequests'), where('uid','==',currentUid), orderBy('createdAt','desc')));
     }
-  }catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; return; }
+  }catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; markLoaded(box); return; }
   const items = [];
   snap.forEach(d=> items.push({id:d.id, ...d.data()}));
-  if(items.length===0){ box.innerHTML = `<p class="muted">Henüz öneri yok.</p>`; return; }
+  if(items.length===0){ box.innerHTML = `<p class="muted">Henüz öneri yok.</p>`; markLoaded(box); return; }
   box.innerHTML = items.map(it=>{
     const statusChip = it.status==='approved' ? '<span class="chip ok">Onaylandı</span>' : it.status==='rejected' ? '<span class="chip danger">Reddedildi</span>' : '<span class="chip pending">Bekliyor</span>';
     const adminBtns = myProfile.role==='admin' && it.status==='pending' ? `
@@ -2134,13 +2155,13 @@ async function renderRuleRequestsList(){
       renderRuleRequestsList();
     });
   });
+  markLoaded(box);
 }
 
 /* ============ ORTAK: HEDİYE KİTAP ============ */
 async function renderGiftsTab(){
   const intro = document.getElementById('giftsIntro');
-  const content = document.getElementById('giftsContent');
-  content.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  const content = keepOrLoading('giftsContent');
   await loadDraws();
 
   let personalHtml = '';
@@ -2175,6 +2196,7 @@ async function renderGiftsTab(){
     content.innerHTML = combined;
   }
 
+  markLoaded(content);
   wireGiftFormHandlers(content);
   await renderGiftHistory(myProfile.role==='admin');
 }
@@ -2306,8 +2328,7 @@ function wireGiftFormHandlers(content){
 }
 
 async function renderGiftHistory(isAdminView){
-  const host = document.getElementById('giftHistoryList');
-  host.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  const host = keepOrLoading('giftHistoryList');
   let items = [];
   try{
     if(isAdminView){
@@ -2323,9 +2344,9 @@ async function renderGiftHistory(isAdminView){
         if(!seen.has(d.id)){ seen.add(d.id); items.push(d.data()); }
       });
     }
-  }catch(e){ host.innerHTML = `<p class="muted">Yüklenemedi.</p>`; return; }
+  }catch(e){ host.innerHTML = `<p class="muted">Yüklenemedi.</p>`; markLoaded(host); return; }
   items.sort((a,b)=> new Date(b.receivedAt||0) - new Date(a.receivedAt||0));
-  if(items.length===0){ host.innerHTML = `<p class="muted">Henüz tamamlanmış hediye yok.</p>`; return; }
+  if(items.length===0){ host.innerHTML = `<p class="muted">Henüz tamamlanmış hediye yok.</p>`; markLoaded(host); return; }
   host.innerHTML = items.map(it=>{
     const dt = it.receivedAt ? new Date(it.receivedAt) : null;
     const dtLabel = dt && !isNaN(dt.getTime()) ? `${pad(dt.getDate())}.${pad(dt.getMonth()+1)}.${dt.getFullYear()}` : '';
@@ -2335,6 +2356,7 @@ async function renderGiftHistory(isAdminView){
       <div style="margin-top:4px;">${userChipHtml(it.receiverUid)} — <span class="chip ok">Hediye kitap alındı</span></div>
     </div>`;
   }).join('');
+  markLoaded(host);
 }
 
 /* ============ ORTAK: KİTAP ÖNERİLERİ ============ */
@@ -2466,8 +2488,7 @@ function wireRecCards(box, items, isGroup){
 }
 
 async function renderPersonalRecs(){
-  const box = document.getElementById('recPersonalList');
-  box.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  const box = keepOrLoading('recPersonalList');
   let items = [];
   try{
     const [snapFrom, snapTo] = await Promise.all([
@@ -2478,27 +2499,28 @@ async function renderPersonalRecs(){
     [...snapFrom.docs, ...snapTo.docs].forEach(d=>{
       if(!seen.has(d.id)){ seen.add(d.id); items.push({id:d.id, ...d.data()}); }
     });
-  }catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; return; }
+  }catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; markLoaded(box); return; }
   items.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
-  if(items.length===0){ box.innerHTML = `<p class="muted">Henüz şahsi öneri yok.</p>`; return; }
+  if(items.length===0){ box.innerHTML = `<p class="muted">Henüz şahsi öneri yok.</p>`; markLoaded(box); return; }
   const cards = await Promise.all(items.map(it=>renderRecCard(it,false)));
   box.innerHTML = cards.join('');
+  markLoaded(box);
   wireRecCards(box, items, false);
 }
 
 async function renderGroupRecs(){
-  const box = document.getElementById('recGroupList');
-  box.innerHTML = `<div class="empty-state">Yükleniyor…</div>`;
+  const box = keepOrLoading('recGroupList');
   let items = [];
   try{
     const snap = await getDocs(query(collection(db,'recommendations'), where('scope','==','group')));
     snap.forEach(d=> items.push({id:d.id, ...d.data()}));
-  }catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; return; }
+  }catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; markLoaded(box); return; }
   items.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
   items = items.slice(0,50);
-  if(items.length===0){ box.innerHTML = `<p class="muted">Henüz grup önerisi yok.</p>`; return; }
+  if(items.length===0){ box.innerHTML = `<p class="muted">Henüz grup önerisi yok.</p>`; markLoaded(box); return; }
   const cards = await Promise.all(items.map(it=>renderRecCard(it,true)));
   box.innerHTML = cards.join('');
+  markLoaded(box);
   wireRecCards(box, items, true);
 }
 
