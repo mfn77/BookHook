@@ -43,7 +43,7 @@
   }
   html, body{ transition: background-color .25s var(--ease); }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  html,body{margin:0;padding:0; width:100%; overflow-x:hidden;}
   body{
     background:
       radial-gradient(circle at 12% 6%, rgba(33,144,164,0.16), transparent 42%),
@@ -84,6 +84,13 @@
     .sidebar{ width:62px; }
     .sidebar-tabs.tabs button{ height:48px !important; font-size:8.3px !important; }
     .sidebar-tabs.tabs button .tab-icon{ font-size:16px !important; }
+    header.top{ padding:10px 10px; gap:6px; }
+    .header-pill{ padding:0 9px; font-size:11.5px; height:34px; }
+    .header-pill.icon-pill{ width:34px; }
+    .whoami{ gap:5px; }
+    .whoami .rolechip{ display:none; }
+    #whoamiName{ max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle; }
+    .header-title-area{ font-size:13px; }
   }
 
   header.top{
@@ -93,7 +100,7 @@
     display:flex; justify-content:space-between; align-items:center; gap:10px;
     position:sticky; top:0; z-index:9;
   }
-  .header-title-area{ font-family:'Cantarell',sans-serif; font-weight:700; font-size:15px; color:var(--ink); }
+  .header-title-area{ font-family:'Cantarell',sans-serif; font-weight:700; font-size:15px; color:var(--ink); flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .whoami{ display:flex; align-items:center; gap:7px; font-family:'Cantarell', sans-serif; font-size:12px; color:var(--ink-70); flex:0 0 auto; position:relative; font-weight:600; text-align:left; }
   .header-pill{
     display:inline-flex; align-items:center; gap:6px; height:38px; padding:0 14px;
@@ -314,7 +321,7 @@
           </div>
           <button id="notifBellBtn" class="header-pill icon-pill"><span class="mono-icon">🔔</span><span id="hamburgerBadge" style="display:none; position:absolute; top:-4px; right:-4px; background:var(--cloth); color:#fff; font-size:9px; border-radius:10px; padding:1px 4px; font-family:'Roboto Mono',monospace;">0</span></button>
           <button id="hamburgerBtn" class="header-pill icon-pill"><span class="mono-icon">☰</span></button>
-          <button id="logoutBtn" class="header-pill">Çıkış</button>
+          <button id="logoutBtn" style="display:none;">Çıkış</button>
           <div id="hamburgerMenu" style="display:none;"></div>
         </div>
       </header>
@@ -324,9 +331,11 @@
     <section class="tab" id="tab-today">
       <div class="card">
         <h2>Bugün kim okudu?</h2>
-        <p class="muted">Herhangi bir üyeyi senin yerine de işaretleyebilir, daha önce kendisi işaretlemiş olsa bile değiştirebilirsin. Aynı butona tekrar basarsan işaret kalkar.</p>
+        <div class="card-desc-wrap">
+          <p class="muted">Herhangi bir üyeyi senin yerine de işaretleyebilir, daha önce kendisi işaretlemiş olsa bile değiştirebilirsin. Aynı butona tekrar basarsan işaret kalkar.</p>
+          <p class="muted" id="aDateNote" style="margin-top:8px;"></p>
+        </div>
         <div id="todayList"></div>
-        <p class="muted" id="aDateNote" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--line);"></p>
       </div>
 
       <div class="card">
@@ -1023,7 +1032,10 @@ function setupCardInfoButtons(){
     if(!h2) return;
     if(h2.querySelector('.card-info-btn')) return;
     const desc = h2.nextElementSibling;
-    if(!desc || desc.tagName!=='P' || !desc.classList.contains('muted') || desc.id) return;
+    if(!desc) return;
+    const isWrap = desc.classList.contains('card-desc-wrap');
+    const isPlainP = desc.tagName==='P' && desc.classList.contains('muted') && !desc.id;
+    if(!isWrap && !isPlainP) return;
     if(!desc.textContent.trim()) return;
     desc.style.display='none';
     const btn = document.createElement('button');
@@ -1056,12 +1068,17 @@ function buildHamburgerMenu(){
           <input type="checkbox" id="autoThemeCheckbox" ${isAuto?'checked':''}>
           <span class="slider"></span>
         </label>
-      </div>`;
+      </div>
+      <button data-logout="1" style="border-top:1px solid var(--line); color:var(--cloth-dark);"><span class="mono-icon">⏻</span>Çıkış</button>`;
   menu.querySelectorAll('button[data-tab]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       switchTab(btn.dataset.tab);
       menu.style.display='none';
     });
+  });
+  menu.querySelector('[data-logout]').addEventListener('click', ()=>{
+    menu.style.display='none';
+    document.getElementById('logoutBtn').click();
   });
   document.getElementById('themeToggleCheckbox').addEventListener('change', (e)=>{
     setTheme(e.target.checked ? 'dark' : 'light');
