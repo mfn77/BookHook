@@ -172,6 +172,19 @@
     display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto;
   }
   .card-info-btn:hover{ border-color:var(--gold); color:var(--gold); }
+  .card-add-btn{
+    display:flex; align-items:center; justify-content:center; width:38px; height:38px;
+    border-radius:50%; border:none; background:var(--gold); color:#fff; font-size:20px;
+    font-weight:700; cursor:pointer; margin:14px auto 0; box-shadow:var(--shadow);
+    transition: transform .15s var(--ease);
+  }
+  .card-add-btn:hover{ box-shadow:var(--shadow-lg); }
+  .card-add-btn:active{ transform:scale(0.92) rotate(45deg); }
+  .card-add-btn.open{ transform:rotate(45deg); background:var(--paper-2); color:var(--ink-70); }
+  .rec-comment-row{ display:flex; align-items:flex-start; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13.5px; }
+  .rec-comment-row:last-child{ border-bottom:none; }
+  .rec-comment-row .rec-comment-body{ flex:1; min-width:0; }
+  .rec-comment-row .rec-comment-del{ border:none; background:none; color:var(--cloth-dark); cursor:pointer; font-size:11px; flex:0 0 auto; padding:2px 4px; }
   main{padding:16px 14px 40px; max-width:640px; margin:0 auto; position:relative; overflow-x:hidden;}
   section.tab{display:none;}
   section.tab.active{display:block;}
@@ -581,32 +594,30 @@
     <!-- ORTAK: KİTAP ÖNERİLERİ -->
     <section class="tab" id="tab-recs">
       <div class="card">
-        <h2>📚 Şahsi Kitap Önerisi Gönder</h2>
-        <p class="muted">Bu öneri ve ona yapılan yorumları sadece sen ve seçtiğin kişi görebilir — yönetici de dahil kimse başkası göremez.</p>
-        <div class="field"><label>Kime?</label>
-          <select id="recPersonalTarget" style="width:100%; padding:10px; border:1.5px solid var(--line); border-radius:8px; font-family:'Roboto',sans-serif; font-size:15px; background:var(--card); color:var(--ink);"></select>
-        </div>
-        <div class="field"><label>Kitap Adı</label><input type="text" id="recPersonalBook" /></div>
-        <div class="field"><label>Not (opsiyonel)</label><input type="text" id="recPersonalNote" placeholder="neden önerdiğini kısaca yaz" /></div>
-        <button class="primary" id="recPersonalSendBtn">Gönder</button>
-      </div>
-
-      <div class="card">
-        <h2>Şahsi Önerilerim</h2>
+        <h2>Şahsi Öneriler</h2>
+        <p class="muted">Bu öneri ve yorumları sadece sen ve ilgili kişi görebilir — yönetici de dahil kimse başkası göremez.</p>
         <div id="recPersonalList"></div>
-      </div>
-
-      <div class="card">
-        <h2>📢 Gruba Kitap Önerisi Gönder</h2>
-        <p class="muted">Bu öneriyi ve yorumları kulüpteki herkes görebilir.</p>
-        <div class="field"><label>Kitap Adı</label><input type="text" id="recGroupBook" /></div>
-        <div class="field"><label>Not (opsiyonel)</label><input type="text" id="recGroupNote" placeholder="neden önerdiğini kısaca yaz" /></div>
-        <button class="primary" id="recGroupSendBtn">Gruba Gönder</button>
+        <button type="button" class="card-add-btn" id="recPersonalAddBtn" aria-label="Şahsi öneri gönder">+</button>
+        <div id="recPersonalFormWrap" style="display:none; margin-top:14px;">
+          <div class="field"><label>Kime?</label>
+            <select id="recPersonalTarget" style="width:100%; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Cantarell',sans-serif; font-size:15px; background:var(--card); color:var(--ink);"></select>
+          </div>
+          <div class="field"><label>Kitap Adı</label><input type="text" id="recPersonalBook" /></div>
+          <div class="field"><label>Not (opsiyonel)</label><input type="text" id="recPersonalNote" placeholder="neden önerdiğini kısaca yaz" /></div>
+          <button class="primary" id="recPersonalSendBtn">Gönder</button>
+        </div>
       </div>
 
       <div class="card">
         <h2>Grup Önerileri</h2>
+        <p class="muted">Bu öneriyi ve yorumları kulüpteki herkes görebilir.</p>
         <div id="recGroupList"></div>
+        <button type="button" class="card-add-btn" id="recGroupAddBtn" aria-label="Gruba öneri gönder">+</button>
+        <div id="recGroupFormWrap" style="display:none; margin-top:14px;">
+          <div class="field"><label>Kitap Adı</label><input type="text" id="recGroupBook" /></div>
+          <div class="field"><label>Not (opsiyonel)</label><input type="text" id="recGroupNote" placeholder="neden önerdiğini kısaca yaz" /></div>
+          <button class="primary" id="recGroupSendBtn">Gruba Gönder</button>
+        </div>
       </div>
     </section>
       </main>
@@ -1028,6 +1039,7 @@ document.getElementById('googleAuthBtn').addEventListener('click', async ()=>{
 const ADMIN_TABS = [
   {id:'today', label:'Bugün', icon:'☑'},
   {id:'week', label:'Bu Hafta', icon:'▤'},
+  {id:'draws', label:'Kura', icon:'↻'},
   {id:'gifts', label:'Hediye', icon:'◈'},
   {id:'worms', label:'Kurtlar', icon:'☆'},
   {id:'recs', label:'Öneriler', icon:'✎'}
@@ -1042,7 +1054,6 @@ const MEMBER_TABS = [
 ];
 const HAMBURGER_ADMIN_EXTRA = [
   {id:'editpast', label:'Geçmiş Düzenle', icon:'✎'},
-  {id:'draws', label:'Kura', icon:'↻'},
   {id:'manual', label:'Manuel Kura', icon:'⚙'},
   {id:'members', label:'Üyeler', icon:'⚈'},
   {id:'rules', label:'Grup Kuralları', icon:'§'},
@@ -1099,7 +1110,7 @@ function buildHamburgerMenu(){
           <span class="slider"></span>
         </label>
       </div>
-      <button data-logout="1" style="border-top:1px solid var(--line); color:var(--cloth-dark);"><span class="mono-icon">⏻</span>Çıkış</button>`;
+      <button data-logout="1" style="border-top:1px solid var(--line); color:var(--cloth-dark);"><span class="mono-icon">🚪</span>Çıkış</button>`;
   menu.querySelectorAll('button[data-tab]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       switchTab(btn.dataset.tab);
@@ -1187,7 +1198,7 @@ function switchTab(id){
   document.addEventListener('touchstart', (e)=>{
     if(e.touches.length!==1){ touchStartX=null; return; }
     const t = e.target;
-    if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.libcard')){
+    if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal')){
       touchStartX=null; return;
     }
     touchStartX = e.touches[0].clientX;
@@ -2385,6 +2396,22 @@ async function renderRecsTab(){
   await renderGroupRecs();
 }
 
+function setupAddToggle(btnId, wrapId){
+  const btn = document.getElementById(btnId);
+  const wrap = document.getElementById(wrapId);
+  btn.addEventListener('click', ()=>{
+    const isOpen = wrap.style.display !== 'none';
+    wrap.style.display = isOpen ? 'none' : 'block';
+    btn.classList.toggle('open', !isOpen);
+  });
+}
+setupAddToggle('recPersonalAddBtn', 'recPersonalFormWrap');
+setupAddToggle('recGroupAddBtn', 'recGroupFormWrap');
+function closeAddForm(btnId, wrapId){
+  document.getElementById(wrapId).style.display = 'none';
+  document.getElementById(btnId).classList.remove('open');
+}
+
 document.getElementById('recPersonalSendBtn').addEventListener('click', async ()=>{
   const toUid = document.getElementById('recPersonalTarget').value;
   const bookTitle = document.getElementById('recPersonalBook').value.trim();
@@ -2400,6 +2427,7 @@ document.getElementById('recPersonalSendBtn').addEventListener('click', async ()
     document.getElementById('recPersonalNote').value='';
     await notifyUser(toUid, `${myProfile.name} sana bir kitap önerdi: "${bookTitle}"`, 'recs');
     showToast('Öneri gönderildi.');
+    closeAddForm('recPersonalAddBtn','recPersonalFormWrap');
     renderPersonalRecs();
   }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
 });
@@ -2416,6 +2444,7 @@ document.getElementById('recGroupSendBtn').addEventListener('click', async ()=>{
     document.getElementById('recGroupBook').value='';
     document.getElementById('recGroupNote').value='';
     showToast('Grup önerisi gönderildi.');
+    closeAddForm('recGroupAddBtn','recGroupFormWrap');
     renderGroupRecs();
   }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
 });
@@ -2442,17 +2471,17 @@ async function renderRecCard(it, isGroup){
   const dtLabel = isNaN(dt.getTime()) ? '' : `${pad(dt.getDate())}.${pad(dt.getMonth()+1)}.${dt.getFullYear()}`;
   const commentsHtml = comments.map(c=>{
     const canDeleteComment = c.uid===currentUid || (isGroup && myProfile.role==='admin');
-    return `<div style="padding:6px 0; border-top:1px dotted var(--line); font-size:13.5px;">
-      ${userChipHtml(c.uid)}: ${escapeHtml(c.text)}
-      ${canDeleteComment?`<button data-del-comment="${it.id}|${c.id}" style="border:none;background:none;color:var(--cloth-dark);cursor:pointer;font-size:11px;margin-left:6px;">✕</button>`:''}
+    return `<div class="rec-comment-row">
+      <div class="rec-comment-body">${userChipHtml(c.uid,18)}<div style="margin-top:2px;">${escapeHtml(c.text)}</div></div>
+      ${canDeleteComment?`<button class="rec-comment-del" data-del-comment="${it.id}|${c.id}">✕</button>`:''}
     </div>`;
   }).join('');
   return `<div class="receipt" data-rec-id="${it.id}">
     <div class="rweek"><span>${directionLabel} &middot; ${dtLabel}</span>${canDelete?`<button class="secondary tiny" data-del-rec="${it.id}">Sil</button>`:''}</div>
     <div style="font-weight:600; margin-top:4px;">${escapeHtml(it.bookTitle)}</div>
     ${it.note?`<div class="muted" style="margin-top:2px;">${escapeHtml(it.note)}</div>`:''}
-    <div style="margin-top:8px;">${commentsHtml}</div>
-    <div class="row" style="margin-top:8px;">
+    ${comments.length ? `<div style="margin-top:10px; background:var(--paper-2); border-radius:12px; padding:4px 12px;">${commentsHtml}</div>` : ''}
+    <div class="row" style="margin-top:10px;">
       <input type="text" class="rec-comment-input" placeholder="Yorum yaz..." data-rec-id="${it.id}" />
       <button class="secondary tiny rec-comment-send" data-rec-id="${it.id}" style="flex:0 0 auto;">Gönder</button>
     </div>
