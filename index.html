@@ -92,6 +92,20 @@
     #whoamiName{ max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle; }
     .header-title-area{ font-size:13px; }
   }
+  /* Dar/dikey ekranlarda: başlık alanını gizle (sidebar zaten hangi sekmede olduğunu gösteriyor),
+     haftalık tabloları sıkıştır — isim yazısını gizleyip sadece profil resmini bırak, "Durum"
+     sütununu gizle, hücreleri küçült. Ekran genişleyince (yatay/tablet/masaüstü) hepsi normale döner. */
+  @media (max-width:700px){
+    .header-title-area{ display:none; }
+    .card{ padding:16px 12px; }
+    table.weekgrid .uc-name{ display:none; }
+    table.weekday-table th:last-child, table.weekday-table td:last-child{ display:none; }
+    table.weekgrid{ min-width:0 !important; width:100%; table-layout:fixed; }
+    table.weekgrid td.name-cell{ width:34px; padding:6px 2px; }
+    table.weekgrid th, table.weekgrid td{ padding:6px 2px; font-size:10.5px; }
+    table.weekgrid th{ font-size:9px; }
+    .stamp-mini{ width:17px; height:17px; line-height:17px; font-size:9.5px; }
+  }
 
   header.top{
     padding:12px 16px; background:rgba(var(--card-bg),0.60);
@@ -367,7 +381,7 @@
         <h2>Bu haftanın karnesi</h2>
         <p class="muted">Haftalık pas hakkı: <b>1</b>. 2. "okumadım" cezaya düşürür. Gün, gece okumalar için ertesi gün 06:00'a kadar sürer.</p>
         <button class="secondary" id="refreshWeekBtn" style="margin-bottom:10px;">Yenile</button>
-        <div class="libcard"><table class="weekgrid" id="weekGrid"></table></div>
+        <div class="libcard"><table class="weekgrid weekday-table" id="weekGrid"></table></div>
       </div>
     </section>
 
@@ -388,7 +402,7 @@
         <h2>🧪 Manuel Kura (deneme / özel)</h2>
         <p class="muted">Burada girdiğin veriler gerçek anketi, gerçek kura geçmişini veya üyelerin gördüğü hiçbir şeyi etkilemez. Sadece sana özel bir deneme alanı. Her üye için 7 güne tıklayarak durumunu değiştir: boş → okudu ✓ → okumadı ✕ → boş.</p>
         <div class="field"><label>Bu deneme için not (opsiyonel)</label><input type="text" id="manualLabel" placeholder="örn. Nisan 2. hafta simülasyonu" /></div>
-        <div class="libcard"><table class="weekgrid" id="manualGridTable"></table></div>
+        <div class="libcard"><table class="weekgrid weekday-table" id="manualGridTable"></table></div>
         <div class="row" style="margin-top:12px;">
           <button class="primary" id="manualDrawBtn">Kura Çek</button>
           <button class="secondary" id="manualResetBtn">Sıfırla</button>
@@ -464,7 +478,7 @@
       <div class="card">
         <h2>Herkesin Bu Haftası</h2>
         <p class="muted">Cevap verilmeyen geçmiş günler, yönetici bir sonraki girişinde otomatik "okumadı" olarak işaretler.</p>
-        <div class="libcard"><table class="weekgrid" id="mWeekGridAll"></table></div>
+        <div class="libcard"><table class="weekgrid weekday-table" id="mWeekGridAll"></table></div>
       </div>
     </section>
 
@@ -760,7 +774,7 @@ function avatarHtml(uid, size){ return avatarHtmlFromProfile(usersCache[uid], si
 function userChipHtml(uid, size){
   const u = usersCache[uid];
   const name = (u && u.name) || '?';
-  return `<span class="user-chip" data-uid="${uid}">${avatarHtmlFromProfile(u,size)}${escapeHtml(name)}</span>`;
+  return `<span class="user-chip" data-uid="${uid}">${avatarHtmlFromProfile(u,size)}<span class="uc-name">${escapeHtml(name)}</span></span>`;
 }
 function openProfileModal(uid){
   const u = usersCache[uid];
