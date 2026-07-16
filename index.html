@@ -141,6 +141,7 @@
   .stamp-mini.empty{background:transparent; color:var(--line); border:1px dashed var(--line);}
   .stamp-mini.clickable{cursor:pointer;}
   .stamp-mini.auto{opacity:0.6; box-shadow:inset 0 0 0 2px rgba(255,255,255,0.55);}
+  .stamp-mini.notmember{background:transparent; color:var(--line); opacity:0.35; border:none;}
   button:disabled{opacity:0.4; cursor:default;}
   .user-chip{cursor:pointer; border-radius:8px; padding:1px 4px; margin:-1px -4px;}
   .user-chip:hover{background:rgba(0,137,123,0.10);}
@@ -337,14 +338,25 @@
         <p class="muted">Üyeler kendi kendine kayıt oluyor. Buradan rollerini değiştirebilir veya banlayabilirsin. Banlanan biri giriş yapamaz, geçmiş verileri silinmez.</p>
         <div id="membersList"></div>
       </div>
+      <div class="card">
+        <h2>Bakım</h2>
+        <p class="muted">Kulüp başlamadan (6 Temmuz'dan) önceki veya bir üyenin katılmadan önceki günler için yanlışlıkla oluşmuş "otomatik okumadı" kayıtlarını temizler. Elle girilmiş hiçbir veriyi silmez.</p>
+        <button class="secondary" id="cleanupBtn">🧹 Hatalı Otomatik Kayıtları Temizle</button>
+        <p class="muted" id="cleanupResult" style="margin-top:8px;"></p>
+      </div>
     </section>
 
     <section class="tab" id="tab-worms">
       <div class="card">
         <h2>🐛 Kitap Kurtları</h2>
-        <p class="muted">30 gün aralıksız okuyanlar burada işaretlenir. Hesaplama biraz zaman alabilir.</p>
+        <p class="muted">Profil resmindeki renkli çerçeve ve köşe simgesi, o kişinin o anki aktif serisini gösterir; seri bozulunca kaybolur.</p>
         <button class="secondary" id="calcStreaksBtn">Serileri Hesapla</button>
         <div id="wormsList" style="margin-top:12px;"></div>
+      </div>
+      <div class="card">
+        <h2>Rozet Geçmişi</h2>
+        <p class="muted">Kim hangi rozeti bugüne kadar kaç kere kazanmış.</p>
+        <div class="libcard"><div id="wormsHistory"></div></div>
       </div>
     </section>
 
@@ -397,8 +409,13 @@
     <section class="tab" id="tab-mworms">
       <div class="card">
         <h2>🐛 Kitap Kurtları</h2>
-        <p class="muted">30 gün ve üzeri aralıksız okuyan var mı, burada görebilirsin.</p>
+        <p class="muted">Profil resmindeki renkli çerçeve ve köşe simgesi, o kişinin o anki aktif serisini gösterir; seri bozulunca kaybolur.</p>
         <div id="mWormsList"></div>
+      </div>
+      <div class="card">
+        <h2>Rozet Geçmişi</h2>
+        <p class="muted">Kim hangi rozeti bugüne kadar kaç kere kazanmış.</p>
+        <div class="libcard"><div id="mWormsHistory"></div></div>
       </div>
     </section>
 
@@ -447,8 +464,7 @@
       <div class="card">
         <h2>Profilim</h2>
         <div style="text-align:center; margin-bottom:14px;">
-          <div class="badge-row big" id="profileMyBadges"></div>
-          <img id="profilePhotoPreview" src="./icon-192.png" alt="" style="width:88px;height:88px;border-radius:50%;object-fit:cover;box-shadow:var(--shadow);" />
+          <div id="profilePhotoWrap" style="display:inline-block;"></div>
           <div style="margin-top:8px;"><input type="file" id="profilePhotoInput" accept="image/*" /></div>
         </div>
         <div class="field"><label>Adın</label><input type="text" id="profileName" /></div>
@@ -519,8 +535,7 @@
   <div class="card" style="max-width:360px; width:100%; position:relative; margin-bottom:0;">
     <button id="profileModalClose" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-70);">✕</button>
     <div style="text-align:center;">
-      <div class="badge-row big" id="profileModalBadges"></div>
-      <img id="profileModalPhoto" src="./icon-192.png" alt="" style="width:88px;height:88px;border-radius:50%;object-fit:cover;box-shadow:var(--shadow);" />
+      <div id="profileModalPhotoWrap" style="display:inline-block;"></div>
       <h2 id="profileModalName" style="margin:10px 0 4px; font-size:20px;"></h2>
       <span class="role-chip" id="profileModalRole"></span>
     </div>
@@ -658,10 +673,17 @@ function avatarHtmlFromProfile(profile, size){
   size = size || 22;
   const name = (profile && profile.name) || '?';
   const initial = name.trim().charAt(0).toUpperCase() || '?';
-  if(profile && profile.photoURL){
-    return `<img src="${profile.photoURL}" alt="" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px;" />`;
-  }
-  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:var(--gold);color:#fff;font-size:${Math.round(size*0.5)}px;font-family:'Roboto',sans-serif;font-weight:700;vertical-align:middle;margin-right:6px;">${escapeHtml(initial)}</span>`;
+  const tierKey = profile && profile.currentTier;
+  const tierDef = tierKey ? BADGE_DEFS.find(d=>d.key===tierKey) : null;
+  const ringStyle = tierDef ? `box-shadow:0 0 0 2.5px ${tierDef.color};` : '';
+  const inner = (profile && profile.photoURL)
+    ? `<img src="${profile.photoURL}" alt="" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;display:block;" />`
+    : `<span style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:var(--gold);color:#fff;font-size:${Math.round(size*0.5)}px;font-family:'Roboto',sans-serif;font-weight:700;">${escapeHtml(initial)}</span>`;
+  const iconSize = Math.max(10, Math.round(size*0.44));
+  const badgeOverlay = tierDef
+    ? `<span title="${tierDef.label}" style="position:absolute; right:-2px; bottom:-2px; width:${iconSize}px; height:${iconSize}px; border-radius:50%; background:${tierDef.color}; display:flex; align-items:center; justify-content:center; font-size:${Math.round(iconSize*0.62)}px; box-shadow:0 0 0 1.5px var(--card);">${tierDef.icon}</span>`
+    : '';
+  return `<span style="position:relative; display:inline-flex; border-radius:50%; ${ringStyle} margin-right:6px; vertical-align:middle; line-height:0;">${inner}${badgeOverlay}</span>`;
 }
 function avatarHtml(uid, size){ return avatarHtmlFromProfile(usersCache[uid], size); }
 function userChipHtml(uid, size){
@@ -672,12 +694,11 @@ function userChipHtml(uid, size){
 function openProfileModal(uid){
   const u = usersCache[uid];
   if(!u) return;
-  document.getElementById('profileModalPhoto').src = u.photoURL || './icon-192.png';
+  document.getElementById('profileModalPhotoWrap').innerHTML = avatarHtmlFromProfile(u, 88);
   document.getElementById('profileModalName').textContent = u.name || '?';
   document.getElementById('profileModalRole').textContent = u.role==='admin' ? 'YÖNETİCİ' : 'ÜYE';
   document.getElementById('profileModalBio').textContent = u.bio ? u.bio : 'Henüz bir bilgi eklenmemiş.';
   document.getElementById('profileModalReading').textContent = u.currentlyReading ? `📖 Şu an okuyor: ${u.currentlyReading}` : '📖 Şu an ne okuduğunu paylaşmamış.';
-  document.getElementById('profileModalBadges').innerHTML = badgeRowHtml(u.badges, 20);
   document.getElementById('profileModal').style.display='flex';
 }
 document.getElementById('profileModalClose').addEventListener('click', ()=>{ document.getElementById('profileModal').style.display='none'; });
@@ -701,7 +722,7 @@ function showToast(msg){
 async function notifyUser(uid, message, linkTab){
   if(!uid) return;
   try{ await addDoc(collection(db,'notifications',uid,'items'), { message, linkTab: linkTab||null, read:false, createdAt:new Date().toISOString() }); }
-  catch(e){ /* bildirim gönderilemese de ana işlemi bozmasın */ }
+  catch(e){ console.error('Bildirim gönderilemedi (notifyUser):', uid, e); }
 }
 async function notifyAdmins(message, linkTab){
   const adminUids = Object.keys(usersCache).filter(u=>usersCache[u].role==='admin' && !usersCache[u].banned);
@@ -1100,8 +1121,16 @@ async function markStatus(uid, status){
 }
 async function computeWeekStats(monday){
   const dates = weekDates(monday);
+  const weekMondayStr = dates[0];
+  const weekSundayStr = dates[6];
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   return activeUids().map(uid=>{
+    const joinDs = joinDateStrOf(uid);
+    // Bir üye bu hafta içinde, Pazartesi DIŞINDA bir günde katıldıysa, sadece bu haftanın
+    // kurasına dahil edilmez (marked:0 vererek eleniyor); sonraki haftalarda normal katılır.
+    if(joinDs && joinDs > weekMondayStr && joinDs <= weekSundayStr){
+      return {uid, name: usersCache[uid]?.name || '?', miss:0, read:0, marked:0};
+    }
     let miss=0, read=0;
     perDate.forEach(map=>{ const rec=map[uid]; if(rec){ if(rec.status==='skip') miss++; else if(rec.status==='read') read++; } });
     return {uid, name: usersCache[uid]?.name || '?', miss, read, marked: miss+read};
@@ -1109,6 +1138,19 @@ async function computeWeekStats(monday){
 }
 // Kapanmış (geçmiş) günlerde hiç işaretleme yapılmamışsa otomatik "okumadı" yazar.
 // Sadece yönetici girişinde çalışır (yazma izni ve merkezi tetikleme için).
+const CLUB_START_DATE = '2026-07-06'; // Bu tarihten önce hiçbir gün için kayıt yok/tutulmuyor
+function logicalDateStrOf(d){
+  const copy = new Date(d);
+  if(isNaN(copy.getTime())) return null;
+  if(copy.getHours()<6) copy.setDate(copy.getDate()-1);
+  copy.setHours(0,0,0,0);
+  return toStr(copy);
+}
+function joinDateStrOf(uid){
+  const u = usersCache[uid];
+  if(!u || !u.createdAt) return null;
+  return logicalDateStrOf(new Date(u.createdAt));
+}
 async function autoFillPastDays(daysBack){
   daysBack = daysBack || 30;
   const uids = activeUids();
@@ -1116,7 +1158,10 @@ async function autoFillPastDays(daysBack){
   let filled = 0;
   for(let i=1;i<=daysBack;i++){
     const ds = toStr(addDays(nowLogical(), -i));
+    if(ds < CLUB_START_DATE) continue; // kulüp başlamadan önceki günler asla doldurulmaz
     const results = await Promise.all(uids.map(async uid=>{
+      const joinDs = joinDateStrOf(uid);
+      if(joinDs && ds < joinDs) return 0; // üye olmadan önceki günler doldurulmaz, boş kalır
       const ref = doc(db,'days',ds,'answers',uid);
       const snap = await getDoc(ref);
       if(!snap.exists()){
@@ -1128,6 +1173,32 @@ async function autoFillPastDays(daysBack){
     filled += results.reduce((a,b)=>a+b,0);
   }
   return filled;
+}
+// Daha önce (bu düzeltmeden önce) yanlışlıkla, kulüp başlamadan veya kişi üye olmadan önceki
+// günler için otomatik "okumadı" yazılmış olabilir. Bu, o hatalı otomatik kayıtları temizler.
+// Sadece auto:true (otomatik oluşturulmuş) kayıtları siler, elle girilmiş hiçbir veriye dokunmaz.
+async function cleanupBadAutoFills(daysBack){
+  daysBack = daysBack || 60;
+  const uids = Object.keys(usersCache);
+  let deleted = 0;
+  for(let i=0;i<=daysBack;i++){
+    const ds = toStr(addDays(nowLogical(), -i));
+    const beforeClub = ds < CLUB_START_DATE;
+    for(const uid of uids){
+      const joinDs = joinDateStrOf(uid);
+      const beforeJoin = joinDs && ds < joinDs;
+      if(!beforeClub && !beforeJoin) continue;
+      try{
+        const ref = doc(db,'days',ds,'answers',uid);
+        const snap = await getDoc(ref);
+        if(snap.exists() && snap.data().auto){
+          await deleteDoc(ref);
+          deleted++;
+        }
+      }catch(e){}
+    }
+  }
+  return deleted;
 }
 async function finalizeWeek(monday, force){
   const wk = toStr(monday);
@@ -1176,43 +1247,49 @@ async function computeStreak(uid, maxDays){
 }
 
 /* ============ ROZET SİSTEMİ ============ */
+// Rozetler artık KALICI değil, o anki aktif seriye bağlı: seri bozulunca profil resmindeki
+// çerçeve/rozet de kayboluyor. Kaç kere kazanıldığı ayrıca badgeCounts içinde sayılıyor
+// (Kitap Kurtları sekmesindeki geçmiş tablosu için).
 const BADGE_DEFS = [
-  {key:'b3',  days:3,  icon:'🔥', label:'3 gün aralıksız'},
-  {key:'b5',  days:5,  icon:'⭐', label:'5 gün aralıksız'},
-  {key:'b7',  days:7,  icon:'🎯', label:'1 hafta aralıksız'},
-  {key:'b14', days:14, icon:'💎', label:'2 hafta aralıksız'},
-  {key:'b21', days:21, icon:'🏆', label:'3 hafta aralıksız'},
-  {key:'b30', days:30, icon:'🐛', label:'Kitap Kurdu (1 ay aralıksız)'}
+  {key:'b3',  days:3,  icon:'🔥', label:'3 gün aralıksız', color:'#CD7F32'},
+  {key:'b5',  days:5,  icon:'⭐', label:'5 gün aralıksız', color:'#9E9E9E'},
+  {key:'b7',  days:7,  icon:'🎯', label:'1 hafta aralıksız', color:'#FFC107'},
+  {key:'b14', days:14, icon:'💎', label:'2 hafta aralıksız', color:'#29B6F6'},
+  {key:'b21', days:21, icon:'🏆', label:'3 hafta aralıksız', color:'#AB47BC'},
+  {key:'b30', days:30, icon:'🐛', label:'Kitap Kurdu (1 ay aralıksız)', color:'#FF6F00'}
 ];
-function badgeRowHtml(badgesObj, size){
-  if(!badgesObj) return '';
-  size = size || 15;
-  const earned = BADGE_DEFS.filter(d=>badgesObj[d.key]);
-  if(earned.length===0) return '';
-  return `<span class="badge-row" style="display:inline-flex;">` +
-    earned.map(d=>`<span class="badge-icon" title="${d.label}" style="font-size:${size}px;">${d.icon}</span>`).join('') +
-  `</span>`;
+function currentTierForStreak(streak){
+  let tier = null;
+  BADGE_DEFS.forEach(def=>{ if(streak>=def.days) tier = def.key; });
+  return tier;
 }
 async function checkAndAwardBadges(uid, streak){
   const u = usersCache[uid];
   if(!u) return;
-  const badges = u.badges || {};
-  const updates = {};
+  const lastStreak = typeof u.lastStreak==='number' ? u.lastStreak : 0;
+  let awarded = Array.isArray(u.awardedTiersThisStreak) ? u.awardedTiersThisStreak.slice() : [];
+  if(streak < lastStreak){ awarded = []; } // seri bozulmuş, yeni döngü başlıyor
+  const badgeCounts = {...(u.badgeCounts||{})};
   const newlyEarned = [];
   BADGE_DEFS.forEach(def=>{
-    if(streak>=def.days && !badges[def.key]){
-      updates['badges.'+def.key] = new Date().toISOString();
+    if(streak>=def.days && !awarded.includes(def.key)){
+      awarded.push(def.key);
+      badgeCounts[def.key] = (badgeCounts[def.key]||0) + 1;
       newlyEarned.push(def);
     }
   });
-  if(newlyEarned.length===0) return;
+  const newTier = currentTierForStreak(streak);
+  const tierChanged = (u.currentTier||null) !== newTier;
+  if(streak===lastStreak && newlyEarned.length===0 && !tierChanged) return;
+  const updates = { lastStreak: streak, awardedTiersThisStreak: awarded, badgeCounts, currentTier: newTier, currentStreak: streak };
   try{
     await updateDoc(doc(db,'users',uid), updates);
-    u.badges = {...badges};
-    Object.keys(updates).forEach(k=>{ u.badges[k.replace('badges.','')] = updates[k]; });
-    const uTab = u.role==='admin' ? 'worms' : 'mworms';
-    for(const def of newlyEarned){
-      await notifyUser(uid, `🎉 Tebrikler! "${def.label}" rozetini kazandın!`, uTab);
+    Object.assign(u, updates);
+    if(newlyEarned.length>0){
+      const uTab = u.role==='admin' ? 'worms' : 'mworms';
+      for(const def of newlyEarned){
+        await notifyUser(uid, `🎉 Tebrikler! "${def.label}" rozetini kazandın!`, uTab);
+      }
     }
   }catch(e){ /* rozet kaydedilemezse sessizce geç */ }
 }
@@ -1285,9 +1362,11 @@ async function renderAdminOwnWeek(){
   const table = document.getElementById('aOwnWeekGrid');
   table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
+  const joinDs = joinDateStrOf(currentUid);
   let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
-  let cells = perDate.map(map=>{
-    const rec = map[currentUid];
+  let cells = dates.map((d,i)=>{
+    if(joinDs && d < joinDs) return `<td><span class="stamp-mini notmember" title="Henüz üye değildin">·</span></td>`;
+    const rec = perDate[i][currentUid];
     if(rec && rec.status==='read') return `<td><span class="stamp-mini read">✓</span></td>`;
     if(rec && rec.status==='skip') return `<td><span class="stamp-mini skip ${rec.auto?'auto':''}" title="${rec.auto?'Otomatik okumadı':''}">✕</span></td>`;
     return `<td><span class="stamp-mini empty">·</span></td>`;
@@ -1350,9 +1429,13 @@ async function renderAdminWeek(){
   if(uids.length===0){ table.innerHTML = `<tr><td class="empty-state">Henüz üye yok.</td></tr>`; return; }
   let head = `<tr><th style="text-align:left;">Üye</th>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `<th>Durum</th></tr>`;
   let rows = uids.map(uid=>{
+    const joinDs = joinDateStrOf(uid);
     let miss=0, read=0;
-    const cells = perDate.map(map=>{
-      const rec = map[uid];
+    const cells = dates.map((d,i)=>{
+      if(joinDs && d < joinDs){
+        return `<td><span class="stamp-mini notmember" title="Henüz üye değildi">·</span></td>`;
+      }
+      const rec = perDate[i][uid];
       if(rec && rec.status==='read'){ read++; return `<td><span class="stamp-mini read">✓</span></td>`; }
       if(rec && rec.status==='skip'){ miss++; return `<td><span class="stamp-mini skip ${rec.auto?'auto':''}" title="${rec.auto?'Otomatik okumadı':''}">✕</span></td>`; }
       return `<td><span class="stamp-mini empty">·</span></td>`;
@@ -1516,6 +1599,13 @@ async function renderManualHistory(){
 }
 
 /* ============ ADMIN: ÜYELER (rol + ban) ============ */
+document.getElementById('cleanupBtn').addEventListener('click', async ()=>{
+  if(!confirm('Kulüp başlamadan veya kişi üye olmadan önceki otomatik "okumadı" kayıtları silinsin mi? Elle girilmiş hiçbir veri silinmez.')) return;
+  document.getElementById('cleanupResult').textContent = 'Taranıyor, biraz sürebilir…';
+  const n = await cleanupBadAutoFills(60);
+  document.getElementById('cleanupResult').textContent = `${n} hatalı otomatik kayıt silindi.`;
+  showToast('Temizlik tamamlandı.');
+});
 async function renderAdminMembers(){
   const list = document.getElementById('membersList');
   const uids = Object.keys(usersCache);
@@ -1578,7 +1668,7 @@ async function renderAdminMembers(){
 
 /* ============ ADMIN: KİTAP KURTLARI ============ */
 document.getElementById('calcStreaksBtn').addEventListener('click', renderAdminWorms);
-async function renderWormsShared(containerId){
+async function renderWormsShared(containerId, historyContainerId){
   const list = document.getElementById(containerId);
   list.innerHTML = `<div class="empty-state">Hesaplanıyor…</div>`;
   const uids = activeUids();
@@ -1589,33 +1679,34 @@ async function renderWormsShared(containerId){
   }));
   results.sort((a,b)=>b.streak-a.streak);
 
-  const now = new Date();
-  const currentBookworms = results.filter(r=>{
-    const achievedAt = usersCache[r.uid]?.badges?.b30;
-    if(!achievedAt) return false;
-    const days = (now - new Date(achievedAt)) / (1000*60*60*24);
-    return days <= 30;
-  });
-
-  let html = '';
-  if(currentBookworms.length>0){
-    html += `<div style="margin-bottom:16px;">
-      <div class="chip ok" style="margin-bottom:8px;">🐛 Güncel Kitap Kurtları (son 1 ay içinde kazanılmış)</div>
-      ${currentBookworms.map(r=>`<div class="worm-row"><div>${userChipHtml(r.uid)} ${badgeRowHtml(usersCache[r.uid].badges)}</div><div class="worm-streak">${r.streak} gün</div></div>`).join('')}
-    </div>
-    <div style="border-top:1px dashed var(--line); margin-bottom:12px;"></div>`;
-  }
-
   if(results.length===0){
-    html += `<div class="empty-state">Henüz üye yok.</div>`;
+    list.innerHTML = `<div class="empty-state">Henüz üye yok.</div>`;
   } else {
-    html += results.map(r=>{
-      return `<div class="worm-row"><div>${userChipHtml(r.uid)} ${badgeRowHtml(usersCache[r.uid].badges)}</div><div class="worm-streak">${r.streak} gün</div></div>`;
+    list.innerHTML = results.map(r=>{
+      return `<div class="worm-row"><div>${userChipHtml(r.uid)}</div><div class="worm-streak">${r.streak} gün</div></div>`;
     }).join('');
   }
-  list.innerHTML = html;
+
+  const historyBox = document.getElementById(historyContainerId);
+  if(historyBox){
+    const rows = results.filter(r=>{
+      const bc = usersCache[r.uid]?.badgeCounts;
+      return bc && BADGE_DEFS.some(def=>bc[def.key]>0);
+    });
+    if(rows.length===0){
+      historyBox.innerHTML = `<p class="muted">Henüz kimse bir rozet kazanmadı.</p>`;
+    } else {
+      const head = `<tr><th style="text-align:left;">Üye</th>` + BADGE_DEFS.map(def=>`<th title="${def.label}">${def.icon}</th>`).join('') + `</tr>`;
+      const body = rows.map(r=>{
+        const bc = usersCache[r.uid].badgeCounts || {};
+        const cells = BADGE_DEFS.map(def=>`<td>${bc[def.key]||0}</td>`).join('');
+        return `<tr><td class="name-cell">${userChipHtml(r.uid,18)}</td>${cells}</tr>`;
+      }).join('');
+      historyBox.innerHTML = `<table class="weekgrid">${head}${body}</table>`;
+    }
+  }
 }
-async function renderAdminWorms(){ await renderWormsShared('wormsList'); }
+async function renderAdminWorms(){ await renderWormsShared('wormsList','wormsHistory'); }
 
 /* ============ ÜYE: ANKET ============ */
 let memberWeekOffset = 0; // 0 = bu hafta, -1 = önceki hafta, ...
@@ -1656,9 +1747,11 @@ async function renderMemberOwnWeek(){
   const table = document.getElementById('mOwnWeekGrid');
   table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
+  const joinDs = joinDateStrOf(currentUid);
   let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
-  let cells = perDate.map(map=>{
-    const rec = map[currentUid];
+  let cells = dates.map((d,i)=>{
+    if(joinDs && d < joinDs) return `<td><span class="stamp-mini notmember" title="Henüz üye değildin">·</span></td>`;
+    const rec = perDate[i][currentUid];
     if(rec && rec.status==='read') return `<td><span class="stamp-mini read">✓</span></td>`;
     if(rec && rec.status==='skip') return `<td><span class="stamp-mini skip ${rec.auto?'auto':''}" title="${rec.auto?'Otomatik okumadı':''}">✕</span></td>`;
     return `<td><span class="stamp-mini empty">·</span></td>`;
@@ -1679,9 +1772,13 @@ async function renderMemberWeekAll(){
   if(uids.length===0){ table.innerHTML = `<tr><td class="empty-state">Henüz üye yok.</td></tr>`; return; }
   let head = `<tr><th style="text-align:left;">Üye</th>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `<th>Durum</th></tr>`;
   let rows = uids.map(uid=>{
+    const joinDs = joinDateStrOf(uid);
     let miss=0, read=0;
-    const cells = perDate.map(map=>{
-      const rec = map[uid];
+    const cells = dates.map((d,i)=>{
+      if(joinDs && d < joinDs){
+        return `<td><span class="stamp-mini notmember" title="Henüz üye değildi">·</span></td>`;
+      }
+      const rec = perDate[i][uid];
       if(rec && rec.status==='read'){ read++; return `<td><span class="stamp-mini read">✓</span></td>`; }
       if(rec && rec.status==='skip'){ miss++; return `<td><span class="stamp-mini skip ${rec.auto?'auto':''}" title="${rec.auto?'Otomatik okumadı':''}">✕</span></td>`; }
       return `<td><span class="stamp-mini empty">·</span></td>`;
@@ -1727,8 +1824,7 @@ function renderProfileTab(){
   document.getElementById('profileAddress').value = myProfile.address || '';
   document.getElementById('profileBio').value = myProfile.bio || '';
   document.getElementById('profileReading').value = myProfile.currentlyReading || '';
-  document.getElementById('profilePhotoPreview').src = myProfile.photoURL || './icon-192.png';
-  document.getElementById('profileMyBadges').innerHTML = badgeRowHtml(myProfile.badges, 20);
+  document.getElementById('profilePhotoWrap').innerHTML = avatarHtmlFromProfile(myProfile, 88);
   document.getElementById('profileError').textContent = '';
   document.getElementById('passwordError').textContent = '';
   const pwCard = document.getElementById('changePasswordBtn').closest('.card');
@@ -1765,7 +1861,7 @@ document.getElementById('profilePhotoInput').addEventListener('change', async (e
     const url = await getDownloadURL(ref);
     await updateDoc(doc(db,'users',currentUid), {photoURL:url});
     myProfile.photoURL = url;
-    document.getElementById('profilePhotoPreview').src = url;
+    document.getElementById('profilePhotoWrap').innerHTML = avatarHtmlFromProfile(myProfile, 88);
     showToast('Profil fotoğrafı güncellendi.');
   }catch(err){ alert('Fotoğraf yüklenemedi: ' + (err.message||err) + '\n\nFirebase Storage etkin mi kontrol et.'); }
 });
@@ -2286,7 +2382,7 @@ async function renderGroupRecs(){
 }
 
 /* ============ ÜYE: KİTAP KURTLARI ============ */
-async function renderMemberWorms(){ await renderWormsShared('mWormsList'); }
+async function renderMemberWorms(){ await renderWormsShared('mWormsList','mWormsHistory'); }
 
 /* ============ GİRİŞ / AUTH DURUM TAKİBİ ============ */
 onAuthStateChanged(auth, async (user)=>{
@@ -2360,6 +2456,12 @@ onAuthStateChanged(auth, async (user)=>{
   if(myProfile.role==='admin'){
     const filledCount = await autoFillPastDays(30);
     if(filledCount>0) showToast(`${filledCount} eksik işaretleme otomatik "okumadı" olarak dolduruldu.`);
+    // Otomatik doldurma birinin serisini bozmuş olabilir; herkesin rozet/seri durumunu tazele
+    // ki profil resmindeki çerçeve/rozet güncel kalsın.
+    await Promise.all(activeUids().map(async uid=>{
+      const s = await computeStreak(uid);
+      await checkAndAwardBadges(uid, s);
+    }));
     const monday = getMonday(nowLogical());
     const prevMonday = addDays(monday,-7);
     const res = await finalizeWeek(prevMonday, false);
