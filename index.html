@@ -70,28 +70,51 @@
   button:not(:disabled):active{ transform: scale(0.96); }
   input, select, textarea{ transition: border-color .15s var(--ease), box-shadow .15s var(--ease); }
 
+  .app-shell{ display:flex; min-height:100vh; align-items:stretch; }
+  .sidebar{
+    width:78px; flex:0 0 auto; display:flex; flex-direction:column; align-items:center;
+    background:rgba(var(--card-bg),0.55); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    border-right:1px solid var(--line);
+    padding:16px 0; position:sticky; top:0; height:100vh; overflow-y:auto; z-index:10;
+  }
+  .sidebar-header{ margin-bottom:14px; flex:0 0 auto; }
+  .sidebar-logo{ width:34px; height:34px; border-radius:10px; display:block; }
+  .content-col{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  @media (max-width:380px){
+    .sidebar{ width:62px; }
+    .sidebar-tabs.tabs button{ height:48px !important; font-size:8.3px !important; }
+    .sidebar-tabs.tabs button .tab-icon{ font-size:16px !important; }
+  }
+
   header.top{
-    padding:16px 18px 14px; background:rgba(var(--card-bg),0.72);
+    padding:12px 16px; background:rgba(var(--card-bg),0.60);
     backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--line);
-    display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
-    position:sticky; top:0; z-index:10;
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    position:sticky; top:0; z-index:9;
   }
-  header.top .eyebrow{
-    font-family:'Roboto Mono', monospace; font-size:10.5px; letter-spacing:0.08em;
-    text-transform:uppercase; color:var(--ink-70); margin:0 0 4px; font-weight:500;
+  .header-title-area{ font-family:'Cantarell',sans-serif; font-weight:700; font-size:15px; color:var(--ink); }
+  .whoami{ display:flex; align-items:center; gap:7px; font-family:'Cantarell', sans-serif; font-size:12px; color:var(--ink-70); flex:0 0 auto; position:relative; font-weight:600; text-align:left; }
+  .header-pill{
+    display:inline-flex; align-items:center; gap:6px; height:38px; padding:0 14px;
+    background:var(--paper-2); border:1px solid var(--line); border-radius:999px;
+    color:var(--ink); font-weight:600; font-size:13px; cursor:default;
   }
-  header.top h1{ margin:0; font-size:22px; font-weight:700; color:var(--ink); letter-spacing:-0.01em; display:flex; align-items:center;}
-  header.top .weekrange{ margin-top:6px; font-family:'Roboto Mono', monospace; font-size:12px; color:var(--ink-70);}
-  .whoami{ text-align:right; font-family:'Cantarell', sans-serif; font-size:12px; color:var(--ink-70); flex:0 0 auto; position:relative; font-weight:600; }
+  .header-pill.icon-pill{ padding:0; width:38px; justify-content:center; font-size:16px; cursor:pointer; position:relative; }
+  #whoamiClickable:hover, .icon-pill:hover{ background:var(--line); }
+  #logoutBtn.header-pill{ cursor:pointer; background:none; border:1.5px solid var(--cloth); color:var(--cloth-dark); }
+  #logoutBtn.header-pill:hover{ background:rgba(224,27,36,0.08); }
+  .whoami .rolechip{display:inline-block; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; letter-spacing:.03em; border:none; color:var(--gold); background:rgba(33,144,164,0.14);}
+  .mono-icon{ filter:grayscale(1) brightness(0.55) contrast(1.4); display:inline-block; }
+  html[data-theme="dark"] .mono-icon{ filter:grayscale(1) brightness(1.8) contrast(1.1); }
   #hamburgerMenu{
-    position:absolute; top:100%; right:0; margin-top:8px; background:rgba(var(--card-bg),0.92);
+    position:absolute; top:calc(100% + 8px); right:0; background:rgba(var(--card-bg),0.94);
     backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
     border:1px solid var(--line); border-radius:var(--radius-md); box-shadow:var(--shadow-lg);
-    z-index:60; min-width:200px; overflow:hidden; text-align:left;
+    z-index:60; min-width:210px; overflow:hidden; text-align:left;
   }
   #hamburgerMenu button{
-    display:block; width:100%; text-align:left; padding:12px 16px; border:none; background:none;
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:12px 16px; border:none; background:none;
     font-family:'Cantarell', sans-serif; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer;
   }
   #hamburgerMenu button:hover{background:rgba(33,144,164,0.10);}
@@ -104,24 +127,28 @@
   .badge-row{display:flex; gap:4px; justify-content:center; margin-bottom:6px; flex-wrap:wrap;}
   .badge-row .badge-icon{font-size:15px; filter:drop-shadow(0 1px 1px rgba(0,0,0,.15));}
   .badge-row.big .badge-icon{font-size:22px;}
-  .whoami .rolechip{display:inline-block; margin-top:4px; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; letter-spacing:.03em; border:none; color:var(--gold); background:rgba(33,144,164,0.14);}
-  .whoami button{
-    margin-top:0; font-family:'Cantarell', sans-serif; font-size:12px; font-weight:600; background:var(--paper-2);
-    border:1px solid var(--line); color:var(--ink-70); border-radius:16px; padding:5px 12px; cursor:pointer;
+  .sidebar-tabs.tabs{
+    display:flex; flex-direction:column; gap:4px; width:100%; align-items:stretch;
+    padding:0 8px; margin:0; overflow-x:visible; overflow-y:auto; background:none; border:none; border-radius:0;
   }
-  .whoami button:hover{background:var(--line);}
-  nav.tabs{
-    display:flex; gap:4px; padding:6px; margin:12px 14px 0; overflow-x:auto;
-    background:rgba(var(--card-bg),0.55); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-    border:1px solid var(--line); border-radius:16px;
+  .sidebar-tabs.tabs button{
+    flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    width:100%; height:56px; border-radius:14px;
+    font-family:'Cantarell', sans-serif; font-size:9.5px; font-weight:700; line-height:1.15;
+    background:none; border:none; padding:6px 2px; color:var(--ink-70); cursor:pointer; text-align:center;
   }
-  nav.tabs button{
-    flex:0 0 auto; font-family:'Cantarell', sans-serif; font-size:13px; font-weight:700;
-    background:none; border:none; border-radius:11px;
-    padding:9px 15px; color:var(--ink-70); cursor:pointer; position:relative;
+  .sidebar-tabs.tabs button .tab-icon{ font-size:18px; line-height:1; }
+  .sidebar-tabs.tabs button.active{ background:var(--gold); color:#fff; }
+  .sidebar-tabs.tabs button.active .tab-icon{ filter:brightness(0) invert(1); }
+  .sidebar-tabs.tabs button:hover:not(.active){ background:var(--paper-2); color:var(--ink); }
+  .card{ position:relative; }
+  .card h2{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .card-info-btn{
+    width:22px; height:22px; border-radius:50%; border:1.5px solid var(--ink-70); background:none;
+    color:var(--ink-70); font-family:'Cantarell',serif; font-style:italic; font-weight:700; font-size:11.5px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto;
   }
-  nav.tabs button.active{ color:var(--ink); background:var(--card); box-shadow:var(--shadow);}
-  nav.tabs button:hover{ color:var(--ink); }
+  .card-info-btn:hover{ border-color:var(--gold); color:var(--gold); }
   main{padding:16px 14px 40px; max-width:640px; margin:0 auto; position:relative; overflow-x:hidden;}
   section.tab{display:none;}
   section.tab.active{display:block;}
@@ -272,27 +299,27 @@
 </div>
 
 <div id="appRoot" style="display:none;">
-  <header class="top">
-    <div>
-      <h1><img src="./icon-192.png" alt="" style="width:28px;height:28px;border-radius:7px;vertical-align:-6px;margin-right:6px;" />BookHook</h1>
-    </div>
-    <div class="whoami">
-      <div id="whoamiClickable" style="cursor:pointer;">
-        <div id="whoamiName">—</div>
-        <div><span class="rolechip" id="whoamiRole">—</span></div>
-      </div>
-      <div style="margin-top:6px; display:flex; gap:6px; justify-content:flex-end;">
-        <button id="notifBellBtn" style="position:relative; background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font-size:16px; color:var(--ink);">🔔<span id="hamburgerBadge" style="display:none; position:absolute; top:-6px; right:-6px; background:var(--cloth); color:#fff; font-size:9px; border-radius:10px; padding:1px 4px; font-family:'Roboto Mono',monospace;">0</span></button>
-        <button id="hamburgerBtn" style="background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font-size:16px; color:var(--ink);">☰</button>
-        <button id="logoutBtn">Çıkış</button>
-      </div>
-      <div id="hamburgerMenu" style="display:none;"></div>
-    </div>
-  </header>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebarNav">
+      <div class="sidebar-header"><img src="./icon-192.png" alt="BookHook" class="sidebar-logo" /></div>
+      <nav class="sidebar-tabs tabs" id="tabs"></nav>
+    </aside>
+    <div class="content-col">
+      <header class="top">
+        <div class="header-title-area"><span id="currentTabTitle"></span></div>
+        <div class="whoami">
+          <div id="whoamiClickable" class="header-pill" style="cursor:pointer;">
+            <span id="whoamiName">—</span>
+            <span class="rolechip" id="whoamiRole" style="margin-left:6px;">—</span>
+          </div>
+          <button id="notifBellBtn" class="header-pill icon-pill"><span class="mono-icon">🔔</span><span id="hamburgerBadge" style="display:none; position:absolute; top:-4px; right:-4px; background:var(--cloth); color:#fff; font-size:9px; border-radius:10px; padding:1px 4px; font-family:'Roboto Mono',monospace;">0</span></button>
+          <button id="hamburgerBtn" class="header-pill icon-pill"><span class="mono-icon">☰</span></button>
+          <button id="logoutBtn" class="header-pill">Çıkış</button>
+          <div id="hamburgerMenu" style="display:none;"></div>
+        </div>
+      </header>
 
-  <nav class="tabs" id="tabs"></nav>
-
-  <main>
+      <main>
     <!-- ADMIN TABS -->
     <section class="tab" id="tab-today">
       <div class="card">
@@ -556,7 +583,9 @@
         <div id="recGroupList"></div>
       </div>
     </section>
-  </main>
+      </main>
+    </div>
+  </div>
 </div>
 
 <div id="toastHost"></div>
@@ -958,39 +987,62 @@ document.getElementById('googleAuthBtn').addEventListener('click', async ()=>{
 
 /* ============ TAB TANIMLARI ============ */
 const ADMIN_TABS = [
-  {id:'today', label:'Bugün'},
-  {id:'week', label:'Bu Hafta'},
-  {id:'gifts', label:'Hediye Kitap'},
-  {id:'worms', label:'Kitap Kurtları'},
-  {id:'recs', label:'Kitap Önerileri'}
+  {id:'today', label:'Bugün', icon:'☑'},
+  {id:'week', label:'Bu Hafta', icon:'▤'},
+  {id:'gifts', label:'Hediye', icon:'◈'},
+  {id:'worms', label:'Kurtlar', icon:'☆'},
+  {id:'recs', label:'Öneriler', icon:'✎'}
 ];
 const MEMBER_TABS = [
-  {id:'msurvey', label:'Anket'},
-  {id:'mtoday', label:'Bu Hafta (Herkes)'},
-  {id:'mlastweek', label:'Geçen Hafta'},
-  {id:'gifts', label:'Hediye Kitap'},
-  {id:'mworms', label:'Kitap Kurtları'},
-  {id:'recs', label:'Kitap Önerileri'}
+  {id:'msurvey', label:'Anket', icon:'☑'},
+  {id:'mtoday', label:'Bu Hafta', icon:'▤'},
+  {id:'mlastweek', label:'Geçen H.', icon:'↻'},
+  {id:'gifts', label:'Hediye', icon:'◈'},
+  {id:'mworms', label:'Kurtlar', icon:'☆'},
+  {id:'recs', label:'Öneriler', icon:'✎'}
 ];
 const HAMBURGER_ADMIN_EXTRA = [
-  {id:'editpast', label:'Geçmiş Düzenle'},
-  {id:'draws', label:'Kura'},
-  {id:'manual', label:'Manuel Kura'},
-  {id:'members', label:'Üyeler'},
-  {id:'rules', label:'Grup Kuralları'},
-  {id:'profile', label:'Profilim'}
+  {id:'editpast', label:'Geçmiş Düzenle', icon:'✎'},
+  {id:'draws', label:'Kura', icon:'↻'},
+  {id:'manual', label:'Manuel Kura', icon:'⚙'},
+  {id:'members', label:'Üyeler', icon:'⚈'},
+  {id:'rules', label:'Grup Kuralları', icon:'§'},
+  {id:'profile', label:'Profilim', icon:'◍'}
 ];
 const HAMBURGER_MEMBER_EXTRA = [
-  {id:'rules', label:'Grup Kuralları'},
-  {id:'profile', label:'Profilim'}
+  {id:'rules', label:'Grup Kuralları', icon:'§'},
+  {id:'profile', label:'Profilim', icon:'◍'}
 ];
 
+// Her kartın statik açıklama metnini gizleyip, h2'nin yanına küçük bir "i" bilgi
+// düğmesi ekler; tıklanınca açıklama açılır/kapanır. Dinamik (id'li) durum metinlerine
+// dokunmaz, sadece h2'den hemen sonra gelen sabit <p class="muted"> açıklamalarını kapsar.
+function setupCardInfoButtons(){
+  document.querySelectorAll('.card').forEach(card=>{
+    const h2 = card.querySelector('h2');
+    if(!h2) return;
+    if(h2.querySelector('.card-info-btn')) return;
+    const desc = h2.nextElementSibling;
+    if(!desc || desc.tagName!=='P' || !desc.classList.contains('muted') || desc.id) return;
+    if(!desc.textContent.trim()) return;
+    desc.style.display='none';
+    const btn = document.createElement('button');
+    btn.className='card-info-btn';
+    btn.type='button';
+    btn.setAttribute('aria-label','Bilgi');
+    btn.textContent='i';
+    btn.addEventListener('click', ()=>{
+      desc.style.display = desc.style.display==='none' ? 'block' : 'none';
+    });
+    h2.appendChild(btn);
+  });
+}
 function buildHamburgerMenu(){
   const items = myProfile.role==='admin' ? HAMBURGER_ADMIN_EXTRA : HAMBURGER_MEMBER_EXTRA;
   const menu = document.getElementById('hamburgerMenu');
   const isDark = document.documentElement.getAttribute('data-theme')==='dark';
   const isAuto = getAutoThemeEnabled();
-  menu.innerHTML = items.map(it=>`<button data-tab="${it.id}">${it.label}</button>`).join('')
+  menu.innerHTML = items.map(it=>`<button data-tab="${it.id}"><span class="mono-icon">${it.icon}</span>${it.label}</button>`).join('')
     + `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--line); ${isAuto?'opacity:0.5;':''}">
         <span style="font-family:'Roboto',sans-serif; font-size:14px; color:var(--ink);">🌙 Karanlık Tema</span>
         <label class="theme-switch">
@@ -1048,7 +1100,7 @@ document.body.addEventListener('click', (e)=>{
 function buildNav(){
   const tabs = myProfile.role === 'admin' ? ADMIN_TABS : MEMBER_TABS;
   const nav = document.getElementById('tabs');
-  nav.innerHTML = tabs.map((t,i)=>`<button data-tab="${t.id}" class="${i===0?'active':''}">${t.label}</button>`).join('');
+  nav.innerHTML = tabs.map((t,i)=>`<button data-tab="${t.id}" class="${i===0?'active':''}"><span class="tab-icon mono-icon">${t.icon}</span><span>${t.label}</span></button>`).join('');
   nav.querySelectorAll('button').forEach(btn=>{
     btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
   });
@@ -1075,6 +1127,10 @@ function switchTab(id){
     sec.classList.add('active');
     sec.classList.add(direction==='right' ? 'anim-from-right' : direction==='left' ? 'anim-from-left' : 'anim-fade');
   }
+  const allTabDefs = [...ADMIN_TABS, ...MEMBER_TABS, ...HAMBURGER_ADMIN_EXTRA, ...HAMBURGER_MEMBER_EXTRA];
+  const def = allTabDefs.find(t=>t.id===id);
+  const titleEl = document.getElementById('currentTabTitle');
+  if(titleEl) titleEl.textContent = def ? def.label : '';
   renderTab(id);
 }
 
@@ -2500,6 +2556,7 @@ onAuthStateChanged(auth, async (user)=>{
   appRoot.style.display='block';
   renderHeader();
   buildNav();
+  setupCardInfoButtons();
 
   if(myProfile.role==='admin'){
     const filledCount = await autoFillPastDays(30);
