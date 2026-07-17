@@ -84,12 +84,19 @@ messaging.onBackgroundMessage((payload) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = self.registration.scope; // manifest'teki scope ile birebir aynı, tam URL
+  const linkTab = (event.notification.data && event.notification.data.linkTab) || null;
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.startsWith(targetUrl) && 'focus' in client) return client.focus();
+        if (client.url.startsWith(targetUrl) && 'focus' in client) {
+          if (linkTab) client.postMessage({ type: 'notifClick', linkTab });
+          return client.focus();
+        }
       }
-      if (clients.openWindow) return clients.openWindow(targetUrl);
+      if (clients.openWindow) {
+        const openUrl = linkTab ? targetUrl + '?tab=' + encodeURIComponent(linkTab) : targetUrl;
+        return clients.openWindow(openUrl);
+      }
     })
   );
 });

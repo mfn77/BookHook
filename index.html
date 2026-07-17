@@ -2974,6 +2974,13 @@ onAuthStateChanged(auth, async (user)=>{
   buildNav();
   setupCardInfoButtons();
 
+  // Bildirime tıklanarak açılmışsa (?tab=xxx), ilgili sekmeye geç ve URL'yi temizle.
+  const notifTabParam = new URLSearchParams(location.search).get('tab');
+  if(notifTabParam && document.getElementById('tab-'+notifTabParam)){
+    switchTab(notifTabParam);
+    history.replaceState(null, '', location.pathname);
+  }
+
   if(myProfile.role==='admin'){
     const filledCount = await autoFillPastDays(30);
     if(filledCount>0) showToast(`${filledCount} eksik işaretleme otomatik "okumadı" olarak dolduruldu.`);
@@ -2996,6 +3003,13 @@ onAuthStateChanged(auth, async (user)=>{
 /* ============ SERVICE WORKER ============ */
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); });
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.addEventListener('message', (e)=>{
+      if(e.data && e.data.type==='notifClick' && e.data.linkTab && document.getElementById('tab-'+e.data.linkTab)){
+        switchTab(e.data.linkTab);
+      }
+    });
+  }
 }
 </script>
 </body>
