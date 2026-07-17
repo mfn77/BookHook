@@ -174,6 +174,28 @@
     display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto;
   }
   .card-info-btn:hover{ border-color:var(--gold); color:var(--gold); }
+  .book-suggest-box{
+    display:none; margin-top:6px; border:1px solid var(--line); border-radius:10px;
+    overflow-y:auto; max-height:220px; background:var(--card); box-shadow:var(--shadow);
+  }
+  .book-suggest-item{ display:flex; align-items:center; padding:8px 10px; cursor:pointer; border-bottom:1px solid var(--line); }
+  .book-suggest-item:last-child{ border-bottom:none; }
+  .book-suggest-item:hover{ background:rgba(33,144,164,0.10); }
+  .book-suggest-thumb{ width:24px; height:36px; object-fit:cover; border-radius:3px; margin-right:8px; flex:0 0 auto; box-shadow:var(--shadow); }
+  .bh-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(76px,1fr)); gap:16px 12px; margin-top:12px; }
+  .bh-card{ position:relative; text-align:center; }
+  .bh-cover-wrap{
+    width:100%; aspect-ratio:2/3; border-radius:8px; overflow:hidden; background:var(--line);
+    box-shadow:var(--shadow); margin-bottom:6px; display:flex; align-items:center; justify-content:center;
+  }
+  .bh-cover-wrap img{ width:100%; height:100%; object-fit:cover; }
+  .bh-cover-wrap .bh-noimg{ font-size:22px; opacity:0.5; }
+  .bh-author{ font-size:10px; color:var(--ink-70); line-height:1.25; }
+  .bh-title{ font-size:11.5px; font-weight:700; line-height:1.25; margin-top:1px; }
+  .bh-delete{
+    position:absolute; top:-6px; right:6px; width:20px; height:20px; border-radius:50%; border:none;
+    background:rgba(0,0,0,0.62); color:#fff; font-size:11px; cursor:pointer; line-height:1;
+  }
   .card-add-btn{
     display:flex; align-items:center; justify-content:center; width:38px; height:38px;
     border-radius:50%; border:none; background:var(--gold); color:#fff; font-size:20px;
@@ -628,8 +650,8 @@
         <div class="field"><label>Telefon</label><input type="text" id="profilePhone" /></div>
         <div class="field"><label>Adres</label><input type="text" id="profileAddress" /></div>
         <div class="field"><label>Hakkımda (kısa bir bilgi, herkes görebilir)</label><input type="text" id="profileBio" placeholder="örn. bilim kurgu ve tarih kitapları severim" /></div>
-        <div class="field"><label>Şu An Okuduğun Kitap</label><input type="text" id="profileReading" placeholder="örn. Suç ve Ceza" /></div>
-        <div class="field"><label>Okuduğun Kitabın Kapak Görseli Linki (opsiyonel)</label><input type="text" id="profileReadingCover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
+        <div class="field"><label>Şu An Okuduğun Kitap</label><input type="text" id="profileReading" placeholder="kitap adını yazmaya başla, listeden seç" autocomplete="off" /><div id="profileReadingSuggest" class="book-suggest-box"></div></div>
+        <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" id="profileReadingCover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
         <div class="auth-error" id="profileError"></div>
         <button class="primary" id="profileSaveBtn">Bilgileri Kaydet</button>
       </div>
@@ -664,9 +686,9 @@
           <div class="field"><label>Kime?</label>
             <select id="recPersonalTarget" style="width:100%; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Cantarell',sans-serif; font-size:15px; background:var(--card); color:var(--ink);"></select>
           </div>
-          <div class="field"><label>Kitap Adı</label><input type="text" id="recPersonalBook" /></div>
+          <div class="field"><label>Kitap Adı</label><input type="text" id="recPersonalBook" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div id="recPersonalBookSuggest" class="book-suggest-box"></div></div>
           <div class="field"><label>Not (opsiyonel)</label><input type="text" id="recPersonalNote" placeholder="neden önerdiğini kısaca yaz" /></div>
-          <div class="field"><label>Kapak Görseli Linki (opsiyonel)</label><input type="text" id="recPersonalCover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
+          <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" id="recPersonalCover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
           <button class="primary" id="recPersonalSendBtn">Gönder</button>
         </div>
       </div>
@@ -677,10 +699,28 @@
         <div id="recGroupList"></div>
         <button type="button" class="card-add-btn" id="recGroupAddBtn" aria-label="Gruba öneri gönder">+</button>
         <div id="recGroupFormWrap" style="display:none; margin-top:14px;">
-          <div class="field"><label>Kitap Adı</label><input type="text" id="recGroupBook" /></div>
+          <div class="field"><label>Kitap Adı</label><input type="text" id="recGroupBook" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div id="recGroupBookSuggest" class="book-suggest-box"></div></div>
           <div class="field"><label>Not (opsiyonel)</label><input type="text" id="recGroupNote" placeholder="neden önerdiğini kısaca yaz" /></div>
-          <div class="field"><label>Kapak Görseli Linki (opsiyonel)</label><input type="text" id="recGroupCover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
+          <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" id="recGroupCover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
           <button class="primary" id="recGroupSendBtn">Gruba Gönder</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab" id="tab-bookhistory">
+      <div class="card">
+        <h2>Kitap Geçmişim</h2>
+        <div class="card-desc-wrap">
+          <p class="muted">Bugüne kadar okuduğun kitapları buraya ekleyip küçük bir kitaplık oluşturabilirsin. Bu, profilinden başkalarının da görebileceği bir liste.</p>
+        </div>
+        <div id="bookHistoryGrid" class="bh-grid"></div>
+        <button type="button" class="card-add-btn" id="bookHistoryAddBtn" aria-label="Kitap ekle">+</button>
+        <div id="bookHistoryFormWrap" style="display:none; margin-top:14px;">
+          <div class="field"><label>Kitap Ara</label><input type="text" id="bhSearchInput" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div id="bhSearchSuggest" class="book-suggest-box"></div></div>
+          <div class="field"><label>Yazar</label><input type="text" id="bhAuthorInput" placeholder="listeden seçince otomatik dolar" /></div>
+          <div class="field"><label>Kitap Adı</label><input type="text" id="bhTitleInput" /></div>
+          <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" id="bhCoverInput" placeholder="internetten bulduğun kapak görselinin linki" /></div>
+          <button class="primary" id="bhSaveBtn">Ekle</button>
         </div>
       </div>
     </section>
@@ -701,6 +741,15 @@
     <div class="muted" id="profileModalBio" style="margin-top:14px;"></div>
     <div class="muted" id="profileModalReading" style="margin-top:8px;"></div>
     <div id="profileModalStats" style="display:flex; justify-content:center; gap:20px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-70);"></div>
+    <button type="button" id="profileModalBookHistoryBtn" class="secondary" style="width:100%; margin-top:14px;">📚 Kitap Geçmişi</button>
+  </div>
+</div>
+
+<div id="bookHistoryViewModal" style="display:none; position:fixed; inset:0; background:rgba(36,49,75,0.55); z-index:210; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:420px; width:100%; max-height:82vh; overflow-y:auto; position:relative; margin-bottom:0;">
+    <button id="bookHistoryViewModalClose" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-70);">✕</button>
+    <h2 id="bookHistoryViewModalName">Kitap Geçmişi</h2>
+    <div id="bookHistoryViewGrid" class="bh-grid"></div>
   </div>
 </div>
 
@@ -919,9 +968,11 @@ function userChipHtml(uid, size){
   const name = (u && u.name) || '?';
   return `<span class="user-chip" data-uid="${uid}">${avatarHtmlFromProfile(u,size)}<span class="uc-name">${escapeHtml(name)}</span></span>`;
 }
+let currentProfileModalUid = null;
 async function openProfileModal(uid){
   const u = usersCache[uid];
   if(!u) return;
+  currentProfileModalUid = uid;
   document.getElementById('profileModalPhotoWrap').innerHTML = avatarHtmlFromProfile(u, 88);
   document.getElementById('profileModalPhotoWrap').style.cursor = u.photoURL ? 'pointer' : 'default';
   document.getElementById('profileModalPhotoWrap').onclick = ()=>{ if(u.photoURL) openPhotoLightbox(u.photoURL); };
@@ -952,6 +1003,17 @@ function openPhotoLightbox(url){
   document.getElementById('photoLightbox').style.display='flex';
 }
 document.getElementById('photoLightbox').addEventListener('click', ()=>{ document.getElementById('photoLightbox').style.display='none'; });
+document.getElementById('profileModalBookHistoryBtn').addEventListener('click', async ()=>{
+  if(!currentProfileModalUid) return;
+  const u = usersCache[currentProfileModalUid];
+  document.getElementById('bookHistoryViewModalName').textContent = `📚 ${u.surname ? `${u.name} ${u.surname}` : (u.name||'?')} — Kitap Geçmişi`;
+  document.getElementById('bookHistoryViewModal').style.display='flex';
+  const viewGrid = document.getElementById('bookHistoryViewGrid');
+  viewGrid.innerHTML=''; delete viewGrid.dataset.loaded;
+  await renderBookHistoryGrid(currentProfileModalUid, 'bookHistoryViewGrid', false);
+});
+document.getElementById('bookHistoryViewModalClose').addEventListener('click', ()=>{ document.getElementById('bookHistoryViewModal').style.display='none'; });
+document.getElementById('bookHistoryViewModal').addEventListener('click', (e)=>{ if(e.target.id==='bookHistoryViewModal') document.getElementById('bookHistoryViewModal').style.display='none'; });
 document.getElementById('profileModalClose').addEventListener('click', ()=>{ document.getElementById('profileModal').style.display='none'; });
 document.getElementById('profileModal').addEventListener('click', (e)=>{ if(e.target.id==='profileModal') document.getElementById('profileModal').style.display='none'; });
 document.body.addEventListener('click', (e)=>{
@@ -1216,6 +1278,7 @@ const ADMIN_TABS = [
   {id:'week', label:'Kayıtlar', icon:'▤'},
   {id:'gifts', label:'Hediye', icon:'◈'},
   {id:'worms', label:'Rozet', icon:'☆'},
+  {id:'bookhistory', label:'Kitaplığım', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>'},
   {id:'recs', label:'Öneriler', icon:'✎'},
   {id:'draws', label:'Kura', icon:'↻'}
 ];
@@ -1225,6 +1288,7 @@ const MEMBER_TABS = [
   {id:'mlastweek', label:'Kura', icon:'↻'},
   {id:'gifts', label:'Hediye', icon:'◈'},
   {id:'mworms', label:'Rozet', icon:'☆'},
+  {id:'bookhistory', label:'Kitaplığım', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>'},
   {id:'recs', label:'Öneriler', icon:'✎'}
 ];
 const HAMBURGER_ADMIN_EXTRA = [
@@ -1244,6 +1308,7 @@ const HAMBURGER_MEMBER_EXTRA = [
 // dokunmaz, sadece h2'den hemen sonra gelen sabit <p class="muted"> açıklamalarını kapsar.
 function setupCardInfoButtons(){
   document.querySelectorAll('.card').forEach(card=>{
+    if(card.closest('#guideModal')) return; // Rehberin kendisi zaten bilgi içeriği, üstüne ayrıca bilgi tuşu eklenmesin
     const h2 = card.querySelector('h2');
     if(!h2) return;
     if(h2.querySelector('.card-info-btn')) return;
@@ -1279,7 +1344,7 @@ function buildHamburgerMenu(){
         </label>
       </div>
       <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--line);">
-        <span style="font-family:'Roboto',sans-serif; font-size:13px; color:var(--ink); max-width:150px;">🕗 Saate Göre Otomatik (08:00-20:00 aydınlık)</span>
+        <span style="font-family:'Roboto',sans-serif; font-size:13px; color:var(--ink); max-width:150px;">🕗 Otomatik Tema</span>
         <label class="theme-switch">
           <input type="checkbox" id="autoThemeCheckbox" ${isAuto?'checked':''}>
           <span class="slider"></span>
@@ -1418,6 +1483,7 @@ function renderTab(id){
   else if(id==='rules') renderRulesTab();
   else if(id==='profile') renderProfileTab();
   else if(id==='recs') renderRecsTab();
+  else if(id==='bookhistory') renderBookHistoryTab();
 }
 
 function renderHeader(){
@@ -2775,6 +2841,134 @@ document.getElementById('recGroupSendBtn').addEventListener('click', async ()=>{
     closeAddForm('recGroupAddBtn','recGroupFormWrap');
     renderGroupRecs();
   }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
+});
+
+/* ============ ORTAK: KİTAP ARAMA (Google Books API üzerinden otomatik tamamlama) ============ */
+function attachBookAutocomplete(inputId, coverInputId, suggestBoxId, onSelect){
+  const input = document.getElementById(inputId);
+  const box = document.getElementById(suggestBoxId);
+  if(!input || !box) return;
+  let debounceTimer = null;
+  let queryToken = 0;
+
+  function hideBox(){ box.style.display='none'; box.innerHTML=''; }
+
+  input.addEventListener('input', ()=>{
+    const q = input.value.trim();
+    clearTimeout(debounceTimer);
+    if(q.length < 2){ hideBox(); return; }
+    debounceTimer = setTimeout(()=> doSearch(q), 400);
+  });
+  input.addEventListener('focus', ()=>{ if(box.innerHTML.trim()) box.style.display='block'; });
+
+  async function doSearch(q){
+    const myToken = ++queryToken;
+    let items = [];
+    try{
+      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=8`);
+      const json = await res.json();
+      items = (json.items||[]).filter(it=>it.volumeInfo && it.volumeInfo.title);
+    }catch(e){ hideBox(); return; }
+    if(myToken !== queryToken) return; // bu arada yeni bir arama başlamış, eski sonucu gösterme
+    if(!items.length){ hideBox(); return; }
+    box.innerHTML = items.map((it,i)=>{
+      const vi = it.volumeInfo;
+      const title = escapeHtml(vi.title);
+      const author = escapeHtml((vi.authors||[]).join(', ') || 'Bilinmeyen Yazar');
+      const thumb = vi.imageLinks ? (vi.imageLinks.thumbnail||vi.imageLinks.smallThumbnail||'').replace('http://','https://') : '';
+      const thumbHtml = thumb
+        ? `<img class="book-suggest-thumb" src="${thumb}" alt="" onerror="this.style.display='none';" />`
+        : `<div class="book-suggest-thumb" style="background:var(--line);"></div>`;
+      return `<div class="book-suggest-item" data-idx="${i}">${thumbHtml}<div><div style="font-weight:600; font-size:13px;">${title}</div><div class="muted" style="font-size:11px;">${author}</div></div></div>`;
+    }).join('');
+    box.style.display='block';
+    box.querySelectorAll('.book-suggest-item').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const it = items[parseInt(el.dataset.idx,10)];
+        const vi = it.volumeInfo;
+        const author = (vi.authors||[]).join(', ') || 'Bilinmeyen Yazar';
+        const thumb = vi.imageLinks ? (vi.imageLinks.thumbnail||vi.imageLinks.smallThumbnail||'').replace('http://','https://') : '';
+        if(typeof onSelect === 'function'){
+          onSelect({ author, title: vi.title, cover: thumb });
+        } else {
+          input.value = `${author} - ${vi.title}`;
+          const coverInput = coverInputId ? document.getElementById(coverInputId) : null;
+          if(coverInput) coverInput.value = thumb;
+        }
+        hideBox();
+      });
+    });
+  }
+
+  document.addEventListener('click', (e)=>{
+    if(e.target!==input && !box.contains(e.target)) hideBox();
+  });
+}
+attachBookAutocomplete('profileReading', 'profileReadingCover', 'profileReadingSuggest');
+attachBookAutocomplete('recPersonalBook', 'recPersonalCover', 'recPersonalBookSuggest');
+attachBookAutocomplete('recGroupBook', 'recGroupCover', 'recGroupBookSuggest');
+
+/* ============ ORTAK: KİTAP GEÇMİŞİM (kişisel kitaplık) ============ */
+async function renderBookHistoryTab(){
+  await renderBookHistoryGrid(currentUid, 'bookHistoryGrid', true);
+}
+async function renderBookHistoryGrid(uid, gridId, editable){
+  const grid = keepOrLoading(gridId);
+  let items = [];
+  try{
+    const snap = await getDocs(query(collection(db,'users',uid,'bookHistory'), orderBy('addedAt','desc')));
+    snap.forEach(d=> items.push({ id:d.id, ...d.data() }));
+  }catch(e){}
+  if(!items.length){
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><span class="big">📚</span>Henüz kitap eklenmemiş.</div>`;
+    markLoaded(grid);
+    return;
+  }
+  grid.innerHTML = items.map(b=>{
+    const coverHtml = b.cover
+      ? `<img src="${b.cover}" alt="" onerror="this.parentElement.innerHTML='<span class=\\'bh-noimg\\'>📖</span>';" />`
+      : `<span class="bh-noimg">📖</span>`;
+    const delBtn = editable ? `<button class="bh-delete" data-id="${b.id}" title="Kaldır">✕</button>` : '';
+    return `<div class="bh-card">
+      <div class="bh-cover-wrap">${coverHtml}</div>
+      <div class="bh-author">${escapeHtml(b.author||'')}</div>
+      <div class="bh-title">${escapeHtml(b.title||'')}</div>
+      ${delBtn}
+    </div>`;
+  }).join('');
+  if(editable){
+    grid.querySelectorAll('.bh-delete').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        try{
+          await deleteDoc(doc(db,'users',currentUid,'bookHistory',btn.dataset.id));
+          renderBookHistoryGrid(currentUid, gridId, true);
+        }catch(e){ alert('Silinemedi: '+(e.message||e)); }
+      });
+    });
+  }
+  markLoaded(grid);
+}
+setupAddToggle('bookHistoryAddBtn', 'bookHistoryFormWrap');
+attachBookAutocomplete('bhSearchInput', null, 'bhSearchSuggest', (sel)=>{
+  document.getElementById('bhAuthorInput').value = sel.author;
+  document.getElementById('bhTitleInput').value = sel.title;
+  document.getElementById('bhCoverInput').value = sel.cover || '';
+  document.getElementById('bhSearchInput').value = '';
+});
+document.getElementById('bhSaveBtn').addEventListener('click', async ()=>{
+  const author = document.getElementById('bhAuthorInput').value.trim();
+  const title = document.getElementById('bhTitleInput').value.trim();
+  const cover = document.getElementById('bhCoverInput').value.trim();
+  if(!title){ alert('Kitap adı yaz.'); return; }
+  try{
+    await addDoc(collection(db,'users',currentUid,'bookHistory'), { author, title, cover, addedAt: new Date().toISOString() });
+    document.getElementById('bhSearchInput').value='';
+    document.getElementById('bhAuthorInput').value='';
+    document.getElementById('bhTitleInput').value='';
+    document.getElementById('bhCoverInput').value='';
+    closeAddForm('bookHistoryAddBtn','bookHistoryFormWrap');
+    renderBookHistoryGrid(currentUid, 'bookHistoryGrid', true);
+  }catch(err){ alert('Eklenemedi: '+(err.message||err)); }
 });
 
 async function fetchRecComments(recId){
