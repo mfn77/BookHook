@@ -1032,7 +1032,7 @@ document.getElementById('notifModal').addEventListener('click', (e)=>{ if(e.targ
 
 /* ============ GERÇEK TELEFON BİLDİRİMİ (Firebase Cloud Messaging) ============ */
 async function registerPushToken(){
-  const swReg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+  const swReg = await navigator.serviceWorker.register('./sw.js');
   const messaging = getMessaging(app);
   const token = await getToken(messaging, { vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: swReg });
   if(token){
