@@ -849,16 +849,34 @@ document.body.addEventListener('click', (e)=>{
 
 // Bir konteynerin daha önce içerik gösterip göstermediğini işaretler. İlk seferinde
 // "Yükleniyor…" gösterilir; sonraki ziyaretlerde önceki içerik ekranda kalmaya devam
-// eder, veri arka planda tazelenip sessizce günceller — böylece her sekmeye geçişte
-// boş/"yükleniyor" ekranı görülmez.
+// eder, veri arka planda tazelenip sessizce günceller. Ayrıca içeriği cihazın kendi
+// hafızasına (localStorage) kaydediyoruz — böylece uygulama tamamen kapatılıp yeniden
+// açıldığında da "yükleniyor" boşluğu görülmez, son bilinen hal anında gösterilir ve
+// arka planda gerçek veriyle sessizce güncellenir.
+const CACHE_PREFIX = 'bh_cache_';
+function getPersistedHTML(key){
+  try{ return localStorage.getItem(CACHE_PREFIX+currentUid+'_'+key); }catch(e){ return null; }
+}
+function setPersistedHTML(key, html){
+  try{ localStorage.setItem(CACHE_PREFIX+currentUid+'_'+key, html); }catch(e){ /* depolama dolu/kapalıysa sessizce geç */ }
+}
+function showCachedOrPlaceholder(el, placeholderHtml){
+  if(!el) return;
+  if(el.dataset.loaded === '1') return;
+  const cached = getPersistedHTML(el.id);
+  if(cached){ el.innerHTML = cached; el.dataset.loaded = '1'; }
+  else { el.innerHTML = placeholderHtml; }
+}
 function keepOrLoading(containerId, loadingText){
   const el = document.getElementById(containerId);
-  if(el && el.dataset.loaded !== '1'){
-    el.innerHTML = `<div class="empty-state">${loadingText || 'Yükleniyor…'}</div>`;
-  }
+  showCachedOrPlaceholder(el, `<div class="empty-state">${loadingText || 'Yükleniyor…'}</div>`);
   return el;
 }
-function markLoaded(el){ if(el) el.dataset.loaded = '1'; }
+function markLoaded(el){
+  if(!el) return;
+  el.dataset.loaded = '1';
+  if(el.id) setPersistedHTML(el.id, el.innerHTML);
+}
 
 function showToast(msg){
   const host = document.getElementById('toastHost');
@@ -1601,7 +1619,7 @@ async function renderAdminOwnWeek(){
   document.getElementById('aWeekRangeLabel').textContent = `${fmtShort(dates[0])} — ${fmtShort(dates[6])}` + (adminWeekOffset===0 ? ' (bu hafta)' : '');
   document.getElementById('aWeekNextBtn').disabled = adminWeekOffset>=0;
   const table = document.getElementById('aOwnWeekGrid');
-  if(table.dataset.loaded !== '1') table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
+  showCachedOrPlaceholder(table, `<tr><td class="empty-state">Yükleniyor…</td></tr>`);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const joinDs = joinDateStrOf(currentUid);
   let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
@@ -1663,7 +1681,7 @@ async function renderEditPastTab(){
 /* ============ ADMIN: BU HAFTA ============ */
 async function renderAdminWeek(){
   const table = document.getElementById('weekGrid');
-  if(table.dataset.loaded !== '1') table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
+  showCachedOrPlaceholder(table, `<tr><td class="empty-state">Yükleniyor…</td></tr>`);
   const monday = getMonday(nowLogical());
   const dates = weekDates(monday);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
@@ -1988,10 +2006,10 @@ async function renderWormsShared(containerId, historyContainerId){
 async function renderTotalPagesCard(elId){
   const pagesEl = document.getElementById(elId);
   if(!pagesEl) return;
-  if(pagesEl.dataset.loaded !== '1') pagesEl.textContent = '…';
+  showCachedOrPlaceholder(pagesEl, '…');
   const totalReadDays = await computeTotalReadDays(currentUid);
   pagesEl.textContent = (totalReadDays*15).toLocaleString('tr-TR');
-  pagesEl.dataset.loaded = '1';
+  markLoaded(pagesEl);
 }
 async function computeTotalReadDays(uid){
   const joinDs = joinDateStrOf(uid);
@@ -2047,7 +2065,7 @@ async function renderMemberOwnWeek(){
   document.getElementById('mWeekRangeLabel').textContent = `${fmtShort(dates[0])} — ${fmtShort(dates[6])}` + (memberWeekOffset===0 ? ' (bu hafta)' : '');
   document.getElementById('mWeekNextBtn').disabled = memberWeekOffset>=0;
   const table = document.getElementById('mOwnWeekGrid');
-  if(table.dataset.loaded !== '1') table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
+  showCachedOrPlaceholder(table, `<tr><td class="empty-state">Yükleniyor…</td></tr>`);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const joinDs = joinDateStrOf(currentUid);
   let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
@@ -2067,7 +2085,7 @@ document.getElementById('mWeekNextBtn').addEventListener('click', ()=>{ if(membe
 /* ============ ÜYE: BU HAFTA (HERKES) ============ */
 async function renderMemberWeekAll(){
   const table = document.getElementById('mWeekGridAll');
-  if(table.dataset.loaded !== '1') table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
+  showCachedOrPlaceholder(table, `<tr><td class="empty-state">Yükleniyor…</td></tr>`);
   const monday = getMonday(nowLogical());
   const dates = weekDates(monday);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
@@ -2243,14 +2261,14 @@ document.getElementById('deleteMyAccountBtn').addEventListener('click', async ()
 /* ============ ORTAK: GRUP KURALLARI ============ */
 async function renderRulesTab(){
   const displayBox = document.getElementById('rulesDisplay');
-  if(displayBox.dataset.loaded !== '1') displayBox.textContent = 'Yükleniyor…';
+  showCachedOrPlaceholder(displayBox, 'Yükleniyor…');
   let rulesText = '';
   try{
     const snap = await getDoc(doc(db,'settings','groupRules'));
     rulesText = snap.exists() ? (snap.data().text || '') : '';
   }catch(e){}
   displayBox.textContent = rulesText || 'Henüz kural eklenmemiş.';
-  displayBox.dataset.loaded = '1';
+  markLoaded(displayBox);
   const editBox = document.getElementById('rulesAdminEdit');
   if(myProfile.role==='admin'){
     editBox.style.display='block';
