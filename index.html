@@ -361,7 +361,7 @@
           <div id="whoamiClickable" class="header-pill" style="cursor:pointer;">
             <span id="whoamiName">—</span>
           </div>
-          <button id="notifBellBtn" class="header-pill icon-pill"><svg class="notif-bell-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span id="hamburgerBadge" style="display:none; position:absolute; top:-4px; right:-4px; background:var(--cloth); color:#fff; font-size:9px; border-radius:10px; padding:1px 4px; font-family:'Roboto Mono',monospace;">0</span></button>
+          <button id="notifBellBtn" class="header-pill icon-pill"><svg class="svg-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span id="hamburgerBadge" style="display:none; position:absolute; top:-4px; right:-4px; background:var(--cloth); color:#fff; font-size:9px; border-radius:10px; padding:1px 4px; font-family:'Roboto Mono',monospace;">0</span></button>
           <button id="hamburgerBtn" class="header-pill icon-pill"><span class="mono-icon">☰</span></button>
           <button id="logoutBtn" style="display:none;">Çıkış</button>
           <div id="hamburgerMenu" style="display:none;"></div>
@@ -427,6 +427,17 @@
         </div>
       </div>
       <div id="drawsList"></div>
+
+      <div class="card">
+        <h2>Kura Geçmişim</h2>
+        <p class="muted">Geçmiş haftaların kura sonuçlarına göz atabilirsin.</p>
+        <div class="row" style="align-items:center; margin-bottom:10px;">
+          <button class="secondary tiny" id="aDrawHistPrevBtn" style="flex:0 0 auto;">◀ Önceki Hafta</button>
+          <div class="mono" id="aDrawHistRangeLabel" style="text-align:center; flex:1;"></div>
+          <button class="secondary tiny" id="aDrawHistNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
+        </div>
+        <div id="aDrawHistBox"></div>
+      </div>
     </section>
 
     <section class="tab" id="tab-manual">
@@ -530,6 +541,17 @@
       <div class="card">
         <h2>Geçen Haftanın Kurası</h2>
         <div id="mLastWeekBox"></div>
+      </div>
+
+      <div class="card">
+        <h2>Kura Geçmişim</h2>
+        <p class="muted">Geçmiş haftaların kura sonuçlarına göz atabilirsin.</p>
+        <div class="row" style="align-items:center; margin-bottom:10px;">
+          <button class="secondary tiny" id="mDrawHistPrevBtn" style="flex:0 0 auto;">◀ Önceki Hafta</button>
+          <div class="mono" id="mDrawHistRangeLabel" style="text-align:center; flex:1;"></div>
+          <button class="secondary tiny" id="mDrawHistNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
+        </div>
+        <div id="mDrawHistBox"></div>
       </div>
     </section>
 
@@ -672,7 +694,12 @@
     </div>
     <div class="muted" id="profileModalBio" style="margin-top:14px;"></div>
     <div class="muted" id="profileModalReading" style="margin-top:8px;"></div>
+    <div id="profileModalStats" style="display:flex; justify-content:center; gap:20px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-70);"></div>
   </div>
+</div>
+
+<div id="photoLightbox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.86); z-index:300; align-items:center; justify-content:center; padding:24px; cursor:zoom-out;">
+  <img id="photoLightboxImg" src="" alt="" style="max-width:92vw; max-height:88vh; border-radius:14px; object-fit:contain; box-shadow:0 8px 40px rgba(0,0,0,0.5);" />
 </div>
 
 <div id="notifModal" style="display:none; position:fixed; inset:0; background:rgba(36,49,75,0.55); z-index:200; align-items:center; justify-content:center; padding:20px;">
@@ -886,10 +913,12 @@ function userChipHtml(uid, size){
   const name = (u && u.name) || '?';
   return `<span class="user-chip" data-uid="${uid}">${avatarHtmlFromProfile(u,size)}<span class="uc-name">${escapeHtml(name)}</span></span>`;
 }
-function openProfileModal(uid){
+async function openProfileModal(uid){
   const u = usersCache[uid];
   if(!u) return;
   document.getElementById('profileModalPhotoWrap').innerHTML = avatarHtmlFromProfile(u, 88);
+  document.getElementById('profileModalPhotoWrap').style.cursor = u.photoURL ? 'pointer' : 'default';
+  document.getElementById('profileModalPhotoWrap').onclick = ()=>{ if(u.photoURL) openPhotoLightbox(u.photoURL); };
   document.getElementById('profileModalName').textContent = u.surname ? `${u.name} ${u.surname}` : (u.name || '?');
   document.getElementById('profileModalBio').textContent = u.bio ? u.bio : 'Henüz bir bilgi eklenmemiş.';
   if(u.currentlyReading){
@@ -900,8 +929,19 @@ function openProfileModal(uid){
   } else {
     document.getElementById('profileModalReading').textContent = '📖 Şu an ne okuduğunu paylaşmamış.';
   }
+  const statsEl = document.getElementById('profileModalStats');
+  statsEl.innerHTML = `<span>… hediye kitap</span><span>… sayfa</span>`;
   document.getElementById('profileModal').style.display='flex';
+  const [totalReadDays] = await Promise.all([computeTotalReadDays(uid), loadDraws()]);
+  const giftsWon = drawsCache.reduce((acc,d)=> acc + (d.pairs||[]).filter(p=>p.receiverUid===uid).length, 0);
+  statsEl.innerHTML = `<span><b>${giftsWon}</b> hediye kitap kazandı</span><span><b>${(totalReadDays*15).toLocaleString('tr-TR')}</b> sayfa okudu</span>`;
 }
+function openPhotoLightbox(url){
+  if(!url) return;
+  document.getElementById('photoLightboxImg').src = url;
+  document.getElementById('photoLightbox').style.display='flex';
+}
+document.getElementById('photoLightbox').addEventListener('click', ()=>{ document.getElementById('photoLightbox').style.display='none'; });
 document.getElementById('profileModalClose').addEventListener('click', ()=>{ document.getElementById('profileModal').style.display='none'; });
 document.getElementById('profileModal').addEventListener('click', (e)=>{ if(e.target.id==='profileModal') document.getElementById('profileModal').style.display='none'; });
 document.body.addEventListener('click', (e)=>{
@@ -1172,7 +1212,7 @@ const ADMIN_TABS = [
 const MEMBER_TABS = [
   {id:'msurvey', label:'Bugün', icon:'✓'},
   {id:'mtoday', label:'Kayıtlar', icon:'▤'},
-  {id:'mlastweek', label:'Geçen H.', icon:'↻'},
+  {id:'mlastweek', label:'Kura', icon:'↻'},
   {id:'gifts', label:'Hediye', icon:'◈'},
   {id:'mworms', label:'Rozet', icon:'☆'},
   {id:'recs', label:'Öneriler', icon:'✎'}
@@ -1235,7 +1275,7 @@ function buildHamburgerMenu(){
           <span class="slider"></span>
         </label>
       </div>
-      <button data-guide="1"><span class="mono-icon">📖</span>Kullanım Rehberi</button>
+      <button data-guide="1"><svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>Kullanım Rehberi</button>
       <button data-logout="1" style="border-top:1px solid var(--line); color:var(--cloth-dark);"><span class="mono-icon">⏻</span>Çıkış</button>`;
   menu.querySelector('[data-guide]').addEventListener('click', ()=>{
     menu.style.display='none';
@@ -1356,13 +1396,13 @@ function renderTab(id){
   if(id==='today') renderAdminToday();
   else if(id==='editpast') renderEditPastTab();
   else if(id==='week'){ renderAdminWeek(); adminWeekOffset=0; renderAdminOwnWeek(); }
-  else if(id==='draws') renderAdminDraws();
+  else if(id==='draws'){ renderAdminDraws(); drawHistIndex.a=0; renderDrawHistoryCard('a'); }
   else if(id==='manual') renderManualTab();
   else if(id==='members') renderAdminMembers();
   else if(id==='worms') renderAdminWorms();
   else if(id==='msurvey') renderMemberSurvey();
   else if(id==='mtoday'){ renderMemberWeekAll(); memberWeekOffset=0; renderMemberOwnWeek(); }
-  else if(id==='mlastweek') renderMemberLastWeek();
+  else if(id==='mlastweek'){ renderMemberLastWeek(); drawHistIndex.m=0; renderDrawHistoryCard('m'); }
   else if(id==='mworms') renderMemberWorms();
   else if(id==='gifts') renderGiftsTab();
   else if(id==='rules') renderRulesTab();
@@ -2203,6 +2243,45 @@ async function renderMemberLastWeek(){
   box.innerHTML = `<div class="receipt"><div class="rweek">Hafta: ${rangeLabel}</div>${body}</div>`;
   markLoaded(box);
 }
+
+/* ============ ORTAK: KURA GEÇMİŞİ (gezinilebilir, tek tek hafta) ============ */
+let drawHistIndex = { m:0, a:0 };
+async function renderDrawHistoryCard(prefix){
+  const box = keepOrLoading(prefix+'DrawHistBox');
+  await loadDraws();
+  const rangeEl = document.getElementById(prefix+'DrawHistRangeLabel');
+  const prevBtn = document.getElementById(prefix+'DrawHistPrevBtn');
+  const nextBtn = document.getElementById(prefix+'DrawHistNextBtn');
+  if(drawsCache.length===0){
+    rangeEl.textContent = '';
+    prevBtn.disabled = true; nextBtn.disabled = true;
+    box.innerHTML = `<div class="empty-state"><span class="big">🎁</span>Henüz tamamlanmış bir hafta yok.</div>`;
+    markLoaded(box);
+    return;
+  }
+  if(drawHistIndex[prefix] >= drawsCache.length) drawHistIndex[prefix] = drawsCache.length-1;
+  if(drawHistIndex[prefix] < 0) drawHistIndex[prefix] = 0;
+  const d = drawsCache[drawHistIndex[prefix]];
+  const rangeLabel = `${fmtShort(d.weekStart)} — ${fmtShort(d.weekEnd)}`;
+  rangeEl.textContent = rangeLabel;
+  prevBtn.disabled = drawHistIndex[prefix] >= drawsCache.length-1;
+  nextBtn.disabled = drawHistIndex[prefix] <= 0;
+  let body;
+  if(!d.pairs || d.pairs.length===0){
+    body = `<div class="empty-note">O hafta cezalı çıkan olmadı — herkese kolay gelsin! 🎉</div>`;
+  } else {
+    body = d.pairs.map(p=>{
+      if(!p.receiverUid) return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span> — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
+      return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow">🎁→</span><span class="receiver">${escapeHtml(p.receiverName)}</span>'e kitap hediye edecek</div>`;
+    }).join('');
+  }
+  box.innerHTML = `<div class="receipt"><div class="rweek">Hafta: ${rangeLabel} &middot; Cezalı: ${d.giverCount} &middot; Temiz/Pas: ${d.safeCount}</div>${body}</div>`;
+  markLoaded(box);
+}
+document.getElementById('mDrawHistPrevBtn').addEventListener('click', ()=>{ drawHistIndex.m += 1; renderDrawHistoryCard('m'); });
+document.getElementById('mDrawHistNextBtn').addEventListener('click', ()=>{ if(drawHistIndex.m>0){ drawHistIndex.m -= 1; renderDrawHistoryCard('m'); } });
+document.getElementById('aDrawHistPrevBtn').addEventListener('click', ()=>{ drawHistIndex.a += 1; renderDrawHistoryCard('a'); });
+document.getElementById('aDrawHistNextBtn').addEventListener('click', ()=>{ if(drawHistIndex.a>0){ drawHistIndex.a -= 1; renderDrawHistoryCard('a'); } });
 
 /* ============ ORTAK: PROFİLİM ============ */
 function isGoogleUser(){
