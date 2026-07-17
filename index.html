@@ -584,10 +584,12 @@
           <div style="margin-top:8px;"><input type="file" id="profilePhotoInput" accept="image/*" /></div>
         </div>
         <div class="field"><label>Adın</label><input type="text" id="profileName" /></div>
+        <div class="field"><label>Soyadın (sadece profiline tıklayınca görünür, başka hiçbir yerde yazmaz)</label><input type="text" id="profileSurname" /></div>
         <div class="field"><label>Telefon</label><input type="text" id="profilePhone" /></div>
         <div class="field"><label>Adres</label><input type="text" id="profileAddress" /></div>
         <div class="field"><label>Hakkımda (kısa bir bilgi, herkes görebilir)</label><input type="text" id="profileBio" placeholder="örn. bilim kurgu ve tarih kitapları severim" /></div>
         <div class="field"><label>Şu An Okuduğun Kitap</label><input type="text" id="profileReading" placeholder="örn. Suç ve Ceza" /></div>
+        <div class="field"><label>Okuduğun Kitabın Kapak Görseli Linki (opsiyonel)</label><input type="text" id="profileReadingCover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
         <div class="auth-error" id="profileError"></div>
         <button class="primary" id="profileSaveBtn">Bilgileri Kaydet</button>
       </div>
@@ -825,10 +827,17 @@ function openProfileModal(uid){
   const u = usersCache[uid];
   if(!u) return;
   document.getElementById('profileModalPhotoWrap').innerHTML = avatarHtmlFromProfile(u, 88);
-  document.getElementById('profileModalName').textContent = u.name || '?';
+  document.getElementById('profileModalName').textContent = u.surname ? `${u.name} ${u.surname}` : (u.name || '?');
   document.getElementById('profileModalRole').textContent = u.role==='admin' ? 'YÖNETİCİ' : 'ÜYE';
   document.getElementById('profileModalBio').textContent = u.bio ? u.bio : 'Henüz bir bilgi eklenmemiş.';
-  document.getElementById('profileModalReading').textContent = u.currentlyReading ? `📖 Şu an okuyor: ${u.currentlyReading}` : '📖 Şu an ne okuduğunu paylaşmamış.';
+  if(u.currentlyReading){
+    const coverImg = u.currentlyReadingCover
+      ? `<img src="${u.currentlyReadingCover}" alt="" style="width:36px;height:54px;object-fit:cover;border-radius:5px;box-shadow:var(--shadow);vertical-align:middle;margin-right:8px;" onerror="this.style.display='none';" />`
+      : '';
+    document.getElementById('profileModalReading').innerHTML = `${coverImg}📖 Şu an okuyor: ${escapeHtml(u.currentlyReading)}`;
+  } else {
+    document.getElementById('profileModalReading').textContent = '📖 Şu an ne okuduğunu paylaşmamış.';
+  }
   document.getElementById('profileModal').style.display='flex';
 }
 document.getElementById('profileModalClose').addEventListener('click', ()=>{ document.getElementById('profileModal').style.display='none'; });
@@ -2115,10 +2124,12 @@ function isGoogleUser(){
 }
 function renderProfileTab(){
   document.getElementById('profileName').value = myProfile.name || '';
+  document.getElementById('profileSurname').value = myProfile.surname || '';
   document.getElementById('profilePhone').value = myProfile.phone || '';
   document.getElementById('profileAddress').value = myProfile.address || '';
   document.getElementById('profileBio').value = myProfile.bio || '';
   document.getElementById('profileReading').value = myProfile.currentlyReading || '';
+  document.getElementById('profileReadingCover').value = myProfile.currentlyReadingCover || '';
   document.getElementById('profilePhotoWrap').innerHTML = avatarHtmlFromProfile(myProfile, 88);
   document.getElementById('profileError').textContent = '';
   document.getElementById('passwordError').textContent = '';
@@ -2162,16 +2173,19 @@ document.getElementById('profilePhotoInput').addEventListener('change', async (e
 });
 document.getElementById('profileSaveBtn').addEventListener('click', async ()=>{
   const name = document.getElementById('profileName').value.trim();
+  const surname = document.getElementById('profileSurname').value.trim();
   const phone = document.getElementById('profilePhone').value.trim();
   const address = document.getElementById('profileAddress').value.trim();
   const bio = document.getElementById('profileBio').value.trim();
   const currentlyReading = document.getElementById('profileReading').value.trim();
+  const currentlyReadingCover = document.getElementById('profileReadingCover').value.trim();
   const errBox = document.getElementById('profileError');
   errBox.textContent = '';
   if(!name){ errBox.textContent = 'İsim boş olamaz.'; return; }
   try{
-    await updateDoc(doc(db,'users',currentUid), {name, phone, address, bio, currentlyReading});
-    myProfile.name = name; myProfile.phone = phone; myProfile.address = address; myProfile.bio = bio; myProfile.currentlyReading = currentlyReading;
+    await updateDoc(doc(db,'users',currentUid), {name, surname, phone, address, bio, currentlyReading, currentlyReadingCover});
+    myProfile.name = name; myProfile.surname = surname; myProfile.phone = phone; myProfile.address = address;
+    myProfile.bio = bio; myProfile.currentlyReading = currentlyReading; myProfile.currentlyReadingCover = currentlyReadingCover;
     document.getElementById('whoamiName').innerHTML = avatarHtmlFromProfile(myProfile,18) + escapeHtml(myProfile.name);
     showToast('Profilin güncellendi.');
   }catch(err){ errBox.textContent = 'Kaydedilemedi: ' + (err.message||err); }
