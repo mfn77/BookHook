@@ -182,7 +182,9 @@
   .book-suggest-item:last-child{ border-bottom:none; }
   .book-suggest-item:hover{ background:rgba(33,144,164,0.10); }
   .book-suggest-thumb{ width:24px; height:36px; object-fit:cover; border-radius:3px; margin-right:8px; flex:0 0 auto; box-shadow:var(--shadow); }
-  .bh-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(76px,1fr)); gap:16px 12px; margin-top:12px; }
+  .bh-grid{ margin-top:12px; }
+  .bh-pager{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+  .bh-grid-inner{ display:grid; grid-template-columns:repeat(auto-fill, minmax(76px,1fr)); gap:16px 12px; }
   .bh-card{ position:relative; text-align:center; }
   .bh-cover-wrap{
     width:100%; aspect-ratio:2/3; border-radius:8px; overflow:hidden; background:var(--line);
@@ -1009,7 +1011,7 @@ document.getElementById('profileModalBookHistoryBtn').addEventListener('click', 
   document.getElementById('bookHistoryViewModalName').textContent = `📚 ${u.surname ? `${u.name} ${u.surname}` : (u.name||'?')} — Kitap Geçmişi`;
   document.getElementById('bookHistoryViewModal').style.display='flex';
   const viewGrid = document.getElementById('bookHistoryViewGrid');
-  viewGrid.innerHTML=''; delete viewGrid.dataset.loaded;
+  viewGrid.innerHTML=''; delete viewGrid.dataset.loaded; delete bhPageState['bookHistoryViewGrid'];
   await renderBookHistoryGrid(currentProfileModalUid, 'bookHistoryViewGrid', false);
 });
 document.getElementById('bookHistoryViewModalClose').addEventListener('click', ()=>{ document.getElementById('bookHistoryViewModal').style.display='none'; });
@@ -2863,14 +2865,24 @@ function attachBookAutocomplete(inputId, coverInputId, suggestBoxId, onSelect){
 
   async function doSearch(q){
     const myToken = ++queryToken;
+    box.style.display='block';
+    box.innerHTML = `<div class="book-suggest-item" style="cursor:default;"><span class="muted" style="font-size:12.5px;">Aranıyor…</span></div>`;
     let items = [];
     try{
       const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=8`);
+      if(!res.ok) throw new Error('HTTP '+res.status);
       const json = await res.json();
       items = (json.items||[]).filter(it=>it.volumeInfo && it.volumeInfo.title);
-    }catch(e){ hideBox(); return; }
+    }catch(e){
+      if(myToken !== queryToken) return;
+      box.innerHTML = `<div class="book-suggest-item" style="cursor:default;"><span class="muted" style="font-size:12px;">Arama başarısız: ${escapeHtml(e.message||String(e))}</span></div>`;
+      return;
+    }
     if(myToken !== queryToken) return; // bu arada yeni bir arama başlamış, eski sonucu gösterme
-    if(!items.length){ hideBox(); return; }
+    if(!items.length){
+      box.innerHTML = `<div class="book-suggest-item" style="cursor:default;"><span class="muted" style="font-size:12.5px;">Sonuç bulunamadı.</span></div>`;
+      return;
+    }
     box.innerHTML = items.map((it,i)=>{
       const vi = it.volumeInfo;
       const title = escapeHtml(vi.title);
@@ -2912,6 +2924,8 @@ attachBookAutocomplete('recGroupBook', 'recGroupCover', 'recGroupBookSuggest');
 async function renderBookHistoryTab(){
   await renderBookHistoryGrid(currentUid, 'bookHistoryGrid', true);
 }
+const BH_PAGE_SIZE = 8;
+const bhPageState = {};
 async function renderBookHistoryGrid(uid, gridId, editable){
   const grid = keepOrLoading(gridId);
   let items = [];
@@ -2920,11 +2934,24 @@ async function renderBookHistoryGrid(uid, gridId, editable){
     snap.forEach(d=> items.push({ id:d.id, ...d.data() }));
   }catch(e){}
   if(!items.length){
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><span class="big">📚</span>Henüz kitap eklenmemiş.</div>`;
+    grid.innerHTML = `<div class="empty-state"><span class="big">📚</span>Henüz kitap eklenmemiş.</div>`;
     markLoaded(grid);
     return;
   }
-  grid.innerHTML = items.map(b=>{
+  if(bhPageState[gridId]===undefined) bhPageState[gridId]=0;
+  const totalPages = Math.max(1, Math.ceil(items.length / BH_PAGE_SIZE));
+  if(bhPageState[gridId] >= totalPages) bhPageState[gridId] = totalPages-1;
+  if(bhPageState[gridId] < 0) bhPageState[gridId] = 0;
+  const page = bhPageState[gridId];
+  const pageItems = items.slice(page*BH_PAGE_SIZE, page*BH_PAGE_SIZE + BH_PAGE_SIZE);
+
+  const pagerHtml = totalPages>1 ? `<div class="bh-pager">
+      <button type="button" class="secondary tiny bh-prev-btn" ${page<=0?'disabled':''}>◀ Önceki</button>
+      <span class="muted mono" style="font-size:12px;">${page+1} / ${totalPages}</span>
+      <button type="button" class="secondary tiny bh-next-btn" ${page>=totalPages-1?'disabled':''}>Sonraki ▶</button>
+    </div>` : '';
+
+  const cardsHtml = pageItems.map(b=>{
     const coverHtml = b.cover
       ? `<img src="${b.cover}" alt="" onerror="this.parentElement.innerHTML='<span class=\\'bh-noimg\\'>📖</span>';" />`
       : `<span class="bh-noimg">📖</span>`;
@@ -2936,6 +2963,12 @@ async function renderBookHistoryGrid(uid, gridId, editable){
       ${delBtn}
     </div>`;
   }).join('');
+
+  grid.innerHTML = pagerHtml + `<div class="bh-grid-inner">${cardsHtml}</div>`;
+  if(totalPages>1){
+    grid.querySelector('.bh-prev-btn')?.addEventListener('click', ()=>{ bhPageState[gridId]--; renderBookHistoryGrid(uid, gridId, editable); });
+    grid.querySelector('.bh-next-btn')?.addEventListener('click', ()=>{ bhPageState[gridId]++; renderBookHistoryGrid(uid, gridId, editable); });
+  }
   if(editable){
     grid.querySelectorAll('.bh-delete').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
