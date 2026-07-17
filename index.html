@@ -1847,8 +1847,10 @@ async function renderAdminDraws(){
       body = `<div class="empty-note">Bu hafta cezalı çıkan olmadı — herkese kolay gelsin! 🎉</div>`;
     } else {
       body = d.pairs.map(p=>{
-        if(!p.receiverUid) return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span> — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
-        return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow">🎁→</span><span class="receiver">${escapeHtml(p.receiverName)}</span>'e kitap hediye edecek</div>`;
+        const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
+        const receiverHtml = `<span class="receiver">${p.receiverUid ? userChipHtml(p.receiverUid) : escapeHtml(p.receiverName)}</span>`;
+        if(!p.receiverUid) return `<div class="pair-line">${giverHtml} — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
+        return `<div class="pair-line">${giverHtml}<span class="arrow">🎁→</span>${receiverHtml}</div>`;
       }).join('');
     }
     return `<div class="receipt">
@@ -2244,8 +2246,10 @@ async function renderMemberLastWeek(){
     body = `<div class="empty-note">O hafta cezalı çıkan olmadı — herkese kolay gelsin! 🎉</div>`;
   } else {
     body = d.pairs.map(p=>{
-      if(!p.receiverUid) return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span> — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
-      return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow">🎁→</span><span class="receiver">${escapeHtml(p.receiverName)}</span>'e kitap hediye edecek</div>`;
+      const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
+      const receiverHtml = `<span class="receiver">${p.receiverUid ? userChipHtml(p.receiverUid) : escapeHtml(p.receiverName)}</span>`;
+      if(!p.receiverUid) return `<div class="pair-line">${giverHtml} — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
+      return `<div class="pair-line">${giverHtml}<span class="arrow">🎁→</span>${receiverHtml}</div>`;
     }).join('');
   }
   box.innerHTML = `<div class="receipt"><div class="rweek">Hafta: ${rangeLabel}</div>${body}</div>`;
@@ -2279,8 +2283,10 @@ async function renderDrawHistoryCard(prefix){
     body = `<div class="empty-note">O hafta cezalı çıkan olmadı — herkese kolay gelsin! 🎉</div>`;
   } else {
     body = d.pairs.map(p=>{
-      if(!p.receiverUid) return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span> — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
-      return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow">🎁→</span><span class="receiver">${escapeHtml(p.receiverName)}</span>'e kitap hediye edecek</div>`;
+      const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
+      const receiverHtml = `<span class="receiver">${p.receiverUid ? userChipHtml(p.receiverUid) : escapeHtml(p.receiverName)}</span>`;
+      if(!p.receiverUid) return `<div class="pair-line">${giverHtml} — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
+      return `<div class="pair-line">${giverHtml}<span class="arrow">🎁→</span>${receiverHtml}</div>`;
     }).join('');
   }
   box.innerHTML = `<div class="receipt"><div class="rweek">Hafta: ${rangeLabel} &middot; Cezalı: ${d.giverCount} &middot; Temiz/Pas: ${d.safeCount}</div>${body}</div>`;
