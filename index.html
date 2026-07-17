@@ -727,7 +727,19 @@ function fromStr(s){const [y,m,d]=s.split("-").map(Number); return new Date(y,m-
 function addDays(d,n){const r=new Date(d); r.setDate(r.getDate()+n); return r;}
 function getMonday(d){ const day=d.getDay(); const diff = day===0?-6:1-day; const m=addDays(d,diff); m.setHours(0,0,0,0); return m; }
 function weekDates(monday){ const arr=[]; for(let i=0;i<7;i++) arr.push(toStr(addDays(monday,i))); return arr; }
-function fmtShort(dstr){ const d=fromStr(dstr); return d.getDate()+"."+(d.getMonth()+1); }
+const MONTHS_TR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+function isWideScreen(){ return window.matchMedia && window.matchMedia('(min-width:700px)').matches; }
+function fmtShort(dstr){
+  const d = fromStr(dstr);
+  if(isWideScreen()) return `${d.getDate()} ${MONTHS_TR[d.getMonth()]}`;
+  return d.getDate()+"."+(d.getMonth()+1);
+}
+let _lastWideState = null;
+window.addEventListener('resize', ()=>{
+  const nowWide = isWideScreen();
+  if(_lastWideState!==null && nowWide!==_lastWideState && activeTab){ renderTab(activeTab); }
+  _lastWideState = nowWide;
+});
 // "Mantıksal gün": saat 06:00'dan önceyse hâlâ önceki günün okuma günü sayılır (gece okumaları için).
 function nowLogical(){ const d=new Date(); if(d.getHours()<6){ d.setDate(d.getDate()-1); } d.setHours(0,0,0,0); return d; }
 function todayStr(){ return toStr(nowLogical()); }
@@ -1041,10 +1053,10 @@ document.getElementById('googleAuthBtn').addEventListener('click', async ()=>{
 const ADMIN_TABS = [
   {id:'today', label:'Bugün', icon:'☑'},
   {id:'week', label:'Bu Hafta', icon:'▤'},
-  {id:'draws', label:'Kura', icon:'↻'},
   {id:'gifts', label:'Hediye', icon:'◈'},
   {id:'worms', label:'Kurtlar', icon:'☆'},
-  {id:'recs', label:'Öneriler', icon:'✎'}
+  {id:'recs', label:'Öneriler', icon:'✎'},
+  {id:'draws', label:'Kura', icon:'↻'}
 ];
 const MEMBER_TABS = [
   {id:'msurvey', label:'Anket', icon:'☑'},
@@ -1413,29 +1425,35 @@ async function checkAndAwardBadges(uid, streak){
   const u = usersCache[uid];
   if(!u) return;
   const lastStreak = typeof u.lastStreak==='number' ? u.lastStreak : 0;
-  let awarded = Array.isArray(u.awardedTiersThisStreak) ? u.awardedTiersThisStreak.slice() : [];
-  if(streak < lastStreak){ awarded = []; } // seri bozulmuş, yeni döngü başlıyor
-  const badgeCounts = {...(u.badgeCounts||{})};
-  const newlyEarned = [];
-  BADGE_DEFS.forEach(def=>{
-    if(streak>=def.days && !awarded.includes(def.key)){
-      awarded.push(def.key);
-      badgeCounts[def.key] = (badgeCounts[def.key]||0) + 1;
-      newlyEarned.push(def);
-    }
-  });
+  const prevTier = u.currentTier || null;
   const newTier = currentTierForStreak(streak);
-  const tierChanged = (u.currentTier||null) !== newTier;
-  if(streak===lastStreak && newlyEarned.length===0 && !tierChanged) return;
-  const updates = { lastStreak: streak, awardedTiersThisStreak: awarded, badgeCounts, currentTier: newTier, currentStreak: streak };
+  const badgeCounts = {...(u.badgeCounts||{})};
+  let historyIncremented = false;
+  let notifyDef = null;
+
+  if(streak < lastStreak){
+    // Seri bozulmuş: bir önceki döngü sona erdi. O döngünün ulaştığı en yüksek rozeti
+    // (sadece onu, aradaki alt rozetleri değil) geçmişe bir kere ekle.
+    if(prevTier){
+      badgeCounts[prevTier] = (badgeCounts[prevTier]||0) + 1;
+      historyIncremented = true;
+    }
+  } else if(newTier && newTier !== prevTier){
+    // Aynı döngü içinde daha yüksek bir eşiğe ulaşıldı: sadece bildirim gönder,
+    // geçmişe (badgeCounts) henüz sayma — seri bitince sayılacak.
+    notifyDef = BADGE_DEFS.find(d=>d.key===newTier);
+  }
+
+  const changed = (streak!==lastStreak) || (prevTier!==newTier) || historyIncremented;
+  if(!changed) return;
+
+  const updates = { lastStreak: streak, badgeCounts, currentTier: newTier, currentStreak: streak };
   try{
     await updateDoc(doc(db,'users',uid), updates);
     Object.assign(u, updates);
-    if(newlyEarned.length>0){
+    if(notifyDef){
       const uTab = u.role==='admin' ? 'worms' : 'mworms';
-      for(const def of newlyEarned){
-        await notifyUser(uid, `🎉 Tebrikler! "${def.label}" rozetini kazandın!`, uTab);
-      }
+      await notifyUser(uid, `🎉 Tebrikler! "${notifyDef.label}" rozetini kazandın!`, uTab);
     }
   }catch(e){ /* rozet kaydedilemezse sessizce geç */ }
 }
