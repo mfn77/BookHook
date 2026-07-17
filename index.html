@@ -439,6 +439,11 @@
         <p class="muted">Kulüp başlamadan (6 Temmuz'dan) önceki veya bir üyenin katılmadan önceki günler için yanlışlıkla oluşmuş "otomatik okumadı" kayıtlarını temizler. Elle girilmiş hiçbir veriyi silmez.</p>
         <button class="secondary" id="cleanupBtn">🧹 Hatalı Otomatik Kayıtları Temizle</button>
         <p class="muted" id="cleanupResult" style="margin-top:8px;"></p>
+        <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line);">
+          <p class="muted">Rozet geçmişini (Rozet Geçmişi tablosundaki sayıları) sıfırlayıp, herkesin tüm okuma geçmişini yeniden oynatarak doğru şekilde baştan hesaplar. Bir önceki hatalı sayım mantığından kalan yanlış sayıları düzeltir.</p>
+          <button class="secondary" id="recomputeBadgesBtn">🔄 Rozetleri Sıfırla ve Yeniden Hesapla</button>
+          <p class="muted" id="recomputeBadgesResult" style="margin-top:8px;"></p>
+        </div>
       </div>
     </section>
 
@@ -732,7 +737,7 @@ function isWideScreen(){ return window.matchMedia && window.matchMedia('(min-wid
 function fmtShort(dstr){
   const d = fromStr(dstr);
   if(isWideScreen()) return `${d.getDate()} ${MONTHS_TR[d.getMonth()]}`;
-  return d.getDate()+"."+(d.getMonth()+1);
+  return pad(d.getDate())+"."+pad(d.getMonth()+1);
 }
 let _lastWideState = null;
 window.addEventListener('resize', ()=>{
@@ -1358,6 +1363,55 @@ async function cleanupBadAutoFills(daysBack){
   }
   return deleted;
 }
+// Bir üyenin TÜM geçmişini (kulüp başlangıcından ya da katılım tarihinden dünе kadar)
+// gün gün yeniden oynatarak rozet geçmişini (badgeCounts) sıfırdan, doğru mantıkla hesaplar.
+// Sadece tamamlanmış (bozulmuş) serileri sayar; bugünü bu fonksiyon işlemez, bugünün
+// katkısı ayrıca computeStreak + checkAndAwardBadges ile eklenir.
+async function recomputeUserBadgeHistory(uid){
+  const u = usersCache[uid];
+  if(!u) return;
+  const joinDs = joinDateStrOf(uid);
+  const startDs = (joinDs && joinDs > CLUB_START_DATE) ? joinDs : CLUB_START_DATE;
+  const yesterday = addDays(nowLogical(), -1);
+  const badgeCounts = {};
+  let streak = 0;
+  let prevTier = null;
+  let cursor = fromStr(startDs);
+  while(toStr(cursor) <= toStr(yesterday)){
+    const ds = toStr(cursor);
+    let status = null;
+    try{
+      const snap = await getDoc(doc(db,'days',ds,'answers',uid));
+      if(snap.exists()) status = snap.data().status;
+    }catch(e){}
+    if(status==='read'){
+      streak++;
+    } else {
+      if(prevTier){ badgeCounts[prevTier] = (badgeCounts[prevTier]||0) + 1; }
+      streak = 0;
+      prevTier = null;
+    }
+    const tierNow = currentTierForStreak(streak);
+    if(tierNow !== prevTier) prevTier = tierNow;
+    cursor = addDays(cursor, 1);
+  }
+  const updates = { badgeCounts, lastStreak: streak, currentTier: prevTier, currentStreak: streak };
+  try{
+    await updateDoc(doc(db,'users',uid), updates);
+    Object.assign(u, updates);
+  }catch(e){}
+}
+async function resetAndRecomputeAllBadges(){
+  const uids = activeUids();
+  let done = 0;
+  for(const uid of uids){
+    await recomputeUserBadgeHistory(uid);
+    const liveStreak = await computeStreak(uid);
+    await checkAndAwardBadges(uid, liveStreak);
+    done++;
+  }
+  return done;
+}
 async function finalizeWeek(monday, force){
   const wk = toStr(monday);
   const ref = doc(db,'draws',wk);
@@ -1771,6 +1825,14 @@ document.getElementById('cleanupBtn').addEventListener('click', async ()=>{
   const n = await cleanupBadAutoFills(60);
   document.getElementById('cleanupResult').textContent = `${n} hatalı otomatik kayıt silindi.`;
   showToast('Temizlik tamamlandı.');
+});
+document.getElementById('recomputeBadgesBtn').addEventListener('click', async ()=>{
+  if(!confirm('Herkesin rozet geçmişi sıfırlanıp tüm okuma günleri yeniden taranarak baştan hesaplanacak. Bu biraz sürebilir. Devam edilsin mi?')) return;
+  document.getElementById('recomputeBadgesResult').textContent = 'Hesaplanıyor, biraz sürebilir…';
+  const n = await resetAndRecomputeAllBadges();
+  document.getElementById('recomputeBadgesResult').textContent = `${n} üyenin rozet geçmişi yeniden hesaplandı.`;
+  showToast('Rozetler yeniden hesaplandı.');
+  if(activeTab) renderTab(activeTab);
 });
 async function renderAdminMembers(){
   const list = document.getElementById('membersList');
