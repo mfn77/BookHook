@@ -2864,50 +2864,72 @@ function attachBookAutocomplete(inputId, coverInputId, suggestBoxId, onSelect){
   });
   input.addEventListener('focus', ()=>{ if(box.innerHTML.trim()) box.style.display='block'; });
 
+  async function searchGoogleBooks(q){
+    const keyParam = GOOGLE_BOOKS_API_KEY ? `&key=${GOOGLE_BOOKS_API_KEY}` : '';
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=8${keyParam}`);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json = await res.json();
+    return (json.items||[]).filter(it=>it.volumeInfo && it.volumeInfo.title).map(it=>{
+      const vi = it.volumeInfo;
+      return {
+        title: vi.title,
+        author: (vi.authors||[]).join(', ') || 'Bilinmeyen Yazar',
+        cover: vi.imageLinks ? (vi.imageLinks.thumbnail||vi.imageLinks.smallThumbnail||'').replace('http://','https://') : ''
+      };
+    });
+  }
+  async function searchOpenLibrary(q){
+    const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=8`);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json = await res.json();
+    return (json.docs||[]).filter(d=>d.title).map(d=>({
+      title: d.title,
+      author: (d.author_name||[]).join(', ') || 'Bilinmeyen Yazar',
+      cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : ''
+    }));
+  }
   async function doSearch(q){
     const myToken = ++queryToken;
     box.style.display='block';
     box.innerHTML = `<div class="book-suggest-item" style="cursor:default;"><span class="muted" style="font-size:12.5px;">Aranıyor…</span></div>`;
     let items = [];
+    let lastError = null;
     try{
-      const keyParam = GOOGLE_BOOKS_API_KEY ? `&key=${GOOGLE_BOOKS_API_KEY}` : '';
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=8${keyParam}`);
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      const json = await res.json();
-      items = (json.items||[]).filter(it=>it.volumeInfo && it.volumeInfo.title);
+      items = await searchGoogleBooks(q);
     }catch(e){
-      if(myToken !== queryToken) return;
-      box.innerHTML = `<div class="book-suggest-item" style="cursor:default;"><span class="muted" style="font-size:12px;">Arama başarısız: ${escapeHtml(e.message||String(e))}</span></div>`;
-      return;
+      lastError = e;
+      try{
+        items = await searchOpenLibrary(q);
+        lastError = null;
+      }catch(e2){ lastError = e2; }
     }
     if(myToken !== queryToken) return; // bu arada yeni bir arama başlamış, eski sonucu gösterme
+    if(lastError){
+      box.innerHTML = `<div class="book-suggest-item" style="cursor:default;"><span class="muted" style="font-size:12px;">Arama başarısız: ${escapeHtml(lastError.message||String(lastError))}</span></div>`;
+      return;
+    }
     if(!items.length){
       box.innerHTML = `<div class="book-suggest-item" style="cursor:default;"><span class="muted" style="font-size:12.5px;">Sonuç bulunamadı.</span></div>`;
       return;
     }
-    box.innerHTML = items.map((it,i)=>{
-      const vi = it.volumeInfo;
-      const title = escapeHtml(vi.title);
-      const author = escapeHtml((vi.authors||[]).join(', ') || 'Bilinmeyen Yazar');
-      const thumb = vi.imageLinks ? (vi.imageLinks.thumbnail||vi.imageLinks.smallThumbnail||'').replace('http://','https://') : '';
-      const thumbHtml = thumb
-        ? `<img class="book-suggest-thumb" src="${thumb}" alt="" onerror="this.style.display='none';" />`
+    box.innerHTML = items.map((b,i)=>{
+      const title = escapeHtml(b.title);
+      const author = escapeHtml(b.author);
+      const thumbHtml = b.cover
+        ? `<img class="book-suggest-thumb" src="${b.cover}" alt="" onerror="this.style.display='none';" />`
         : `<div class="book-suggest-thumb" style="background:var(--line);"></div>`;
       return `<div class="book-suggest-item" data-idx="${i}">${thumbHtml}<div><div style="font-weight:600; font-size:13px;">${title}</div><div class="muted" style="font-size:11px;">${author}</div></div></div>`;
     }).join('');
     box.style.display='block';
     box.querySelectorAll('.book-suggest-item').forEach(el=>{
       el.addEventListener('click', ()=>{
-        const it = items[parseInt(el.dataset.idx,10)];
-        const vi = it.volumeInfo;
-        const author = (vi.authors||[]).join(', ') || 'Bilinmeyen Yazar';
-        const thumb = vi.imageLinks ? (vi.imageLinks.thumbnail||vi.imageLinks.smallThumbnail||'').replace('http://','https://') : '';
+        const b = items[parseInt(el.dataset.idx,10)];
         if(typeof onSelect === 'function'){
-          onSelect({ author, title: vi.title, cover: thumb });
+          onSelect({ author: b.author, title: b.title, cover: b.cover });
         } else {
-          input.value = `${author} - ${vi.title}`;
+          input.value = `${b.author} - ${b.title}`;
           const coverInput = coverInputId ? document.getElementById(coverInputId) : null;
-          if(coverInput) coverInput.value = thumb;
+          if(coverInput) coverInput.value = b.cover;
         }
         hideBox();
       });
