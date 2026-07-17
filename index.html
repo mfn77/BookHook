@@ -1837,6 +1837,7 @@ async function renderAdminDraws(){
   await loadDraws();
   const note = document.getElementById('drawStatusNote');
   note.textContent = "Tarih seçip 'Kapat / Yeniden Çek' ile o haftanın kurasını çekebilir veya zaten çekilmişse üzerine yazıp yeniden çekebilirsin. Girilmemiş bir hafta seçersen kura boş çıkar.";
+  setupCardInfoButtons();
   const list = document.getElementById('drawsList');
   if(drawsCache.length===0){ list.innerHTML = `<div class="empty-state"><span class="big">🎁</span>Henüz tamamlanmış bir hafta yok.</div>`; return; }
   list.innerHTML = drawsCache.map(d=>{
@@ -2154,6 +2155,7 @@ function renderMemberSurvey(){
   const dateLabel = `${dowLabel} ${pad(ld.getDate())}.${pad(ld.getMonth()+1)}.${ld.getFullYear()}`;
   document.getElementById('mDateNote').textContent =
     `Bugünün okuma tarihi: ${dateLabel}. Bu işaretleme yarın sabah 06:00'a kadar geçerli; 06:00'dan sonra yaptığın işaretleme bir sonraki güne yazılır. 06:00'a kadar hiç işaretleme yapmazsan bu gün otomatik "okumadım" sayılır.`;
+  setupCardInfoButtons();
   document.getElementById('mMyStatusNote').textContent =
     st==='read' ? 'Bugün için "Okudum" işaretledin. Harika!' :
     st==='skip' ? 'Bugün için "Okumadım" işaretledin.' :
@@ -2522,6 +2524,7 @@ async function renderGiftsTab(){
   intro.textContent = myProfile.role==='admin'
     ? 'Önce kendi durumun (varsa), altında tüm kulübün bekleyen istekleri.'
     : 'Bu haftanın hediye kitap durumu.';
+  setupCardInfoButtons();
 
   if(!personalHtml && !adminHtml){
     content.innerHTML = drawsCache.length===0
