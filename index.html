@@ -852,6 +852,7 @@ const firebaseConfig = {
 };
 const ADMIN_EMAIL = "furkan.nayman77@gmail.com"; // Bu email ile üye olan kişi otomatik YÖNETİCİ olur
 const FCM_VAPID_KEY = "BE2rTmP33eegqZfz2p3wP-skKGpR0NuEWkal5-VaNbsX1ikgMa_mvIUg4uXATWXHzy1boy0yuBqeCb2Q-Wn3aXw";
+const GOOGLE_BOOKS_API_KEY = "AIzaSyBpIIf2aPenDO9E1ZgX96oNAznFmAadRxs"; // Kitap arama kotasını yükseltmek için buraya kendi Google Books API anahtarını yapıştır (boş bırakılırsa düşük anonim kota kullanılır, 429 hatası alınabilir)
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -2869,7 +2870,8 @@ function attachBookAutocomplete(inputId, coverInputId, suggestBoxId, onSelect){
     box.innerHTML = `<div class="book-suggest-item" style="cursor:default;"><span class="muted" style="font-size:12.5px;">Aranıyor…</span></div>`;
     let items = [];
     try{
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=8`);
+      const keyParam = GOOGLE_BOOKS_API_KEY ? `&key=${GOOGLE_BOOKS_API_KEY}` : '';
+      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=8${keyParam}`);
       if(!res.ok) throw new Error('HTTP '+res.status);
       const json = await res.json();
       items = (json.items||[]).filter(it=>it.volumeInfo && it.volumeInfo.title);
