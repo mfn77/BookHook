@@ -100,6 +100,7 @@
     .header-title-area{ display:none; }
     .card{ padding:16px 12px; }
     table.weekgrid .uc-name{ display:none; }
+    table.weekgrid .th-date{ display:none; }
     table.weekday-table th:last-child, table.weekday-table td:last-child{ display:none; }
     table.weekgrid{ min-width:0 !important; width:100%; table-layout:fixed; }
     table.weekgrid td.name-cell{ width:34px; padding:6px 2px; }
@@ -359,7 +360,6 @@
         <div class="whoami">
           <div id="whoamiClickable" class="header-pill" style="cursor:pointer;">
             <span id="whoamiName">—</span>
-            <span class="rolechip" id="whoamiRole" style="margin-left:6px;">—</span>
           </div>
           <button id="notifBellBtn" class="header-pill icon-pill"><span class="mono-icon">🔔</span><span id="hamburgerBadge" style="display:none; position:absolute; top:-4px; right:-4px; background:var(--cloth); color:#fff; font-size:9px; border-radius:10px; padding:1px 4px; font-family:'Roboto Mono',monospace;">0</span></button>
           <button id="hamburgerBtn" class="header-pill icon-pill"><span class="mono-icon">☰</span></button>
@@ -593,6 +593,7 @@
         <div style="text-align:center; margin-bottom:14px;">
           <div id="profilePhotoWrap" style="display:inline-block;"></div>
           <div style="margin-top:8px;"><input type="file" id="profilePhotoInput" accept="image/*" /></div>
+          <div style="margin-top:8px;"><span class="role-chip" id="profileMyRole"></span></div>
         </div>
         <div class="field"><label>Adın</label><input type="text" id="profileName" /></div>
         <div class="field"><label>Soyadın (sadece profiline tıklayınca görünür, başka hiçbir yerde yazmaz)</label><input type="text" id="profileSurname" /></div>
@@ -668,7 +669,6 @@
     <div style="text-align:center;">
       <div id="profileModalPhotoWrap" style="display:inline-block;"></div>
       <h2 id="profileModalName" style="margin:10px 0 4px; font-size:20px;"></h2>
-      <span class="role-chip" id="profileModalRole"></span>
     </div>
     <div class="muted" id="profileModalBio" style="margin-top:14px;"></div>
     <div class="muted" id="profileModalReading" style="margin-top:8px;"></div>
@@ -891,7 +891,6 @@ function openProfileModal(uid){
   if(!u) return;
   document.getElementById('profileModalPhotoWrap').innerHTML = avatarHtmlFromProfile(u, 88);
   document.getElementById('profileModalName').textContent = u.surname ? `${u.name} ${u.surname}` : (u.name || '?');
-  document.getElementById('profileModalRole').textContent = u.role==='admin' ? 'YÖNETİCİ' : 'ÜYE';
   document.getElementById('profileModalBio').textContent = u.bio ? u.bio : 'Henüz bir bilgi eklenmemiş.';
   if(u.currentlyReading){
     const coverImg = u.currentlyReadingCover
@@ -1373,7 +1372,6 @@ function renderTab(id){
 
 function renderHeader(){
   document.getElementById('whoamiName').innerHTML = avatarHtmlFromProfile(myProfile,18) + escapeHtml(myProfile.name);
-  document.getElementById('whoamiRole').textContent = myProfile.role==='admin' ? 'YÖNETİCİ' : 'ÜYE';
 }
 
 /* ============ FIRESTORE YARDIMCILARI ============ */
@@ -1659,7 +1657,7 @@ function renderAdminToday(){
     return `
     <div class="member-row">
       <div>
-        <div class="member-name">${userChipHtml(uid)} ${u.role==='admin'?'<span class="role-chip">yönetici</span>':''}</div>
+        <div class="member-name">${userChipHtml(uid)}</div>
       </div>
       <div class="stamp-btns">
         <button class="stamp-btn read ${st==='read'?'selected':''}" data-uid="${uid}" data-status="read">✓</button>
@@ -1692,7 +1690,7 @@ async function renderAdminOwnWeek(){
   showCachedOrPlaceholder(table, `<tr><td class="empty-state">Yükleniyor…</td></tr>`);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const joinDs = joinDateStrOf(currentUid);
-  let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
+  let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span class="th-date" style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
   let cells = dates.map((d,i)=>{
     if(joinDs && d < joinDs) return `<td><span class="stamp-mini notmember" title="Henüz üye değildin">·</span></td>`;
     const rec = perDate[i][currentUid];
@@ -1956,7 +1954,7 @@ async function renderAdminMembers(){
     const joinDs = joinDateStrOf(uid) || '—';
     return `<div class="member-row">
       <div>
-        <div class="member-name">${userChipHtml(uid)} ${u.role==='admin'?'<span class="role-chip">yönetici</span>':''} ${u.banned && !u.deleted?'<span class="chip banned">BANLI</span>':''} ${u.deleted?'<span class="chip banned">SİLİNDİ</span>':''}</div>
+        <div class="member-name">${userChipHtml(uid)} ${u.banned && !u.deleted?'<span class="chip banned">BANLI</span>':''} ${u.deleted?'<span class="chip banned">SİLİNDİ</span>':''}</div>
         <div class="member-meta">${escapeHtml(u.email||'')} &middot; Katılım: ${joinDs} <button data-edit-join="${uid}" style="border:none;background:none;color:var(--gold);cursor:pointer;font-size:10.5px;text-decoration:underline;">düzenle</button></div>
       </div>
       <div class="row" style="flex:0 0 auto; width:auto; flex-wrap:wrap;">
@@ -2138,7 +2136,7 @@ async function renderMemberOwnWeek(){
   showCachedOrPlaceholder(table, `<tr><td class="empty-state">Yükleniyor…</td></tr>`);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const joinDs = joinDateStrOf(currentUid);
-  let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
+  let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span class="th-date" style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
   let cells = dates.map((d,i)=>{
     if(joinDs && d < joinDs) return `<td><span class="stamp-mini notmember" title="Henüz üye değildin">·</span></td>`;
     const rec = perDate[i][currentUid];
@@ -2211,6 +2209,7 @@ function isGoogleUser(){
   return !!(auth.currentUser && auth.currentUser.providerData.some(p=>p.providerId==='google.com'));
 }
 function renderProfileTab(){
+  document.getElementById('profileMyRole').textContent = myProfile.role==='admin' ? 'YÖNETİCİ' : 'ÜYE';
   document.getElementById('profileName').value = myProfile.name || '';
   document.getElementById('profileSurname').value = myProfile.surname || '';
   document.getElementById('profilePhone').value = myProfile.phone || '';
