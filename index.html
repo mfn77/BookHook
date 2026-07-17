@@ -370,14 +370,10 @@
       </div>
 
       <div class="card">
-        <h2>Haftalık Geçmişim</h2>
-        <p class="muted">Cevap vermediğin geçmiş günler otomatik "okumadı" olarak görünür.</p>
-        <div class="row" style="align-items:center; margin-bottom:10px;">
-          <button class="secondary tiny" id="aWeekPrevBtn" style="flex:0 0 auto;">◀ Önceki Hafta</button>
-          <div class="mono" id="aWeekRangeLabel" style="text-align:center; flex:1;"></div>
-          <button class="secondary tiny" id="aWeekNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
+        <h2>En Az Bu Kadar Sayfa Okudun</h2>
+        <div style="text-align:center; padding:16px 0;">
+          <span id="totalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Cantarell',sans-serif;">–</span>
         </div>
-        <div class="libcard"><table class="weekgrid" id="aOwnWeekGrid"></table></div>
       </div>
     </section>
 
@@ -396,6 +392,17 @@
         <p class="muted">Haftalık pas hakkı: <b>1</b>. 2. "okumadım" cezaya düşürür. Gün, gece okumalar için ertesi gün 06:00'a kadar sürer.</p>
         <button class="secondary" id="refreshWeekBtn" style="margin-bottom:10px;">Yenile</button>
         <div class="libcard"><table class="weekgrid weekday-table" id="weekGrid"></table></div>
+      </div>
+
+      <div class="card">
+        <h2>Haftalık Geçmişim</h2>
+        <p class="muted">Cevap vermediğin geçmiş günler otomatik "okumadı" olarak görünür.</p>
+        <div class="row" style="align-items:center; margin-bottom:10px;">
+          <button class="secondary tiny" id="aWeekPrevBtn" style="flex:0 0 auto;">◀ Önceki Hafta</button>
+          <div class="mono" id="aWeekRangeLabel" style="text-align:center; flex:1;"></div>
+          <button class="secondary tiny" id="aWeekNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
+        </div>
+        <div class="libcard"><table class="weekgrid" id="aOwnWeekGrid"></table></div>
       </div>
     </section>
 
@@ -460,12 +467,6 @@
         <p class="muted">Kim hangi rozeti bugüne kadar kaç kere kazanmış (devam eden serinin ulaştığı seviye de dahil).</p>
         <div class="libcard"><div id="wormsHistory"></div></div>
       </div>
-      <div class="card">
-        <h2>En Az Bu Kadar Sayfa Okudun</h2>
-        <div style="text-align:center; padding:16px 0;">
-          <span id="totalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Cantarell',sans-serif;">–</span>
-        </div>
-      </div>
     </section>
 
     <!-- MEMBER TABS -->
@@ -488,14 +489,10 @@
       </div>
 
       <div class="card">
-        <h2>Haftalık Geçmişim</h2>
-        <p class="muted">Cevap vermediğin geçmiş günler otomatik "okumadı" olarak görünür.</p>
-        <div class="row" style="align-items:center; margin-bottom:10px;">
-          <button class="secondary tiny" id="mWeekPrevBtn" style="flex:0 0 auto;">◀ Önceki Hafta</button>
-          <div class="mono" id="mWeekRangeLabel" style="text-align:center; flex:1;"></div>
-          <button class="secondary tiny" id="mWeekNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
+        <h2>En Az Bu Kadar Sayfa Okudun</h2>
+        <div style="text-align:center; padding:16px 0;">
+          <span id="mTotalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Cantarell',sans-serif;">–</span>
         </div>
-        <div class="libcard"><table class="weekgrid" id="mOwnWeekGrid"></table></div>
       </div>
     </section>
 
@@ -504,6 +501,17 @@
         <h2>Herkesin Bu Haftası</h2>
         <p class="muted">Cevap verilmeyen geçmiş günler, yönetici bir sonraki girişinde otomatik "okumadı" olarak işaretler.</p>
         <div class="libcard"><table class="weekgrid weekday-table" id="mWeekGridAll"></table></div>
+      </div>
+
+      <div class="card">
+        <h2>Haftalık Geçmişim</h2>
+        <p class="muted">Cevap vermediğin geçmiş günler otomatik "okumadı" olarak görünür.</p>
+        <div class="row" style="align-items:center; margin-bottom:10px;">
+          <button class="secondary tiny" id="mWeekPrevBtn" style="flex:0 0 auto;">◀ Önceki Hafta</button>
+          <div class="mono" id="mWeekRangeLabel" style="text-align:center; flex:1;"></div>
+          <button class="secondary tiny" id="mWeekNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
+        </div>
+        <div class="libcard"><table class="weekgrid" id="mOwnWeekGrid"></table></div>
       </div>
     </section>
 
@@ -524,12 +532,6 @@
         <h2>Rozet Geçmişi</h2>
         <p class="muted">Kim hangi rozeti bugüne kadar kaç kere kazanmış.</p>
         <div class="libcard"><div id="mWormsHistory"></div></div>
-      </div>
-      <div class="card">
-        <h2>En Az Bu Kadar Sayfa Okudun</h2>
-        <div style="text-align:center; padding:16px 0;">
-          <span id="mTotalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Cantarell',sans-serif;">–</span>
-        </div>
       </div>
     </section>
 
@@ -1070,7 +1072,7 @@ document.getElementById('googleAuthBtn').addEventListener('click', async ()=>{
 /* ============ TAB TANIMLARI ============ */
 const ADMIN_TABS = [
   {id:'today', label:'Bugün', icon:'☑'},
-  {id:'week', label:'Bu Hafta', icon:'▤'},
+  {id:'week', label:'Kayıtlar', icon:'▤'},
   {id:'gifts', label:'Hediye', icon:'◈'},
   {id:'worms', label:'Rozet', icon:'☆'},
   {id:'recs', label:'Öneriler', icon:'✎'},
@@ -1078,7 +1080,7 @@ const ADMIN_TABS = [
 ];
 const MEMBER_TABS = [
   {id:'msurvey', label:'Anket', icon:'☑'},
-  {id:'mtoday', label:'Bu Hafta', icon:'▤'},
+  {id:'mtoday', label:'Kayıtlar', icon:'▤'},
   {id:'mlastweek', label:'Geçen H.', icon:'↻'},
   {id:'gifts', label:'Hediye', icon:'◈'},
   {id:'mworms', label:'Rozet', icon:'☆'},
@@ -1257,13 +1259,13 @@ function switchTab(id){
 function renderTab(id){
   if(id==='today') renderAdminToday();
   else if(id==='editpast') renderEditPastTab();
-  else if(id==='week') renderAdminWeek();
+  else if(id==='week'){ renderAdminWeek(); adminWeekOffset=0; renderAdminOwnWeek(); }
   else if(id==='draws') renderAdminDraws();
   else if(id==='manual') renderManualTab();
   else if(id==='members') renderAdminMembers();
   else if(id==='worms') renderAdminWorms();
   else if(id==='msurvey') renderMemberSurvey();
-  else if(id==='mtoday') renderMemberWeekAll();
+  else if(id==='mtoday'){ renderMemberWeekAll(); memberWeekOffset=0; renderMemberOwnWeek(); }
   else if(id==='mlastweek') renderMemberLastWeek();
   else if(id==='mworms') renderMemberWorms();
   else if(id==='gifts') renderGiftsTab();
@@ -1581,8 +1583,7 @@ function renderAdminToday(){
     const myStatusText = myStatus==='read' ? 'Bugün için "Okudum" işaretlendin.' : myStatus==='skip' ? 'Bugün için "Okumadım" işaretlendin.' : 'Bugün için henüz işaretleme yapılmadı.';
     noteEl.textContent = `Bugünün okuma tarihi: ${dateLabel}. İşaretlemeler yarın sabah 06:00'a kadar geçerli; 06:00'dan sonraki işaretleme bir sonraki güne yazılır. 06:00'a kadar hiç işaretleme yapılmazsa o gün otomatik "okumadı" sayılır. ${myStatusText}`;
   }
-  adminWeekOffset = 0;
-  renderAdminOwnWeek();
+  renderTotalPagesCard('totalPagesNumber');
 }
 async function renderAdminOwnWeek(){
   const baseMonday = getMonday(nowLogical());
@@ -1927,7 +1928,7 @@ async function renderAdminMembers(){
 
 /* ============ ADMIN: KİTAP KURTLARI ============ */
 document.getElementById('calcStreaksBtn').addEventListener('click', renderAdminWorms);
-async function renderWormsShared(containerId, historyContainerId, totalPagesId){
+async function renderWormsShared(containerId, historyContainerId){
   const list = keepOrLoading(containerId, 'Hesaplanıyor…');
   const uids = activeUids();
   const results = await Promise.all(uids.map(async uid=>{
@@ -1974,15 +1975,14 @@ async function renderWormsShared(containerId, historyContainerId, totalPagesId){
     markLoaded(historyBox);
   }
 
-  if(totalPagesId){
-    const pagesEl = document.getElementById(totalPagesId);
-    if(pagesEl){
-      if(pagesEl.dataset.loaded !== '1') pagesEl.textContent = '…';
-      const totalReadDays = await computeTotalReadDays(currentUid);
-      pagesEl.textContent = (totalReadDays*15).toLocaleString('tr-TR');
-      pagesEl.dataset.loaded = '1';
-    }
-  }
+}
+async function renderTotalPagesCard(elId){
+  const pagesEl = document.getElementById(elId);
+  if(!pagesEl) return;
+  if(pagesEl.dataset.loaded !== '1') pagesEl.textContent = '…';
+  const totalReadDays = await computeTotalReadDays(currentUid);
+  pagesEl.textContent = (totalReadDays*15).toLocaleString('tr-TR');
+  pagesEl.dataset.loaded = '1';
 }
 async function computeTotalReadDays(uid){
   const joinDs = joinDateStrOf(uid);
@@ -2000,7 +2000,7 @@ async function computeTotalReadDays(uid){
   }
   return count;
 }
-async function renderAdminWorms(){ await renderWormsShared('wormsList','wormsHistory','totalPagesNumber'); }
+async function renderAdminWorms(){ await renderWormsShared('wormsList','wormsHistory'); }
 
 /* ============ ÜYE: ANKET ============ */
 let memberWeekOffset = 0; // 0 = bu hafta, -1 = önceki hafta, ...
@@ -2020,8 +2020,7 @@ function renderMemberSurvey(){
   computeStreak(currentUid).then(s=>{
     document.getElementById('mMyStreakNote').textContent = s>0 ? `🔥 ${s} gündür aralıksız okuyorsun.` : '';
   });
-  memberWeekOffset = 0;
-  renderMemberOwnWeek();
+  renderTotalPagesCard('mTotalPagesNumber');
 }
 document.getElementById('mReadBtn').addEventListener('click', async ()=>{
   await markStatus(currentUid,'read');
@@ -2707,7 +2706,7 @@ async function renderGroupRecs(){
 }
 
 /* ============ ÜYE: KİTAP KURTLARI ============ */
-async function renderMemberWorms(){ await renderWormsShared('mWormsList','mWormsHistory','mTotalPagesNumber'); }
+async function renderMemberWorms(){ await renderWormsShared('mWormsList','mWormsHistory'); }
 
 /* ============ GİRİŞ / AUTH DURUM TAKİBİ ============ */
 onAuthStateChanged(auth, async (user)=>{
