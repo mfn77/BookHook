@@ -930,11 +930,15 @@ async function openProfileModal(uid){
     document.getElementById('profileModalReading').textContent = '📖 Şu an ne okuduğunu paylaşmamış.';
   }
   const statsEl = document.getElementById('profileModalStats');
-  statsEl.innerHTML = `<span>… hediye kitap</span><span>… sayfa</span>`;
+  const statsKey = 'profileStats_'+uid;
+  const cachedStats = getPersistedHTML(statsKey);
+  statsEl.innerHTML = cachedStats || `<span>… hediye kitap</span><span>… sayfa</span>`;
   document.getElementById('profileModal').style.display='flex';
   const [totalReadDays] = await Promise.all([computeTotalReadDays(uid), loadDraws()]);
   const giftsWon = drawsCache.reduce((acc,d)=> acc + (d.pairs||[]).filter(p=>p.receiverUid===uid).length, 0);
-  statsEl.innerHTML = `<span><b>${giftsWon}</b> hediye kitap kazandı</span><span><b>${(totalReadDays*15).toLocaleString('tr-TR')}</b> sayfa okudu</span>`;
+  const freshStatsHtml = `<span><b>${giftsWon}</b> hediye kitap kazandı</span><span><b>${(totalReadDays*15).toLocaleString('tr-TR')}</b> sayfa okudu</span>`;
+  statsEl.innerHTML = freshStatsHtml;
+  setPersistedHTML(statsKey, freshStatsHtml);
 }
 function openPhotoLightbox(url){
   if(!url) return;
@@ -2123,17 +2127,13 @@ async function computeTotalReadDays(uid){
   const joinDs = joinDateStrOf(uid);
   const startDs = (joinDs && joinDs > CLUB_START_DATE) ? joinDs : CLUB_START_DATE;
   const today = nowLogical();
+  const dateStrs = [];
   let cursor = fromStr(startDs);
-  let count = 0;
-  while(toStr(cursor) <= toStr(today)){
-    const ds = toStr(cursor);
-    try{
-      const snap = await getDoc(doc(db,'days',ds,'answers',uid));
-      if(snap.exists() && snap.data().status==='read') count++;
-    }catch(e){}
-    cursor = addDays(cursor,1);
-  }
-  return count;
+  while(toStr(cursor) <= toStr(today)){ dateStrs.push(toStr(cursor)); cursor = addDays(cursor,1); }
+  // Günleri tek tek sırayla değil, hepsini aynı anda (paralel) çekiyoruz — bu, uzun
+  // süredir üye olan biri için bile sonucu saniyelerden yüzlerce milisaniyeye indirir.
+  const snaps = await Promise.all(dateStrs.map(ds => getDoc(doc(db,'days',ds,'answers',uid)).catch(()=>null)));
+  return snaps.filter(snap => snap && snap.exists() && snap.data().status==='read').length;
 }
 async function renderAdminWorms(){ await renderWormsShared('wormsList','wormsHistory'); }
 
