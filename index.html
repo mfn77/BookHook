@@ -456,8 +456,14 @@
       </div>
       <div class="card">
         <h2>Rozet Geçmişi</h2>
-        <p class="muted">Kim hangi rozeti bugüne kadar kaç kere kazanmış.</p>
+        <p class="muted">Kim hangi rozeti bugüne kadar kaç kere kazanmış (devam eden serinin ulaştığı seviye de dahil).</p>
         <div class="libcard"><div id="wormsHistory"></div></div>
+      </div>
+      <div class="card">
+        <h2>En Az Bu Kadar Sayfa Okudun</h2>
+        <div style="text-align:center; padding:16px 0;">
+          <span id="totalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Cantarell',sans-serif;">–</span>
+        </div>
       </div>
     </section>
 
@@ -517,6 +523,12 @@
         <h2>Rozet Geçmişi</h2>
         <p class="muted">Kim hangi rozeti bugüne kadar kaç kere kazanmış.</p>
         <div class="libcard"><div id="mWormsHistory"></div></div>
+      </div>
+      <div class="card">
+        <h2>En Az Bu Kadar Sayfa Okudun</h2>
+        <div style="text-align:center; padding:16px 0;">
+          <span id="mTotalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Cantarell',sans-serif;">–</span>
+        </div>
       </div>
     </section>
 
@@ -1914,7 +1926,7 @@ async function renderAdminMembers(){
 
 /* ============ ADMIN: KİTAP KURTLARI ============ */
 document.getElementById('calcStreaksBtn').addEventListener('click', renderAdminWorms);
-async function renderWormsShared(containerId, historyContainerId){
+async function renderWormsShared(containerId, historyContainerId, totalPagesId){
   const list = keepOrLoading(containerId, 'Hesaplanıyor…');
   const uids = activeUids();
   const results = await Promise.all(uids.map(async uid=>{
@@ -1936,24 +1948,58 @@ async function renderWormsShared(containerId, historyContainerId){
   const historyBox = document.getElementById(historyContainerId);
   if(historyBox){
     const rows = results.filter(r=>{
-      const bc = usersCache[r.uid]?.badgeCounts;
-      return bc && BADGE_DEFS.some(def=>bc[def.key]>0);
+      const u = usersCache[r.uid];
+      const bc = u?.badgeCounts;
+      const hasHistorical = bc && BADGE_DEFS.some(def=>bc[def.key]>0);
+      const hasLiveTier = !!u?.currentTier;
+      return hasHistorical || hasLiveTier;
     });
     if(rows.length===0){
       historyBox.innerHTML = `<p class="muted">Henüz kimse bir rozet kazanmadı.</p>`;
     } else {
       const head = `<tr><th style="text-align:left;">Üye</th>` + BADGE_DEFS.map(def=>`<th title="${def.label}">${def.icon}</th>`).join('') + `</tr>`;
       const body = rows.map(r=>{
-        const bc = usersCache[r.uid].badgeCounts || {};
-        const cells = BADGE_DEFS.map(def=>`<td>${bc[def.key]||0}</td>`).join('');
+        const u = usersCache[r.uid];
+        const bc = u.badgeCounts || {};
+        const liveTier = u.currentTier;
+        const cells = BADGE_DEFS.map(def=>{
+          const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
+          return `<td>${count}</td>`;
+        }).join('');
         return `<tr><td class="name-cell">${userChipHtml(r.uid,18)}</td>${cells}</tr>`;
       }).join('');
       historyBox.innerHTML = `<table class="weekgrid">${head}${body}</table>`;
     }
     markLoaded(historyBox);
   }
+
+  if(totalPagesId){
+    const pagesEl = document.getElementById(totalPagesId);
+    if(pagesEl){
+      if(pagesEl.dataset.loaded !== '1') pagesEl.textContent = '…';
+      const totalReadDays = await computeTotalReadDays(currentUid);
+      pagesEl.textContent = (totalReadDays*15).toLocaleString('tr-TR');
+      pagesEl.dataset.loaded = '1';
+    }
+  }
 }
-async function renderAdminWorms(){ await renderWormsShared('wormsList','wormsHistory'); }
+async function computeTotalReadDays(uid){
+  const joinDs = joinDateStrOf(uid);
+  const startDs = (joinDs && joinDs > CLUB_START_DATE) ? joinDs : CLUB_START_DATE;
+  const today = nowLogical();
+  let cursor = fromStr(startDs);
+  let count = 0;
+  while(toStr(cursor) <= toStr(today)){
+    const ds = toStr(cursor);
+    try{
+      const snap = await getDoc(doc(db,'days',ds,'answers',uid));
+      if(snap.exists() && snap.data().status==='read') count++;
+    }catch(e){}
+    cursor = addDays(cursor,1);
+  }
+  return count;
+}
+async function renderAdminWorms(){ await renderWormsShared('wormsList','wormsHistory','totalPagesNumber'); }
 
 /* ============ ÜYE: ANKET ============ */
 let memberWeekOffset = 0; // 0 = bu hafta, -1 = önceki hafta, ...
@@ -2660,7 +2706,7 @@ async function renderGroupRecs(){
 }
 
 /* ============ ÜYE: KİTAP KURTLARI ============ */
-async function renderMemberWorms(){ await renderWormsShared('mWormsList','mWormsHistory'); }
+async function renderMemberWorms(){ await renderWormsShared('mWormsList','mWormsHistory','mTotalPagesNumber'); }
 
 /* ============ GİRİŞ / AUTH DURUM TAKİBİ ============ */
 onAuthStateChanged(auth, async (user)=>{
