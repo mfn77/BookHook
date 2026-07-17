@@ -2384,7 +2384,8 @@ async function buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver){
         <button class="primary gf-received" data-reqid="${reqId}" data-giver="${p.giverUid}" style="margin-top:8px;">📬 Kitabı Aldım</button>
       </div>`;
     } else {
-      const prefillName = req?.recipientName || myProfile.name || '';
+      const myFullName = myProfile.surname ? `${myProfile.name} ${myProfile.surname}` : (myProfile.name || '');
+      const prefillName = req?.recipientName || myFullName;
       const prefillAddress = req?.address || myProfile.address || '';
       const prefillPhone = req?.phone || myProfile.phone || '';
       html += `<div class="receipt">
