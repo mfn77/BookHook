@@ -283,6 +283,17 @@
   .empty-state{text-align:center; padding:30px 10px; color:var(--ink-70);}
   .empty-state .big{font-size:34px; display:block; margin-bottom:8px;}
   ul.plain{margin:6px 0; padding-left:18px;}
+  .guide-section{
+    border:1px solid var(--line); border-radius:12px; margin-bottom:10px; padding:0 14px; background:var(--paper-2);
+  }
+  .guide-section summary{
+    padding:12px 0; font-weight:700; font-family:'Cantarell',sans-serif; font-size:14.5px; color:var(--ink); cursor:pointer; list-style:none;
+  }
+  .guide-section summary::-webkit-details-marker{ display:none; }
+  .guide-section summary::before{ content:'▸'; display:inline-block; width:16px; color:var(--gold); transition:transform .15s var(--ease); }
+  .guide-section[open] summary::before{ transform:rotate(90deg); }
+  .guide-section ul.plain{ padding-bottom:12px; }
+  .guide-section ul.plain li{ margin-bottom:8px; }
   ul.plain li{margin-bottom:4px; font-size:13.5px; color:var(--ink-70);}
   .role-chip{font-family:'Cantarell', sans-serif; font-size:10px; font-weight:700; letter-spacing:.03em; padding:3px 10px; border-radius:20px; border:none; color:var(--gold); background:rgba(33,144,164,0.14);}
   .auth-wrap{ max-width:400px; margin:40px auto; padding:0 16px;}
@@ -675,6 +686,58 @@
   </div>
 </div>
 
+<div id="guideModal" style="display:none; position:fixed; inset:0; background:rgba(36,49,75,0.55); z-index:200; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:460px; width:100%; max-height:85vh; overflow-y:auto; position:relative; margin-bottom:0;">
+    <button id="guideModalClose" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-70);">✕</button>
+    <h2>📖 Kullanım Rehberi</h2>
+    <p class="muted" style="margin-bottom:14px;">Yeni misin? Aşağıdaki başlıklara dokunup açabilirsin.</p>
+
+    <details class="guide-section" open>
+      <summary>🖐️ Temel İpuçları</summary>
+      <ul class="plain">
+        <li>Herhangi bir <b>profil resmine veya isme dokunursan</b>, o kişinin profili açılır — rozetleri, şu an okuduğu kitabı ve hakkında yazdığını görürsün.</li>
+        <li>Sekmeler arasında parmağınla <b>sağa/sola kaydırarak</b> geçebilirsin, sol menüden de seçebilirsin.</li>
+        <li>Bir kartın başlığının yanında <b>ⓘ</b> görürsen, dokununca kısa bir açıklama açılır.</li>
+        <li>Sağ üstteki 🔔 zil bildirimlerini, ☰ menü diğer sayfaları (Profilim, Grup Kuralları vb.) açar.</li>
+        <li>İsmine/fotoğrafına dokunmak seni direkt kendi Profilim sayfana götürür.</li>
+      </ul>
+    </details>
+
+    <details class="guide-section">
+      <summary>📑 Sekmeler Ne İşe Yarar?</summary>
+      <ul class="plain">
+        <li><b>Bugün / Anket</b>: bugün en az 15 sayfa okuyup okumadığını işaretlersin.</li>
+        <li><b>Kayıtlar</b>: bu haftanın herkes tablosu ve senin kendi geçmiş haftaların (◀ ▶ ile gezebilirsin).</li>
+        <li><b>Hediye Kitap</b>: kurada hediye alacaksan/vereceksen kitap/adres bilgileri burada, "gönderdim/aldım" onayları da buradan.</li>
+        <li><b>Rozet</b>: aktif okuma serin (profil resminde renkli çerçeve olarak görünür), rozet geçmişin, toplam sayfa sayın.</li>
+        <li><b>Öneriler</b>: birine özel veya tüm gruba kitap önerisi gönderir, yorum yazarsın.</li>
+        <li><b>Kura</b>: geçmiş haftaların kim-kime-hediye sonuçları.</li>
+        <li>☰ menüdeki <b>Profilim</b>: bilgilerini/fotoğrafını düzenlersin. <b>Grup Kuralları</b>: kuralları okur, öneri gönderirsin.</li>
+      </ul>
+    </details>
+
+    <details class="guide-section">
+      <summary>📲 Telefonda Uygulama Gibi Kullanma</summary>
+      <ul class="plain">
+        <li><b>Android + Chrome:</b> sağ üstteki ⋮ menü → "Ana ekrana ekle" ya da "Uygulamayı yükle".</li>
+        <li><b>iPhone + Safari:</b> alttaki Paylaş ikonu (kare + yukarı ok) → "Ana Ekrana Ekle". <b>Bildirimler iOS'ta yalnızca bu şekilde eklenince çalışır.</b></li>
+        <li><b>Android + Firefox:</b> ⋮ menü → "Ana ekrana ekle".</li>
+        <li><b>Bilgisayarda Chrome/Edge:</b> adres çubuğunun sağındaki küçük yükleme simgesine tıkla.</li>
+        <li>Eklendikten sonra ana ekrandaki simgeden açarsan tam ekran, uygulama gibi çalışır.</li>
+      </ul>
+    </details>
+
+    <details class="guide-section">
+      <summary>🔔 Bildirimleri Açma</summary>
+      <ul class="plain">
+        <li>🔔 simgesine dokun → "📱 Telefon Bildirimlerini Aç" butonuna bas → tarayıcının izin sorusuna "İzin Ver" de.</li>
+        <li>Bunu <b>her cihazda ayrı ayrı</b> yapman gerekir (bilgisayarda açman telefonu etkilemez).</li>
+        <li>Uygulama içi bildirimler zaten otomatik gelir, bu adım sadece telefon/ekran bildirimi için.</li>
+      </ul>
+    </details>
+  </div>
+</div>
+
 <script type="module">
 /* ================= FIREBASE AYARLARI — BURAYI DOLDUR ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -914,6 +977,8 @@ function openNotifModal(){
   renderNotifsTab();
 }
 document.getElementById('notifModalClose').addEventListener('click', ()=>{ document.getElementById('notifModal').style.display='none'; });
+document.getElementById('guideModalClose').addEventListener('click', ()=>{ document.getElementById('guideModal').style.display='none'; });
+document.getElementById('guideModal').addEventListener('click', (e)=>{ if(e.target.id==='guideModal') document.getElementById('guideModal').style.display='none'; });
 document.getElementById('notifModal').addEventListener('click', (e)=>{ if(e.target.id==='notifModal') document.getElementById('notifModal').style.display='none'; });
 
 /* ============ GERÇEK TELEFON BİLDİRİMİ (Firebase Cloud Messaging) ============ */
@@ -1171,7 +1236,12 @@ function buildHamburgerMenu(){
           <span class="slider"></span>
         </label>
       </div>
+      <button data-guide="1"><span class="mono-icon">📖</span>Kullanım Rehberi</button>
       <button data-logout="1" style="border-top:1px solid var(--line); color:var(--cloth-dark);"><span class="mono-icon">🚪</span>Çıkış</button>`;
+  menu.querySelector('[data-guide]').addEventListener('click', ()=>{
+    menu.style.display='none';
+    document.getElementById('guideModal').style.display='flex';
+  });
   menu.querySelectorAll('button[data-tab]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       switchTab(btn.dataset.tab);
