@@ -75,8 +75,9 @@
     width:78px; flex:0 0 auto; display:flex; flex-direction:column; align-items:center;
     background:rgba(var(--card-bg),0.55); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
     border-right:1px solid var(--line);
-    padding:16px 0; position:sticky; top:0; height:100vh; overflow-y:auto; z-index:10;
+    padding:16px 0; position:sticky; top:0; align-self:stretch; min-height:100vh; z-index:10;
   }
+  .sidebar-tabs.tabs{ position:sticky; top:16px; }
   .sidebar-header{ margin-bottom:14px; flex:0 0 auto; }
   .sidebar-logo{ width:34px; height:34px; border-radius:10px; display:block; }
   .content-col{ flex:1; min-width:0; max-width:100%; display:flex; flex-direction:column; overflow-x:hidden; }
@@ -1071,7 +1072,7 @@ const ADMIN_TABS = [
   {id:'today', label:'Bugün', icon:'☑'},
   {id:'week', label:'Bu Hafta', icon:'▤'},
   {id:'gifts', label:'Hediye', icon:'◈'},
-  {id:'worms', label:'Kurtlar', icon:'☆'},
+  {id:'worms', label:'Rozet', icon:'☆'},
   {id:'recs', label:'Öneriler', icon:'✎'},
   {id:'draws', label:'Kura', icon:'↻'}
 ];
@@ -1080,7 +1081,7 @@ const MEMBER_TABS = [
   {id:'mtoday', label:'Bu Hafta', icon:'▤'},
   {id:'mlastweek', label:'Geçen H.', icon:'↻'},
   {id:'gifts', label:'Hediye', icon:'◈'},
-  {id:'mworms', label:'Kurtlar', icon:'☆'},
+  {id:'mworms', label:'Rozet', icon:'☆'},
   {id:'recs', label:'Öneriler', icon:'✎'}
 ];
 const HAMBURGER_ADMIN_EXTRA = [
@@ -1652,13 +1653,13 @@ async function renderEditPastTab(){
 /* ============ ADMIN: BU HAFTA ============ */
 async function renderAdminWeek(){
   const table = document.getElementById('weekGrid');
-  if(table.dataset.loaded !== '1') if(table.dataset.loaded !== '1') table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
+  if(table.dataset.loaded !== '1') table.innerHTML = `<tr><td class="empty-state">Yükleniyor…</td></tr>`;
   const monday = getMonday(nowLogical());
   const dates = weekDates(monday);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const uids = activeUids();
   if(uids.length===0){ table.innerHTML = `<tr><td class="empty-state">Henüz üye yok.</td></tr>`; markLoaded(table); return; }
-  let head = `<tr><th style="text-align:left;">Üye</th>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `<th>Durum</th></tr>`;
+  let head = `<tr><th style="text-align:left;">Üye</th>` + dates.map((d,i)=>`<th>${DOW[i]}</th>`).join('') + `<th>Durum</th></tr>`;
   let rows = uids.map(uid=>{
     const joinDs = joinDateStrOf(uid);
     let miss=0, read=0;
@@ -2064,7 +2065,7 @@ async function renderMemberWeekAll(){
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const uids = activeUids();
   if(uids.length===0){ table.innerHTML = `<tr><td class="empty-state">Henüz üye yok.</td></tr>`; markLoaded(table); return; }
-  let head = `<tr><th style="text-align:left;">Üye</th>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `<th>Durum</th></tr>`;
+  let head = `<tr><th style="text-align:left;">Üye</th>` + dates.map((d,i)=>`<th>${DOW[i]}</th>`).join('') + `<th>Durum</th></tr>`;
   let rows = uids.map(uid=>{
     const joinDs = joinDateStrOf(uid);
     let miss=0, read=0;
