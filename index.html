@@ -1075,7 +1075,11 @@ async function showBookInfo(rawTitle, cover){
   const searchQuery = author ? `${title} ${author}` : title;
   try{
     const items = await searchOpenLibrary(searchQuery);
-    if(items[0]) info = items[0];
+    if(items[0]){
+      info = items[0];
+      body.innerHTML = `<span class="muted">Detaylar getiriliyor…</span>`;
+      info = await enrichFromOpenLibraryWork(info);
+    }
     else lastError = 'Open Library: sonuç yok';
   }catch(e){ lastError = 'Open Library hata: '+(e.message||e); }
   if(!info){
@@ -1095,10 +1099,12 @@ async function showBookInfo(rawTitle, cover){
     return;
   }
   const descShort = info.description ? escapeHtml(info.description).slice(0,320) + (info.description.length>320?'…':'') : '';
+  const LANG_LABELS = {eng:'İngilizce', tur:'Türkçe', fre:'Fransızca', ger:'Almanca', spa:'İspanyolca', ita:'İtalyanca', rus:'Rusça'};
   const metaLine2 = [
     info.publisher ? escapeHtml(info.publisher) : '',
     info.categories ? escapeHtml(info.categories) : '',
-    info.rating ? `⭐ ${info.rating}${info.ratingsCount?` (${info.ratingsCount} oy)`:''}` : ''
+    info.rating ? `⭐ ${info.rating}${info.ratingsCount?` (${info.ratingsCount} oy)`:''}` : '',
+    info.language ? (LANG_LABELS[info.language]||escapeHtml(info.language)) : ''
   ].filter(Boolean).join(' &middot; ');
   body.innerHTML = `
     ${info.cover ? `<img src="${info.cover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.style.display='none';" />` : ''}
@@ -3045,9 +3051,40 @@ async function searchOpenLibrary(q){
     ratingsCount: d.ratings_count || '',
     isbn: (d.isbn||[])[0] || '',
     language: (d.language||[])[0] || '',
+    workKey: d.key || '',
     link: d.key ? `https://openlibrary.org${d.key}` : '',
     cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : ''
   }));
+}
+// search.json sonucu sadece temel bilgi veriyor; sayfa sayısı/dil/puan gibi detaylar kitabın
+// kendi "work" sayfasına ait ayrı uç noktalarda duruyor — bu fonksiyon onları ek olarak çekip birleştirir.
+async function enrichFromOpenLibraryWork(info){
+  if(!info.workKey) return info;
+  try{
+    const [workRes, ratingsRes, editionsRes] = await Promise.all([
+      fetch(`https://openlibrary.org${info.workKey}.json`).catch(()=>null),
+      fetch(`https://openlibrary.org${info.workKey}/ratings.json`).catch(()=>null),
+      fetch(`https://openlibrary.org${info.workKey}/editions.json?limit=5`).catch(()=>null)
+    ]);
+    if(workRes && workRes.ok){
+      const w = await workRes.json();
+      if(!info.description && w.description){ info.description = typeof w.description==='string' ? w.description : (w.description.value||''); }
+      if(!info.categories && w.subjects){ info.categories = w.subjects.slice(0,4).join(', '); }
+    }
+    if(ratingsRes && ratingsRes.ok){
+      const r = await ratingsRes.json();
+      if(!info.rating && r.summary && r.summary.average){ info.rating = Math.round(r.summary.average*10)/10; info.ratingsCount = r.summary.count||''; }
+    }
+    if(editionsRes && editionsRes.ok){
+      const e = await editionsRes.json();
+      const eds = e.entries || [];
+      if(!info.pageCount){ const withPages = eds.find(ed=>ed.number_of_pages); if(withPages) info.pageCount = withPages.number_of_pages; }
+      if(!info.language){ const withLang = eds.find(ed=>ed.languages && ed.languages[0]); if(withLang) info.language = (withLang.languages[0].key||'').replace('/languages/',''); }
+      if(!info.publisher){ const withPub = eds.find(ed=>ed.publishers && ed.publishers[0]); if(withPub) info.publisher = withPub.publishers[0]; }
+      if(!info.isbn){ const withIsbn = eds.find(ed=>ed.isbn_13 && ed.isbn_13[0]); if(withIsbn) info.isbn = withIsbn.isbn_13[0]; }
+    }
+  }catch(e){}
+  return info;
 }
 function attachBookAutocomplete(inputId, coverInputId, suggestBoxId, onSelect){
   const input = document.getElementById(inputId);
