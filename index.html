@@ -1213,7 +1213,7 @@ function hideAnchoredPopover(){
 }
 document.addEventListener('click', (e)=>{
   const pop = document.getElementById('anchoredPopover');
-  if(pop.style.display==='block' && !pop.contains(e.target) && !e.target.closest('.badge-info-icon')){
+  if(pop.style.display==='block' && !pop.contains(e.target) && !e.target.closest('.badge-info-icon') && !e.target.closest('.total-pages-clickable')){
     hideAnchoredPopover();
   }
 });
@@ -1222,7 +1222,10 @@ document.body.addEventListener('click', (e)=>{
   const chip = e.target.closest('.user-chip');
   if(chip && chip.dataset.uid) openProfileModal(chip.dataset.uid);
   const badge = e.target.closest('.badge-info-icon');
-  if(badge && badge.dataset.badgeLabel && !badge.closest('#profileModalPhotoWrap')) showAnchoredPopover(badge, `🏅 ${escapeHtml(badge.dataset.badgeLabel)}`);
+  if(badge && badge.dataset.badgeLabel && !badge.closest('#profileModalPhotoWrap')){
+    e.stopPropagation();
+    showAnchoredPopover(badge, `🏅 ${escapeHtml(badge.dataset.badgeLabel)}`);
+  }
   const pickBtn = e.target.closest('.emoji-pick-btn');
   if(pickBtn){
     const target = pickBtn.dataset.target, emoji = pickBtn.dataset.emoji;
@@ -1236,6 +1239,7 @@ document.body.addEventListener('click', (e)=>{
   }
   const pagesEl = e.target.closest('.total-pages-clickable');
   if(pagesEl && pagesEl.dataset.days!==undefined){
+    e.stopPropagation();
     showAnchoredPopover(pagesEl, `📖 ${pagesEl.dataset.days} gün okudun`);
   }
 });
