@@ -1950,12 +1950,12 @@ async function computeStreak(uid, maxDays){
 // çerçeve/rozet de kayboluyor. Kaç kere kazanıldığı ayrıca badgeCounts içinde sayılıyor
 // (Kitap Kurtları sekmesindeki geçmiş tablosu için).
 const BADGE_DEFS = [
-  {key:'b3',  days:3,  icon:'🔥', label:'3 gün aralıksız', color:'#CD7F32'},
-  {key:'b5',  days:5,  icon:'⭐', label:'5 gün aralıksız', color:'#9E9E9E'},
-  {key:'b7',  days:7,  icon:'🎯', label:'1 hafta aralıksız', color:'#FFC107'},
-  {key:'b14', days:14, icon:'💎', label:'2 hafta aralıksız', color:'#29B6F6'},
-  {key:'b21', days:21, icon:'🏆', label:'3 hafta aralıksız', color:'#AB47BC'},
-  {key:'b30', days:30, icon:'🐺', label:'Kitap Kurdu (1 ay aralıksız)', color:'#FF6F00'}
+  {key:'b3',  days:3,  icon:'🔥', label:'3 gün aralıksız seri', color:'#CD7F32'},
+  {key:'b5',  days:5,  icon:'⭐', label:'5 gün aralıksız seri', color:'#9E9E9E'},
+  {key:'b7',  days:7,  icon:'🎯', label:'1 hafta aralıksız seri', color:'#FFC107'},
+  {key:'b14', days:14, icon:'💎', label:'2 hafta aralıksız seri', color:'#29B6F6'},
+  {key:'b21', days:21, icon:'🏆', label:'3 hafta aralıksız seri', color:'#AB47BC'},
+  {key:'b30', days:30, icon:'🐺', label:'Kitap Kurdu (1 ay aralıksız seri)', color:'#FF6F00'}
 ];
 function currentTierForStreak(streak){
   let tier = null;
