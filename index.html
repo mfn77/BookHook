@@ -1074,16 +1074,16 @@ async function showBookInfo(rawTitle, cover){
   let lastError = null;
   const searchQuery = author ? `${title} ${author}` : title;
   try{
-    const items = await searchGoogleBooks(searchQuery);
+    const items = await searchOpenLibrary(searchQuery);
     if(items[0]) info = items[0];
-    else lastError = 'Google Books: sonuç yok';
-  }catch(e){ lastError = 'Google Books hata: '+(e.message||e); }
+    else lastError = 'Open Library: sonuç yok';
+  }catch(e){ lastError = 'Open Library hata: '+(e.message||e); }
   if(!info){
     try{
-      const items = await searchOpenLibrary(searchQuery);
+      const items = await searchGoogleBooks(searchQuery);
       if(items[0]) info = items[0];
-      else lastError = (lastError?lastError+' | ':'')+'Open Library: sonuç yok';
-    }catch(e){ lastError = (lastError?lastError+' | ':'')+'Open Library hata: '+(e.message||e); }
+      else lastError = (lastError?lastError+' | ':'')+'Google Books: sonuç yok';
+    }catch(e){ lastError = (lastError?lastError+' | ':'')+'Google Books hata: '+(e.message||e); }
   }
   if(info){
     info.author = info.author || author || 'Bilinmeyen Yazar';
@@ -3079,11 +3079,12 @@ function attachBookAutocompleteEl(input, coverInput, box, onSelect){
     let items = [];
     let lastError = null;
     try{
-      items = await searchGoogleBooks(q);
+      items = await searchOpenLibrary(q);
+      if(!items.length) throw new Error('sonuç yok');
     }catch(e){
       lastError = e;
       try{
-        items = await searchOpenLibrary(q);
+        items = await searchGoogleBooks(q);
         lastError = null;
       }catch(e2){ lastError = e2; }
     }
