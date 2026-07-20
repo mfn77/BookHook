@@ -1071,15 +1071,18 @@ async function showBookInfo(rawTitle, cover){
   const dashIdx = rawTitle.indexOf(' - ');
   if(dashIdx>0){ author = rawTitle.slice(0,dashIdx).trim(); title = rawTitle.slice(dashIdx+3).trim(); }
   let info = null;
+  let lastError = null;
   try{
     const items = await searchGoogleBooks(rawTitle);
     if(items[0]) info = items[0];
-  }catch(e){}
+    else lastError = 'Google Books: sonuç yok';
+  }catch(e){ lastError = 'Google Books hata: '+(e.message||e); }
   if(!info){
     try{
       const items = await searchOpenLibrary(rawTitle);
       if(items[0]) info = items[0];
-    }catch(e){}
+      else lastError = (lastError?lastError+' | ':'')+'Open Library: sonuç yok';
+    }catch(e){ lastError = (lastError?lastError+' | ':'')+'Open Library hata: '+(e.message||e); }
   }
   if(info){
     info.author = info.author || author || 'Bilinmeyen Yazar';
@@ -1087,7 +1090,7 @@ async function showBookInfo(rawTitle, cover){
     info.cover = cover || info.cover;
   }
   if(!info){
-    body.innerHTML = `<span class="muted">Bu kitap hakkında bilgi bulunamadı.</span>`;
+    body.innerHTML = `<span class="muted">Bu kitap hakkında bilgi bulunamadı.${lastError?`<br/><span style="font-size:11px;">(${escapeHtml(lastError)})</span>`:''}</span>`;
     return;
   }
   const descShort = info.description ? escapeHtml(info.description).slice(0,320) + (info.description.length>320?'…':'') : '';
