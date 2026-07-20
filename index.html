@@ -1939,7 +1939,7 @@ async function renderAdminDraws(){
   setupCardInfoButtons();
   const list = document.getElementById('drawsList');
   if(drawsCache.length===0){ list.innerHTML = `<div class="empty-state"><span class="big">🎁</span>Henüz tamamlanmış bir hafta yok.</div>`; return; }
-  list.innerHTML = drawsCache.map(d=>{
+  list.innerHTML = drawsCache.slice(0,1).map(d=>{
     const rangeLabel = `${fmtShort(d.weekStart)} — ${fmtShort(d.weekEnd)}`;
     let body;
     if(!d.pairs || d.pairs.length===0){
