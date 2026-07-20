@@ -933,18 +933,22 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<
 // statsArr: [{uid,name,miss,read,marked}]
 function runLottery(statsArr){
   const eligible = statsArr.filter(s=>s.marked>0);
-  const givers = eligible.filter(s=>s.miss>=2);
-  const tier1 = eligible.filter(s=>s.miss===0);
-  const tier2 = eligible.filter(s=>s.miss===1);
+  const givers = shuffle(eligible.filter(s=>s.miss>=2));
+  const tier1 = shuffle(eligible.filter(s=>s.miss===0));
+  const tier2 = shuffle(eligible.filter(s=>s.miss===1));
+  // Alıcı kuyruğu: önce tüm "temiz" (tier1), sonra tüm "1 pas geçmiş" (tier2) kişiler.
+  // Her cezalı bu kuyruktan SIRAYLA bir kişi alır (aynı alıcı, kuyruk bitmeden ikinci kez verilmez).
+  // Cezalı sayısı, kuyruktaki kişi sayısından fazlaysa kuyruğun başına dönülür — bu yüzden
+  // ekstra hediyeler de önce "temiz" kişilere, ancak herkes en az bir kez aldıktan sonra dağılır.
+  const receiverQueue = [...tier1, ...tier2];
   const pairs = [];
-  shuffle(givers).forEach(g=>{
-    const pool = tier1.length ? tier1 : (tier2.length ? tier2 : null);
-    if(pool){
-      const r = pool[Math.floor(Math.random()*pool.length)];
-      pairs.push({giverUid:g.uid||null, giverName:g.name, receiverUid:r.uid||null, receiverName:r.name});
-    } else {
+  givers.forEach((g,i)=>{
+    if(receiverQueue.length===0){
       pairs.push({giverUid:g.uid||null, giverName:g.name, receiverUid:null, receiverName:null});
+      return;
     }
+    const r = receiverQueue[i % receiverQueue.length];
+    pairs.push({giverUid:g.uid||null, giverName:g.name, receiverUid:r.uid||null, receiverName:r.name});
   });
   return { giverCount: givers.length, safeCount: tier1.length+tier2.length, pairs };
 }
