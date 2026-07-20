@@ -196,34 +196,47 @@
   .slide-down-anim{ animation: slideDownOpen 0.22s cubic-bezier(0.16,1,0.3,1); overflow:hidden; }
   @keyframes reactionBurst{ 0%{ transform:scale(1); } 40%{ transform:scale(1.6); } 100%{ transform:scale(1); } }
   .reaction-burst{ animation: reactionBurst 0.28s cubic-bezier(0.34,1.56,0.64,1); }
-  .mark-fx-layer{ position:fixed; inset:0; z-index:400; pointer-events:none; overflow:visible; }
-  .mark-fx-check{ position:absolute; font-size:44px; font-weight:900; color:var(--forest); animation: checkPop 0.46s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-  @keyframes checkPop{
-    0%{ opacity:0; transform:scale(0.2); }
-    35%{ opacity:1; transform:scale(1.4); }
-    60%{ opacity:1; transform:scale(1); }
-    100%{ opacity:0; transform:scale(0.9); }
+  .mark-fx-layer{ display:none; }
+  .stamp-btn.pop-read{ animation: stampBounceRead 0.55s cubic-bezier(0.34,1.56,0.64,1); z-index:2; }
+  .stamp-btn.pop-skip{ animation: stampShakeSkip 0.5s ease; z-index:2; }
+  @keyframes stampBounceRead{
+    0%{ transform:scale(1); background:var(--card); }
+    30%{ transform:scale(1.45) rotate(8deg); background:var(--forest); border-color:var(--forest); color:#fff; }
+    55%{ transform:scale(0.92) rotate(-4deg); }
+    75%{ transform:scale(1.08); }
+    100%{ transform:scale(1) rotate(0deg); }
   }
-  .mark-fx-speedline{ position:absolute; height:3px; border-radius:2px; background:var(--forest); opacity:0; animation: speedLine 0.32s ease-out forwards; }
-  @keyframes speedLine{
-    0%{ opacity:0; transform:scaleX(0.3) translateX(0); }
-    25%{ opacity:0.85; transform:scaleX(1) translateX(0); }
-    100%{ opacity:0; transform:scaleX(1) translateX(-10px); }
+  @keyframes stampShakeSkip{
+    0%{ transform:scale(1) rotate(0deg); background:var(--card); }
+    20%{ transform:scale(1.3) rotate(-12deg); background:var(--cloth); border-color:var(--cloth); color:#fff; }
+    40%{ transform:scale(1.25) rotate(10deg); }
+    60%{ transform:scale(1.18) rotate(-8deg); }
+    80%{ transform:scale(1.06) rotate(4deg); }
+    100%{ transform:scale(1) rotate(0deg); }
   }
-  .mark-fx-x{ position:absolute; font-size:44px; font-weight:900; color:var(--cloth); animation: xPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-  @keyframes xPop{
-    0%{ opacity:0; transform:scale(0.3) rotate(0deg); }
-    40%{ opacity:1; transform:scale(1.3) rotate(0deg); }
-    58%{ opacity:1; transform:scale(1) rotate(0deg); }
-    72%{ opacity:0; transform:scale(0.92) rotate(0deg); }
-    100%{ opacity:0; }
+  .stamp-btn.pop-read::after{
+    content:''; position:absolute; inset:-4px; border-radius:50%; border:3px solid var(--forest);
+    animation: ringExpand 0.55s ease-out forwards; pointer-events:none;
   }
-  .mark-fx-shard{ position:absolute; width:7px; height:7px; background:var(--cloth); opacity:0; animation: shardFly 0.5s ease-out forwards; animation-delay:0.16s; }
-  @keyframes shardFly{
-    0%{ opacity:0; transform:translate(0,0) rotate(0deg) scale(1); }
-    12%{ opacity:0.95; }
-    100%{ opacity:0; transform:translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.3); }
+  .stamp-btn.pop-skip::after{
+    content:''; position:absolute; inset:-4px; border-radius:50%; border:3px solid var(--cloth);
+    animation: ringExpand 0.5s ease-out forwards; pointer-events:none;
   }
+  @keyframes ringExpand{
+    0%{ transform:scale(0.7); opacity:1; }
+    100%{ transform:scale(2.1); opacity:0; }
+  }
+  .stamp-btn.pop-read::before{
+    content:''; position:absolute; inset:0; border-radius:50%;
+    box-shadow:0 0 18px 6px var(--forest); opacity:0.55; pointer-events:none;
+    animation: glowFade 0.5s ease-out forwards;
+  }
+  .stamp-btn.pop-skip::before{
+    content:''; position:absolute; inset:0; border-radius:50%;
+    box-shadow:0 0 18px 6px var(--cloth); opacity:0.55; pointer-events:none;
+    animation: glowFade 0.5s ease-out forwards;
+  }
+  @keyframes glowFade{ 0%{ opacity:0.7; } 100%{ opacity:0; } }
   @keyframes modalPopIn{ from{ opacity:0; transform:scale(0.93) translateY(6px); } to{ opacity:1; transform:scale(1) translateY(0); } }
   @keyframes popoverPopIn{ from{ opacity:0; transform:scale(0.9) translateY(-4px); } to{ opacity:1; transform:scale(1) translateY(0); } }
   @keyframes lightboxFadeIn{ from{ opacity:0; } to{ opacity:1; } }
@@ -297,7 +310,7 @@
     width:50px; height:50px; border-radius:50%; border:2px solid var(--line); background:var(--card);
     display:flex; align-items:center; justify-content:center; font-size:19px; cursor:pointer;
     transition:transform .15s var(--ease), background-color .15s var(--ease), border-color .15s var(--ease), box-shadow .15s var(--ease);
-    color:var(--ink-70);
+    color:var(--ink-70); position:relative;
   }
   .stamp-btn:active{transform:scale(0.92);}
   .stamp-btn.read.selected{ border-color:var(--forest); background:var(--forest); color:#fff; transform:scale(1.06); box-shadow:var(--shadow);}
@@ -2481,53 +2494,11 @@ function renderMemberSurvey(){
   renderTotalPagesCard('mTotalPagesNumber');
 }
 function playMarkFx(btn, type){
-  const r = btn.getBoundingClientRect();
-  const cx = r.left + r.width/2, cy = r.top + r.height/2;
-  const layer = document.createElement('div');
-  layer.className = 'mark-fx-layer';
-  document.body.appendChild(layer);
-  if(type==='read'){
-    const angles = [-70,-35,0,35,70,145,180,215];
-    angles.forEach((ang,i)=>{
-      const len = 22 + (i%3)*7;
-      const line = document.createElement('div');
-      line.className = 'mark-fx-speedline';
-      line.style.width = len+'px';
-      line.style.left = (cx - len/2) + 'px';
-      line.style.top = (cy - 1.5) + 'px';
-      line.style.transform = `rotate(${ang}deg) translateX(${-(len*0.85)}px)`;
-      line.style.transformOrigin = 'right center';
-      line.style.animationDelay = (i*8)+'ms';
-      layer.appendChild(line);
-    });
-    const check = document.createElement('div');
-    check.className = 'mark-fx-check';
-    check.textContent = '✓';
-    check.style.left = (cx-22)+'px';
-    check.style.top = (cy-28)+'px';
-    layer.appendChild(check);
-    setTimeout(()=>layer.remove(), 500);
-  } else {
-    const x = document.createElement('div');
-    x.className = 'mark-fx-x';
-    x.textContent = '✕';
-    x.style.left = (cx-22)+'px';
-    x.style.top = (cy-28)+'px';
-    layer.appendChild(x);
-    for(let i=0;i<9;i++){
-      const ang = (Math.PI*2*i/9) + (Math.random()*0.4-0.2);
-      const dist = 30 + Math.random()*26;
-      const shard = document.createElement('div');
-      shard.className = 'mark-fx-shard';
-      shard.style.setProperty('--dx', (Math.cos(ang)*dist)+'px');
-      shard.style.setProperty('--dy', (Math.sin(ang)*dist)+'px');
-      shard.style.setProperty('--rot', (Math.random()*300-150)+'deg');
-      shard.style.left = (cx-3.5)+'px';
-      shard.style.top = (cy-3.5)+'px';
-      layer.appendChild(shard);
-    }
-    setTimeout(()=>layer.remove(), 700);
-  }
+  const cls = type==='read' ? 'pop-read' : 'pop-skip';
+  btn.classList.remove('pop-read','pop-skip');
+  void btn.offsetWidth; // reflow — animasyonu her tıklamada baştan başlatmak için
+  btn.classList.add(cls);
+  setTimeout(()=> btn.classList.remove(cls), 560);
 }
 document.getElementById('mReadBtn').addEventListener('click', async ()=>{
   try{ playMarkFx(document.getElementById('mReadBtn'), 'read'); }catch(e){}
