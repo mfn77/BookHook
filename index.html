@@ -1153,7 +1153,7 @@ document.body.addEventListener('click', (e)=>{
   const chip = e.target.closest('.user-chip');
   if(chip && chip.dataset.uid) openProfileModal(chip.dataset.uid);
   const badge = e.target.closest('.badge-info-icon');
-  if(badge && badge.dataset.badgeLabel) showAnchoredPopover(badge, `🏅 ${escapeHtml(badge.dataset.badgeLabel)}`);
+  if(badge && badge.dataset.badgeLabel && !badge.closest('#profileModalPhotoWrap')) showAnchoredPopover(badge, `🏅 ${escapeHtml(badge.dataset.badgeLabel)}`);
   const pickBtn = e.target.closest('.emoji-pick-btn');
   if(pickBtn){
     setReaction(pickBtn.dataset.target, pickBtn.dataset.emoji).then(()=>{
