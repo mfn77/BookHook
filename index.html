@@ -419,6 +419,19 @@
         <div class="field"><label>Tarih</label><input type="date" id="editPastDate" /></div>
         <div id="editPastList"></div>
       </div>
+
+      <div class="card">
+        <h2>Geçmiş Haftaların Karnesi</h2>
+        <div class="card-desc-wrap">
+          <p class="muted">Herhangi bir geçmiş haftada kimin ne okuduğunu, "Bu haftanın karnesi" ile aynı tabloda görebilirsin.</p>
+        </div>
+        <div class="row" style="align-items:center; margin-bottom:10px;">
+          <button class="secondary tiny" id="editPastWeekPrevBtn" style="flex:0 0 auto;">◀ Önceki Hafta</button>
+          <div class="mono" id="editPastWeekRangeLabel" style="text-align:center; flex:1;"></div>
+          <button class="secondary tiny" id="editPastWeekNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
+        </div>
+        <div class="libcard"><table class="weekgrid weekday-table" id="editPastWeekGrid"></table></div>
+      </div>
     </section>
 
     <section class="tab" id="tab-week">
@@ -1472,7 +1485,7 @@ function switchTab(id){
 
 function renderTab(id){
   if(id==='today') renderAdminToday();
-  else if(id==='editpast') renderEditPastTab();
+  else if(id==='editpast'){ renderEditPastTab(); editPastWeekOffset=0; renderEditPastWeekReport(); }
   else if(id==='week'){ renderAdminWeek(); adminWeekOffset=0; renderAdminOwnWeek(); }
   else if(id==='draws'){ renderAdminDraws(); drawHistIndex.a=0; renderDrawHistoryCard('a'); }
   else if(id==='manual') renderManualTab();
@@ -1865,11 +1878,10 @@ async function renderEditPastTab(){
   });
 }
 
-/* ============ ADMIN: BU HAFTA ============ */
-async function renderAdminWeek(){
-  const table = document.getElementById('weekGrid');
+/* ============ ADMIN: BU HAFTA (ve genel olarak: seçilen herhangi bir hafta) ============ */
+async function renderWeekReportTable(monday, tableId){
+  const table = document.getElementById(tableId);
   showCachedOrPlaceholder(table, `<tr><td class="empty-state">Yükleniyor…</td></tr>`);
-  const monday = getMonday(nowLogical());
   const dates = weekDates(monday);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const uids = activeUids();
@@ -1898,7 +1910,21 @@ async function renderAdminWeek(){
   table.innerHTML = head + rows;
   markLoaded(table);
 }
+async function renderAdminWeek(){
+  await renderWeekReportTable(getMonday(nowLogical()), 'weekGrid');
+}
 document.getElementById('refreshWeekBtn').addEventListener('click', renderAdminWeek);
+
+let editPastWeekOffset = 0;
+async function renderEditPastWeekReport(){
+  const monday = addDays(getMonday(nowLogical()), editPastWeekOffset*7);
+  const dates = weekDates(monday);
+  document.getElementById('editPastWeekRangeLabel').textContent = `${fmtShort(dates[0])} — ${fmtShort(dates[6])}`;
+  document.getElementById('editPastWeekNextBtn').disabled = editPastWeekOffset>=0;
+  await renderWeekReportTable(monday, 'editPastWeekGrid');
+}
+document.getElementById('editPastWeekPrevBtn').addEventListener('click', ()=>{ editPastWeekOffset--; renderEditPastWeekReport(); });
+document.getElementById('editPastWeekNextBtn').addEventListener('click', ()=>{ if(editPastWeekOffset<0){ editPastWeekOffset++; renderEditPastWeekReport(); } });
 
 /* ============ ADMIN: KURA (gerçek, esnek hafta seçimi) ============ */
 document.getElementById('drawWeekPicker').value = toStr(addDays(getMonday(nowLogical()),-7));
