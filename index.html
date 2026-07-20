@@ -79,7 +79,7 @@
   }
   .sidebar-header{ margin-bottom:14px; flex:0 0 auto; position:sticky; top:calc(16px + env(safe-area-inset-top, 0px)); }
   .sidebar-tabs.tabs{ position:sticky; top:calc(66px + env(safe-area-inset-top, 0px)); }
-  .sidebar-logo{ width:34px; height:34px; border-radius:10px; display:block; }
+  .sidebar-logo{ width:30px; height:auto; display:block; }
   .content-col{ flex:1; min-width:0; max-width:100%; display:flex; flex-direction:column; overflow-x:hidden; }
   @media (max-width:380px){
     .sidebar{ width:62px; }
@@ -329,9 +329,9 @@
   .field label{display:block; font-family:'Cantarell', sans-serif; font-size:12px; font-weight:600; color:var(--ink-70); margin-bottom:5px;}
   .auth-error{color:var(--cloth-dark); font-size:13px; margin-bottom:10px; font-family:'Cantarell', sans-serif;}
   .banned-notice{background:rgba(224,27,36,0.08); border:none; border-left:4px solid var(--cloth); color:var(--cloth-dark); padding:12px 14px; border-radius:10px; font-size:13.5px; margin-bottom:14px;}
-  .center-logo{text-align:center; margin-bottom:18px;}
-  .center-logo-frame{ display:inline-block; background:#fff; border-radius:26px; padding:7px; box-shadow:var(--shadow); }
-  .center-logo img{width:64px; height:64px; border-radius:20px; display:block;}
+  .center-logo{text-align:center; margin-bottom:22px;}
+  .center-logo-mark img{ width:auto; height:72px; display:block; margin:0 auto; }
+  .center-logo-word{ font-family:'Cantarell', sans-serif; font-weight:700; font-size:24px; color:var(--ink); margin-top:6px; letter-spacing:0.2px; }
   .loading-note{text-align:center; padding:40px; color:var(--ink-70); font-family:'Cantarell', sans-serif; font-size:13px;}
 </style>
 </head>
@@ -340,7 +340,10 @@
 <div id="loadingScreen" class="loading-note">Yükleniyor…</div>
 
 <div id="authScreen" class="auth-wrap" style="display:none;">
-  <div class="center-logo"><div class="center-logo-frame"><img src="./icon-192.png" alt="BookHook"/></div></div>
+  <div class="center-logo">
+    <div class="center-logo-mark"><img src="./logo-mark.png" alt="BookHook" /></div>
+    <div class="center-logo-word">BookHook</div>
+  </div>
   <div id="bannedNotice" class="banned-notice" style="display:none;"></div>
   <div class="auth-toggle">
     <button id="showLoginBtn" class="active">Giriş Yap</button>
@@ -376,7 +379,7 @@
 <div id="appRoot" style="display:none;">
   <div class="app-shell">
     <aside class="sidebar" id="sidebarNav">
-      <div class="sidebar-header"><img src="./icon-192.png" alt="BookHook" class="sidebar-logo" /></div>
+      <div class="sidebar-header"><img src="./logo-mark.png" alt="BookHook" class="sidebar-logo" /></div>
       <nav class="sidebar-tabs tabs" id="tabs"></nav>
     </aside>
     <div class="content-col">
