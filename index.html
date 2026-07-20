@@ -42,7 +42,9 @@
     color-scheme: dark;
   }
   html, body{ transition: background-color .25s var(--ease); }
-  *{box-sizing:border-box;}
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  button, a, input, select, textarea, [tabindex]{ outline:none; }
+  button:focus, a:focus, [tabindex]:focus{ outline:none; }
   html,body{margin:0;padding:0; width:100%; overflow-x:hidden;}
   body{
     background:
@@ -2524,8 +2526,7 @@ function playMarkFx(btn, type){
   }
 }
 document.getElementById('mReadBtn').addEventListener('click', async ()=>{
-  const wasRead = todayAnswers[currentUid]==='read';
-  if(!wasRead) playMarkFx(document.getElementById('mReadBtn'), 'read');
+  try{ playMarkFx(document.getElementById('mReadBtn'), 'read'); }catch(e){}
   await markStatus(currentUid,'read');
   renderMemberSurvey();
   notifyAdmins(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week');
@@ -2533,8 +2534,7 @@ document.getElementById('mReadBtn').addEventListener('click', async ()=>{
   await checkAndAwardBadges(currentUid, s);
 });
 document.getElementById('mSkipBtn').addEventListener('click', async ()=>{
-  const wasSkip = todayAnswers[currentUid]==='skip';
-  if(!wasSkip) playMarkFx(document.getElementById('mSkipBtn'), 'skip');
+  try{ playMarkFx(document.getElementById('mSkipBtn'), 'skip'); }catch(e){}
   await markStatus(currentUid,'skip'); renderMemberSurvey(); notifyAdmins(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week');
 });
 
