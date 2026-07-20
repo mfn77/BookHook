@@ -227,14 +227,25 @@
     100%{ transform:scale(2.1); opacity:0; }
   }
   .stamp-btn.pop-read::before{
-    content:''; position:absolute; inset:0; border-radius:50%;
-    box-shadow:0 0 0.95em 0.32em var(--forest); opacity:0.55; pointer-events:none;
-    animation: glowFade 0.5s ease-out forwards;
+    content:''; position:absolute; inset:0; border-radius:50%; pointer-events:none;
+    animation: glowLingerRead 1.9s ease-out forwards;
   }
   .stamp-btn.pop-skip::before{
-    content:''; position:absolute; inset:0; border-radius:50%;
-    box-shadow:0 0 0.95em 0.32em var(--cloth); opacity:0.55; pointer-events:none;
-    animation: glowFade 0.5s ease-out forwards;
+    content:''; position:absolute; inset:0; border-radius:50%; pointer-events:none;
+    animation: fireDieSmoke 2.1s ease-out forwards;
+  }
+  @keyframes glowLingerRead{
+    0%{ box-shadow:0 0 0.95em 0.32em var(--forest); opacity:0.8; }
+    18%{ box-shadow:0 0 1.15em 0.42em var(--forest); opacity:0.7; }
+    100%{ box-shadow:0 0 0.25em 0.08em var(--forest); opacity:0; }
+  }
+  @keyframes fireDieSmoke{
+    0%{ box-shadow:0 0 0.9em 0.3em #ff7b00, 0 0 1.5em 0.5em #d81e05; opacity:0.9; }
+    14%{ box-shadow:0 0 0.75em 0.28em #ff9200, 0 0 1.3em 0.45em #c21600; opacity:0.82; }
+    28%{ box-shadow:0 0 0.6em 0.26em #ff8a00, 0 0 1.15em 0.4em #9c1200; opacity:0.72; }
+    45%{ box-shadow:0 0 0.55em 0.3em #a6a6a6, 0 0 1.2em 0.55em #7d7d7d; opacity:0.5; }
+    70%{ box-shadow:0 0 0.45em 0.36em #b3b3b3, 0 0 1.35em 0.7em #909090; opacity:0.26; }
+    100%{ box-shadow:0 0 0.3em 0.42em #c2c2c2; opacity:0; }
   }
   @keyframes glowFade{ 0%{ opacity:0.7; } 100%{ opacity:0; } }
   @keyframes modalPopIn{ from{ opacity:0; transform:scale(0.93) translateY(6px); } to{ opacity:1; transform:scale(1) translateY(0); } }
@@ -2501,7 +2512,7 @@ function playMarkFx(btn, type){
   btn.classList.remove('pop-read','pop-skip');
   void btn.offsetWidth; // reflow — animasyonu her tıklamada baştan başlatmak için
   btn.classList.add(cls);
-  setTimeout(()=> btn.classList.remove(cls), 560);
+  setTimeout(()=> btn.classList.remove(cls), 2150);
 }
 document.getElementById('mReadBtn').addEventListener('click', async ()=>{
   try{ playMarkFx(document.getElementById('mReadBtn'), 'read'); }catch(e){}
