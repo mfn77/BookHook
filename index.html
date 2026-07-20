@@ -292,6 +292,19 @@
   .reaction-pill{ border:1.5px solid var(--line); background:var(--card); border-radius:14px; padding:2px 8px; font-size:13.5px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; line-height:1.6; }
   .reaction-pill.mine{ background:rgba(33,144,164,0.14); border-color:var(--gold); }
   .reaction-pill .rcount{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
+  #reactionDrawer{
+    display:none; position:fixed; z-index:240; background:var(--card); border:1px solid var(--line); border-radius:20px;
+    box-shadow:var(--shadow-lg); padding:6px 7px; align-items:center; gap:1px; white-space:nowrap;
+    transform-origin:left center; transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s;
+    opacity:0; transform:translateY(-50%) scaleX(0);
+  }
+  #reactionDrawer.open{ opacity:1; transform:translateY(-50%) scaleX(1); }
+  #reactionDrawer.flip-left{ transform-origin:right center; }
+  #reactionDrawer .emoji-pick-btn{ font-size:19px; padding:4px 5px; border:none; background:none; cursor:pointer; border-radius:8px; }
+  #reactionDrawer .emoji-pick-btn:hover{ background:rgba(33,144,164,0.10); }
+  #reactionDrawer .emoji-pick-btn-toggle{ font-size:15px; padding:4px 6px; color:var(--ink-70); border:none; background:none; cursor:pointer; }
+  #reactionDrawer .drawer-custom-input{ width:52px; font-size:20px; text-align:center; padding:4px; border:1.5px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); }
+  .reaction-add-btn.expanded{ transform:scale(1.22); background:var(--gold); color:#fff; border-color:var(--gold); }
   .reaction-add-btn{ border:1.5px solid var(--line); background:var(--card); border-radius:50%; width:26px; height:26px; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; line-height:1; }
   .emoji-pick-btn{ font-size:26px; border:none; background:none; cursor:pointer; padding:6px; border-radius:10px; }
   .emoji-pick-btn:hover{ background:rgba(33,144,164,0.10); }
@@ -358,7 +371,7 @@
     border:none; background:transparent; color:rgba(255,255,255,0.72); font-family:'Cantarell',sans-serif;
     font-weight:600; font-size:13.5px; padding:9px 20px; border-radius:18px; cursor:pointer; transition: background 0.2s, color 0.2s;
   }
-  .social-pill.active{ background:rgba(255,255,255,0.96); color:var(--ink); }
+  .social-pill.active{ background:var(--gold); color:#fff; }
   .post-card{
     background:var(--card); border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer;
   }
@@ -932,6 +945,8 @@
 
 <div id="anchoredPopover" style="display:none; position:absolute; z-index:230; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-lg); padding:10px 14px; font-size:13.5px; max-width:220px; text-align:center;"></div>
 
+<div id="reactionDrawer"></div>
+
 <div id="postModal" class="modal-overlay-anim" style="display:none; position:fixed; inset:0; background:rgba(20,20,25,0.65); z-index:250; align-items:center; justify-content:center; padding:16px;">
   <div class="card modal-card-anim" style="max-width:480px; width:100%; max-height:88vh; overflow-y:auto; position:relative; margin-bottom:0;">
     <button id="postModalClose" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-70);">✕</button>
@@ -1335,7 +1350,7 @@ document.body.addEventListener('click', (e)=>{
   if(pickBtn){
     const target = pickBtn.dataset.target, emoji = pickBtn.dataset.emoji;
     setReaction(target, emoji).then(async ()=>{
-      closeModal('bookInfoModal');
+      closeReactionDrawer();
       if(pendingReactionRefresh) await pendingReactionRefresh();
       const bar = document.querySelector(`.reaction-bar[data-target="${target}"]`);
       const pill = bar && Array.from(bar.querySelectorAll('.reaction-pill')).find(p=>p.dataset.emoji===emoji);
@@ -3538,7 +3553,7 @@ document.getElementById('bhSaveBtn').addEventListener('click', async ()=>{
   }catch(err){ alert('Eklenemedi: '+(err.message||err)); }
 });
 
-const REACTION_EMOJIS = ['👍','❤️','😂','😮','👏'];
+const REACTION_EMOJIS = ['👍','❤️','😂','😮','😢','🔥','👏','🎉','🤔','👎'];
 function reactionTargetRef(target){
   const [kind, ids] = target.split(':');
   if(kind==='rec') return doc(db,'recommendations',ids);
@@ -3557,13 +3572,67 @@ function renderReactionBar(reactions, target){
   }).join('');
   return `<div class="reaction-bar" data-target="${target}">${pills}<button type="button" class="reaction-add-btn" data-target="${target}">🙂</button></div>`;
 }
-function openReactionPicker(target){
-  const html = `<h2 style="margin-bottom:10px;">Tepki Seç</h2>
-    <div style="display:flex; justify-content:center; gap:4px;">
-      ${REACTION_EMOJIS.map(em=>`<button type="button" class="emoji-pick-btn" data-target="${target}" data-emoji="${em}">${em}</button>`).join('')}
-    </div>`;
-  showSimpleInfoModal(html);
+let currentReactionDrawerBtn = null;
+function closeReactionDrawer(){
+  const drawer = document.getElementById('reactionDrawer');
+  drawer.classList.remove('open');
+  setTimeout(()=>{ if(!drawer.classList.contains('open')) drawer.style.display='none'; }, 200);
+  if(currentReactionDrawerBtn) currentReactionDrawerBtn.classList.remove('expanded');
+  currentReactionDrawerBtn = null;
 }
+function renderDrawerEmojiRow(target){
+  const drawer = document.getElementById('reactionDrawer');
+  drawer.innerHTML = REACTION_EMOJIS.map(em=>`<button type="button" class="emoji-pick-btn" data-target="${target}" data-emoji="${em}">${em}</button>`).join('') +
+    `<button type="button" class="emoji-pick-btn-toggle" id="drawerCustomToggleBtn" data-target="${target}">+</button>`;
+  const toggleBtn = document.getElementById('drawerCustomToggleBtn');
+  toggleBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    drawer.innerHTML = `<input type="text" class="drawer-custom-input" id="drawerCustomInput" placeholder="😀" maxlength="8" />
+      <button type="button" class="emoji-pick-btn-toggle" id="drawerCustomSendBtn">✓</button>`;
+    const input = document.getElementById('drawerCustomInput');
+    input.focus();
+    document.getElementById('drawerCustomSendBtn').addEventListener('click', async (ev)=>{
+      ev.stopPropagation();
+      const val = input.value.trim();
+      if(!val) return;
+      await setReaction(target, val);
+      if(pendingReactionRefresh) await pendingReactionRefresh();
+      const bar = document.querySelector(`.reaction-bar[data-target="${target}"]`);
+      const pill = bar && Array.from(bar.querySelectorAll('.reaction-pill')).find(p=>p.dataset.emoji===val);
+      if(pill){ pill.classList.add('reaction-burst'); setTimeout(()=>pill.classList.remove('reaction-burst'), 300); }
+      closeReactionDrawer();
+    });
+  });
+}
+function toggleReactionDrawer(btn, target){
+  if(currentReactionDrawerBtn === btn){ closeReactionDrawer(); return; }
+  closeReactionDrawer();
+  const drawer = document.getElementById('reactionDrawer');
+  renderDrawerEmojiRow(target);
+  drawer.style.display = 'flex';
+  drawer.classList.remove('open','flip-left');
+  const r = btn.getBoundingClientRect();
+  void drawer.offsetWidth; // boyutunu ölçmek için önce görünür yap
+  const drawerWidth = drawer.offsetWidth || 220;
+  const fitsRight = (r.right + 8 + drawerWidth) < window.innerWidth;
+  if(fitsRight){
+    drawer.style.left = (r.right + 8) + 'px';
+    drawer.style.removeProperty('right');
+  } else {
+    drawer.classList.add('flip-left');
+    drawer.style.left = (r.left - 8 - drawerWidth) + 'px';
+  }
+  drawer.style.top = (r.top + r.height/2) + 'px';
+  requestAnimationFrame(()=>{ drawer.classList.add('open'); });
+  btn.classList.add('expanded');
+  currentReactionDrawerBtn = btn;
+}
+document.addEventListener('click', (e)=>{
+  const drawer = document.getElementById('reactionDrawer');
+  if(drawer.classList.contains('open') && !drawer.contains(e.target) && !e.target.closest('.reaction-add-btn')){
+    closeReactionDrawer();
+  }
+});
 function showReactorsModal(uidsCsv, emoji){
   const uids = uidsCsv ? uidsCsv.split(',').filter(Boolean) : [];
   const names = uids.map(uid=> escapeHtml((usersCache[uid]&&usersCache[uid].name) || 'Bilinmeyen')).join('<br/>');
@@ -3577,7 +3646,7 @@ async function setReaction(target, emoji){
     const reactions = snap.data().reactions || {};
     const hasThis = (reactions[emoji]||[]).includes(currentUid);
     const updates = {};
-    REACTION_EMOJIS.forEach(em=>{
+    Object.keys(reactions).forEach(em=>{
       if(em!==emoji && (reactions[em]||[]).includes(currentUid)){
         updates[`reactions.${em}`] = arrayRemove(currentUid);
       }
@@ -3629,10 +3698,12 @@ function postBodyHtml(p){
   }
 }
 function renderPostCard(p){
+  const canDelete = p.uid===currentUid || myProfile.role==='admin';
   return `<div class="post-card modal-card-anim" data-post-id="${p.id}">
     <div class="post-card-head">
       ${userChipHtml(p.uid)}
       <span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span>
+      ${canDelete?`<button type="button" class="rec-comment-del" data-del-post="${p.id}" style="margin-left:auto;" title="Sil">✕</button>`:''}
     </div>
     <div class="post-card-body">${postBodyHtml(p)}</div>
     <div class="post-card-footer">
@@ -3654,11 +3725,18 @@ async function renderTimelineTab(){
   markLoaded(feed);
 }
 function wirePostCards(container){
+  container.querySelectorAll('[data-del-post]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      if(!confirm('Bu gönderiyi silmek istediğine emin misin?')) return;
+      try{ await deleteDoc(doc(db,'posts',btn.dataset.delPost)); renderTimelineTab(); }catch(err){ alert('Silinemedi: '+(err.message||err)); }
+    });
+  });
   container.querySelectorAll('.reaction-pill').forEach(btn=>{
     btn.addEventListener('click', (e)=>{ e.stopPropagation(); showReactorsModal(btn.dataset.uids, btn.dataset.emoji); });
   });
   container.querySelectorAll('.reaction-add-btn').forEach(btn=>{
-    btn.addEventListener('click', (e)=>{ e.stopPropagation(); pendingReactionRefresh = renderTimelineTab; openReactionPicker(btn.dataset.target); });
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); pendingReactionRefresh = renderTimelineTab; toggleReactionDrawer(btn, btn.dataset.target); });
   });
   container.querySelectorAll('.post-card').forEach(card=>{
     card.addEventListener('click', (e)=>{
@@ -3687,7 +3765,7 @@ async function openPostModal(postId){
     ${(c.uid===currentUid||myProfile.role==='admin')?`<button class="rec-comment-del" data-del-postcomment="${c.id}">✕</button>`:''}
   </div>`).join('');
   body.innerHTML = `
-    <div class="post-card-head">${userChipHtml(p.uid)}<span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span></div>
+    <div class="post-card-head">${userChipHtml(p.uid)}<span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span>${(p.uid===currentUid||myProfile.role==='admin')?`<button type="button" class="rec-comment-del" id="postModalDelBtn" style="margin-left:auto;" title="Sil">✕</button>`:''}</div>
     <div class="post-card-body" style="margin-bottom:10px;">${postBodyHtml(p)}</div>
     ${renderReactionBar(p.reactions, `post:${p.id}`)}
     <div class="rec-comments-label">💬 ${comments.length} Yorum</div>
@@ -3701,13 +3779,18 @@ async function openPostModal(postId){
     btn.addEventListener('click', ()=> showReactorsModal(btn.dataset.uids, btn.dataset.emoji));
   });
   body.querySelectorAll('.reaction-add-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{ pendingReactionRefresh = ()=>openPostModal(postId); openReactionPicker(btn.dataset.target); });
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); pendingReactionRefresh = ()=>openPostModal(postId); toggleReactionDrawer(btn, btn.dataset.target); });
   });
   body.querySelectorAll('[data-del-postcomment]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       if(!confirm('Bu yorumu silmek istediğine emin misin?')) return;
       try{ await deleteDoc(doc(db,'posts',postId,'comments',btn.dataset.delPostcomment)); await updateDoc(doc(db,'posts',postId), {commentCount: Math.max(0,(p.commentCount||1)-1)}); openPostModal(postId); }catch(e){ alert('Silinemedi: '+(e.message||e)); }
     });
+  });
+  const delPostBtn = document.getElementById('postModalDelBtn');
+  if(delPostBtn) delPostBtn.addEventListener('click', async ()=>{
+    if(!confirm('Bu gönderiyi silmek istediğine emin misin?')) return;
+    try{ await deleteDoc(doc(db,'posts',postId)); closeModal('postModal'); renderTimelineTab(); }catch(err){ alert('Silinemedi: '+(err.message||err)); }
   });
   document.getElementById('postCommentSendBtn').addEventListener('click', async ()=>{
     const input = document.getElementById('postCommentInput');
@@ -3780,6 +3863,110 @@ function groupAvg(ratings){
   if(!vals.length) return 0;
   return vals.reduce((a,b)=>a+b,0)/vals.length;
 }
+const CURATED_FEATURED_SEED = [
+  {title:"To Kill a Mockingbird", author:"Harper Lee"},
+  {title:"1984", author:"George Orwell"},
+  {title:"Pride and Prejudice", author:"Jane Austen"},
+  {title:"The Great Gatsby", author:"F. Scott Fitzgerald"},
+  {title:"The Catcher in the Rye", author:"J.D. Salinger"},
+  {title:"The Fellowship of the Ring", author:"J.R.R. Tolkien"},
+  {title:"The Hobbit", author:"J.R.R. Tolkien"},
+  {title:"Harry Potter and the Sorcerer's Stone", author:"J.K. Rowling"},
+  {title:"Animal Farm", author:"George Orwell"},
+  {title:"Brave New World", author:"Aldous Huxley"},
+  {title:"Fahrenheit 451", author:"Ray Bradbury"},
+  {title:"The Alchemist", author:"Paulo Coelho"},
+  {title:"One Hundred Years of Solitude", author:"Gabriel García Márquez"},
+  {title:"Crime and Punishment", author:"Fyodor Dostoevsky"},
+  {title:"War and Peace", author:"Leo Tolstoy"},
+  {title:"Anna Karenina", author:"Leo Tolstoy"},
+  {title:"Jane Eyre", author:"Charlotte Brontë"},
+  {title:"Wuthering Heights", author:"Emily Brontë"},
+  {title:"Moby-Dick", author:"Herman Melville"},
+  {title:"The Adventures of Huckleberry Finn", author:"Mark Twain"},
+  {title:"Don Quixote", author:"Miguel de Cervantes"},
+  {title:"The Odyssey", author:"Homer"},
+  {title:"Frankenstein", author:"Mary Shelley"},
+  {title:"Dracula", author:"Bram Stoker"},
+  {title:"The Picture of Dorian Gray", author:"Oscar Wilde"},
+  {title:"Little Women", author:"Louisa May Alcott"},
+  {title:"The Lion, the Witch and the Wardrobe", author:"C.S. Lewis"},
+  {title:"Charlotte's Web", author:"E.B. White"},
+  {title:"The Diary of a Young Girl", author:"Anne Frank"},
+  {title:"Night", author:"Elie Wiesel"},
+  {title:"The Kite Runner", author:"Khaled Hosseini"},
+  {title:"A Thousand Splendid Suns", author:"Khaled Hosseini"},
+  {title:"Life of Pi", author:"Yann Martel"},
+  {title:"The Book Thief", author:"Markus Zusak"},
+  {title:"The Fault in Our Stars", author:"John Green"},
+  {title:"The Perks of Being a Wallflower", author:"Stephen Chbosky"},
+  {title:"The Hunger Games", author:"Suzanne Collins"},
+  {title:"Divergent", author:"Veronica Roth"},
+  {title:"Percy Jackson and the Lightning Thief", author:"Rick Riordan"},
+  {title:"Dune", author:"Frank Herbert"},
+  {title:"Ender's Game", author:"Orson Scott Card"},
+  {title:"The Martian", author:"Andy Weir"},
+  {title:"Ready Player One", author:"Ernest Cline"},
+  {title:"The Handmaid's Tale", author:"Margaret Atwood"},
+  {title:"Slaughterhouse-Five", author:"Kurt Vonnegut"},
+  {title:"The Road", author:"Cormac McCarthy"},
+  {title:"Beloved", author:"Toni Morrison"},
+  {title:"The Color Purple", author:"Alice Walker"},
+  {title:"Their Eyes Were Watching God", author:"Zora Neale Hurston"},
+  {title:"Invisible Man", author:"Ralph Ellison"},
+  {title:"East of Eden", author:"John Steinbeck"},
+  {title:"Of Mice and Men", author:"John Steinbeck"},
+  {title:"The Grapes of Wrath", author:"John Steinbeck"},
+  {title:"A Tale of Two Cities", author:"Charles Dickens"},
+  {title:"Great Expectations", author:"Charles Dickens"},
+  {title:"Oliver Twist", author:"Charles Dickens"},
+  {title:"Les Misérables", author:"Victor Hugo"},
+  {title:"The Count of Monte Cristo", author:"Alexandre Dumas"},
+  {title:"Sapiens: A Brief History of Humankind", author:"Yuval Noah Harari"},
+  {title:"Educated", author:"Tara Westover"},
+  {title:"Atomic Habits", author:"James Clear"},
+  {title:"Man's Search for Meaning", author:"Viktor Frankl"},
+  {title:"The Power of Now", author:"Eckhart Tolle"},
+  {title:"Thinking, Fast and Slow", author:"Daniel Kahneman"},
+  {title:"Gone Girl", author:"Gillian Flynn"},
+  {title:"The Girl with the Dragon Tattoo", author:"Stieg Larsson"},
+  {title:"And Then There Were None", author:"Agatha Christie"},
+  {title:"The Da Vinci Code", author:"Dan Brown"},
+  {title:"Norwegian Wood", author:"Haruki Murakami"},
+  {title:"Kafka on the Shore", author:"Haruki Murakami"},
+  {title:"The Little Prince", author:"Antoine de Saint-Exupéry"},
+  {title:"Siddhartha", author:"Hermann Hesse"},
+  {title:"Meditations", author:"Marcus Aurelius"},
+  {title:"The Silent Patient", author:"Alex Michaelides"},
+  {title:"Where the Crawdads Sing", author:"Delia Owens"},
+  {title:"Circe", author:"Madeline Miller"},
+  {title:"The Song of Achilles", author:"Madeline Miller"},
+  {title:"Suç ve Ceza", author:"Fyodor Dostoyevski"},
+  {title:"Serseri", author:"Sabahattin Ali"},
+  {title:"Tutunamayanlar", author:"Oğuz Atay"},
+  {title:"İnce Memed", author:"Yaşar Kemal"}
+];
+async function seedFeaturedBooks(){
+  if(!confirm(`${CURATED_FEATURED_SEED.length} kitap "Tavsiye Kitaplar"a eklenecek, kapak/bilgi çekmek biraz sürebilir (1-2 dakika). Daha önce eklediysen tekrar eklenip kopya oluşabilir. Devam edilsin mi?`)) return;
+  showToast('Ekleniyor, bu biraz sürebilir…');
+  let added = 0;
+  for(const b of CURATED_FEATURED_SEED){
+    try{
+      const items = await searchOpenLibrary(`${b.title} ${b.author}`);
+      const found = items[0];
+      await addDoc(collection(db,'discoverFeatured'), {
+        title: found ? found.title : b.title,
+        author: found ? found.author : b.author,
+        cover: found ? found.cover : '',
+        workKey: found ? found.workKey : '',
+        approved: true, addedBy: currentUid, addedByName: myProfile.name, createdAt: new Date().toISOString()
+      });
+      added++;
+    }catch(e){}
+  }
+  showToast(`${added} kitap eklendi!`);
+  renderDiscoverHome();
+}
 function openBookPickerModal(onPick){
   showSimpleInfoModal(`<h2 style="margin-bottom:10px;">Kitap Ekle</h2>
     <div class="field" style="text-align:left;"><label>Kitap Ara</label><input type="text" id="pickerBookInput" autocomplete="off" placeholder="kitap adını yazmaya başla" /><div id="pickerBookSuggest" class="book-suggest-box"></div></div>`);
@@ -3840,6 +4027,9 @@ async function renderDiscoverHome(){
   html += `<div class="discover-cat-title">📚 Tavsiye Kitaplar</div>`;
   if(!featured.length){
     html += `<div class="empty-state"><span class="big">📚</span>Henüz tavsiye kitap eklenmemiş.</div>`;
+    if(myProfile.role==='admin'){
+      html += `<button type="button" class="secondary" id="discoverSeedBtn" style="width:100%; margin-bottom:10px;">🌱 Beğenilen 80 Kitaplık Listeyle Doldur</button>`;
+    }
   }
   html += featured.map((b,i)=>`<div class="discover-featured-card" data-featured-idx="${i}">
     ${b.cover?`<img src="${b.cover}" class="discover-featured-cover" />`:`<div class="discover-featured-cover"></div>`}
@@ -3847,6 +4037,8 @@ async function renderDiscoverHome(){
   </div>`).join('');
   html += `<button type="button" class="discover-add-card" id="discoverAddFeaturedBtn" style="width:100%; aspect-ratio:auto; height:52px; margin-top:8px;">+</button>`;
   main.innerHTML = html;
+  const seedBtn = document.getElementById('discoverSeedBtn');
+  if(seedBtn) seedBtn.addEventListener('click', seedFeaturedBooks);
   main.querySelectorAll('[data-featured-idx]').forEach(card=>{
     card.addEventListener('click', ()=> openBookDiscoverModal(featured[parseInt(card.dataset.featuredIdx,10)]));
   });
@@ -4067,7 +4259,7 @@ function wireRecCards(box, items, isGroup){
     btn.addEventListener('click', ()=>{ showReactorsModal(btn.dataset.uids, btn.dataset.emoji); });
   });
   box.querySelectorAll('.reaction-add-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{ pendingReactionRefresh = isGroup ? renderGroupRecs : renderPersonalRecs; openReactionPicker(btn.dataset.target); });
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); pendingReactionRefresh = isGroup ? renderGroupRecs : renderPersonalRecs; toggleReactionDrawer(btn, btn.dataset.target); });
   });
   box.querySelectorAll('[data-del-rec]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
