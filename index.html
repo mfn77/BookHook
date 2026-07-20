@@ -2509,10 +2509,22 @@ function renderMemberSurvey(){
 }
 function playMarkFx(btn, type){
   const cls = type==='read' ? 'pop-read' : 'pop-skip';
-  btn.classList.remove('pop-read','pop-skip');
-  void btn.offsetWidth; // reflow — animasyonu her tıklamada baştan başlatmak için
-  btn.classList.add(cls);
-  setTimeout(()=> btn.classList.remove(cls), 2150);
+  const r = btn.getBoundingClientRect();
+  const ghost = btn.cloneNode(true);
+  ghost.classList.remove('selected');
+  ghost.removeAttribute('id');
+  ghost.style.position = 'fixed';
+  ghost.style.left = r.left + 'px';
+  ghost.style.top = r.top + 'px';
+  ghost.style.width = r.width + 'px';
+  ghost.style.height = r.height + 'px';
+  ghost.style.margin = '0';
+  ghost.style.zIndex = '500';
+  ghost.style.pointerEvents = 'none';
+  document.body.appendChild(ghost);
+  void ghost.offsetWidth; // reflow — animasyonu tetiklemek için
+  ghost.classList.add(cls);
+  setTimeout(()=> ghost.remove(), 2300);
 }
 document.getElementById('mReadBtn').addEventListener('click', async ()=>{
   try{ playMarkFx(document.getElementById('mReadBtn'), 'read'); }catch(e){}
