@@ -2660,7 +2660,7 @@ async function buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver){
     } else if(req && req.shipped){
       html += `<div class="receipt">
         <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${userChipHtml(p.giverUid)}</span> kitabını gönderdi 📮</div>
-        <div class="muted">Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></div>
+        <div class="muted" style="display:flex; align-items:center; gap:8px;">${req.bookCover?`<img src="${req.bookCover}" alt="" style="width:32px;height:48px;object-fit:cover;border-radius:4px;box-shadow:var(--shadow);" onerror="this.style.display='none';" />`:''}<span>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
         <button class="primary gf-received" data-reqid="${reqId}" data-giver="${p.giverUid}" style="margin-top:8px;">📬 Kitabı Aldım</button>
       </div>`;
     } else {
@@ -2672,7 +2672,8 @@ async function buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver){
         <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${userChipHtml(p.giverUid)}</span> sana kitap hediye edecek</div>
         <div class="gift-form" data-week="${latest.weekStart}" data-giver="${p.giverUid}" data-receiver="${p.receiverUid}">
           <div class="field"><label>Ad Soyad</label><input type="text" class="gf-name" value="${escapeHtml(prefillName)}" /></div>
-          <div class="field"><label>İstediğin kitap</label><input type="text" class="gf-book" value="${escapeHtml(req?.bookTitle||'')}" /></div>
+          <div class="field"><label>İstediğin kitap</label><input type="text" class="gf-book" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" value="${escapeHtml(req?.bookTitle||'')}" /><div class="gf-book-suggest book-suggest-box"></div></div>
+          <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" class="gf-cover" value="${escapeHtml(req?.bookCover||'')}" placeholder="internetten bulduğun kapak görselinin linki" /></div>
           <div class="field"><label>Site (opsiyonel)</label><input type="text" class="gf-site" value="${escapeHtml(req?.site||'')}" placeholder="örn. trendyol, d&r..." /></div>
           <div class="field"><label>Adres</label><input type="text" class="gf-address" value="${escapeHtml(prefillAddress)}" /></div>
           <div class="field"><label>Telefon</label><input type="text" class="gf-phone" value="${escapeHtml(prefillPhone)}" /></div>
@@ -2693,7 +2694,7 @@ async function buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver){
       html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${userChipHtml(p.receiverUid)}'e gönderdiğini işaretledin</div><div class="empty-note">📬 Alıcı onayı bekleniyor.</div></div>`;
     } else if(req){
       html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${userChipHtml(p.receiverUid)}'e kitap hediye edeceksin</div>
-        <div class="muted">Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>İstediği kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>
+        <div class="muted" style="display:flex; gap:10px;">${req.bookCover?`<img src="${req.bookCover}" alt="" style="width:40px;height:60px;object-fit:cover;border-radius:5px;box-shadow:var(--shadow); flex:0 0 auto;" onerror="this.style.display='none';" />`:''}<span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>İstediği kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>
         <button class="secondary gf-shipped" data-reqid="${reqId}" data-receiver="${p.receiverUid}" style="margin-top:8px;">📮 Kitabı Gönderdim</button>
       </div>`;
     } else {
@@ -2718,7 +2719,7 @@ async function buildAdminPendingHtml(){
       if(req && req.shipped){
         html += `<div class="empty-note">📮 Gönderildi, alıcı onayı bekleniyor.</div>`;
       } else if(req){
-        html += `<div class="muted">Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</div>`;
+        html += `<div class="muted" style="display:flex; gap:10px;">${req.bookCover?`<img src="${req.bookCover}" alt="" style="width:40px;height:60px;object-fit:cover;border-radius:5px;box-shadow:var(--shadow); flex:0 0 auto;" onerror="this.style.display='none';" />`:''}<span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>`;
       } else {
         html += `<div class="empty-note">Alıcı henüz istek formunu doldurmadı.</div>`;
       }
@@ -2730,11 +2731,17 @@ async function buildAdminPendingHtml(){
 
 function wireGiftFormHandlers(content){
   content.querySelectorAll('.gift-form').forEach(formEl=>{
+    attachBookAutocompleteEl(
+      formEl.querySelector('.gf-book'),
+      formEl.querySelector('.gf-cover'),
+      formEl.querySelector('.gf-book-suggest')
+    );
     formEl.querySelector('.gf-submit').addEventListener('click', async ()=>{
       const weekStart = formEl.dataset.week, giverUid = formEl.dataset.giver, receiverUid = formEl.dataset.receiver;
       const reqId = `${weekStart}_${giverUid}_${receiverUid}`;
       const recipientName = formEl.querySelector('.gf-name').value.trim();
       const bookTitle = formEl.querySelector('.gf-book').value.trim();
+      const bookCover = formEl.querySelector('.gf-cover').value.trim();
       const site = formEl.querySelector('.gf-site').value.trim();
       const address = formEl.querySelector('.gf-address').value.trim();
       const phone = formEl.querySelector('.gf-phone').value.trim();
@@ -2743,7 +2750,7 @@ function wireGiftFormHandlers(content){
         await setDoc(doc(db,'giftRequests',reqId), {
           weekStart, giverUid, receiverUid,
           giverName: usersCache[giverUid]?.name||'', receiverName: usersCache[receiverUid]?.name||'',
-          recipientName, bookTitle, site, address, phone, shipped:false, received:false, updatedAt: new Date().toISOString()
+          recipientName, bookTitle, bookCover, site, address, phone, shipped:false, received:false, updatedAt: new Date().toISOString()
         });
         await notifyUser(giverUid, `${myProfile.name} hediye kitap isteğini gönderdi: "${bookTitle}". "Hediye Kitap" sekmesinden bak.`, 'gifts');
         showToast('İstek gönderildi.');
@@ -2880,7 +2887,13 @@ document.getElementById('recGroupSendBtn').addEventListener('click', async ()=>{
 function attachBookAutocomplete(inputId, coverInputId, suggestBoxId, onSelect){
   const input = document.getElementById(inputId);
   const box = document.getElementById(suggestBoxId);
+  const coverInput = coverInputId ? document.getElementById(coverInputId) : null;
+  attachBookAutocompleteEl(input, coverInput, box, onSelect);
+}
+function attachBookAutocompleteEl(input, coverInput, box, onSelect){
   if(!input || !box) return;
+  if(input.dataset.bookAutocompleteAttached) return; // aynı elemana iki kez bağlanmasın
+  input.dataset.bookAutocompleteAttached = '1';
   let debounceTimer = null;
   let queryToken = 0;
 
@@ -2958,7 +2971,6 @@ function attachBookAutocomplete(inputId, coverInputId, suggestBoxId, onSelect){
           onSelect({ author: b.author, title: b.title, cover: b.cover });
         } else {
           input.value = `${b.author} - ${b.title}`;
-          const coverInput = coverInputId ? document.getElementById(coverInputId) : null;
           if(coverInput) coverInput.value = b.cover;
         }
         hideBox();
