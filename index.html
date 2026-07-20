@@ -343,6 +343,7 @@
   .stamp-mini.skip{background:var(--cloth); color:#fff;}
   .stamp-mini.empty{background:transparent; color:var(--line); border:1px dashed var(--line);}
   .stamp-mini.clickable{cursor:pointer;}
+  .day-info-cell{cursor:pointer;}
   .stamp-mini.auto{opacity:0.6; box-shadow:inset 0 0 0 2px rgba(255,255,255,0.55);}
   .stamp-mini.notmember{background:transparent; color:var(--line); opacity:0.35; border:none;}
   button:disabled{opacity:0.4; cursor:default;}
@@ -1266,6 +1267,11 @@ document.body.addEventListener('click', (e)=>{
     e.stopPropagation();
     showAnchoredPopover(pagesEl, `📖 ${pagesEl.dataset.days} gün okudun`);
   }
+  const dayCell = e.target.closest('.day-info-cell');
+  if(dayCell && dayCell.dataset.info){
+    e.stopPropagation();
+    showAnchoredPopover(dayCell, escapeHtml(dayCell.dataset.info));
+  }
 });
 
 // Bir konteynerin daha önce içerik gösterip göstermediğini işaretler. İlk seferinde
@@ -2134,18 +2140,18 @@ async function renderWeekReportTable(monday, tableId){
     let miss=0, read=0;
     const cells = dates.map((d,i)=>{
       if(joinDs && d < joinDs){
-        return `<td><span class="stamp-mini notmember" title="Henüz üye değildi">·</span></td>`;
+        return `<td><span class="stamp-mini notmember day-info-cell" data-info="Henüz üye değildi">·</span></td>`;
       }
       const rec = perDate[i][uid];
-      if(rec && rec.status==='read'){ read++; return `<td><span class="stamp-mini read">✓</span></td>`; }
-      if(rec && rec.status==='skip'){ miss++; return `<td><span class="stamp-mini skip ${rec.auto?'auto':''}" title="${rec.auto?'Otomatik okumadı':''}">✕</span></td>`; }
-      return `<td><span class="stamp-mini empty">·</span></td>`;
+      if(rec && rec.status==='read'){ read++; return `<td><span class="stamp-mini read day-info-cell" data-info="Okudu">✓</span></td>`; }
+      if(rec && rec.status==='skip'){ miss++; return `<td><span class="stamp-mini skip ${rec.auto?'auto':''} day-info-cell" data-info="${rec.auto?'Okumadı (otomatik işaretlendi)':'Okumadı'}">✕</span></td>`; }
+      return `<td><span class="stamp-mini empty day-info-cell" data-info="Pas geçti / işaretleme yapılmadı">·</span></td>`;
     }).join('');
     let statusChip = `<span class="chip">—</span>`;
     if(miss+read>0){
       if(miss>=2) statusChip = `<span class="chip danger">Cezalı (${miss})</span>`;
       else if(miss===1) statusChip = `<span class="chip warn">Pas (1)</span>`;
-      else statusChip = `<span class="chip ok">Temiz</span>`;
+      else statusChip = `<span class="chip ok">Kusursuz</span>`;
     }
     return `<tr><td class="name-cell">${userChipHtml(uid,18)}</td>${cells}<td>${statusChip}</td></tr>`;
   }).join('');
@@ -2247,7 +2253,7 @@ function renderManualTab(){
     if(miss+read>0){
       if(miss>=2) statusChip = `<span class="chip danger">Cezalı (${miss})</span>`;
       else if(miss===1) statusChip = `<span class="chip warn">Pas (1)</span>`;
-      else statusChip = `<span class="chip ok">Temiz</span>`;
+      else statusChip = `<span class="chip ok">Kusursuz</span>`;
     }
     return `<tr><td class="name-cell">${userChipHtml(uid,18)}</td>${cells}<td>${statusChip}</td></tr>`;
   }).join('');
@@ -2589,7 +2595,7 @@ async function renderMemberWeekAll(){
     if(miss+read>0){
       if(miss>=2) statusChip = `<span class="chip danger">Cezalı (${miss})</span>`;
       else if(miss===1) statusChip = `<span class="chip warn">Pas (1)</span>`;
-      else statusChip = `<span class="chip ok">Temiz</span>`;
+      else statusChip = `<span class="chip ok">Kusursuz</span>`;
     }
     return `<tr><td class="name-cell">${userChipHtml(uid,18)}</td>${cells}<td>${statusChip}</td></tr>`;
   }).join('');
