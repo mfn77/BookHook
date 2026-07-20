@@ -213,9 +213,12 @@
   .rec-comment-row .rec-comment-del{ border:none; background:none; color:var(--cloth-dark); cursor:pointer; font-size:11px; flex:0 0 auto; padding:2px 4px; }
   .rec-comments-label{ font-size:11px; font-weight:700; color:var(--ink-70); text-transform:uppercase; letter-spacing:0.4px; margin:12px 0 6px; }
   .reaction-bar{ display:flex; gap:5px; margin-top:8px; flex-wrap:wrap; }
-  .reaction-btn{ border:1.5px solid var(--line); background:var(--card); border-radius:14px; padding:2px 8px; font-size:13.5px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; line-height:1.6; }
-  .reaction-btn.active{ background:rgba(33,144,164,0.14); border-color:var(--gold); }
-  .reaction-btn .rcount{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
+  .reaction-pill{ border:1.5px solid var(--line); background:var(--card); border-radius:14px; padding:2px 8px; font-size:13.5px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; line-height:1.6; }
+  .reaction-pill.mine{ background:rgba(33,144,164,0.14); border-color:var(--gold); }
+  .reaction-pill .rcount{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
+  .reaction-add-btn{ border:1.5px solid var(--line); background:var(--card); border-radius:50%; width:26px; height:26px; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; line-height:1; }
+  .emoji-pick-btn{ font-size:26px; border:none; background:none; cursor:pointer; padding:6px; border-radius:10px; }
+  .emoji-pick-btn:hover{ background:rgba(33,144,164,0.10); }
   main{padding:16px 14px 40px; max-width:1200px; width:100%; margin:0 auto; position:relative; overflow-x:hidden;}
   section.tab{display:none;}
   section.tab.active{display:block;}
@@ -392,7 +395,7 @@
         <div class="header-title-area"><span id="currentTabTitle"></span></div>
         <div class="whoami">
           <div id="whoamiClickable" class="header-pill" style="cursor:pointer;">
-            <span id="whoamiName">—</span>
+            <span id="whoamiAvatar" style="display:inline-flex; vertical-align:middle;"></span><span id="whoamiName">—</span>
           </div>
           <button id="notifBellBtn" class="header-pill icon-pill"><svg class="svg-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span id="hamburgerBadge" style="display:none; position:absolute; top:-4px; right:-4px; background:var(--cloth); color:#fff; font-size:9px; border-radius:10px; padding:1px 4px; font-family:'Roboto Mono',monospace;">0</span></button>
           <button id="hamburgerBtn" class="header-pill icon-pill"><span class="mono-icon">☰</span></button>
@@ -1121,11 +1124,23 @@ document.body.addEventListener('click', (e)=>{
 });
 document.getElementById('profileModalClose').addEventListener('click', ()=>{ document.getElementById('profileModal').style.display='none'; });
 document.getElementById('profileModal').addEventListener('click', (e)=>{ if(e.target.id==='profileModal') document.getElementById('profileModal').style.display='none'; });
+function showSimpleInfoModal(html){
+  document.getElementById('bookInfoModalBody').innerHTML = html;
+  document.getElementById('bookInfoModal').style.display='flex';
+}
+let pendingReactionRefresh = null;
 document.body.addEventListener('click', (e)=>{
   const chip = e.target.closest('.user-chip');
   if(chip && chip.dataset.uid) openProfileModal(chip.dataset.uid);
   const badge = e.target.closest('.badge-info-icon');
-  if(badge && badge.dataset.badgeLabel) showToast(`🏅 ${badge.dataset.badgeLabel}`);
+  if(badge && badge.dataset.badgeLabel) showSimpleInfoModal(`<div style="font-size:34px; margin-bottom:8px;">🏅</div><h2 style="margin:0 0 4px;">${escapeHtml(badge.dataset.badgeLabel)}</h2>`);
+  const pickBtn = e.target.closest('.emoji-pick-btn');
+  if(pickBtn){
+    setReaction(pickBtn.dataset.target, pickBtn.dataset.emoji).then(()=>{
+      document.getElementById('bookInfoModal').style.display='none';
+      if(pendingReactionRefresh) pendingReactionRefresh();
+    });
+  }
 });
 
 // Bir konteynerin daha önce içerik gösterip göstermediğini işaretler. İlk seferinde
@@ -1594,7 +1609,8 @@ function renderTab(id){
 }
 
 function renderHeader(){
-  document.getElementById('whoamiName').innerHTML = avatarHtmlFromProfile(myProfile,18) + escapeHtml(myProfile.name);
+  document.getElementById('whoamiAvatar').innerHTML = avatarHtmlFromProfile(myProfile,18);
+  document.getElementById('whoamiName').textContent = myProfile.name;
 }
 
 /* ============ FIRESTORE YARDIMCILARI ============ */
@@ -2552,7 +2568,8 @@ document.getElementById('profileSaveBtn').addEventListener('click', async ()=>{
     await updateDoc(doc(db,'users',currentUid), {name, surname, phone, address, bio, currentlyReading, currentlyReadingCover});
     myProfile.name = name; myProfile.surname = surname; myProfile.phone = phone; myProfile.address = address;
     myProfile.bio = bio; myProfile.currentlyReading = currentlyReading; myProfile.currentlyReadingCover = currentlyReadingCover;
-    document.getElementById('whoamiName').innerHTML = avatarHtmlFromProfile(myProfile,18) + escapeHtml(myProfile.name);
+    document.getElementById('whoamiAvatar').innerHTML = avatarHtmlFromProfile(myProfile,18);
+  document.getElementById('whoamiName').textContent = myProfile.name;
     showToast('Profilin güncellendi.');
   }catch(err){ errBox.textContent = 'Kaydedilemedi: ' + (err.message||err); }
 });
@@ -3181,27 +3198,52 @@ document.getElementById('bhSaveBtn').addEventListener('click', async ()=>{
 });
 
 const REACTION_EMOJIS = ['👍','❤️','😂','😮','👏'];
+function reactionTargetRef(target){
+  const [kind, ids] = target.split(':');
+  if(kind==='rec') return doc(db,'recommendations',ids);
+  const [recId, commentId] = ids.split('|');
+  return doc(db,'recommendations',recId,'comments',commentId);
+}
 function renderReactionBar(reactions, target){
   reactions = reactions || {};
-  return `<div class="reaction-bar" data-target="${target}">` + REACTION_EMOJIS.map(em=>{
+  const activeEmojis = REACTION_EMOJIS.filter(em => (reactions[em]||[]).length>0);
+  const pills = activeEmojis.map(em=>{
     const uids = reactions[em] || [];
-    const active = uids.includes(currentUid);
-    return `<button type="button" class="reaction-btn${active?' active':''}" data-emoji="${em}">${em}${uids.length?`<span class="rcount">${uids.length}</span>`:''}</button>`;
-  }).join('') + `</div>`;
+    const mine = uids.includes(currentUid);
+    return `<button type="button" class="reaction-pill${mine?' mine':''}" data-target="${target}" data-emoji="${em}" data-uids="${uids.join(',')}">${em}${uids.length>1?`<span class="rcount">${uids.length}</span>`:''}</button>`;
+  }).join('');
+  return `<div class="reaction-bar" data-target="${target}">${pills}<button type="button" class="reaction-add-btn" data-target="${target}">🙂</button></div>`;
 }
-async function toggleReaction(target, emoji){
-  const [kind, ids] = target.split(':');
-  let ref;
-  if(kind==='rec') ref = doc(db,'recommendations',ids);
-  else { const [recId, commentId] = ids.split('|'); ref = doc(db,'recommendations',recId,'comments',commentId); }
+function openReactionPicker(target){
+  const html = `<h2 style="margin-bottom:10px;">Tepki Seç</h2>
+    <div style="display:flex; justify-content:center; gap:4px;">
+      ${REACTION_EMOJIS.map(em=>`<button type="button" class="emoji-pick-btn" data-target="${target}" data-emoji="${em}">${em}</button>`).join('')}
+    </div>`;
+  showSimpleInfoModal(html);
+}
+function showReactorsModal(uidsCsv, emoji){
+  const uids = uidsCsv ? uidsCsv.split(',').filter(Boolean) : [];
+  const names = uids.map(uid=> escapeHtml((usersCache[uid]&&usersCache[uid].name) || 'Bilinmeyen')).join('<br/>');
+  showSimpleInfoModal(`<div style="font-size:30px; margin-bottom:8px;">${emoji}</div><div>${names || '<span class=\"muted\">Kimse yok.</span>'}</div>`);
+}
+async function setReaction(target, emoji){
+  const ref = reactionTargetRef(target);
   try{
     const snap = await getDoc(ref);
     if(!snap.exists()) return;
     const reactions = snap.data().reactions || {};
-    const uids = reactions[emoji] || [];
-    const has = uids.includes(currentUid);
-    await updateDoc(ref, { [`reactions.${emoji}`]: has ? arrayRemove(currentUid) : arrayUnion(currentUid) });
-  }catch(e){}
+    const hasThis = (reactions[emoji]||[]).includes(currentUid);
+    const updates = {};
+    REACTION_EMOJIS.forEach(em=>{
+      if(em!==emoji && (reactions[em]||[]).includes(currentUid)){
+        updates[`reactions.${em}`] = arrayRemove(currentUid);
+      }
+    });
+    updates[`reactions.${emoji}`] = hasThis ? arrayRemove(currentUid) : arrayUnion(currentUid);
+    await updateDoc(ref, updates);
+  }catch(e){
+    alert('Tepki kaydedilemedi: '+(e.message||e)+'\n\nBu genelde Firestore Rules izin vermediği için olur — yönetici kuralları güncellemesi gerekebilir.');
+  }
 }
 
 async function fetchRecComments(recId){
@@ -3224,13 +3266,18 @@ async function renderRecCard(it, isGroup){
     : (it.fromUid===currentUid ? `Sen ${userChipHtml(it.toUid)} kişisine önerdin` : `${userChipHtml(it.fromUid)} sana önerdi`);
   const dt = new Date(it.createdAt);
   const dtLabel = isNaN(dt.getTime()) ? '' : `${pad(dt.getDate())}.${pad(dt.getMonth()+1)}.${dt.getFullYear()}`;
-  const commentsHtml = comments.map(c=>{
+  const topComments = comments.filter(c=>!c.replyTo);
+  const repliesOf = pid => comments.filter(c=>c.replyTo===pid);
+  const renderComment = (c, isReply)=>{
     const canDeleteComment = c.uid===currentUid || (isGroup && myProfile.role==='admin');
-    return `<div class="rec-comment-row">
-      <div class="rec-comment-body">${userChipHtml(c.uid,18)}<div style="margin-top:2px;">${escapeHtml(c.text)}</div>${renderReactionBar(c.reactions, `comment:${it.id}|${c.id}`)}</div>
+    return `<div class="rec-comment-row"${isReply?' style="margin-left:26px;"':''}>
+      <div class="rec-comment-body">${userChipHtml(c.uid,18)}<div style="margin-top:2px;">${escapeHtml(c.text)}</div>${renderReactionBar(c.reactions, `comment:${it.id}|${c.id}`)}
+        ${!isReply?`<button type="button" class="secondary tiny rec-comment-reply-btn" data-rec-id="${it.id}" data-comment-id="${c.id}" style="margin-top:4px;">Cevapla</button>`:''}
+      </div>
       ${canDeleteComment?`<button class="rec-comment-del" data-del-comment="${it.id}|${c.id}">✕</button>`:''}
     </div>`;
-  }).join('');
+  };
+  const commentsHtml = topComments.map(c=> renderComment(c,false) + repliesOf(c.id).map(r=>renderComment(r,true)).join('')).join('');
   const coverHtml = it.coverUrl ? `<img src="${it.coverUrl}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(it.bookTitle)}" data-book-cover="${escapeHtml(it.coverUrl)}" style="width:52px; height:78px; object-fit:cover; border-radius:6px; box-shadow:var(--shadow); flex:0 0 auto; background:var(--paper-2); cursor:pointer;" onerror="this.style.display='none';" />` : '';
   return `<div class="receipt" data-rec-id="${it.id}">
     <div class="rweek"><span>${directionLabel} &middot; ${dtLabel}</span>${canDelete?`<button class="secondary tiny" data-del-rec="${it.id}">Sil</button>`:''}</div>
@@ -3251,12 +3298,11 @@ async function renderRecCard(it, isGroup){
 }
 
 function wireRecCards(box, items, isGroup){
-  box.querySelectorAll('.reaction-btn').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const target = btn.closest('.reaction-bar').dataset.target;
-      await toggleReaction(target, btn.dataset.emoji);
-      isGroup ? renderGroupRecs() : renderPersonalRecs();
-    });
+  box.querySelectorAll('.reaction-pill').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ showReactorsModal(btn.dataset.uids, btn.dataset.emoji); });
+  });
+  box.querySelectorAll('.reaction-add-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ pendingReactionRefresh = isGroup ? renderGroupRecs : renderPersonalRecs; openReactionPicker(btn.dataset.target); });
   });
   box.querySelectorAll('[data-del-rec]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
@@ -3273,6 +3319,35 @@ function wireRecCards(box, items, isGroup){
       try{ await deleteDoc(doc(db,'recommendations',recId,'comments',commentId)); }
       catch(e){ alert('Silinemedi: '+(e.message||e)); return; }
       isGroup ? renderGroupRecs() : renderPersonalRecs();
+    });
+  });
+  box.querySelectorAll('.rec-comment-reply-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const existing = btn.parentElement.querySelector('.rec-reply-input-wrap');
+      if(existing){ existing.remove(); return; }
+      const wrap = document.createElement('div');
+      wrap.className = 'rec-reply-input-wrap row';
+      wrap.style.marginTop = '6px';
+      wrap.innerHTML = `<input type="text" class="rec-reply-input" placeholder="Cevap yaz..." /><button type="button" class="secondary tiny rec-reply-send" style="flex:0 0 auto;">Gönder</button>`;
+      btn.after(wrap);
+      wrap.querySelector('.rec-reply-send').addEventListener('click', async ()=>{
+        const text = wrap.querySelector('.rec-reply-input').value.trim();
+        if(!text) return;
+        const recId = btn.dataset.recId, commentId = btn.dataset.commentId;
+        try{
+          await addDoc(collection(db,'recommendations',recId,'comments'), { uid: currentUid, name: myProfile.name, text, replyTo: commentId, createdAt: new Date().toISOString() });
+          const it = items.find(x=>x.id===recId);
+          if(it){
+            if(isGroup){
+              if(it.fromUid!==currentUid) await notifyUser(it.fromUid, `${myProfile.name}, "${it.bookTitle}" önerine cevap yazdı.`, 'recs');
+            } else {
+              const otherUid = it.fromUid===currentUid ? it.toUid : it.fromUid;
+              await notifyUser(otherUid, `${myProfile.name}, "${it.bookTitle}" önerisine cevap yazdı.`, 'recs');
+            }
+          }
+          isGroup ? renderGroupRecs() : renderPersonalRecs();
+        }catch(err){ alert('Cevap gönderilemedi: '+(err.message||err)); }
+      });
     });
   });
   box.querySelectorAll('.rec-comment-send').forEach(btn=>{
