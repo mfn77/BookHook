@@ -370,13 +370,30 @@
   .post-book-cover{ width:44px; height:66px; object-fit:cover; border-radius:6px; box-shadow:var(--shadow); flex:0 0 auto; }
   .discover-cat{ margin-bottom:22px; }
   .discover-cat-title{ font-family:'Roboto',sans-serif; font-weight:700; font-size:16px; margin-bottom:10px; }
-  .discover-row{ display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; -webkit-overflow-scrolling:touch; }
-  .discover-book-card{ flex:0 0 auto; width:104px; cursor:pointer; }
-  .discover-book-cover-wrap{ width:104px; height:150px; border-radius:10px; overflow:hidden; box-shadow:var(--shadow); background:var(--paper-2); position:relative; }
+  .discover-filters{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px; }
+  .discover-filter-chip{
+    border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-family:'Cantarell',sans-serif;
+    font-weight:600; font-size:13px; padding:7px 14px; border-radius:16px; cursor:pointer; transition:background .15s, color .15s, border-color .15s;
+  }
+  .discover-filter-chip.active{ background:var(--cloth); border-color:var(--cloth); color:#fff; }
+  .discover-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(84px,1fr)); gap:16px 10px; }
+  .discover-book-card{ cursor:pointer; }
+  .discover-book-cover-wrap{ width:100%; aspect-ratio:2/3; border-radius:10px; overflow:hidden; box-shadow:var(--shadow); background:var(--paper-2); position:relative; }
   .discover-book-cover-wrap img{ width:100%; height:100%; object-fit:cover; }
   .discover-group-badge{ position:absolute; top:5px; left:5px; background:var(--gold); color:#fff; font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:8px; }
   .discover-book-title{ font-size:12px; font-weight:600; margin-top:6px; line-height:1.25; }
   .discover-book-rating{ font-size:11px; color:var(--ink-70); margin-top:2px; }
+  .discover-add-card{
+    display:flex; align-items:center; justify-content:center; aspect-ratio:2/3; border-radius:10px;
+    border:2px dashed var(--line); color:var(--ink-70); font-size:30px; cursor:pointer; background:none;
+  }
+  .discover-pager{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:18px; }
+  .discover-pager button{ border:1.5px solid var(--line); background:var(--card); border-radius:14px; padding:8px 16px; font-family:'Cantarell',sans-serif; font-weight:600; font-size:13px; cursor:pointer; color:var(--ink); }
+  .discover-featured-card{ display:flex; gap:14px; background:var(--card); border-radius:16px; padding:14px; margin-bottom:14px; box-shadow:var(--shadow); cursor:pointer; }
+  .discover-featured-cover{ width:88px; height:130px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); flex:0 0 auto; background:var(--paper-2); }
+  .discover-featured-info{ min-width:0; flex:1; }
+  .discover-featured-title{ font-weight:700; font-size:15.5px; margin-bottom:2px; }
+  .discover-pending-row{ display:flex; align-items:center; gap:10px; background:rgba(230,168,0,0.10); border-radius:12px; padding:10px 12px; margin-bottom:8px; }
   .rating-star-row{ display:flex; justify-content:center; gap:2px; font-size:26px; cursor:pointer; user-select:none; }
   .rating-star{ color:var(--line); transition:color 0.1s; }
   .rating-star.filled{ color:var(--gold); }
@@ -524,6 +541,7 @@
         <div id="timelineFeed"></div>
       </div>
       <div id="socialSubDiscover" class="social-subtab" style="display:none;">
+        <div id="discoverFilters" class="discover-filters"></div>
         <div id="discoverFeed"></div>
       </div>
       <div id="socialPillBar" class="social-pill-bar">
@@ -3418,7 +3436,7 @@ function attachBookAutocompleteEl(input, coverInput, box, onSelect){
       el.addEventListener('click', ()=>{
         const b = items[parseInt(el.dataset.idx,10)];
         if(typeof onSelect === 'function'){
-          onSelect({ author: b.author, title: b.title, cover: b.cover });
+          onSelect({ author: b.author, title: b.title, cover: b.cover, workKey: b.workKey||'' });
         } else {
           input.value = `${b.author} - ${b.title}`;
           if(coverInput) coverInput.value = b.cover;
@@ -3740,9 +3758,9 @@ const DISCOVER_CATEGORIES = [
   {label:'Kişisel Gelişim', slug:'self-help'},
   {label:'Klasikler', slug:'classics'}
 ];
-async function fetchDiscoverCategory(slug){
+async function fetchDiscoverCategory(slug, lim){
   try{
-    const res = await fetch(`https://openlibrary.org/subjects/${slug}.json?limit=16&sort=rating`);
+    const res = await fetch(`https://openlibrary.org/subjects/${slug}.json?limit=${lim||40}&sort=rating`);
     if(!res.ok) throw new Error('HTTP '+res.status);
     const json = await res.json();
     return (json.works||[]).filter(w=>w.title).map(w=>({
@@ -3762,48 +3780,168 @@ function groupAvg(ratings){
   if(!vals.length) return 0;
   return vals.reduce((a,b)=>a+b,0)/vals.length;
 }
+function openBookPickerModal(onPick){
+  showSimpleInfoModal(`<h2 style="margin-bottom:10px;">Kitap Ekle</h2>
+    <div class="field" style="text-align:left;"><label>Kitap Ara</label><input type="text" id="pickerBookInput" autocomplete="off" placeholder="kitap adını yazmaya başla" /><div id="pickerBookSuggest" class="book-suggest-box"></div></div>`);
+  const input = document.getElementById('pickerBookInput');
+  const box = document.getElementById('pickerBookSuggest');
+  attachBookAutocompleteEl(input, null, box, (sel)=>{
+    closeModal('bookInfoModal');
+    onPick(sel);
+  });
+}
+
+let discoverActiveCategory = null;
+let discoverPage = 0;
 let discoverBooksCache = [];
-async function renderDiscoverTab(){
-  const feed = keepOrLoading('discoverFeed');
-  discoverBooksCache = [];
+
+function renderDiscoverTab(){
+  discoverActiveCategory = null;
+  discoverPage = 0;
+  renderDiscoverFilters();
+  renderDiscoverContent();
+}
+function renderDiscoverFilters(){
+  const bar = document.getElementById('discoverFilters');
+  bar.innerHTML = `<button type="button" class="discover-filter-chip${!discoverActiveCategory?' active':''}" data-slug="">Önerilenler</button>` +
+    DISCOVER_CATEGORIES.map(c=>`<button type="button" class="discover-filter-chip${discoverActiveCategory===c.slug?' active':''}" data-slug="${c.slug}">${escapeHtml(c.label)}</button>`).join('');
+  bar.querySelectorAll('.discover-filter-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const slug = chip.dataset.slug;
+      discoverActiveCategory = !slug ? null : (discoverActiveCategory===slug ? null : slug);
+      discoverPage = 0;
+      renderDiscoverFilters();
+      renderDiscoverContent();
+    });
+  });
+}
+function renderDiscoverContent(){
+  if(discoverActiveCategory) renderDiscoverCategoryGrid(discoverActiveCategory);
+  else renderDiscoverHome();
+}
+async function renderDiscoverHome(){
+  const main = document.getElementById('discoverFeed');
+  showCachedOrPlaceholder(main, `<div class="empty-state">Yükleniyor…</div>`);
+  let featured = [], pending = [];
+  try{
+    const snap = await getDocs(query(collection(db,'discoverFeatured'), orderBy('createdAt','desc')));
+    snap.forEach(d=>{ const data = {id:d.id, ...d.data()}; (data.approved ? featured : pending).push(data); });
+  }catch(e){}
+  let html = '';
+  if(myProfile.role==='admin' && pending.length){
+    html += `<div class="discover-cat-title">⏳ Onay Bekleyen Öneriler</div>`;
+    html += pending.map(p=>`<div class="discover-pending-row">
+      ${p.cover?`<img src="${p.cover}" style="width:36px;height:52px;object-fit:cover;border-radius:5px;" />`:''}
+      <div style="flex:1; min-width:0;"><b>${escapeHtml(p.title)}</b><div class="muted" style="font-size:12px;">${escapeHtml(p.author||'')} &middot; ${escapeHtml(p.addedByName||'')} önerdi</div></div>
+      <button class="secondary tiny" data-approve-featured="${p.id}">Onayla</button>
+      <button class="secondary tiny" data-reject-featured="${p.id}">Sil</button>
+    </div>`).join('');
+  }
+  html += `<div class="discover-cat-title">📚 Tavsiye Kitaplar</div>`;
+  if(!featured.length){
+    html += `<div class="empty-state"><span class="big">📚</span>Henüz tavsiye kitap eklenmemiş.</div>`;
+  }
+  html += featured.map((b,i)=>`<div class="discover-featured-card" data-featured-idx="${i}">
+    ${b.cover?`<img src="${b.cover}" class="discover-featured-cover" />`:`<div class="discover-featured-cover"></div>`}
+    <div class="discover-featured-info"><div class="discover-featured-title">${escapeHtml(b.title)}</div><div class="muted">${escapeHtml(b.author||'')}</div></div>
+  </div>`).join('');
+  html += `<button type="button" class="discover-add-card" id="discoverAddFeaturedBtn" style="width:100%; aspect-ratio:auto; height:52px; margin-top:8px;">+</button>`;
+  main.innerHTML = html;
+  main.querySelectorAll('[data-featured-idx]').forEach(card=>{
+    card.addEventListener('click', ()=> openBookDiscoverModal(featured[parseInt(card.dataset.featuredIdx,10)]));
+  });
+  main.querySelectorAll('[data-approve-featured]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{ try{ await updateDoc(doc(db,'discoverFeatured',btn.dataset.approveFeatured), {approved:true}); renderDiscoverHome(); }catch(e){ alert('Onaylanamadı: '+(e.message||e)); } });
+  });
+  main.querySelectorAll('[data-reject-featured]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{ if(!confirm('Bu öneriyi silmek istediğine emin misin?')) return; try{ await deleteDoc(doc(db,'discoverFeatured',btn.dataset.rejectFeatured)); renderDiscoverHome(); }catch(e){ alert('Silinemedi: '+(e.message||e)); } });
+  });
+  document.getElementById('discoverAddFeaturedBtn').addEventListener('click', ()=>{
+    openBookPickerModal(async (sel)=>{
+      try{
+        await addDoc(collection(db,'discoverFeatured'), { ...sel, approved: myProfile.role==='admin', addedBy:currentUid, addedByName:myProfile.name, createdAt:new Date().toISOString() });
+        if(myProfile.role!=='admin'){ notifyAdmins(`${myProfile.name} "Tavsiye Kitaplar" için "${sel.title}" önerdi, onay bekliyor.`, 'social'); showToast('Öneri gönderildi, onaylandığında görünecek.'); }
+        else showToast('Eklendi!');
+        renderDiscoverHome();
+      }catch(err){ alert('Eklenemedi: '+(err.message||err)); }
+    });
+  });
+  markLoaded(main);
+}
+async function renderDiscoverCategoryGrid(slug){
+  const main = document.getElementById('discoverFeed');
+  showCachedOrPlaceholder(main, `<div class="empty-state">Yükleniyor…</div>`);
+  const catLabel = (DISCOVER_CATEGORIES.find(c=>c.slug===slug)||{}).label || slug;
   let groupDocs = [];
   try{
-    const snap = await getDocs(collection(db,'groupBookRatings'));
+    const snap = await getDocs(query(collection(db,'groupBookRatings'), where('category','==',slug)));
     snap.forEach(d=> groupDocs.push({id:d.id, ...d.data()}));
   }catch(e){}
-  const sections = await Promise.all(DISCOVER_CATEGORIES.map(async cat=>{
-    const groupBooksInCat = groupDocs.filter(g=>g.category===cat.slug);
-    let extBooks = [];
-    try{ extBooks = await fetchDiscoverCategory(cat.slug); }catch(e){}
-    const groupIds = new Set(groupBooksInCat.map(g=>g.id));
-    const merged = [
-      ...groupBooksInCat.map(g=>({ title:g.title, author:g.author, cover:g.cover, workKey:g.workKey, category:cat.slug, isGroup:true, ratings:g.ratings })),
-      ...extBooks.filter(b=> !groupIds.has(bookKeyFor(b))).map(b=>({ ...b, category:cat.slug, isGroup:false }))
-    ];
-    const shown = merged.slice(0,10);
-    if(!shown.length) return '';
-    const cardsHtml = shown.map(b=>{
-      const idx = discoverBooksCache.length;
-      discoverBooksCache.push(b);
-      const ratingLabel = b.isGroup ? `⭐ ${groupAvg(b.ratings).toFixed(1)} &middot; Grupta ${Object.keys(b.ratings||{}).length}` : '';
-      const coverHtml = b.cover ? `<img src="${b.cover}" alt="" onerror="this.style.display='none';" />` : '';
-      return `<div class="discover-book-card" data-idx="${idx}">
-        <div class="discover-book-cover-wrap">${coverHtml}${b.isGroup?'<span class="discover-group-badge">Grupta</span>':''}</div>
-        <div class="discover-book-title">${escapeHtml(b.title)}</div>
-        ${ratingLabel?`<div class="discover-book-rating">${ratingLabel}</div>`:''}
-      </div>`;
-    }).join('');
-    return `<div class="discover-cat"><div class="discover-cat-title">${escapeHtml(cat.label)}</div><div class="discover-row">${cardsHtml}</div></div>`;
-  }));
-  const html = sections.filter(Boolean).join('');
-  feed.innerHTML = html || `<div class="empty-state"><span class="big">🔍</span>Kategoriler şu an yüklenemedi, birazdan tekrar dene.</div>`;
-  feed.querySelectorAll('.discover-book-card').forEach(card=>{
+  let extBooks = [];
+  try{ extBooks = await fetchDiscoverCategory(slug, 40); }catch(e){}
+  let additions = [];
+  try{
+    const snap = await getDocs(query(collection(db,'discoverAdditions'), where('category','==',slug)));
+    snap.forEach(d=> additions.push({id:d.id, ...d.data()}));
+  }catch(e){}
+  const groupIds = new Set(groupDocs.map(g=>g.id));
+  const nonGroup = [
+    ...extBooks.filter(b=>!groupIds.has(bookKeyFor(b))),
+    ...additions.filter(b=>!groupIds.has(bookKeyFor(b)))
+  ];
+  const PAGE_SIZE = 20;
+  const totalPages = Math.max(1, Math.ceil(nonGroup.length / PAGE_SIZE));
+  if(discoverPage >= totalPages) discoverPage = totalPages-1;
+  if(discoverPage < 0) discoverPage = 0;
+  const pageItems = nonGroup.slice(discoverPage*PAGE_SIZE, discoverPage*PAGE_SIZE+PAGE_SIZE);
+  discoverBooksCache = [];
+  function cardHtml(b, isGroup){
+    const idx = discoverBooksCache.length;
+    discoverBooksCache.push({...b, category:slug});
+    const ratingLabel = isGroup ? `⭐ ${groupAvg(b.ratings).toFixed(1)} &middot; Grupta ${Object.keys(b.ratings||{}).length}` : '';
+    const coverHtml = b.cover ? `<img src="${b.cover}" alt="" onerror="this.style.display='none';" />` : '';
+    return `<div class="discover-book-card" data-idx="${idx}">
+      <div class="discover-book-cover-wrap">${coverHtml}${isGroup?'<span class="discover-group-badge">Grupta</span>':''}</div>
+      <div class="discover-book-title">${escapeHtml(b.title)}</div>
+      ${ratingLabel?`<div class="discover-book-rating">${ratingLabel}</div>`:''}
+    </div>`;
+  }
+  let html = '';
+  if(groupDocs.length){
+    html += `<div class="discover-cat-title">👥 Grupta Puanlananlar</div>`;
+    html += `<div class="discover-grid" style="margin-bottom:22px;">${groupDocs.map(g=>cardHtml(g,true)).join('')}</div>`;
+  }
+  html += `<div class="discover-cat-title">${escapeHtml(catLabel)}</div>`;
+  html += `<div class="discover-grid">${pageItems.map(b=>cardHtml(b,false)).join('')}<button type="button" class="discover-add-card" id="discoverAddCategoryBtn">+</button></div>`;
+  if(totalPages>1){
+    html += `<div class="discover-pager">
+      ${discoverPage>0?`<button id="discoverPrevPageBtn">◀ Önceki Sayfa</button>`:''}
+      <span class="muted mono">${discoverPage+1} / ${totalPages}</span>
+      ${discoverPage<totalPages-1?`<button id="discoverNextPageBtn">Sonraki Sayfa ▶</button>`:''}
+    </div>`;
+  }
+  main.innerHTML = html;
+  main.querySelectorAll('.discover-book-card').forEach(card=>{
     card.addEventListener('click', ()=>{
       const book = discoverBooksCache[parseInt(card.dataset.idx,10)];
       if(book) openBookDiscoverModal(book);
     });
   });
-  markLoaded(feed);
+  const addBtn = document.getElementById('discoverAddCategoryBtn');
+  if(addBtn) addBtn.addEventListener('click', ()=>{
+    openBookPickerModal(async (sel)=>{
+      try{
+        await addDoc(collection(db,'discoverAdditions'), { ...sel, category:slug, addedBy:currentUid, createdAt:new Date().toISOString() });
+        showToast('Kitap eklendi!');
+        renderDiscoverCategoryGrid(slug);
+      }catch(err){ alert('Eklenemedi: '+(err.message||err)); }
+    });
+  });
+  const prevBtn = document.getElementById('discoverPrevPageBtn');
+  if(prevBtn) prevBtn.addEventListener('click', ()=>{ discoverPage--; renderDiscoverCategoryGrid(slug); });
+  const nextBtn = document.getElementById('discoverNextPageBtn');
+  if(nextBtn) nextBtn.addEventListener('click', ()=>{ discoverPage++; renderDiscoverCategoryGrid(slug); });
+  markLoaded(main);
 }
 async function openBookDiscoverModal(book){
   const body = document.getElementById('bookDiscoverModalBody');
@@ -3854,10 +3992,16 @@ async function openBookDiscoverModal(book){
     if(!selectedScore){ alert('Önce bir puan seç (yıldızlara dokun).'); return; }
     const comment = document.getElementById('ratingCommentInput').value.trim();
     try{
-      await setDoc(doc(db,'groupBookRatings',bookKey), {
-        title: book.title, author: book.author||'', cover: book.cover||'', category: book.category||'', workKey: book.workKey||'',
-        [`ratings.${currentUid}`]: { score: selectedScore, comment, createdAt: new Date().toISOString() }
-      }, { merge:true });
+      if(groupDoc){
+        await updateDoc(doc(db,'groupBookRatings',bookKey), {
+          [`ratings.${currentUid}`]: { score: selectedScore, comment, createdAt: new Date().toISOString() }
+        });
+      } else {
+        await setDoc(doc(db,'groupBookRatings',bookKey), {
+          title: book.title, author: book.author||'', cover: book.cover||'', category: book.category||'', workKey: book.workKey||'',
+          ratings: { [currentUid]: { score: selectedScore, comment, createdAt: new Date().toISOString() } }
+        });
+      }
       await createPost('book_review', { bookTitle: book.title, bookAuthor: book.author||'', bookCover: book.cover||'', rating: selectedScore, reviewText: comment });
       closeModal('bookDiscoverModal');
       showToast('Puanın kaydedildi, Timeline\'da paylaşıldı!');
