@@ -183,6 +183,17 @@
   .book-suggest-item:hover{ background:rgba(33,144,164,0.10); }
   .book-suggest-thumb{ width:24px; height:36px; object-fit:cover; border-radius:3px; margin-right:8px; flex:0 0 auto; box-shadow:var(--shadow); }
   @keyframes modalFadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes modalFadeOut{ from{ opacity:1; } to{ opacity:0; } }
+  @keyframes modalPopOut{ from{ opacity:1; transform:scale(1) translateY(0); } to{ opacity:0; transform:scale(0.94) translateY(4px); } }
+  @keyframes popoverPopOut{ from{ opacity:1; transform:scale(1) translateY(0); } to{ opacity:0; transform:scale(0.9) translateY(-4px); } }
+  .modal-overlay-anim.closing{ animation: modalFadeOut 0.12s ease-in forwards; }
+  .modal-card-anim.closing{ animation: modalPopOut 0.12s ease-in forwards; }
+  .lightbox-img-anim.closing{ animation: modalPopOut 0.12s ease-in forwards; }
+  #anchoredPopover.closing{ animation: popoverPopOut 0.12s ease-in forwards; }
+  @keyframes slideDownOpen{ from{ opacity:0; max-height:0; transform:translateY(-6px); } to{ opacity:1; max-height:1200px; transform:translateY(0); } }
+  .slide-down-anim{ animation: slideDownOpen 0.22s cubic-bezier(0.16,1,0.3,1); overflow:hidden; }
+  @keyframes reactionBurst{ 0%{ transform:scale(1); } 40%{ transform:scale(1.6); } 100%{ transform:scale(1); } }
+  .reaction-burst{ animation: reactionBurst 0.28s cubic-bezier(0.34,1.56,0.64,1); }
   @keyframes modalPopIn{ from{ opacity:0; transform:scale(0.93) translateY(6px); } to{ opacity:1; transform:scale(1) translateY(0); } }
   @keyframes popoverPopIn{ from{ opacity:0; transform:scale(0.9) translateY(-4px); } to{ opacity:1; transform:scale(1) translateY(0); } }
   @keyframes lightboxFadeIn{ from{ opacity:0; } to{ opacity:1; } }
@@ -1058,7 +1069,7 @@ document.getElementById('sidebarLogoBtn').addEventListener('click', ()=>{
   const homeTab = myProfile && myProfile.role==='admin' ? 'today' : 'msurvey';
   if(document.getElementById('tab-'+homeTab)) switchTab(homeTab);
 });
-document.getElementById('photoLightbox').addEventListener('click', ()=>{ document.getElementById('photoLightbox').style.display='none'; });
+document.getElementById('photoLightbox').addEventListener('click', ()=>{ closeModal('photoLightbox'); });
 document.getElementById('profileModalBookHistoryBtn').addEventListener('click', async ()=>{
   if(!currentProfileModalUid) return;
   const u = usersCache[currentProfileModalUid];
@@ -1068,12 +1079,12 @@ document.getElementById('profileModalBookHistoryBtn').addEventListener('click', 
   viewGrid.innerHTML=''; delete viewGrid.dataset.loaded; delete bhPageState['bookHistoryViewGrid'];
   await renderBookHistoryGrid(currentProfileModalUid, 'bookHistoryViewGrid', false);
 });
-document.getElementById('bookHistoryViewModalClose').addEventListener('click', ()=>{ document.getElementById('bookHistoryViewModal').style.display='none'; });
-document.getElementById('bookHistoryViewModal').addEventListener('click', (e)=>{ if(e.target.id==='bookHistoryViewModal') document.getElementById('bookHistoryViewModal').style.display='none'; });
+document.getElementById('bookHistoryViewModalClose').addEventListener('click', ()=>{ closeModal('bookHistoryViewModal'); });
+document.getElementById('bookHistoryViewModal').addEventListener('click', (e)=>{ if(e.target.id==='bookHistoryViewModal') closeModal('bookHistoryViewModal'); });
 
 /* ============ ORTAK: KİTAP BİLGİSİ (kapağa tıklayınca) ============ */
-document.getElementById('bookInfoModalClose').addEventListener('click', ()=>{ document.getElementById('bookInfoModal').style.display='none'; });
-document.getElementById('bookInfoModal').addEventListener('click', (e)=>{ if(e.target.id==='bookInfoModal') document.getElementById('bookInfoModal').style.display='none'; });
+document.getElementById('bookInfoModalClose').addEventListener('click', ()=>{ closeModal('bookInfoModal'); });
+document.getElementById('bookInfoModal').addEventListener('click', (e)=>{ if(e.target.id==='bookInfoModal') closeModal('bookInfoModal'); });
 async function showBookInfo(rawTitle, cover){
   if(!rawTitle) return;
   const body = document.getElementById('bookInfoModalBody');
@@ -1133,11 +1144,23 @@ document.body.addEventListener('click', (e)=>{
   const cover = e.target.closest('.book-cover-clickable');
   if(cover && cover.dataset.bookTitle) showBookInfo(cover.dataset.bookTitle, cover.dataset.bookCover||cover.src||'');
 });
-document.getElementById('profileModalClose').addEventListener('click', ()=>{ document.getElementById('profileModal').style.display='none'; });
-document.getElementById('profileModal').addEventListener('click', (e)=>{ if(e.target.id==='profileModal') document.getElementById('profileModal').style.display='none'; });
+document.getElementById('profileModalClose').addEventListener('click', ()=>{ closeModal('profileModal'); });
+document.getElementById('profileModal').addEventListener('click', (e)=>{ if(e.target.id==='profileModal') closeModal('profileModal'); });
 function showSimpleInfoModal(html){
   document.getElementById('bookInfoModalBody').innerHTML = html;
   document.getElementById('bookInfoModal').style.display='flex';
+}
+function closeModal(id){
+  const el = document.getElementById(id);
+  if(!el || el.style.display==='none') return;
+  const card = el.querySelector('.modal-card-anim') || el.querySelector('.lightbox-img-anim');
+  el.classList.add('closing');
+  if(card) card.classList.add('closing');
+  setTimeout(()=>{
+    el.style.display='none';
+    el.classList.remove('closing');
+    if(card) card.classList.remove('closing');
+  }, 120);
 }
 function showAnchoredPopover(anchorEl, html){
   const pop = document.getElementById('anchoredPopover');
@@ -1152,7 +1175,12 @@ function showAnchoredPopover(anchorEl, html){
   pop.style.left = (left + window.scrollX) + 'px';
   pop.style.top = (top + window.scrollY) + 'px';
 }
-function hideAnchoredPopover(){ document.getElementById('anchoredPopover').style.display='none'; }
+function hideAnchoredPopover(){
+  const pop = document.getElementById('anchoredPopover');
+  if(pop.style.display==='none') return;
+  pop.classList.add('closing');
+  setTimeout(()=>{ pop.style.display='none'; pop.classList.remove('closing'); }, 120);
+}
 document.addEventListener('click', (e)=>{
   const pop = document.getElementById('anchoredPopover');
   if(pop.style.display==='block' && !pop.contains(e.target) && !e.target.closest('.badge-info-icon')){
@@ -1167,9 +1195,13 @@ document.body.addEventListener('click', (e)=>{
   if(badge && badge.dataset.badgeLabel && !badge.closest('#profileModalPhotoWrap')) showAnchoredPopover(badge, `🏅 ${escapeHtml(badge.dataset.badgeLabel)}`);
   const pickBtn = e.target.closest('.emoji-pick-btn');
   if(pickBtn){
-    setReaction(pickBtn.dataset.target, pickBtn.dataset.emoji).then(()=>{
-      document.getElementById('bookInfoModal').style.display='none';
-      if(pendingReactionRefresh) pendingReactionRefresh();
+    const target = pickBtn.dataset.target, emoji = pickBtn.dataset.emoji;
+    setReaction(target, emoji).then(async ()=>{
+      closeModal('bookInfoModal');
+      if(pendingReactionRefresh) await pendingReactionRefresh();
+      const bar = document.querySelector(`.reaction-bar[data-target="${target}"]`);
+      const pill = bar && Array.from(bar.querySelectorAll('.reaction-pill')).find(p=>p.dataset.emoji===emoji);
+      if(pill){ pill.classList.add('reaction-burst'); setTimeout(()=>pill.classList.remove('reaction-burst'), 300); }
     });
   }
 });
@@ -1240,10 +1272,10 @@ function openNotifModal(){
   document.getElementById('notifModal').style.display='flex';
   renderNotifsTab();
 }
-document.getElementById('notifModalClose').addEventListener('click', ()=>{ document.getElementById('notifModal').style.display='none'; });
-document.getElementById('guideModalClose').addEventListener('click', ()=>{ document.getElementById('guideModal').style.display='none'; });
-document.getElementById('guideModal').addEventListener('click', (e)=>{ if(e.target.id==='guideModal') document.getElementById('guideModal').style.display='none'; });
-document.getElementById('notifModal').addEventListener('click', (e)=>{ if(e.target.id==='notifModal') document.getElementById('notifModal').style.display='none'; });
+document.getElementById('notifModalClose').addEventListener('click', ()=>{ closeModal('notifModal'); });
+document.getElementById('guideModalClose').addEventListener('click', ()=>{ closeModal('guideModal'); });
+document.getElementById('guideModal').addEventListener('click', (e)=>{ if(e.target.id==='guideModal') closeModal('guideModal'); });
+document.getElementById('notifModal').addEventListener('click', (e)=>{ if(e.target.id==='notifModal') closeModal('notifModal'); });
 
 /* ============ GERÇEK TELEFON BİLDİRİMİ (Firebase Cloud Messaging) ============ */
 async function registerPushToken(){
@@ -1330,7 +1362,7 @@ async function renderNotifsTab(){
       const tab = row.dataset.notifTab;
       const id = row.dataset.notifId;
       try{ await updateDoc(doc(db,'notifications',currentUid,'items',id), {read:true}); }catch(e){}
-      document.getElementById('notifModal').style.display='none';
+      closeModal('notifModal');
       if(document.getElementById('tab-'+tab)) switchTab(tab);
     });
   });
@@ -1478,7 +1510,14 @@ function setupCardInfoButtons(){
     btn.setAttribute('aria-label','Bilgi');
     btn.textContent='i';
     btn.addEventListener('click', ()=>{
-      desc.style.display = desc.style.display==='none' ? 'block' : 'none';
+      if(desc.style.display==='none'){
+        desc.style.display = 'block';
+        desc.classList.remove('slide-down-anim');
+        void desc.offsetWidth; // reflow'u tetikleyip animasyonu yeniden başlatıyoruz
+        desc.classList.add('slide-down-anim');
+      } else {
+        desc.style.display = 'none';
+      }
     });
     h2.appendChild(btn);
   });
@@ -2884,7 +2923,14 @@ function wireGiftFormHandlers(content){
     btn.addEventListener('click', ()=>{
       const formEl = btn.nextElementSibling;
       if(formEl && formEl.classList.contains('gift-form')){
-        formEl.style.display = formEl.style.display==='none' ? 'block' : 'none';
+        if(formEl.style.display==='none'){
+          formEl.style.display = 'block';
+          formEl.classList.remove('slide-down-anim');
+          void formEl.offsetWidth;
+          formEl.classList.add('slide-down-anim');
+        } else {
+          formEl.style.display = 'none';
+        }
       }
     });
   });
@@ -2989,7 +3035,14 @@ function setupAddToggle(btnId, wrapId){
   const wrap = document.getElementById(wrapId);
   btn.addEventListener('click', ()=>{
     const isOpen = wrap.style.display !== 'none';
-    wrap.style.display = isOpen ? 'none' : 'block';
+    if(isOpen){
+      wrap.style.display = 'none';
+    } else {
+      wrap.style.display = 'block';
+      wrap.classList.remove('slide-down-anim');
+      void wrap.offsetWidth;
+      wrap.classList.add('slide-down-anim');
+    }
     btn.classList.toggle('open', !isOpen);
   });
 }
