@@ -1066,45 +1066,25 @@ async function showBookInfo(rawTitle, cover){
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
   body.innerHTML = `<span class="muted">Aranıyor…</span>`;
-  // "Yazar - Kitap Adı" formatındaysa ikiye ayır, değilse tamamını başlık olarak kullan
+  // "Yazar - Kitap Adı" formatındaysa ikiye ayır (sadece başlık kısmını arama sorgusunda kullanmak için)
   let author = '', title = rawTitle;
   const dashIdx = rawTitle.indexOf(' - ');
   if(dashIdx>0){ author = rawTitle.slice(0,dashIdx).trim(); title = rawTitle.slice(dashIdx+3).trim(); }
   let info = null;
   try{
-    const keyParam = GOOGLE_BOOKS_API_KEY ? `&key=${GOOGLE_BOOKS_API_KEY}` : '';
-    const q = author ? `intitle:${title} inauthor:${author}` : title;
-    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=1${keyParam}`);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const json = await res.json();
-    const vi = json.items && json.items[0] && json.items[0].volumeInfo;
-    if(vi){
-      info = {
-        title: vi.title || title,
-        author: (vi.authors||[]).join(', ') || author || 'Bilinmeyen Yazar',
-        year: vi.publishedDate ? vi.publishedDate.slice(0,4) : '',
-        pageCount: vi.pageCount || '',
-        description: vi.description || '',
-        cover: cover || (vi.imageLinks ? (vi.imageLinks.thumbnail||vi.imageLinks.smallThumbnail||'').replace('http://','https://') : '')
-      };
-    }
+    const items = await searchGoogleBooks(rawTitle);
+    if(items[0]) info = items[0];
   }catch(e){}
   if(!info){
     try{
-      const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(rawTitle)}&limit=1`);
-      const json = await res.json();
-      const d = json.docs && json.docs[0];
-      if(d){
-        info = {
-          title: d.title || title,
-          author: (d.author_name||[]).join(', ') || author || 'Bilinmeyen Yazar',
-          year: d.first_publish_year || '',
-          pageCount: d.number_of_pages_median || '',
-          description: '',
-          cover: cover || (d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : '')
-        };
-      }
+      const items = await searchOpenLibrary(rawTitle);
+      if(items[0]) info = items[0];
     }catch(e){}
+  }
+  if(info){
+    info.author = info.author || author || 'Bilinmeyen Yazar';
+    info.title = info.title || title;
+    info.cover = cover || info.cover;
   }
   if(!info){
     body.innerHTML = `<span class="muted">Bu kitap hakkında bilgi bulunamadı.</span>`;
@@ -3011,6 +2991,37 @@ document.getElementById('recGroupSendBtn').addEventListener('click', async ()=>{
 });
 
 /* ============ ORTAK: KİTAP ARAMA (Google Books API üzerinden otomatik tamamlama) ============ */
+/* ============ ORTAK: KİTAP ARAMA (Google Books API üzerinden otomatik tamamlama) ============ */
+async function searchGoogleBooks(q){
+  const keyParam = GOOGLE_BOOKS_API_KEY ? `&key=${GOOGLE_BOOKS_API_KEY}` : '';
+  const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=8${keyParam}`);
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const json = await res.json();
+  return (json.items||[]).filter(it=>it.volumeInfo && it.volumeInfo.title).map(it=>{
+    const vi = it.volumeInfo;
+    return {
+      title: vi.title,
+      author: (vi.authors||[]).join(', ') || 'Bilinmeyen Yazar',
+      year: vi.publishedDate ? vi.publishedDate.slice(0,4) : '',
+      pageCount: vi.pageCount || '',
+      description: vi.description || '',
+      cover: vi.imageLinks ? (vi.imageLinks.thumbnail||vi.imageLinks.smallThumbnail||'').replace('http://','https://') : ''
+    };
+  });
+}
+async function searchOpenLibrary(q){
+  const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=8`);
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const json = await res.json();
+  return (json.docs||[]).filter(d=>d.title).map(d=>({
+    title: d.title,
+    author: (d.author_name||[]).join(', ') || 'Bilinmeyen Yazar',
+    year: d.first_publish_year || '',
+    pageCount: d.number_of_pages_median || '',
+    description: '',
+    cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : ''
+  }));
+}
 function attachBookAutocomplete(inputId, coverInputId, suggestBoxId, onSelect){
   const input = document.getElementById(inputId);
   const box = document.getElementById(suggestBoxId);
@@ -3034,30 +3045,6 @@ function attachBookAutocompleteEl(input, coverInput, box, onSelect){
   });
   input.addEventListener('focus', ()=>{ if(box.innerHTML.trim()) box.style.display='block'; });
 
-  async function searchGoogleBooks(q){
-    const keyParam = GOOGLE_BOOKS_API_KEY ? `&key=${GOOGLE_BOOKS_API_KEY}` : '';
-    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=8${keyParam}`);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const json = await res.json();
-    return (json.items||[]).filter(it=>it.volumeInfo && it.volumeInfo.title).map(it=>{
-      const vi = it.volumeInfo;
-      return {
-        title: vi.title,
-        author: (vi.authors||[]).join(', ') || 'Bilinmeyen Yazar',
-        cover: vi.imageLinks ? (vi.imageLinks.thumbnail||vi.imageLinks.smallThumbnail||'').replace('http://','https://') : ''
-      };
-    });
-  }
-  async function searchOpenLibrary(q){
-    const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=8`);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const json = await res.json();
-    return (json.docs||[]).filter(d=>d.title).map(d=>({
-      title: d.title,
-      author: (d.author_name||[]).join(', ') || 'Bilinmeyen Yazar',
-      cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : ''
-    }));
-  }
   async function doSearch(q){
     const myToken = ++queryToken;
     box.style.display='block';
