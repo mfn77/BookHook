@@ -530,7 +530,7 @@
 
     <section class="tab" id="tab-worms">
       <div class="card">
-        <h2>🐛 Kitap Kurtları</h2>
+        <h2>🐺 Kitap Kurtları</h2>
         <p class="muted">Profil resmindeki renkli çerçeve ve köşe simgesi, o kişinin o anki aktif serisini gösterir; seri bozulunca kaybolur.</p>
         <button class="secondary" id="calcStreaksBtn">Serileri Hesapla</button>
         <div id="wormsList" style="margin-top:12px;"></div>
@@ -610,7 +610,7 @@
 
     <section class="tab" id="tab-mworms">
       <div class="card">
-        <h2>🐛 Kitap Kurtları</h2>
+        <h2>🐺 Kitap Kurtları</h2>
         <p class="muted">Profil resmindeki renkli çerçeve ve köşe simgesi, o kişinin o anki aktif serisini gösterir; seri bozulunca kaybolur.</p>
         <div id="mWormsList"></div>
       </div>
@@ -786,6 +786,8 @@
     <div id="bookInfoModalBody" style="text-align:center;"><span class="muted">Aranıyor…</span></div>
   </div>
 </div>
+
+<div id="anchoredPopover" style="display:none; position:absolute; z-index:230; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-lg); padding:10px 14px; font-size:13.5px; max-width:220px; text-align:center;"></div>
 
 <div id="photoLightbox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.86); z-index:300; align-items:center; justify-content:center; padding:24px; cursor:zoom-out;">
   <img id="photoLightboxImg" src="" alt="" style="max-width:92vw; max-height:88vh; border-radius:14px; object-fit:contain; box-shadow:0 8px 40px rgba(0,0,0,0.5);" />
@@ -1126,12 +1128,32 @@ function showSimpleInfoModal(html){
   document.getElementById('bookInfoModalBody').innerHTML = html;
   document.getElementById('bookInfoModal').style.display='flex';
 }
+function showAnchoredPopover(anchorEl, html){
+  const pop = document.getElementById('anchoredPopover');
+  pop.innerHTML = html;
+  pop.style.display = 'block';
+  const r = anchorEl.getBoundingClientRect();
+  const popW = pop.offsetWidth, popH = pop.offsetHeight;
+  let left = r.left + r.width/2 - popW/2;
+  left = Math.max(8, Math.min(left, window.innerWidth - popW - 8));
+  let top = r.bottom + 8;
+  if(top + popH > window.innerHeight - 8) top = r.top - popH - 8;
+  pop.style.left = (left + window.scrollX) + 'px';
+  pop.style.top = (top + window.scrollY) + 'px';
+}
+function hideAnchoredPopover(){ document.getElementById('anchoredPopover').style.display='none'; }
+document.addEventListener('click', (e)=>{
+  const pop = document.getElementById('anchoredPopover');
+  if(pop.style.display==='block' && !pop.contains(e.target) && !e.target.closest('.badge-info-icon')){
+    hideAnchoredPopover();
+  }
+});
 let pendingReactionRefresh = null;
 document.body.addEventListener('click', (e)=>{
   const chip = e.target.closest('.user-chip');
   if(chip && chip.dataset.uid) openProfileModal(chip.dataset.uid);
   const badge = e.target.closest('.badge-info-icon');
-  if(badge && badge.dataset.badgeLabel) showSimpleInfoModal(`<div style="font-size:34px; margin-bottom:8px;">🏅</div><h2 style="margin:0 0 4px;">${escapeHtml(badge.dataset.badgeLabel)}</h2>`);
+  if(badge && badge.dataset.badgeLabel) showAnchoredPopover(badge, `🏅 ${escapeHtml(badge.dataset.badgeLabel)}`);
   const pickBtn = e.target.closest('.emoji-pick-btn');
   if(pickBtn){
     setReaction(pickBtn.dataset.target, pickBtn.dataset.emoji).then(()=>{
@@ -1815,7 +1837,7 @@ const BADGE_DEFS = [
   {key:'b7',  days:7,  icon:'🎯', label:'1 hafta aralıksız', color:'#FFC107'},
   {key:'b14', days:14, icon:'💎', label:'2 hafta aralıksız', color:'#29B6F6'},
   {key:'b21', days:21, icon:'🏆', label:'3 hafta aralıksız', color:'#AB47BC'},
-  {key:'b30', days:30, icon:'🐛', label:'Kitap Kurdu (1 ay aralıksız)', color:'#FF6F00'}
+  {key:'b30', days:30, icon:'🐺', label:'Kitap Kurdu (1 ay aralıksız)', color:'#FF6F00'}
 ];
 function currentTierForStreak(streak){
   let tier = null;
