@@ -1072,14 +1072,15 @@ async function showBookInfo(rawTitle, cover){
   if(dashIdx>0){ author = rawTitle.slice(0,dashIdx).trim(); title = rawTitle.slice(dashIdx+3).trim(); }
   let info = null;
   let lastError = null;
+  const searchQuery = author ? `${title} ${author}` : title;
   try{
-    const items = await searchGoogleBooks(rawTitle);
+    const items = await searchGoogleBooks(searchQuery);
     if(items[0]) info = items[0];
     else lastError = 'Google Books: sonuç yok';
   }catch(e){ lastError = 'Google Books hata: '+(e.message||e); }
   if(!info){
     try{
-      const items = await searchOpenLibrary(rawTitle);
+      const items = await searchOpenLibrary(searchQuery);
       if(items[0]) info = items[0];
       else lastError = (lastError?lastError+' | ':'')+'Open Library: sonuç yok';
     }catch(e){ lastError = (lastError?lastError+' | ':'')+'Open Library hata: '+(e.message||e); }
