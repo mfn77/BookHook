@@ -2026,7 +2026,10 @@ function renderAdminToday(){
     </div>`;
   }).join('');
   list.querySelectorAll('.stamp-btn').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{ await markStatus(btn.dataset.uid, btn.dataset.status); });
+    btn.addEventListener('click', async ()=>{
+      playMarkFx(btn, btn.dataset.status);
+      await markStatus(btn.dataset.uid, btn.dataset.status);
+    });
   });
 
   const ld = nowLogical();
