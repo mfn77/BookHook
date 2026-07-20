@@ -1095,11 +1095,19 @@ async function showBookInfo(rawTitle, cover){
     return;
   }
   const descShort = info.description ? escapeHtml(info.description).slice(0,320) + (info.description.length>320?'…':'') : '';
+  const metaLine2 = [
+    info.publisher ? escapeHtml(info.publisher) : '',
+    info.categories ? escapeHtml(info.categories) : '',
+    info.rating ? `⭐ ${info.rating}${info.ratingsCount?` (${info.ratingsCount} oy)`:''}` : ''
+  ].filter(Boolean).join(' &middot; ');
   body.innerHTML = `
     ${info.cover ? `<img src="${info.cover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.style.display='none';" />` : ''}
     <h2 style="margin:4px 0 2px;">${escapeHtml(info.title)}</h2>
-    <div class="muted" style="margin-bottom:10px;">${escapeHtml(info.author)}${info.year?` &middot; ${info.year}`:''}${info.pageCount?` &middot; ${info.pageCount} sayfa`:''}</div>
+    <div class="muted" style="margin-bottom:4px;">${escapeHtml(info.author)}${info.year?` &middot; ${info.year}`:''}${info.pageCount?` &middot; ${info.pageCount} sayfa`:''}</div>
+    ${metaLine2?`<div class="muted" style="margin-bottom:10px; font-size:12.5px;">${metaLine2}</div>`:''}
     ${descShort?`<p style="text-align:left; font-size:13.5px; line-height:1.5;">${descShort}</p>`:''}
+    ${info.isbn?`<div class="muted" style="font-size:11px; margin-top:8px;">ISBN: ${escapeHtml(info.isbn)}</div>`:''}
+    ${info.link?`<a href="${info.link}" target="_blank" rel="noopener" style="display:inline-block; margin-top:10px; font-size:13px; color:var(--gold);">Daha fazla bilgi →</a>`:''}
   `;
 }
 document.body.addEventListener('click', (e)=>{
@@ -3003,12 +3011,20 @@ async function searchGoogleBooks(q){
   const json = await res.json();
   return (json.items||[]).filter(it=>it.volumeInfo && it.volumeInfo.title).map(it=>{
     const vi = it.volumeInfo;
+    const isbn = (vi.industryIdentifiers||[]).find(x=>x.type==='ISBN_13') || (vi.industryIdentifiers||[])[0];
     return {
       title: vi.title,
       author: (vi.authors||[]).join(', ') || 'Bilinmeyen Yazar',
       year: vi.publishedDate ? vi.publishedDate.slice(0,4) : '',
       pageCount: vi.pageCount || '',
       description: vi.description || '',
+      publisher: vi.publisher || '',
+      categories: (vi.categories||[]).join(', '),
+      rating: vi.averageRating || '',
+      ratingsCount: vi.ratingsCount || '',
+      isbn: isbn ? isbn.identifier : '',
+      language: vi.language || '',
+      link: vi.infoLink || (it.id ? `https://books.google.com/books?id=${it.id}` : ''),
       cover: vi.imageLinks ? (vi.imageLinks.thumbnail||vi.imageLinks.smallThumbnail||'').replace('http://','https://') : ''
     };
   });
@@ -3023,6 +3039,13 @@ async function searchOpenLibrary(q){
     year: d.first_publish_year || '',
     pageCount: d.number_of_pages_median || '',
     description: '',
+    publisher: (d.publisher||[])[0] || '',
+    categories: (d.subject||[]).slice(0,4).join(', '),
+    rating: d.ratings_average ? Math.round(d.ratings_average*10)/10 : '',
+    ratingsCount: d.ratings_count || '',
+    isbn: (d.isbn||[])[0] || '',
+    language: (d.language||[])[0] || '',
+    link: d.key ? `https://openlibrary.org${d.key}` : '',
     cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : ''
   }));
 }
