@@ -344,6 +344,42 @@
   .stamp-mini.empty{background:transparent; color:var(--line); border:1px dashed var(--line);}
   .stamp-mini.clickable{cursor:pointer;}
   .day-info-cell{cursor:pointer;}
+  /* ============ SOSYAL SEKMESİ ============ */
+  .social-subtab{ padding-bottom:100px; }
+  .social-pill-bar{
+    position:fixed; bottom:18px; left:calc(78px + (100vw - 78px)/2); transform:translateX(-50%) translateY(0);
+    display:flex; gap:6px; padding:5px; background:rgba(24,24,30,0.6); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-radius:22px; z-index:150; box-shadow:0 6px 22px rgba(0,0,0,0.28);
+    transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s;
+    opacity:1;
+  }
+  .social-pill-bar.hidden{ transform:translateX(-50%) translateY(100px); opacity:0; pointer-events:none; }
+  .social-pill{
+    border:none; background:transparent; color:rgba(255,255,255,0.72); font-family:'Cantarell',sans-serif;
+    font-weight:600; font-size:13.5px; padding:9px 20px; border-radius:18px; cursor:pointer; transition: background 0.2s, color 0.2s;
+  }
+  .social-pill.active{ background:rgba(255,255,255,0.96); color:var(--ink); }
+  .post-card{
+    background:var(--card); border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer;
+  }
+  .post-card-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .post-card-time{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
+  .post-card-body{ font-size:14.5px; line-height:1.5; }
+  .post-card-footer{ display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
+  .post-comment-count{ font-size:12.5px; color:var(--ink-70); }
+  .post-book-cover{ width:44px; height:66px; object-fit:cover; border-radius:6px; box-shadow:var(--shadow); flex:0 0 auto; }
+  .discover-cat{ margin-bottom:22px; }
+  .discover-cat-title{ font-family:'Roboto',sans-serif; font-weight:700; font-size:16px; margin-bottom:10px; }
+  .discover-row{ display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; -webkit-overflow-scrolling:touch; }
+  .discover-book-card{ flex:0 0 auto; width:104px; cursor:pointer; }
+  .discover-book-cover-wrap{ width:104px; height:150px; border-radius:10px; overflow:hidden; box-shadow:var(--shadow); background:var(--paper-2); position:relative; }
+  .discover-book-cover-wrap img{ width:100%; height:100%; object-fit:cover; }
+  .discover-group-badge{ position:absolute; top:5px; left:5px; background:var(--gold); color:#fff; font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:8px; }
+  .discover-book-title{ font-size:12px; font-weight:600; margin-top:6px; line-height:1.25; }
+  .discover-book-rating{ font-size:11px; color:var(--ink-70); margin-top:2px; }
+  .rating-star-row{ display:flex; justify-content:center; gap:2px; font-size:26px; cursor:pointer; user-select:none; }
+  .rating-star{ color:var(--line); transition:color 0.1s; }
+  .rating-star.filled{ color:var(--gold); }
   .stamp-mini.auto{opacity:0.6; box-shadow:inset 0 0 0 2px rgba(255,255,255,0.55);}
   .stamp-mini.notmember{background:transparent; color:var(--line); opacity:0.35; border:none;}
   button:disabled{opacity:0.4; cursor:default;}
@@ -483,6 +519,18 @@
 
       <main>
     <!-- ADMIN TABS -->
+    <section class="tab" id="tab-social" style="padding-bottom:0;">
+      <div id="socialSubTimeline" class="social-subtab">
+        <div id="timelineFeed"></div>
+      </div>
+      <div id="socialSubDiscover" class="social-subtab" style="display:none;">
+        <div id="discoverFeed"></div>
+      </div>
+      <div id="socialPillBar" class="social-pill-bar">
+        <button type="button" class="social-pill active" data-sub="timeline">Timeline</button>
+        <button type="button" class="social-pill" data-sub="discover">Keşfet</button>
+      </div>
+    </section>
     <section class="tab" id="tab-today">
       <div class="card">
         <h2>Bugün kim okudu?</h2>
@@ -865,6 +913,20 @@
 </div>
 
 <div id="anchoredPopover" style="display:none; position:absolute; z-index:230; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-lg); padding:10px 14px; font-size:13.5px; max-width:220px; text-align:center;"></div>
+
+<div id="postModal" class="modal-overlay-anim" style="display:none; position:fixed; inset:0; background:rgba(20,20,25,0.65); z-index:250; align-items:center; justify-content:center; padding:16px;">
+  <div class="card modal-card-anim" style="max-width:480px; width:100%; max-height:88vh; overflow-y:auto; position:relative; margin-bottom:0;">
+    <button id="postModalClose" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-70);">✕</button>
+    <div id="postModalBody"></div>
+  </div>
+</div>
+
+<div id="bookDiscoverModal" class="modal-overlay-anim" style="display:none; position:fixed; inset:0; background:rgba(20,20,25,0.65); z-index:250; align-items:center; justify-content:center; padding:16px;">
+  <div class="card modal-card-anim" style="max-width:460px; width:100%; max-height:88vh; overflow-y:auto; position:relative; margin-bottom:0;">
+    <button id="bookDiscoverModalClose" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-70);">✕</button>
+    <div id="bookDiscoverModalBody"></div>
+  </div>
+</div>
 
 <div id="photoLightbox" class="modal-overlay-anim" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.86); z-index:300; align-items:center; justify-content:center; padding:24px; cursor:zoom-out;">
   <img id="photoLightboxImg" src="" alt="" class="lightbox-img-anim" style="max-width:92vw; max-height:88vh; border-radius:14px; object-fit:contain; box-shadow:0 8px 40px rgba(0,0,0,0.5);" />
@@ -1483,6 +1545,7 @@ document.getElementById('signupBtn').onclick = async ()=>{
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     const role = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'member';
     await setDoc(doc(db,'users',cred.user.uid), { name, email, role, banned:false, phone:'', address:'', photoURL:'', createdAt: new Date().toISOString() });
+    try{ await addDoc(collection(db,'posts'), { type:'new_member', uid:cred.user.uid, name, createdAt:new Date().toISOString(), commentCount:0 }); }catch(e){}
   }catch(err){ errBox.textContent = friendlyAuthError(err); }
 };
 
@@ -1527,6 +1590,7 @@ document.getElementById('googleAuthBtn').addEventListener('click', async ()=>{
 
 /* ============ TAB TANIMLARI ============ */
 const ADMIN_TABS = [
+  {id:'social', label:'Sosyal', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"></path><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'},
   {id:'today', label:'Bugün', icon:'✓'},
   {id:'week', label:'Kayıtlar', icon:'▤'},
   {id:'gifts', label:'Hediye', icon:'◈'},
@@ -1536,6 +1600,7 @@ const ADMIN_TABS = [
   {id:'draws', label:'Kura', icon:'↻'}
 ];
 const MEMBER_TABS = [
+  {id:'social', label:'Sosyal', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"></path><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'},
   {id:'msurvey', label:'Bugün', icon:'✓'},
   {id:'mtoday', label:'Kayıtlar', icon:'▤'},
   {id:'mlastweek', label:'Kura', icon:'↻'},
@@ -1744,6 +1809,15 @@ function renderTab(id){
   else if(id==='profile') renderProfileTab();
   else if(id==='recs') renderRecsTab();
   else if(id==='bookhistory') renderBookHistoryTab();
+  else if(id==='social'){
+    document.querySelectorAll('.social-pill').forEach(b=>b.classList.remove('active'));
+    document.querySelector('.social-pill[data-sub="timeline"]').classList.add('active');
+    document.getElementById('socialSubTimeline').style.display='block';
+    document.getElementById('socialSubDiscover').style.display='none';
+    document.getElementById('socialPillBar').classList.remove('hidden');
+    lastSocialScrollY = window.scrollY;
+    renderTimelineTab();
+  }
 }
 
 function renderHeader(){
@@ -1921,6 +1995,7 @@ async function finalizeWeek(monday, force){
     await Promise.all(pairs.map(async p=>{
       if(p.giverUid) await notifyUser(p.giverUid, `Kura çekildi (${rangeLabel}): cezalısın, ${p.receiverName||'—'} için kitap hediyesi vereceksin. "Hediye Kitap" sekmesine bak.`, 'gifts');
       if(p.receiverUid) await notifyUser(p.receiverUid, `Kura çekildi (${rangeLabel}): tebrikler, ${p.giverName} sana kitap hediye edecek! "Hediye Kitap" sekmesinden isteğini gönderebilirsin.`, 'gifts');
+      if(p.receiverUid) createPost('gift_won', {}, p.receiverUid, p.receiverName);
     }));
   }
   return {already:!didWrite, data};
@@ -1995,6 +2070,11 @@ async function checkAndAwardBadges(uid, streak){
     if(notifyDef){
       const uTab = u.role==='admin' ? 'worms' : 'mworms';
       await notifyUser(uid, `🎉 Tebrikler! "${notifyDef.label}" rozetini kazandın!`, uTab);
+      createPost('badge_gained', { badgeKey:notifyDef.key, badgeLabel:notifyDef.label, badgeIcon:notifyDef.icon }, uid, u.name);
+    }
+    if(historyIncremented && prevTier){
+      const lostDef = BADGE_DEFS.find(d=>d.key===prevTier);
+      if(lostDef) createPost('badge_lost', { badgeKey:lostDef.key, badgeLabel:lostDef.label, badgeIcon:lostDef.icon }, uid, u.name);
     }
   }catch(e){ /* rozet kaydedilemezse sessizce geç */ }
 }
@@ -2044,8 +2124,11 @@ function renderAdminToday(){
   }).join('');
   list.querySelectorAll('.stamp-btn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
+      const isSelf = btn.dataset.uid===currentUid;
+      const wasNew = isSelf && todayAnswers[btn.dataset.uid]!==btn.dataset.status;
       playMarkFx(btn, btn.dataset.status);
       await markStatus(btn.dataset.uid, btn.dataset.status);
+      if(wasNew) createPost(btn.dataset.status, {});
     });
   });
 
@@ -2533,16 +2616,20 @@ function playMarkFx(btn, type){
   setTimeout(()=> ghost.remove(), 2300);
 }
 document.getElementById('mReadBtn').addEventListener('click', async ()=>{
+  const wasNew = todayAnswers[currentUid] !== 'read';
   try{ playMarkFx(document.getElementById('mReadBtn'), 'read'); }catch(e){}
   await markStatus(currentUid,'read');
   renderMemberSurvey();
   notifyAdmins(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week');
+  if(wasNew) createPost('read', {});
   const s = await computeStreak(currentUid);
   await checkAndAwardBadges(currentUid, s);
 });
 document.getElementById('mSkipBtn').addEventListener('click', async ()=>{
+  const wasNew = todayAnswers[currentUid] !== 'skip';
   try{ playMarkFx(document.getElementById('mSkipBtn'), 'skip'); }catch(e){}
   await markStatus(currentUid,'skip'); renderMemberSurvey(); notifyAdmins(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week');
+  if(wasNew) createPost('skip', {});
 });
 
 async function renderMemberOwnWeek(){
@@ -3076,6 +3163,7 @@ function wireGiftFormHandlers(content){
       try{
         await updateDoc(doc(db,'giftRequests',btn.dataset.reqid), {received:true, receivedAt:new Date().toISOString()});
         await notifyUser(btn.dataset.giver, `${myProfile.name} hediye kitabını aldığını onayladı. 🎉`, 'gifts');
+        createPost('gift_completed', {});
         showToast('Alındı olarak işaretlendi, teşekkürler!');
         renderGiftsTab();
       }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); }
@@ -3436,6 +3524,8 @@ const REACTION_EMOJIS = ['👍','❤️','😂','😮','👏'];
 function reactionTargetRef(target){
   const [kind, ids] = target.split(':');
   if(kind==='rec') return doc(db,'recommendations',ids);
+  if(kind==='post') return doc(db,'posts',ids);
+  if(kind==='postcomment'){ const [postId,commentId] = ids.split('|'); return doc(db,'posts',postId,'comments',commentId); }
   const [recId, commentId] = ids.split('|');
   return doc(db,'recommendations',recId,'comments',commentId);
 }
@@ -3480,6 +3570,302 @@ async function setReaction(target, emoji){
     alert('Tepki kaydedilemedi: '+(e.message||e)+'\n\nBu genelde Firestore Rules izin vermediği için olur — yönetici kuralları güncellemesi gerekebilir.');
   }
 }
+
+/* ============ SOSYAL: TIMELINE + KEŞFET ============ */
+async function createPost(type, data, forUid, forName){
+  try{
+    await addDoc(collection(db,'posts'), {
+      type, uid: forUid||currentUid, name: forName||myProfile.name,
+      createdAt: new Date().toISOString(), commentCount: 0,
+      ...data
+    });
+  }catch(e){ /* sosyal gönderi oluşturma sessizce başarısız olabilir, ana işlevi bozmaz */ }
+}
+function timeAgoLabel(iso){
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs/60000);
+  if(mins < 1) return 'az önce';
+  if(mins < 60) return `${mins} dk önce`;
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return `${hrs} sa önce`;
+  const days = Math.floor(hrs/24);
+  if(days < 7) return `${days} gün önce`;
+  const d = new Date(iso);
+  return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
+}
+function postBodyHtml(p){
+  const name = escapeHtml(p.name||'');
+  switch(p.type){
+    case 'read': return `📖 Bugün okudu.`;
+    case 'skip': return `😴 Bugün okuyamadı.`;
+    case 'badge_gained': return `${p.badgeIcon||'🏅'} <b>${escapeHtml(p.badgeLabel||'')}</b> rozetini kazandı!`;
+    case 'badge_lost': return `💔 <b>${escapeHtml(p.badgeLabel||'')}</b> rozetini kaybetti.`;
+    case 'gift_won': return `🎁 Bu hafta hediye kitap kazandı!`;
+    case 'gift_completed': return `🎉 Hediye kitabına kavuştu!`;
+    case 'new_member': return `👋 Kulübe katıldı, hoş geldin!`;
+    case 'book_review': {
+      const cover = p.bookCover ? `<img src="${p.bookCover}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml((p.bookAuthor?p.bookAuthor+' - ':'')+(p.bookTitle||''))}" data-book-cover="${escapeHtml(p.bookCover)}" />` : '';
+      return `<div style="display:flex; gap:10px;">${cover}<div style="min-width:0;"><b>${escapeHtml(p.bookTitle||'')}</b><div style="color:var(--gold); font-size:13px; margin:2px 0;">⭐ ${p.rating}/10 verdi</div>${p.reviewText?`<div class="muted" style="font-size:13px;">"${escapeHtml(p.reviewText)}"</div>`:''}</div></div>`;
+    }
+    default: return escapeHtml(p.text||'');
+  }
+}
+function renderPostCard(p){
+  return `<div class="post-card modal-card-anim" data-post-id="${p.id}">
+    <div class="post-card-head">
+      ${userChipHtml(p.uid)}
+      <span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span>
+    </div>
+    <div class="post-card-body">${postBodyHtml(p)}</div>
+    <div class="post-card-footer">
+      ${renderReactionBar(p.reactions, `post:${p.id}`)}
+      <span class="post-comment-count">💬 ${p.commentCount||0}</span>
+    </div>
+  </div>`;
+}
+async function renderTimelineTab(){
+  const feed = keepOrLoading('timelineFeed');
+  let posts = [];
+  try{
+    const snap = await getDocs(query(collection(db,'posts'), orderBy('createdAt','desc'), limit(60)));
+    snap.forEach(d=> posts.push({id:d.id, ...d.data()}));
+  }catch(e){}
+  if(!posts.length){ feed.innerHTML = `<div class="empty-state"><span class="big">📰</span>Henüz gönderi yok. Okuma işaretlemeleri, rozetler ve hediyeler burada görünecek.</div>`; markLoaded(feed); return; }
+  feed.innerHTML = posts.map(p=> renderPostCard(p)).join('');
+  wirePostCards(feed);
+  markLoaded(feed);
+}
+function wirePostCards(container){
+  container.querySelectorAll('.reaction-pill').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); showReactorsModal(btn.dataset.uids, btn.dataset.emoji); });
+  });
+  container.querySelectorAll('.reaction-add-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); pendingReactionRefresh = renderTimelineTab; openReactionPicker(btn.dataset.target); });
+  });
+  container.querySelectorAll('.post-card').forEach(card=>{
+    card.addEventListener('click', (e)=>{
+      if(e.target.closest('.user-chip') || e.target.closest('.book-cover-clickable')) return;
+      openPostModal(card.dataset.postId);
+    });
+  });
+}
+async function openPostModal(postId){
+  const body = document.getElementById('postModalBody');
+  body.innerHTML = `<span class="muted">Yükleniyor…</span>`;
+  document.getElementById('postModal').style.display='flex';
+  let p = null, comments = [];
+  try{
+    const snap = await getDoc(doc(db,'posts',postId));
+    if(snap.exists()) p = {id:postId, ...snap.data()};
+  }catch(e){}
+  if(!p){ body.innerHTML = `<span class="muted">Gönderi bulunamadı.</span>`; return; }
+  try{
+    const csnap = await getDocs(collection(db,'posts',postId,'comments'));
+    csnap.forEach(d=> comments.push({id:d.id, ...d.data()}));
+    comments.sort((a,b)=> new Date(a.createdAt) - new Date(b.createdAt));
+  }catch(e){}
+  const commentsHtml = comments.map(c=>`<div class="rec-comment-row">
+    <div class="rec-comment-body">${userChipHtml(c.uid,18)}<div style="margin-top:2px;">${escapeHtml(c.text)}</div>${renderReactionBar(c.reactions, `postcomment:${postId}|${c.id}`)}</div>
+    ${(c.uid===currentUid||myProfile.role==='admin')?`<button class="rec-comment-del" data-del-postcomment="${c.id}">✕</button>`:''}
+  </div>`).join('');
+  body.innerHTML = `
+    <div class="post-card-head">${userChipHtml(p.uid)}<span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span></div>
+    <div class="post-card-body" style="margin-bottom:10px;">${postBodyHtml(p)}</div>
+    ${renderReactionBar(p.reactions, `post:${p.id}`)}
+    <div class="rec-comments-label">💬 ${comments.length} Yorum</div>
+    <div id="postModalComments">${commentsHtml}</div>
+    <div class="row" style="margin-top:10px;">
+      <input type="text" id="postCommentInput" placeholder="Yorum yaz..." />
+      <button class="secondary tiny" id="postCommentSendBtn" style="flex:0 0 auto;">Gönder</button>
+    </div>
+  `;
+  body.querySelectorAll('.reaction-pill').forEach(btn=>{
+    btn.addEventListener('click', ()=> showReactorsModal(btn.dataset.uids, btn.dataset.emoji));
+  });
+  body.querySelectorAll('.reaction-add-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ pendingReactionRefresh = ()=>openPostModal(postId); openReactionPicker(btn.dataset.target); });
+  });
+  body.querySelectorAll('[data-del-postcomment]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm('Bu yorumu silmek istediğine emin misin?')) return;
+      try{ await deleteDoc(doc(db,'posts',postId,'comments',btn.dataset.delPostcomment)); await updateDoc(doc(db,'posts',postId), {commentCount: Math.max(0,(p.commentCount||1)-1)}); openPostModal(postId); }catch(e){ alert('Silinemedi: '+(e.message||e)); }
+    });
+  });
+  document.getElementById('postCommentSendBtn').addEventListener('click', async ()=>{
+    const input = document.getElementById('postCommentInput');
+    const text = input.value.trim();
+    if(!text) return;
+    try{
+      await addDoc(collection(db,'posts',postId,'comments'), { uid:currentUid, name:myProfile.name, text, createdAt:new Date().toISOString() });
+      await updateDoc(doc(db,'posts',postId), { commentCount: (p.commentCount||0)+1 });
+      if(p.uid!==currentUid) await notifyUser(p.uid, `${myProfile.name} gönderine yorum yaptı.`, 'social');
+      openPostModal(postId);
+    }catch(err){ alert('Yorum gönderilemedi: '+(err.message||err)); }
+  });
+}
+document.getElementById('postModalClose').addEventListener('click', ()=> closeModal('postModal'));
+document.getElementById('postModal').addEventListener('click', (e)=>{ if(e.target.id==='postModal') closeModal('postModal'); });
+
+/* --- Sosyal pill çubuğu: alt sekme geçişi + kaydırınca gizle/göster --- */
+document.querySelectorAll('.social-pill').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.social-pill').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const sub = btn.dataset.sub;
+    document.getElementById('socialSubTimeline').style.display = sub==='timeline' ? 'block':'none';
+    document.getElementById('socialSubDiscover').style.display = sub==='discover' ? 'block':'none';
+    if(sub==='discover') renderDiscoverTab();
+  });
+});
+let lastSocialScrollY = 0;
+window.addEventListener('scroll', ()=>{
+  const socialTab = document.getElementById('tab-social');
+  if(!socialTab || !socialTab.classList.contains('active')) return;
+  const bar = document.getElementById('socialPillBar');
+  const cur = window.scrollY;
+  if(cur > lastSocialScrollY + 4) bar.classList.add('hidden');
+  else if(cur < lastSocialScrollY - 4) bar.classList.remove('hidden');
+  lastSocialScrollY = cur;
+}, {passive:true});
+
+const DISCOVER_CATEGORIES = [
+  {label:'Roman', slug:'fiction'},
+  {label:'Bilim Fantastik', slug:'science_fiction'},
+  {label:'Fantastik', slug:'fantasy'},
+  {label:'Tarih', slug:'history'},
+  {label:'Felsefe', slug:'philosophy'},
+  {label:'Psikoloji', slug:'psychology'},
+  {label:'Gençlik', slug:'young_adult_fiction'},
+  {label:'Şiir', slug:'poetry'},
+  {label:'Kişisel Gelişim', slug:'self-help'},
+  {label:'Klasikler', slug:'classics'}
+];
+async function fetchDiscoverCategory(slug){
+  try{
+    const res = await fetch(`https://openlibrary.org/subjects/${slug}.json?limit=16&sort=rating`);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json = await res.json();
+    return (json.works||[]).filter(w=>w.title).map(w=>({
+      title: w.title,
+      author: (w.authors||[]).map(a=>a.name).join(', ') || 'Bilinmeyen Yazar',
+      cover: w.cover_id ? `https://covers.openlibrary.org/b/id/${w.cover_id}-M.jpg` : '',
+      workKey: w.key || ''
+    }));
+  }catch(e){ return []; }
+}
+function bookKeyFor(book){
+  if(book.workKey) return book.workKey.replace(/^\/works\//,'').replace(/[^a-zA-Z0-9_-]/g,'_');
+  return (book.title+'_'+(book.author||'')).toLowerCase().replace(/[^a-z0-9]+/g,'_').slice(0,80);
+}
+function groupAvg(ratings){
+  const vals = Object.values(ratings||{}).map(r=>r.score).filter(n=>typeof n==='number');
+  if(!vals.length) return 0;
+  return vals.reduce((a,b)=>a+b,0)/vals.length;
+}
+let discoverBooksCache = [];
+async function renderDiscoverTab(){
+  const feed = keepOrLoading('discoverFeed');
+  discoverBooksCache = [];
+  let groupDocs = [];
+  try{
+    const snap = await getDocs(collection(db,'groupBookRatings'));
+    snap.forEach(d=> groupDocs.push({id:d.id, ...d.data()}));
+  }catch(e){}
+  const sections = await Promise.all(DISCOVER_CATEGORIES.map(async cat=>{
+    const groupBooksInCat = groupDocs.filter(g=>g.category===cat.slug);
+    let extBooks = [];
+    try{ extBooks = await fetchDiscoverCategory(cat.slug); }catch(e){}
+    const groupIds = new Set(groupBooksInCat.map(g=>g.id));
+    const merged = [
+      ...groupBooksInCat.map(g=>({ title:g.title, author:g.author, cover:g.cover, workKey:g.workKey, category:cat.slug, isGroup:true, ratings:g.ratings })),
+      ...extBooks.filter(b=> !groupIds.has(bookKeyFor(b))).map(b=>({ ...b, category:cat.slug, isGroup:false }))
+    ];
+    const shown = merged.slice(0,10);
+    if(!shown.length) return '';
+    const cardsHtml = shown.map(b=>{
+      const idx = discoverBooksCache.length;
+      discoverBooksCache.push(b);
+      const ratingLabel = b.isGroup ? `⭐ ${groupAvg(b.ratings).toFixed(1)} &middot; Grupta ${Object.keys(b.ratings||{}).length}` : '';
+      const coverHtml = b.cover ? `<img src="${b.cover}" alt="" onerror="this.style.display='none';" />` : '';
+      return `<div class="discover-book-card" data-idx="${idx}">
+        <div class="discover-book-cover-wrap">${coverHtml}${b.isGroup?'<span class="discover-group-badge">Grupta</span>':''}</div>
+        <div class="discover-book-title">${escapeHtml(b.title)}</div>
+        ${ratingLabel?`<div class="discover-book-rating">${ratingLabel}</div>`:''}
+      </div>`;
+    }).join('');
+    return `<div class="discover-cat"><div class="discover-cat-title">${escapeHtml(cat.label)}</div><div class="discover-row">${cardsHtml}</div></div>`;
+  }));
+  const html = sections.filter(Boolean).join('');
+  feed.innerHTML = html || `<div class="empty-state"><span class="big">🔍</span>Kategoriler şu an yüklenemedi, birazdan tekrar dene.</div>`;
+  feed.querySelectorAll('.discover-book-card').forEach(card=>{
+    card.addEventListener('click', ()=>{
+      const book = discoverBooksCache[parseInt(card.dataset.idx,10)];
+      if(book) openBookDiscoverModal(book);
+    });
+  });
+  markLoaded(feed);
+}
+async function openBookDiscoverModal(book){
+  const body = document.getElementById('bookDiscoverModalBody');
+  document.getElementById('bookDiscoverModal').style.display='flex';
+  body.innerHTML = `<span class="muted">Yükleniyor…</span>`;
+  const bookKey = bookKeyFor(book);
+  let groupDoc = null;
+  try{
+    const snap = await getDoc(doc(db,'groupBookRatings',bookKey));
+    if(snap.exists()) groupDoc = snap.data();
+  }catch(e){}
+  const myRating = groupDoc && groupDoc.ratings && groupDoc.ratings[currentUid];
+  const groupList = groupDoc ? Object.entries(groupDoc.ratings||{}) : [];
+  const groupHtml = groupList.length ? `
+    <div class="rec-comments-label">👥 Gruptaki Puanlar</div>
+    ${groupList.map(([uid,r])=>`<div class="rec-comment-row">
+      <div class="rec-comment-body">${userChipHtml(uid,18)}<div style="color:var(--gold); font-size:12.5px; margin:2px 0;">⭐ ${r.score}/10</div>${r.comment?`<div style="margin-top:2px;">${escapeHtml(r.comment)}</div>`:''}</div>
+    </div>`).join('')}` : '';
+  let extInfo = null;
+  try{
+    if(book.workKey) extInfo = await enrichFromOpenLibraryWork({ workKey:book.workKey, title:book.title, author:book.author, cover:book.cover });
+    else { const items = await searchOpenLibrary(`${book.title} ${book.author||''}`); if(items[0]) extInfo = await enrichFromOpenLibraryWork(items[0]); }
+  }catch(e){}
+  const extHtml = extInfo ? `
+    <div class="rec-comments-label" style="margin-top:14px;">ℹ️ Kitap Bilgisi</div>
+    <div class="muted" style="font-size:12.5px;">${[extInfo.publisher, extInfo.categories, extInfo.pageCount?extInfo.pageCount+' sayfa':'', extInfo.year].filter(Boolean).join(' &middot; ')}</div>
+    ${extInfo.description?`<p style="font-size:13px; line-height:1.5;">${escapeHtml(extInfo.description).slice(0,300)}</p>`:''}
+    ${extInfo.link?`<a href="${extInfo.link}" target="_blank" rel="noopener" style="font-size:12.5px; color:var(--gold);">Daha fazla bilgi →</a>`:''}` : '';
+  body.innerHTML = `
+    <div style="text-align:center;">
+      ${book.cover?`<img src="${book.cover}" alt="" style="width:110px; height:160px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:10px;" onerror="this.style.display='none';" />`:''}
+      <h2 style="margin:0 0 2px;">${escapeHtml(book.title)}</h2>
+      <div class="muted">${escapeHtml(book.author||'')}</div>
+    </div>
+    ${groupHtml}
+    <div class="rec-comments-label" style="margin-top:14px;">${myRating?'Puanını Güncelle':'Grupta Puan Ver'}</div>
+    <div class="rating-star-row" id="ratingStarRow">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="rating-star" data-n="${n}">★</span>`).join('')}</div>
+    <textarea id="ratingCommentInput" placeholder="Yorumun (opsiyonel)" style="width:100%; margin-top:10px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Cantarell',sans-serif; font-size:14px; min-height:60px; background:var(--card); color:var(--ink);">${myRating?escapeHtml(myRating.comment||''):''}</textarea>
+    <button class="primary" id="ratingSubmitBtn" style="width:100%; margin-top:8px;">Gönder</button>
+    ${extHtml}
+  `;
+  let selectedScore = myRating ? myRating.score : 0;
+  const stars = body.querySelectorAll('.rating-star');
+  function paintStars(n){ stars.forEach(s=> s.classList.toggle('filled', parseInt(s.dataset.n,10)<=n)); }
+  paintStars(selectedScore);
+  stars.forEach(s=> s.addEventListener('click', ()=>{ selectedScore = parseInt(s.dataset.n,10); paintStars(selectedScore); }));
+  document.getElementById('ratingSubmitBtn').addEventListener('click', async ()=>{
+    if(!selectedScore){ alert('Önce bir puan seç (yıldızlara dokun).'); return; }
+    const comment = document.getElementById('ratingCommentInput').value.trim();
+    try{
+      await setDoc(doc(db,'groupBookRatings',bookKey), {
+        title: book.title, author: book.author||'', cover: book.cover||'', category: book.category||'', workKey: book.workKey||'',
+        [`ratings.${currentUid}`]: { score: selectedScore, comment, createdAt: new Date().toISOString() }
+      }, { merge:true });
+      await createPost('book_review', { bookTitle: book.title, bookAuthor: book.author||'', bookCover: book.cover||'', rating: selectedScore, reviewText: comment });
+      closeModal('bookDiscoverModal');
+      showToast('Puanın kaydedildi, Timeline\'da paylaşıldı!');
+    }catch(err){ alert('Kaydedilemedi: '+(err.message||err)); }
+  });
+}
+document.getElementById('bookDiscoverModalClose').addEventListener('click', ()=> closeModal('bookDiscoverModal'));
+document.getElementById('bookDiscoverModal').addEventListener('click', (e)=>{ if(e.target.id==='bookDiscoverModal') closeModal('bookDiscoverModal'); });
 
 async function fetchRecComments(recId){
   let items = [];
