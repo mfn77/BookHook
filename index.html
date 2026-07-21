@@ -3855,22 +3855,17 @@ document.querySelectorAll('.social-pill').forEach(btn=>{
   });
 });
 let lastSocialScrollY = 0;
-document.getElementById('discoverFabPrev').addEventListener('click', ()=>{
-  const i = discoverActiveCategory ? DISCOVER_CATEGORIES.findIndex(c=>c.slug===discoverActiveCategory) : 0;
-  const prev = DISCOVER_CATEGORIES[(i-1+DISCOVER_CATEGORIES.length)%DISCOVER_CATEGORIES.length];
-  discoverActiveCategory = prev.slug;
+function discoverGoToOffset(offset){
+  const total = DISCOVER_CATEGORIES.length + 1; // +1: "Önerilenler" durağı
+  const cur = discoverActiveCategory ? DISCOVER_CATEGORIES.findIndex(c=>c.slug===discoverActiveCategory) : -1;
+  const normalized = (((cur + offset + 1) % total) + total) % total - 1;
+  discoverActiveCategory = normalized === -1 ? null : DISCOVER_CATEGORIES[normalized].slug;
   discoverPage = 0;
   renderDiscoverFilters();
   renderDiscoverContent();
-});
-document.getElementById('discoverFabNext').addEventListener('click', ()=>{
-  const i = discoverActiveCategory ? DISCOVER_CATEGORIES.findIndex(c=>c.slug===discoverActiveCategory) : -1;
-  const next = DISCOVER_CATEGORIES[(i+1)%DISCOVER_CATEGORIES.length];
-  discoverActiveCategory = next.slug;
-  discoverPage = 0;
-  renderDiscoverFilters();
-  renderDiscoverContent();
-});
+}
+document.getElementById('discoverFabPrev').addEventListener('click', ()=> discoverGoToOffset(-1));
+document.getElementById('discoverFabNext').addEventListener('click', ()=> discoverGoToOffset(1));
 window.addEventListener('scroll', ()=>{
   const socialTab = document.getElementById('tab-social');
   if(!socialTab || !socialTab.classList.contains('active')) return;
