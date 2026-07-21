@@ -293,7 +293,7 @@
   .reaction-pill.mine{ background:rgba(33,144,164,0.14); border-color:var(--gold); }
   .reaction-pill .rcount{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
   #reactionDrawer{
-    display:none; position:fixed; z-index:240; background:var(--card); border:1px solid var(--line); border-radius:20px;
+    display:none; position:fixed; z-index:260; background:var(--card); border:1px solid var(--line); border-radius:20px;
     box-shadow:var(--shadow-lg); padding:6px 7px; align-items:center; gap:1px; white-space:nowrap;
     transform-origin:left center; transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s;
     opacity:0; transform:translateY(-50%) scaleX(0);
@@ -562,7 +562,7 @@
         <div id="discoverFeed"></div>
       </div>
       <div id="socialPillBar" class="social-pill-bar">
-        <button type="button" class="social-pill active" data-sub="timeline">Timeline</button>
+        <button type="button" class="social-pill active" data-sub="timeline">Akış</button>
         <button type="button" class="social-pill" data-sub="discover">Keşfet</button>
       </div>
     </section>
@@ -3178,6 +3178,7 @@ function wireGiftFormHandlers(content){
           recipientName, bookTitle, bookCover, site, address, phone, shipped:false, received:false, updatedAt: new Date().toISOString()
         });
         await notifyUser(giverUid, `${myProfile.name} hediye kitap isteğini gönderdi: "${bookTitle}". "Hediye Kitap" sekmesinden bak.`, 'gifts');
+        createPost('gift_requested', { giverUid, giverName: usersCache[giverUid]?.name||'', bookTitle, bookCover });
         showToast('İstek gönderildi.');
         renderGiftsTab();
       }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
@@ -3667,7 +3668,7 @@ async function createPost(type, data, forUid, forName){
       createdAt: new Date().toISOString(), commentCount: 0,
       ...data
     });
-  }catch(e){ /* sosyal gönderi oluşturma sessizce başarısız olabilir, ana işlevi bozmaz */ }
+  }catch(e){ console.error('Gönderi oluşturulamadı:', e); }
 }
 function timeAgoLabel(iso){
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -3689,6 +3690,7 @@ function postBodyHtml(p){
     case 'badge_gained': return `${p.badgeIcon||'🏅'} <b>${escapeHtml(p.badgeLabel||'')}</b> rozetini kazandı!`;
     case 'badge_lost': return `💔 <b>${escapeHtml(p.badgeLabel||'')}</b> rozetini kaybetti.`;
     case 'gift_won': return `🎁 Bu hafta hediye kitap kazandı!`;
+    case 'gift_requested': return `📮 ${userChipHtml(p.giverUid)} kişisinden <b>${escapeHtml(p.bookTitle||'')}</b> istedi.`;
     case 'gift_completed': return `🎉 Hediye kitabına kavuştu!`;
     case 'new_member': return `👋 Kulübe katıldı, hoş geldin!`;
     case 'book_review': {
@@ -4222,7 +4224,7 @@ async function openBookDiscoverModal(book){
       }
       await createPost('book_review', { bookTitle: book.title, bookAuthor: book.author||'', bookCover: book.cover||'', rating: selectedScore, reviewText: comment });
       closeModal('bookDiscoverModal');
-      showToast('Puanın kaydedildi, Timeline\'da paylaşıldı!');
+      showToast('Puanın kaydedildi, Akış\'ta paylaşıldı!');
     }catch(err){ alert('Kaydedilemedi: '+(err.message||err)); }
   });
 }
