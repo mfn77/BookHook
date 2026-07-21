@@ -430,7 +430,6 @@
     transition: left 0.2s, transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.28s;
   }
   #discoverFabPrev.visible, #discoverFabNext.visible{ opacity:1; pointer-events:auto; }
-  #discoverFabPrev.slide-hidden, #discoverFabNext.slide-hidden{ transform:translate(-50%, 100px); }
   .compose-textarea{ width:100%; min-height:90px; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:14.5px; background:var(--card); color:var(--ink); resize:vertical; }
   .post-card{
     background:var(--card); border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer;
@@ -1018,10 +1017,8 @@
       <h2 id="discoverHeaderTitle" style="margin-top:22px;">🔍 Keşfet</h2>
       <div id="discoverFilters" class="discover-filters"></div>
       <div id="discoverFeed" style="padding-bottom:90px;"></div>
-      <div id="discoverNavFab" class="discover-fab-nav">
-        <button type="button" id="discoverFabPrev">◀</button>
-        <button type="button" id="discoverFabNext">▶</button>
-      </div>
+      <button type="button" id="discoverFabPrev">◀</button>
+      <button type="button" id="discoverFabNext">▶</button>
     </section>
       </main>
     </div>
@@ -1309,7 +1306,6 @@ function avatarHtmlFromProfile(profile, size){
     : '';
   return `<span style="position:relative; display:inline-flex; border-radius:50%; ${ringStyle} margin-right:6px; vertical-align:middle; line-height:0;">${inner}${badgeOverlay}</span>`;
 }
-function avatarHtml(uid, size){ return avatarHtmlFromProfile(usersCache[uid], size); }
 function userChipHtml(uid, size){
   const u = usersCache[uid];
   const name = (u && u.name) || '?';
@@ -3881,9 +3877,7 @@ async function renderBookHistoryTab(){
   renderDiscoverTab();
   setupDiscoverNavObserver();
 }
-let discoverNavObserver = null;
 let discoverNavEnteredZone = false;
-let lastDiscoverNavScrollY = 0;
 function positionDiscoverFabs(){
   const contentCol = document.getElementById('contentCol');
   const prevBtn = document.getElementById('discoverFabPrev');
