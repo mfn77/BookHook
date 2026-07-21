@@ -19,8 +19,8 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'member';
       allow update: if isSignedIn() && (
-        (request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role','isOwner'])) ||
-        (isAdmin() && request.auth.uid != uid && !isOwnerUid(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isOwner']))
+        request.auth.uid == uid ||
+        (isAdmin() && !isOwnerUid(uid))
       );
       allow delete: if isAdmin() && !isOwnerUid(uid);
 
