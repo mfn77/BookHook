@@ -3689,6 +3689,7 @@ document.getElementById('recPersonalSendBtn').addEventListener('click', async ()
     document.getElementById('recPersonalNote').value='';
     document.getElementById('recPersonalCover').value='';
     await notifyUser(toUid, `${myProfile.name} sana bir kitap önerdi: "${bookTitle}"`, 'recs');
+    createPost('rec_personal', { toName: usersCache[toUid]?.name||'' });
     showToast('Öneri gönderildi.');
     closeAddForm('recPersonalAddBtn','recPersonalFormWrap');
     renderPersonalRecs();
@@ -3708,13 +3709,13 @@ document.getElementById('recGroupSendBtn').addEventListener('click', async ()=>{
     document.getElementById('recGroupBook').value='';
     document.getElementById('recGroupNote').value='';
     document.getElementById('recGroupCover').value='';
+    createPost('rec_group', { bookTitle, bookCover: coverUrl });
     showToast('Grup önerisi gönderildi.');
     closeAddForm('recGroupAddBtn','recGroupFormWrap');
     renderGroupRecs();
   }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
 });
 
-/* ============ ORTAK: KİTAP ARAMA (Google Books API üzerinden otomatik tamamlama) ============ */
 /* ============ ORTAK: KİTAP ARAMA (Google Books API üzerinden otomatik tamamlama) ============ */
 async function searchGoogleBooks(q){
   const keyParam = GOOGLE_BOOKS_API_KEY ? `&key=${GOOGLE_BOOKS_API_KEY}` : '';
@@ -4174,6 +4175,11 @@ function postBodyHtml(p){
     }
     case 'record_dethrone': return `👑 ${p.recordIcon||'🏆'} <b>${escapeHtml(p.recordLabel||'')}</b> rekorunda <b>${escapeHtml(p.dethronedName||'')}</b>'ı geçti! (${p.recordCount})`;
     case 'no_lottery': return `🍀 Bu hafta (${escapeHtml(p.weekLabel||'')}) kimse cezalı olmadı, kura çekilmedi!`;
+    case 'rec_personal': return `✎ ${escapeHtml(p.toName||'')}'ye kitap önerdi.`;
+    case 'rec_group': {
+      const cover = p.bookCover ? `<img src="${p.bookCover}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml(p.bookTitle||'')}" data-book-cover="${escapeHtml(p.bookCover)}" />` : '';
+      return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div>✎ Gruba <b>${escapeHtml(p.bookTitle||'')}</b>'ı önerdi.</div></div>`;
+    }
     default: return escapeHtml(p.text||'');
   }
 }
