@@ -384,10 +384,10 @@
   /* ============ SOSYAL SEKMESİ ============ */
   .social-subtab{ padding-bottom:100px; }
   .social-pill-bar{
-    position:fixed; bottom:18px; left:calc(78px + (100vw - 78px)/2); transform:translateX(-50%) translateY(0);
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(0);
     display:flex; align-items:center; height:40px; gap:6px; padding:0 5px; background:rgba(24,24,30,0.6); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
     border-radius:20px; z-index:150; box-shadow:0 6px 22px rgba(0,0,0,0.28);
-    transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s;
+    transition: left 0.32s cubic-bezier(0.4,0,0.2,1), transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s;
     opacity:1;
   }
   .social-pill-bar.hidden{ transform:translateX(-50%) translateY(100px); opacity:0; pointer-events:none; }
@@ -538,10 +538,11 @@
     .sidebar-collapse-btn{ display:none; }
     .sidebar-tabs.tabs{
       position:static; top:auto; display:flex; flex-direction:row; flex:1 1 auto;
-      overflow-x:auto; overflow-y:hidden; gap:2px; padding:0 4px; align-items:stretch; height:auto;
+      overflow-x:visible; overflow-y:hidden; gap:2px; padding:0 4px; align-items:stretch; height:auto;
     }
-    .sidebar-tabs.tabs button{ width:auto; min-width:58px; flex:0 0 auto; height:52px !important; font-size:9px !important; }
+    .sidebar-tabs.tabs button{ width:auto; min-width:0; flex:1 1 0; height:52px !important; font-size:9px !important; }
     .sidebar-tabs.tabs button .tab-icon{ font-size:17px !important; }
+    .sidebar-tabs.tabs button span:not(.tab-icon){ display:none; }
     .content-col{ margin-left:0 !important; padding-bottom:70px; }
     .content-col.expanded{ margin-left:0 !important; }
     .sidebar-expand-fab{ display:none !important; }
@@ -1356,15 +1357,25 @@ document.getElementById('sidebarLogoBtn').addEventListener('click', ()=>{
   const homeTab = myProfile && myProfile.role==='admin' ? 'today' : 'msurvey';
   if(document.getElementById('tab-'+homeTab)) switchTab(homeTab);
 });
+function repositionSocialPillBar(){
+  const contentCol = document.getElementById('contentCol');
+  const pillBar = document.getElementById('socialPillBar');
+  if(!contentCol || !pillBar) return;
+  const rect = contentCol.getBoundingClientRect();
+  pillBar.style.left = (rect.left + rect.width/2) + 'px';
+}
+window.addEventListener('resize', repositionSocialPillBar);
 document.getElementById('sidebarCollapseBtn').addEventListener('click', ()=>{
   document.getElementById('sidebarNav').classList.add('collapsed');
   document.getElementById('contentCol').classList.add('expanded');
   document.getElementById('sidebarExpandFab').classList.add('visible');
+  setTimeout(repositionSocialPillBar, 340);
 });
 document.getElementById('sidebarExpandFab').addEventListener('click', ()=>{
   document.getElementById('sidebarNav').classList.remove('collapsed');
   document.getElementById('contentCol').classList.remove('expanded');
   document.getElementById('sidebarExpandFab').classList.remove('visible');
+  setTimeout(repositionSocialPillBar, 340);
 });
 document.getElementById('photoLightbox').addEventListener('click', ()=>{ closeModal('photoLightbox'); });
 document.getElementById('profileModalBookHistoryBtn').addEventListener('click', async ()=>{
@@ -1770,23 +1781,23 @@ document.getElementById('googleAuthBtn').addEventListener('click', async ()=>{
 /* ============ TAB TANIMLARI ============ */
 const ADMIN_TABS = [
   {id:'social', label:'Sosyal', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"></path><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'},
-  {id:'today', label:'Bugün', icon:'✓'},
-  {id:'week', label:'Kayıtlar', icon:'▤'},
-  {id:'gifts', label:'Hediye', icon:'◈'},
-  {id:'worms', label:'Rozet', icon:'☆'},
+  {id:'today', label:'Bugün', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'},
+  {id:'week', label:'Kayıtlar', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>'},
+  {id:'gifts', label:'Hediye', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"></path></svg>'},
+  {id:'worms', label:'Rozet', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>'},
   {id:'bookhistory', label:'Kitaplığım', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>'},
-  {id:'recs', label:'Öneriler', icon:'✎'},
-  {id:'draws', label:'Kura', icon:'↻'}
+  {id:'recs', label:'Öneriler', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>'},
+  {id:'draws', label:'Kura', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>'}
 ];
 const MEMBER_TABS = [
   {id:'social', label:'Sosyal', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"></path><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'},
-  {id:'msurvey', label:'Bugün', icon:'✓'},
-  {id:'mtoday', label:'Kayıtlar', icon:'▤'},
-  {id:'mlastweek', label:'Kura', icon:'↻'},
-  {id:'gifts', label:'Hediye', icon:'◈'},
-  {id:'mworms', label:'Rozet', icon:'☆'},
+  {id:'msurvey', label:'Bugün', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'},
+  {id:'mtoday', label:'Kayıtlar', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>'},
+  {id:'mlastweek', label:'Kura', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>'},
+  {id:'gifts', label:'Hediye', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"></path></svg>'},
+  {id:'mworms', label:'Rozet', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>'},
   {id:'bookhistory', label:'Kitaplığım', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>'},
-  {id:'recs', label:'Öneriler', icon:'✎'}
+  {id:'recs', label:'Öneriler', icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>'}
 ];
 const HAMBURGER_ADMIN_EXTRA = [
   {id:'editpast', label:'Geçmiş Düzenle', icon:'✎'},
@@ -1998,6 +2009,7 @@ function renderTab(id){
     document.getElementById('composePostBtn').style.display='flex';
     document.getElementById('discoverNavFab').style.display='none';
     lastSocialScrollY = window.scrollY;
+    repositionSocialPillBar();
     renderTimelineTab();
   }
 }
