@@ -2190,34 +2190,37 @@ function currentTierForStreak(streak){
   BADGE_DEFS.forEach(def=>{ if(streak>=def.days) tier = def.key; });
   return tier;
 }
+const badgeCheckInFlight = new Set();
 async function checkAndAwardBadges(uid, streak){
-  const u = usersCache[uid];
-  if(!u) return;
-  const lastStreak = typeof u.lastStreak==='number' ? u.lastStreak : 0;
-  const prevTier = u.currentTier || null;
-  const newTier = currentTierForStreak(streak);
-  const badgeCounts = {...(u.badgeCounts||{})};
-  let historyIncremented = false;
-  let notifyDef = null;
-
-  if(streak < lastStreak){
-    // Seri bozulmuş: bir önceki döngü sona erdi. O döngünün ulaştığı en yüksek rozeti
-    // (sadece onu, aradaki alt rozetleri değil) geçmişe bir kere ekle.
-    if(prevTier){
-      badgeCounts[prevTier] = (badgeCounts[prevTier]||0) + 1;
-      historyIncremented = true;
-    }
-  } else if(newTier && newTier !== prevTier){
-    // Aynı döngü içinde daha yüksek bir eşiğe ulaşıldı: sadece bildirim gönder,
-    // geçmişe (badgeCounts) henüz sayma — seri bitince sayılacak.
-    notifyDef = BADGE_DEFS.find(d=>d.key===newTier);
-  }
-
-  const changed = (streak!==lastStreak) || (prevTier!==newTier) || historyIncremented;
-  if(!changed) return;
-
-  const updates = { lastStreak: streak, badgeCounts, currentTier: newTier, currentStreak: streak };
+  if(badgeCheckInFlight.has(uid)) return; // aynı kişi için eşzamanlı ikinci bir kontrolü atla (çift sayımı önler)
+  badgeCheckInFlight.add(uid);
   try{
+    const u = usersCache[uid];
+    if(!u) return;
+    const lastStreak = typeof u.lastStreak==='number' ? u.lastStreak : 0;
+    const prevTier = u.currentTier || null;
+    const newTier = currentTierForStreak(streak);
+    const badgeCounts = {...(u.badgeCounts||{})};
+    let historyIncremented = false;
+    let notifyDef = null;
+
+    if(streak < lastStreak){
+      // Seri bozulmuş: bir önceki döngü sona erdi. O döngünün ulaştığı en yüksek rozeti
+      // (sadece onu, aradaki alt rozetleri değil) geçmişe bir kere ekle.
+      if(prevTier){
+        badgeCounts[prevTier] = (badgeCounts[prevTier]||0) + 1;
+        historyIncremented = true;
+      }
+    } else if(newTier && newTier !== prevTier){
+      // Aynı döngü içinde daha yüksek bir eşiğe ulaşıldı: sadece bildirim gönder,
+      // geçmişe (badgeCounts) henüz sayma — seri bitince sayılacak.
+      notifyDef = BADGE_DEFS.find(d=>d.key===newTier);
+    }
+
+    const changed = (streak!==lastStreak) || (prevTier!==newTier) || historyIncremented;
+    if(!changed) return;
+
+    const updates = { lastStreak: streak, badgeCounts, currentTier: newTier, currentStreak: streak };
     await updateDoc(doc(db,'users',uid), updates);
     Object.assign(u, updates);
     if(notifyDef){
@@ -2230,6 +2233,7 @@ async function checkAndAwardBadges(uid, streak){
       if(lostDef) createPost('badge_lost', { badgeKey:lostDef.key, badgeLabel:lostDef.label, badgeIcon:lostDef.icon }, uid, u.name);
     }
   }catch(e){ /* rozet kaydedilemezse sessizce geç */ }
+  finally{ badgeCheckInFlight.delete(uid); }
 }
 
 /* ============ GÜN GEÇİŞİNİ (06:00) TAKİP ET ============ */
