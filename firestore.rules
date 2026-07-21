@@ -21,9 +21,9 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         (request.auth.uid == uid &&
           request.resource.data.role == resource.data.role &&
-          request.resource.data.get('isOwner', false) == resource.data.get('isOwner', false)) ||
+          request.resource.data.isOwner == resource.data.isOwner) ||
         (isAdmin() && request.auth.uid != uid && resource.data.isOwner != true &&
-          request.resource.data.get('isOwner', false) == resource.data.get('isOwner', false))
+          request.resource.data.isOwner == resource.data.isOwner)
       );
       allow delete: if isAdmin() && resource.data.isOwner != true;
 
