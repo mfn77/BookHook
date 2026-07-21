@@ -363,6 +363,7 @@
   .chip.ok{color:var(--forest-dark); background:rgba(38,162,105,0.14);}
   .chip.pending{color:var(--ink-70); background:var(--paper-2); border:1px dashed var(--line);}
   .chip.banned{color:#fff; background:var(--cloth); font-weight:700;}
+  .chip.owner{color:#fff; background:var(--gold); font-weight:700;}
   .libcard{overflow-x:auto;}
   table.weekgrid{ width:100%; border-collapse:collapse; font-family:'Roboto Mono', monospace; font-size:12px; min-width:520px;}
   table.weekgrid th, table.weekgrid td{ border:none; border-bottom:1px solid var(--line); padding:10px 6px; text-align:center;}
@@ -2263,14 +2264,15 @@ function renderAdminToday(){
   list.innerHTML = uids.map(uid=>{
     const u = usersCache[uid];
     const st = todayAnswers[uid];
+    const isProtectedOwner = u.isOwner && uid!==currentUid;
     return `
     <div class="member-row">
       <div>
         <div class="member-name">${userChipHtml(uid)}</div>
       </div>
       <div class="stamp-btns">
-        <button class="stamp-btn read ${st==='read'?'selected':''}" data-uid="${uid}" data-status="read">✓</button>
-        <button class="stamp-btn skip ${st==='skip'?'selected':''}" data-uid="${uid}" data-status="skip">✕</button>
+        <button class="stamp-btn read ${st==='read'?'selected':''}" data-uid="${uid}" data-status="read" ${isProtectedOwner?'disabled title="Sahibin işaretlemesini değiştiremezsin"':''}>✓</button>
+        <button class="stamp-btn skip ${st==='skip'?'selected':''}" data-uid="${uid}" data-status="skip" ${isProtectedOwner?'disabled title="Sahibin işaretlemesini değiştiremezsin"':''}>✕</button>
       </div>
     </div>`;
   }).join('');
@@ -2343,12 +2345,13 @@ async function renderEditPastTab(){
   list.innerHTML = uids.map(uid=>{
     const rec = map[uid];
     const st = rec ? rec.status : undefined;
+    const isProtectedOwner = usersCache[uid] && usersCache[uid].isOwner && uid!==currentUid;
     const autoTag = rec && rec.auto ? '<span class="chip pending" title="Otomatik işaretlenmiş, henüz kendisi cevap vermemiş">otomatik</span>' : (!rec ? '<span class="chip pending">cevap yok</span>' : '');
     return `<div class="member-row">
       <div><div class="member-name">${userChipHtml(uid)}</div><div class="member-meta">${autoTag}</div></div>
       <div class="stamp-btns">
-        <button class="stamp-btn read ${st==='read'?'selected':''}" data-uid="${uid}" data-status="read">✓</button>
-        <button class="stamp-btn skip ${st==='skip'?'selected':''}" data-uid="${uid}" data-status="skip">✕</button>
+        <button class="stamp-btn read ${st==='read'?'selected':''}" data-uid="${uid}" data-status="read" ${isProtectedOwner?'disabled title="Sahibin geçmişini değiştiremezsin"':''}>✓</button>
+        <button class="stamp-btn skip ${st==='skip'?'selected':''}" data-uid="${uid}" data-status="skip" ${isProtectedOwner?'disabled title="Sahibin geçmişini değiştiremezsin"':''}>✕</button>
       </div>
     </div>`;
   }).join('');
@@ -2582,16 +2585,17 @@ async function renderAdminMembers(){
   list.innerHTML = uids.map(uid=>{
     const u = usersCache[uid];
     const isSelf = uid===currentUid;
+    const isProtectedOwner = u.isOwner && !isSelf; // sahip, sahibin kendisi dışındaki herkese karşı korumalı
     const joinDs = joinDateStrOf(uid) || '—';
     return `<div class="member-row">
       <div>
-        <div class="member-name">${userChipHtml(uid)} ${u.banned && !u.deleted?'<span class="chip banned">BANLI</span>':''} ${u.deleted?'<span class="chip banned">SİLİNDİ</span>':''}</div>
+        <div class="member-name">${userChipHtml(uid)} ${u.role==='admin'?`<span class="chip ${u.isOwner?'owner':'ok'}">YÖNETİCİ</span>`:''} ${u.banned && !u.deleted?'<span class="chip banned">BANLI</span>':''} ${u.deleted?'<span class="chip banned">SİLİNDİ</span>':''}</div>
         <div class="member-meta">${escapeHtml(u.email||'')} &middot; Katılım: ${joinDs} <button data-edit-join="${uid}" style="border:none;background:none;color:var(--gold);cursor:pointer;font-size:10.5px;text-decoration:underline;">düzenle</button></div>
       </div>
       <div class="row" style="flex:0 0 auto; width:auto; flex-wrap:wrap;">
-        <button class="secondary tiny" data-toggle-role="${uid}" ${isSelf||u.deleted?'disabled':''} ${isSelf?'title="Kendi rolünü buradan değiştiremezsin"':''}>${u.role==='admin' ? 'Üye Yap' : 'Yönetici Yap'}</button>
-        <button class="secondary tiny" data-toggle-ban="${uid}" ${isSelf||u.deleted?'disabled':''} ${isSelf?'title="Kendini banlayamazsın"':''}>${u.banned ? 'Banı Kaldır' : 'Banla'}</button>
-        <button class="secondary tiny" data-toggle-delete="${uid}" ${isSelf?'disabled title="Kendi hesabını Profilim sekmesinden silebilirsin"':''} style="border-color:var(--cloth-dark); color:var(--cloth-dark);">${u.deleted ? 'Geri Yükle' : 'Sil'}</button>
+        <button class="secondary tiny" data-toggle-role="${uid}" ${isSelf||u.deleted||isProtectedOwner?'disabled':''} ${isSelf?'title="Kendi rolünü buradan değiştiremezsin"':(isProtectedOwner?'title="Sahibin rolünü değiştiremezsin"':'')}>${u.role==='admin' ? 'Üye Yap' : 'Yönetici Yap'}</button>
+        <button class="secondary tiny" data-toggle-ban="${uid}" ${isSelf||u.deleted||isProtectedOwner?'disabled':''} ${isSelf?'title="Kendini banlayamazsın"':(isProtectedOwner?'title="Sahibi banlayamazsın"':'')}>${u.banned ? 'Banı Kaldır' : 'Banla'}</button>
+        <button class="secondary tiny" data-toggle-delete="${uid}" ${isSelf||isProtectedOwner?'disabled':''} ${isSelf?'title="Kendi hesabını Profilim sekmesinden silebilirsin"':(isProtectedOwner?'title="Sahibi silemezsin"':'')} style="border-color:var(--cloth-dark); color:var(--cloth-dark);">${u.deleted ? 'Geri Yükle' : 'Sil'}</button>
       </div>
     </div>`;
   }).join('');
