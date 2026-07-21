@@ -525,6 +525,29 @@
   .center-logo-mark img{ width:auto; height:72px; display:block; margin:0 auto; }
   .center-logo-word{ font-family:'Inter', sans-serif; font-weight:700; font-size:24px; color:var(--ink); margin-top:6px; letter-spacing:0.2px; }
   .loading-note{text-align:center; padding:40px; color:var(--ink-70); font-family:'Inter', sans-serif; font-size:13px;}
+  /* ============ DAR EKRANLARDA: SOL SEKME MENÜSÜ ALTA GEÇER (yatay tab çubuğu) ============ */
+  @media (max-width:700px){
+    .sidebar{
+      top:auto; left:0; right:0; bottom:0; width:100%; height:auto;
+      flex-direction:row; align-items:center; justify-content:flex-start;
+      padding:4px calc(4px + env(safe-area-inset-left,0px)) calc(4px + env(safe-area-inset-bottom,0px)) calc(4px + env(safe-area-inset-right,0px));
+      border-right:none; border-top:1px solid var(--line); overflow-x:auto; overflow-y:hidden;
+    }
+    .sidebar.collapsed{ transform:translateY(100%); }
+    .sidebar-header{ display:none; }
+    .sidebar-collapse-btn{ display:none; }
+    .sidebar-tabs.tabs{
+      position:static; top:auto; display:flex; flex-direction:row; flex:1 1 auto;
+      overflow-x:auto; overflow-y:hidden; gap:2px; padding:0 4px; align-items:stretch; height:auto;
+    }
+    .sidebar-tabs.tabs button{ width:auto; min-width:58px; flex:0 0 auto; height:52px !important; font-size:9px !important; }
+    .sidebar-tabs.tabs button .tab-icon{ font-size:17px !important; }
+    .content-col{ margin-left:0 !important; padding-bottom:70px; }
+    .content-col.expanded{ margin-left:0 !important; }
+    .sidebar-expand-fab{ display:none !important; }
+    .social-pill-bar{ bottom:calc(70px + env(safe-area-inset-bottom,0px)) !important; }
+    .social-floating-action{ bottom:calc(70px + env(safe-area-inset-bottom,0px)) !important; }
+  }
 </style>
 </head>
 <body>
@@ -4341,16 +4364,25 @@ async function renderDiscoverHome(){
       html += `<button type="button" class="secondary" id="discoverSeedBtn" style="width:100%; margin-bottom:10px;">🌱 Beğenilen 80 Kitaplık Listeyle Doldur</button>`;
     }
   }
-  html += `<div class="discover-featured-grid">` + featured.map((b,i)=>`<div class="discover-featured-card" data-featured-idx="${i}">
-    ${b.cover?`<img src="${b.cover}" class="discover-featured-cover" />`:`<div class="discover-featured-cover"></div>`}
-    <div class="discover-featured-info"><div class="discover-featured-title">${escapeHtml(b.title)}</div><div class="muted">${escapeHtml(b.author||'')}</div></div>
-  </div>`).join('') + `</div>`;
-  html += `<button type="button" class="discover-add-card" id="discoverAddFeaturedBtn" style="width:100%; aspect-ratio:auto; height:52px; margin-top:8px;">+</button>`;
+  discoverBooksCache = [];
+  const featuredCardsHtml = featured.map(b=>{
+    const idx = discoverBooksCache.length;
+    discoverBooksCache.push(b);
+    const coverHtml = b.cover ? `<img src="${b.cover}" alt="" onerror="this.style.display='none';" />` : '';
+    return `<div class="discover-book-card" data-idx="${idx}">
+      <div class="discover-book-cover-wrap">${coverHtml}</div>
+      <div class="discover-book-title">${escapeHtml(b.title)}</div>
+    </div>`;
+  }).join('');
+  html += `<div class="discover-grid">${featuredCardsHtml}<button type="button" class="discover-add-card" id="discoverAddFeaturedBtn">+</button></div>`;
   main.innerHTML = html;
   const seedBtn = document.getElementById('discoverSeedBtn');
   if(seedBtn) seedBtn.addEventListener('click', seedFeaturedBooks);
-  main.querySelectorAll('[data-featured-idx]').forEach(card=>{
-    card.addEventListener('click', ()=> openBookDiscoverModal(featured[parseInt(card.dataset.featuredIdx,10)]));
+  main.querySelectorAll('.discover-book-card').forEach(card=>{
+    card.addEventListener('click', ()=>{
+      const book = discoverBooksCache[parseInt(card.dataset.idx,10)];
+      if(book) openBookDiscoverModal(book);
+    });
   });
   main.querySelectorAll('[data-approve-featured]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{ try{ await updateDoc(doc(db,'discoverFeatured',btn.dataset.approveFeatured), {approved:true}); renderDiscoverHome(); }catch(e){ alert('Onaylanamadı: '+(e.message||e)); } });
