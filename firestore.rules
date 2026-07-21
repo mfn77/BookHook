@@ -1,0 +1,123 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function myRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    function isAdmin() {
+      return isSignedIn() && myRole() == 'admin';
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'member';
+      allow update: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow delete: if isAdmin();
+
+      match /bookHistory/{itemId} {
+        allow read: if isSignedIn();
+        allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
+      }
+    }
+
+    match /days/{dateId}/answers/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+    }
+
+    match /draws/{weekId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /manualDraws/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    match /settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /ruleRequests/{id} {
+      allow read: if isSignedIn() && (isAdmin() || resource.data.uid == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin();
+    }
+
+    match /giftRequests/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && (request.resource.data.receiverUid == request.auth.uid || request.resource.data.giverUid == request.auth.uid || isAdmin());
+    }
+
+    match /notifications/{uid}/items/{id} {
+      allow read, update, delete: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn();
+    }
+
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+        allow update: if isSignedIn();
+        allow delete: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      }
+    }
+
+    match /groupBookRatings/{bookId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+    }
+
+    match /discoverFeatured/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && isAdmin();
+    }
+
+    match /discoverAdditions/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+    }
+
+    match /recommendations/{recId} {
+      allow read: if isSignedIn() && (
+        resource.data.scope == 'group' ||
+        (resource.data.scope == 'personal' && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid))
+      );
+      allow create: if isSignedIn() && request.resource.data.fromUid == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.scope == 'group' ||
+        resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid
+      );
+      allow delete: if isSignedIn() && (
+        (resource.data.scope == 'group' && (resource.data.fromUid == request.auth.uid || isAdmin())) ||
+        (resource.data.scope == 'personal' && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid))
+      );
+
+      match /comments/{commentId} {
+        allow read: if isSignedIn() && (
+          get(/databases/$(database)/documents/recommendations/$(recId)).data.scope == 'group' ||
+          (get(/databases/$(database)/documents/recommendations/$(recId)).data.fromUid == request.auth.uid ||
+           get(/databases/$(database)/documents/recommendations/$(recId)).data.toUid == request.auth.uid)
+        );
+        allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+        allow update: if isSignedIn();
+        allow delete: if isSignedIn() && (
+          resource.data.uid == request.auth.uid ||
+          (get(/databases/$(database)/documents/recommendations/$(recId)).data.scope == 'group' && isAdmin())
+        );
+      }
+    }
+  }
+}
