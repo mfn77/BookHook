@@ -394,20 +394,6 @@
   #pinnedPostBar .pin-icon{ flex:0 0 auto; font-size:15px; }
   #pinnedPostBar .pin-author{ font-weight:700; font-size:12.5px; flex:0 0 auto; }
   #pinnedPostBar .pin-preview{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; font-size:12.5px; color:var(--ink-70); }
-  .social-pill-bar{
-    position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(0);
-    display:flex; align-items:center; height:40px; gap:6px; padding:0 5px; background:rgba(24,24,30,0.6); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-    border-radius:20px; z-index:150; box-shadow:0 6px 22px rgba(0,0,0,0.28);
-    transition: left 0.32s cubic-bezier(0.4,0,0.2,1), transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s;
-    opacity:1;
-  }
-  .social-pill-bar.hidden{ transform:translateX(-50%) translateY(100px); opacity:0; pointer-events:none; }
-  .social-pill{
-    border:none; background:transparent; color:rgba(255,255,255,0.72); font-family:'Inter',sans-serif;
-    height:32px; display:flex; align-items:center;
-    font-weight:600; font-size:13px; padding:0 16px; border-radius:16px; cursor:pointer; transition: background 0.2s, color 0.2s;
-  }
-  .social-pill.active{ background:var(--gold); color:#fff; }
   .social-floating-action{
     position:fixed; bottom:18px; right:16px; z-index:150; display:flex; align-items:center; height:40px;
     transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s; opacity:1;
@@ -417,8 +403,16 @@
     width:40px; height:40px; border-radius:50%; background:var(--gold); color:#fff; font-size:20px; font-weight:400; border:none;
     box-shadow:0 6px 18px rgba(0,0,0,0.28); cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;
   }
-  .discover-fab-nav{ display:flex; align-items:center; height:40px; gap:4px; background:rgba(24,24,30,0.62); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-radius:20px; padding:0 4px; box-shadow:0 6px 22px rgba(0,0,0,0.28); }
-  .discover-fab-nav button{ width:30px; height:30px; border-radius:50%; border:none; background:rgba(255,255,255,0.14); color:#fff; font-size:12.5px; cursor:pointer; }
+  .discover-fab-nav{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(0);
+    display:flex; align-items:center; gap:22px; z-index:150; opacity:0; pointer-events:none;
+    transition: left 0.2s, transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.28s;
+  }
+  .discover-fab-nav.visible{ opacity:1; pointer-events:auto; }
+  .discover-fab-nav button{
+    width:44px; height:44px; border-radius:50%; border:none; background:var(--gold); color:#fff; font-size:16px; cursor:pointer;
+    box-shadow:0 6px 18px rgba(0,0,0,0.28);
+  }
   .compose-textarea{ width:100%; min-height:90px; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:14.5px; background:var(--card); color:var(--ink); resize:vertical; }
   .post-card{
     background:var(--card); border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer;
@@ -557,7 +551,7 @@
     .content-col{ margin-left:0 !important; padding-bottom:70px; }
     .content-col.expanded{ margin-left:0 !important; }
     .sidebar-expand-fab{ display:none !important; }
-    .social-pill-bar{ bottom:calc(70px + env(safe-area-inset-bottom,0px)) !important; }
+    .discover-fab-nav{ bottom:calc(70px + env(safe-area-inset-bottom,0px)) !important; }
     .social-floating-action{ bottom:calc(70px + env(safe-area-inset-bottom,0px)) !important; }
   }
 </style>
@@ -628,24 +622,10 @@
       <main>
     <!-- ADMIN TABS -->
     <section class="tab" id="tab-social" style="padding-bottom:0;">
-      <div id="socialSubTimeline" class="social-subtab">
-        <div id="pinnedPostBar" style="display:none;"></div>
-        <div id="timelineFeed"></div>
-      </div>
-      <div id="socialSubDiscover" class="social-subtab" style="display:none;">
-        <div id="discoverFilters" class="discover-filters"></div>
-        <div id="discoverFeed"></div>
-      </div>
-      <div id="socialPillBar" class="social-pill-bar">
-        <button type="button" class="social-pill active" data-sub="timeline">Akış</button>
-        <button type="button" class="social-pill" data-sub="discover">Keşfet</button>
-      </div>
+      <div id="pinnedPostBar" style="display:none;"></div>
+      <div id="timelineFeed"></div>
       <div id="socialFloatingAction" class="social-floating-action">
         <button type="button" id="composePostBtn" class="social-fab">+</button>
-        <div id="discoverNavFab" class="discover-fab-nav" style="display:none;">
-          <button type="button" id="discoverFabPrev">◀</button>
-          <button type="button" id="discoverFabNext">▶</button>
-        </div>
       </div>
     </section>
     <section class="tab" id="tab-today">
@@ -995,6 +975,13 @@
           <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" id="bhCoverInput" placeholder="internetten bulduğun kapak görselinin linki" /></div>
           <button class="primary" id="bhSaveBtn">Ekle</button>
         </div>
+      </div>
+      <h2 style="margin-top:22px;">🔍 Keşfet</h2>
+      <div id="discoverFilters" class="discover-filters"></div>
+      <div id="discoverFeed" style="padding-bottom:90px;"></div>
+      <div id="discoverNavFab" class="discover-fab-nav">
+        <button type="button" id="discoverFabPrev">◀</button>
+        <button type="button" id="discoverFabNext">▶</button>
       </div>
     </section>
       </main>
@@ -2019,18 +2006,18 @@ function renderTab(id){
   else if(id==='rules') renderRulesTab();
   else if(id==='profile') renderProfileTab();
   else if(id==='recs') renderRecsTab();
-  else if(id==='bookhistory') renderBookHistoryTab();
+  else if(id==='bookhistory'){
+    renderBookHistoryTab();
+    discoverActiveCategory = null;
+    discoverPage = 0;
+    renderDiscoverFilters();
+    renderDiscoverContent();
+    setupDiscoverNavObserver();
+    repositionDiscoverFabNav();
+  }
   else if(id==='social'){
-    document.querySelectorAll('.social-pill').forEach(b=>b.classList.remove('active'));
-    document.querySelector('.social-pill[data-sub="timeline"]').classList.add('active');
-    document.getElementById('socialSubTimeline').style.display='block';
-    document.getElementById('socialSubDiscover').style.display='none';
-    document.getElementById('socialPillBar').classList.remove('hidden');
     document.getElementById('socialFloatingAction').classList.remove('hidden');
-    document.getElementById('composePostBtn').style.display='flex';
-    document.getElementById('discoverNavFab').style.display='none';
     lastSocialScrollY = window.scrollY;
-    repositionSocialPillBar();
     renderTimelineTab();
   }
 }
@@ -3731,6 +3718,19 @@ attachBookAutocomplete('recGroupBook', 'recGroupCover', 'recGroupBookSuggest');
 /* ============ ORTAK: KİTAP GEÇMİŞİM (kişisel kitaplık) ============ */
 async function renderBookHistoryTab(){
   await renderBookHistoryGrid(currentUid, 'bookHistoryGrid', true);
+  renderDiscoverTab();
+  setupDiscoverNavObserver();
+}
+let discoverNavObserver = null;
+function setupDiscoverNavObserver(){
+  const target = document.getElementById('discoverFilters');
+  const fab = document.getElementById('discoverNavFab');
+  if(!target || !fab) return;
+  if(discoverNavObserver) discoverNavObserver.disconnect();
+  discoverNavObserver = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{ fab.classList.toggle('visible', entry.isIntersecting); });
+  }, { threshold: 0.01 });
+  discoverNavObserver.observe(target);
 }
 const BH_PAGE_SIZE = 8;
 const bhPageState = {};
@@ -4246,18 +4246,6 @@ document.getElementById('postModalClose').addEventListener('click', ()=> closeMo
 document.getElementById('postModal').addEventListener('click', (e)=>{ if(e.target.id==='postModal') closeModal('postModal'); });
 
 /* --- Sosyal pill çubuğu: alt sekme geçişi + kaydırınca gizle/göster --- */
-document.querySelectorAll('.social-pill').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.social-pill').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const sub = btn.dataset.sub;
-    document.getElementById('socialSubTimeline').style.display = sub==='timeline' ? 'block':'none';
-    document.getElementById('socialSubDiscover').style.display = sub==='discover' ? 'block':'none';
-    document.getElementById('composePostBtn').style.display = sub==='timeline' ? 'flex':'none';
-    document.getElementById('discoverNavFab').style.display = sub==='discover' ? 'flex':'none';
-    if(sub==='discover') renderDiscoverTab();
-  });
-});
 let lastSocialScrollY = 0;
 function discoverGoToOffset(offset){
   const total = DISCOVER_CATEGORIES.length + 1; // +1: "Önerilenler" durağı
@@ -4273,12 +4261,11 @@ document.getElementById('discoverFabNext').addEventListener('click', ()=> discov
 window.addEventListener('scroll', ()=>{
   const socialTab = document.getElementById('tab-social');
   if(!socialTab || !socialTab.classList.contains('active')) return;
-  const bar = document.getElementById('socialPillBar');
   const fab = document.getElementById('socialFloatingAction');
   const pinBar = document.getElementById('pinnedPostBar');
   const cur = window.scrollY;
-  if(cur > lastSocialScrollY + 4){ bar.classList.add('hidden'); fab.classList.add('hidden'); if(pinBar) pinBar.classList.add('hidden'); }
-  else if(cur < lastSocialScrollY - 4){ bar.classList.remove('hidden'); fab.classList.remove('hidden'); if(pinBar) pinBar.classList.remove('hidden'); }
+  if(cur > lastSocialScrollY + 4){ if(fab) fab.classList.add('hidden'); if(pinBar) pinBar.classList.add('hidden'); }
+  else if(cur < lastSocialScrollY - 4){ if(fab) fab.classList.remove('hidden'); if(pinBar) pinBar.classList.remove('hidden'); }
   lastSocialScrollY = cur;
 }, {passive:true});
 
