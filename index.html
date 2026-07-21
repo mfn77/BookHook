@@ -1118,7 +1118,6 @@ const firebaseConfig = {
   messagingSenderId: "611511209042",
   appId: "1:611511209042:web:3fa319fb5ee6ca5daba38b"
 };
-const ADMIN_EMAIL = "furkan.nayman77@gmail.com"; // Bu email ile üye olan kişi otomatik YÖNETİCİ olur
 const FCM_VAPID_KEY = "BE2rTmP33eegqZfz2p3wP-skKGpR0NuEWkal5-VaNbsX1ikgMa_mvIUg4uXATWXHzy1boy0yuBqeCb2Q-Wn3aXw";
 const GOOGLE_BOOKS_API_KEY = "AIzaSyBpIIf2aPenDO9E1ZgX96oNAznFmAadRxs"; // Kitap arama kotasını yükseltmek için buraya kendi Google Books API anahtarını yapıştır (boş bırakılırsa düşük anonim kota kullanılır, 429 hatası alınabilir)
 
@@ -1694,8 +1693,7 @@ document.getElementById('signupBtn').onclick = async ()=>{
   if(!name || !email || !password){ errBox.textContent = 'Tüm alanları doldur.'; return; }
   try{
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    const role = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'member';
-    await setDoc(doc(db,'users',cred.user.uid), { name, email, role, banned:false, phone:'', address:'', photoURL:'', createdAt: new Date().toISOString() });
+    await setDoc(doc(db,'users',cred.user.uid), { name, email, role:'member', banned:false, phone:'', address:'', photoURL:'', createdAt: new Date().toISOString() });
     try{ await addDoc(collection(db,'posts'), { type:'new_member', uid:cred.user.uid, name, createdAt:new Date().toISOString(), commentCount:0 }); }catch(e){}
   }catch(err){ errBox.textContent = friendlyAuthError(err); }
 };
@@ -4616,9 +4614,8 @@ onAuthStateChanged(auth, async (user)=>{
   let profSnap = await getDoc(doc(db,'users',user.uid));
   if(!profSnap.exists()){
     const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'Üye');
-    const role = (user.email && user.email.toLowerCase()===ADMIN_EMAIL.toLowerCase()) ? 'admin' : 'member';
     await setDoc(doc(db,'users',user.uid), {
-      name: defaultName, email: user.email||'', role, banned:false,
+      name: defaultName, email: user.email||'', role:'member', banned:false,
       phone:'', address:'', photoURL: user.photoURL||'', createdAt: new Date().toISOString()
     });
     profSnap = await getDoc(doc(db,'users',user.uid));
