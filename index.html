@@ -4212,16 +4212,16 @@ async function openBookDiscoverModal(book){
     if(!selectedScore){ alert('Önce bir puan seç (yıldızlara dokun).'); return; }
     const comment = document.getElementById('ratingCommentInput').value.trim();
     try{
-      if(groupDoc){
-        await updateDoc(doc(db,'groupBookRatings',bookKey), {
-          [`ratings.${currentUid}`]: { score: selectedScore, comment, createdAt: new Date().toISOString() }
-        });
-      } else {
-        await setDoc(doc(db,'groupBookRatings',bookKey), {
-          title: book.title, author: book.author||'', cover: book.cover||'', category: book.category||'', workKey: book.workKey||'',
-          ratings: { [currentUid]: { score: selectedScore, comment, createdAt: new Date().toISOString() } }
-        });
-      }
+      const existingRatings = (groupDoc && groupDoc.ratings && typeof groupDoc.ratings==='object') ? groupDoc.ratings : {};
+      const newRatings = { ...existingRatings, [currentUid]: { score: selectedScore, comment, createdAt: new Date().toISOString() } };
+      await setDoc(doc(db,'groupBookRatings',bookKey), {
+        title: book.title, author: book.author||'', cover: book.cover||'', category: book.category||'', workKey: book.workKey||'',
+        ratings: newRatings
+      });
+      // yazmanın gerçekten tuttuğunu doğrula; tutmadıysa kullanıcıyı sessizce yanıltmayalım
+      const verifySnap = await getDoc(doc(db,'groupBookRatings',bookKey));
+      const verifyOk = verifySnap.exists() && verifySnap.data().ratings && verifySnap.data().ratings[currentUid] && verifySnap.data().ratings[currentUid].score===selectedScore;
+      if(!verifyOk){ alert('Puan kaydedilmiş gibi göründü ama doğrulanamadı. Lütfen Keşfet sekmesine dönüp tekrar kontrol et; sorun sürerse bana haber ver.'); }
       await createPost('book_review', { bookTitle: book.title, bookAuthor: book.author||'', bookCover: book.cover||'', rating: selectedScore, reviewText: comment });
       closeModal('bookDiscoverModal');
       showToast('Puanın kaydedildi, Akış\'ta paylaşıldı!');
