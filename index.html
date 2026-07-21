@@ -372,6 +372,18 @@
     font-weight:600; font-size:13.5px; padding:9px 20px; border-radius:18px; cursor:pointer; transition: background 0.2s, color 0.2s;
   }
   .social-pill.active{ background:var(--gold); color:#fff; }
+  .social-floating-action{
+    position:fixed; bottom:18px; right:16px; z-index:150;
+    transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s; opacity:1;
+  }
+  .social-floating-action.hidden{ transform:translateY(100px); opacity:0; pointer-events:none; }
+  .social-fab{
+    width:52px; height:52px; border-radius:50%; background:var(--gold); color:#fff; font-size:28px; font-weight:400; border:none;
+    box-shadow:0 6px 18px rgba(0,0,0,0.28); cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;
+  }
+  .discover-fab-nav{ display:flex; gap:6px; background:rgba(24,24,30,0.62); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-radius:24px; padding:6px; box-shadow:0 6px 22px rgba(0,0,0,0.28); }
+  .discover-fab-nav button{ width:40px; height:40px; border-radius:50%; border:none; background:rgba(255,255,255,0.14); color:#fff; font-size:15px; cursor:pointer; }
+  .compose-textarea{ width:100%; min-height:90px; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Cantarell',sans-serif; font-size:14.5px; background:var(--card); color:var(--ink); resize:vertical; }
   .post-card{
     background:var(--card); border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer;
   }
@@ -564,6 +576,13 @@
       <div id="socialPillBar" class="social-pill-bar">
         <button type="button" class="social-pill active" data-sub="timeline">Akış</button>
         <button type="button" class="social-pill" data-sub="discover">Keşfet</button>
+      </div>
+      <div id="socialFloatingAction" class="social-floating-action">
+        <button type="button" id="composePostBtn" class="social-fab">+</button>
+        <div id="discoverNavFab" class="discover-fab-nav" style="display:none;">
+          <button type="button" id="discoverFabPrev">◀</button>
+          <button type="button" id="discoverFabNext">▶</button>
+        </div>
       </div>
     </section>
     <section class="tab" id="tab-today">
@@ -1852,6 +1871,9 @@ function renderTab(id){
     document.getElementById('socialSubTimeline').style.display='block';
     document.getElementById('socialSubDiscover').style.display='none';
     document.getElementById('socialPillBar').classList.remove('hidden');
+    document.getElementById('socialFloatingAction').classList.remove('hidden');
+    document.getElementById('composePostBtn').style.display='flex';
+    document.getElementById('discoverNavFab').style.display='none';
     lastSocialScrollY = window.scrollY;
     renderTimelineTab();
   }
@@ -3697,6 +3719,11 @@ function postBodyHtml(p){
       const cover = p.bookCover ? `<img src="${p.bookCover}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml((p.bookAuthor?p.bookAuthor+' - ':'')+(p.bookTitle||''))}" data-book-cover="${escapeHtml(p.bookCover)}" />` : '';
       return `<div style="display:flex; gap:10px;">${cover}<div style="min-width:0;"><b>${escapeHtml(p.bookTitle||'')}</b><div style="color:var(--gold); font-size:13px; margin:2px 0;">⭐ ${p.rating}/10 verdi</div>${p.reviewText?`<div class="muted" style="font-size:13px;">"${escapeHtml(p.reviewText)}"</div>`:''}</div></div>`;
     }
+    case 'user_post': {
+      const txt = p.text ? escapeHtml(p.text).replace(/\n/g,'<br/>') : '';
+      const img = p.image ? `<img src="${p.image}" alt="" style="max-width:100%; border-radius:10px; margin-top:8px; display:block;" />` : '';
+      return `${txt}${img}`;
+    }
     default: return escapeHtml(p.text||'');
   }
 }
@@ -3821,17 +3848,36 @@ document.querySelectorAll('.social-pill').forEach(btn=>{
     const sub = btn.dataset.sub;
     document.getElementById('socialSubTimeline').style.display = sub==='timeline' ? 'block':'none';
     document.getElementById('socialSubDiscover').style.display = sub==='discover' ? 'block':'none';
+    document.getElementById('composePostBtn').style.display = sub==='timeline' ? 'flex':'none';
+    document.getElementById('discoverNavFab').style.display = sub==='discover' ? 'flex':'none';
     if(sub==='discover') renderDiscoverTab();
   });
 });
 let lastSocialScrollY = 0;
+document.getElementById('discoverFabPrev').addEventListener('click', ()=>{
+  const i = discoverActiveCategory ? DISCOVER_CATEGORIES.findIndex(c=>c.slug===discoverActiveCategory) : 0;
+  const prev = DISCOVER_CATEGORIES[(i-1+DISCOVER_CATEGORIES.length)%DISCOVER_CATEGORIES.length];
+  discoverActiveCategory = prev.slug;
+  discoverPage = 0;
+  renderDiscoverFilters();
+  renderDiscoverContent();
+});
+document.getElementById('discoverFabNext').addEventListener('click', ()=>{
+  const i = discoverActiveCategory ? DISCOVER_CATEGORIES.findIndex(c=>c.slug===discoverActiveCategory) : -1;
+  const next = DISCOVER_CATEGORIES[(i+1)%DISCOVER_CATEGORIES.length];
+  discoverActiveCategory = next.slug;
+  discoverPage = 0;
+  renderDiscoverFilters();
+  renderDiscoverContent();
+});
 window.addEventListener('scroll', ()=>{
   const socialTab = document.getElementById('tab-social');
   if(!socialTab || !socialTab.classList.contains('active')) return;
   const bar = document.getElementById('socialPillBar');
+  const fab = document.getElementById('socialFloatingAction');
   const cur = window.scrollY;
-  if(cur > lastSocialScrollY + 4) bar.classList.add('hidden');
-  else if(cur < lastSocialScrollY - 4) bar.classList.remove('hidden');
+  if(cur > lastSocialScrollY + 4){ bar.classList.add('hidden'); fab.classList.add('hidden'); }
+  else if(cur < lastSocialScrollY - 4){ bar.classList.remove('hidden'); fab.classList.remove('hidden'); }
   lastSocialScrollY = cur;
 }, {passive:true});
 
@@ -3973,6 +4019,85 @@ async function seedFeaturedBooks(){
   showToast(`${added} kitap eklendi!`);
   renderDiscoverHome();
 }
+function resizeImageToDataUrl(file, maxDim, quality){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w > maxDim || h > maxDim){
+          if(w > h){ h = Math.round(h * maxDim/w); w = maxDim; }
+          else { w = Math.round(w * maxDim/h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+let composeImageDataUrl = null;
+function openComposeModal(){
+  composeImageDataUrl = null;
+  showSimpleInfoModal(`
+    <h2 style="margin-bottom:10px;">Yeni Gönderi</h2>
+    <textarea id="composeText" class="compose-textarea" maxlength="280" placeholder="Ne düşünüyorsun?"></textarea>
+    <div class="muted" id="composeCharCount" style="text-align:right; font-size:11px; margin-top:2px;">280 karakter kaldı</div>
+    <div id="composeImagePreviewWrap" style="display:none; margin-top:10px; text-align:center;">
+      <img id="composeImagePreview" style="max-width:100%; border-radius:10px;" />
+      <button type="button" class="secondary tiny" id="composeImageRemoveBtn" style="margin-top:6px;">Görseli Kaldır</button>
+    </div>
+    <input type="file" id="composeImageInput" accept="image/*" style="display:none;" />
+    <div class="row" style="margin-top:10px;">
+      <button type="button" class="secondary tiny" id="composeImageBtn">📷 Görsel Ekle</button>
+      <button type="button" class="primary" id="composeSendBtn" style="flex:1;">Paylaş</button>
+    </div>
+  `);
+  const textarea = document.getElementById('composeText');
+  const counter = document.getElementById('composeCharCount');
+  function updateLimit(){
+    const max = composeImageDataUrl ? 140 : 280;
+    textarea.maxLength = max;
+    if(textarea.value.length > max) textarea.value = textarea.value.slice(0, max);
+    counter.textContent = `${max - textarea.value.length} karakter kaldı`;
+  }
+  textarea.addEventListener('input', updateLimit);
+  updateLimit();
+  document.getElementById('composeImageBtn').addEventListener('click', ()=> document.getElementById('composeImageInput').click());
+  document.getElementById('composeImageInput').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    try{
+      composeImageDataUrl = await resizeImageToDataUrl(file, 800, 0.72);
+      document.getElementById('composeImagePreview').src = composeImageDataUrl;
+      document.getElementById('composeImagePreviewWrap').style.display='block';
+      updateLimit();
+    }catch(err){ alert('Görsel işlenemedi: '+(err.message||err)); }
+  });
+  document.getElementById('composeImageRemoveBtn').addEventListener('click', ()=>{
+    composeImageDataUrl = null;
+    document.getElementById('composeImagePreviewWrap').style.display='none';
+    document.getElementById('composeImageInput').value = '';
+    updateLimit();
+  });
+  document.getElementById('composeSendBtn').addEventListener('click', async ()=>{
+    const text = textarea.value.trim();
+    if(!text && !composeImageDataUrl){ alert('Bir şey yazmalısın veya görsel eklemelisin.'); return; }
+    try{
+      await createPost('user_post', { text, image: composeImageDataUrl||'' });
+      closeModal('bookInfoModal');
+      showToast('Gönderi paylaşıldı!');
+      renderTimelineTab();
+    }catch(err){ alert('Paylaşılamadı: '+(err.message||err)); }
+  });
+}
+document.getElementById('composePostBtn').addEventListener('click', openComposeModal);
 function openBookPickerModal(onPick){
   showSimpleInfoModal(`<h2 style="margin-bottom:10px;">Kitap Ekle</h2>
     <div class="field" style="text-align:left;"><label>Kitap Ara</label><input type="text" id="pickerBookInput" autocomplete="off" placeholder="kitap adını yazmaya başla" /><div id="pickerBookSuggest" class="book-suggest-box"></div></div>`);
@@ -4109,11 +4234,7 @@ async function renderDiscoverCategoryGrid(slug){
     html += `<div class="discover-cat-title">👥 Grupta Puanlananlar</div>`;
     html += `<div class="discover-grid" style="margin-bottom:22px;">${groupDocs.map(g=>cardHtml(g,true)).join('')}</div>`;
   }
-  html += `<div class="discover-cat-nav">
-    <button type="button" id="discoverCatPrevBtn">◀</button>
-    <div class="discover-cat-title">${escapeHtml(catLabel)}</div>
-    <button type="button" id="discoverCatNextBtn">▶</button>
-  </div>`;
+  html += `<div class="discover-cat-title">${escapeHtml(catLabel)}</div>`;
   html += `<div class="discover-grid">${pageItems.map(b=>cardHtml(b,false)).join('')}<button type="button" class="discover-add-card" id="discoverAddCategoryBtn">+</button></div>`;
   if(totalPages>1){
     html += `<div class="discover-pager">
@@ -4123,24 +4244,6 @@ async function renderDiscoverCategoryGrid(slug){
     </div>`;
   }
   main.innerHTML = html;
-  const catPrevBtn = document.getElementById('discoverCatPrevBtn');
-  const catNextBtn = document.getElementById('discoverCatNextBtn');
-  function goToCategory(newSlug){
-    discoverActiveCategory = newSlug;
-    discoverPage = 0;
-    renderDiscoverFilters();
-    renderDiscoverCategoryGrid(newSlug);
-  }
-  if(catPrevBtn) catPrevBtn.addEventListener('click', ()=>{
-    const i = DISCOVER_CATEGORIES.findIndex(c=>c.slug===slug);
-    const prev = DISCOVER_CATEGORIES[(i-1+DISCOVER_CATEGORIES.length)%DISCOVER_CATEGORIES.length];
-    goToCategory(prev.slug);
-  });
-  if(catNextBtn) catNextBtn.addEventListener('click', ()=>{
-    const i = DISCOVER_CATEGORIES.findIndex(c=>c.slug===slug);
-    const next = DISCOVER_CATEGORIES[(i+1)%DISCOVER_CATEGORIES.length];
-    goToCategory(next.slug);
-  });
   main.querySelectorAll('.discover-book-card').forEach(card=>{
     card.addEventListener('click', ()=>{
       const book = discoverBooksCache[parseInt(card.dataset.idx,10)];
