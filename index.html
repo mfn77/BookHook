@@ -307,6 +307,11 @@
   .rec-comment-row:last-child{ margin-bottom:0; }
   .rec-comment-row .rec-comment-body{ flex:1; min-width:0; }
   .rec-comment-row .rec-comment-del{ border:none; background:none; color:var(--cloth-dark); cursor:pointer; font-size:11px; flex:0 0 auto; padding:2px 4px; }
+  .post-menu-btn{ border:none; background:none; color:var(--ink-70); cursor:pointer; font-size:16px; flex:0 0 auto; padding:2px 8px; line-height:1; border-radius:8px; }
+  .post-menu-btn:hover{ background:rgba(0,0,0,0.06); }
+  .post-menu-item{ display:block; width:100%; text-align:left; border:none; background:none; padding:8px 10px; font-size:13.5px; cursor:pointer; border-radius:8px; color:var(--ink); white-space:nowrap; }
+  .post-menu-item:hover{ background:rgba(33,144,164,0.10); }
+  .post-menu-item.danger{ color:var(--cloth-dark); }
   .rec-comments-label{ font-size:11px; font-weight:700; color:var(--ink-70); text-transform:uppercase; letter-spacing:0.4px; margin:12px 0 6px; }
   .reaction-bar{ display:flex; gap:5px; margin-top:8px; flex-wrap:wrap; }
   .reaction-pill{ border:1.5px solid var(--line); background:var(--card); border-radius:14px; padding:2px 8px; font-size:13.5px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; line-height:1.6; }
@@ -3833,11 +3838,12 @@ function postBodyHtml(p){
 }
 function renderPostCard(p){
   const canDelete = p.uid===currentUid || myProfile.role==='admin';
+  const canEdit = p.uid===currentUid && p.type==='user_post';
   return `<div class="post-card modal-card-anim" data-post-id="${p.id}">
     <div class="post-card-head">
       ${userChipHtml(p.uid)}
       <span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span>
-      ${canDelete?`<button type="button" class="rec-comment-del" data-del-post="${p.id}" style="margin-left:auto;" title="Sil">✕</button>`:''}
+      ${canDelete?`<button type="button" class="post-menu-btn" data-post-menu="${p.id}" data-can-edit="${canEdit?'1':'0'}" style="margin-left:auto;" title="Seçenekler">⋮</button>`:''}
     </div>
     <div class="post-card-body">${postBodyHtml(p)}</div>
     <div class="post-card-footer">
@@ -3858,13 +3864,88 @@ async function renderTimelineTab(){
   wirePostCards(feed);
   markLoaded(feed);
 }
+function openPostMenu(btn, postId, canEdit, refresh){
+  const html = `
+    ${canEdit?`<button type="button" class="post-menu-item" id="postMenuEditBtn">✏️ Düzenle</button>`:''}
+    <button type="button" class="post-menu-item danger" id="postMenuDeleteBtn">🗑 Kaldır</button>
+  `;
+  showAnchoredPopover(btn, html);
+  const editBtn = document.getElementById('postMenuEditBtn');
+  if(editBtn) editBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    hideAnchoredPopover();
+    openEditPostModal(postId, refresh);
+  });
+  document.getElementById('postMenuDeleteBtn').addEventListener('click', async (e)=>{
+    e.stopPropagation();
+    hideAnchoredPopover();
+    if(!confirm('Bu gönderiyi silmek istediğine emin misin?')) return;
+    try{ await deleteDoc(doc(db,'posts',postId)); refresh(); }catch(err){ alert('Silinemedi: '+(err.message||err)); }
+  });
+}
+async function openEditPostModal(postId, refresh){
+  let p = null;
+  try{ const snap = await getDoc(doc(db,'posts',postId)); if(snap.exists()) p = {id:postId, ...snap.data()}; }catch(e){}
+  if(!p) return;
+  composeImageDataUrl = p.image || null;
+  showSimpleInfoModal(`
+    <h2 style="margin-bottom:10px;">Gönderiyi Düzenle</h2>
+    <textarea id="composeText" class="compose-textarea" maxlength="280">${escapeHtml(p.text||'')}</textarea>
+    <div class="muted" id="composeCharCount" style="text-align:right; font-size:11px; margin-top:2px;"></div>
+    <div id="composeImagePreviewWrap" style="${p.image?'':'display:none;'} margin-top:10px; text-align:center;">
+      <img id="composeImagePreview" src="${p.image||''}" style="max-width:100%; border-radius:10px;" />
+      <button type="button" class="secondary tiny" id="composeImageRemoveBtn" style="margin-top:6px;">Görseli Kaldır</button>
+    </div>
+    <input type="file" id="composeImageInput" accept="image/*" style="display:none;" />
+    <div class="row" style="margin-top:10px;">
+      <button type="button" class="secondary tiny" id="composeImageBtn">📷 ${p.image?'Görseli Değiştir':'Görsel Ekle'}</button>
+      <button type="button" class="primary" id="composeSendBtn" style="flex:1;">Kaydet</button>
+    </div>
+  `);
+  const textarea = document.getElementById('composeText');
+  const counter = document.getElementById('composeCharCount');
+  function updateLimit(){
+    const max = composeImageDataUrl ? 140 : 280;
+    textarea.maxLength = max;
+    if(textarea.value.length > max) textarea.value = textarea.value.slice(0, max);
+    counter.textContent = `${max - textarea.value.length} karakter kaldı`;
+  }
+  textarea.addEventListener('input', updateLimit);
+  updateLimit();
+  document.getElementById('composeImageBtn').addEventListener('click', ()=> document.getElementById('composeImageInput').click());
+  document.getElementById('composeImageInput').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    try{
+      composeImageDataUrl = await resizeImageToDataUrl(file, 800, 0.72);
+      document.getElementById('composeImagePreview').src = composeImageDataUrl;
+      document.getElementById('composeImagePreviewWrap').style.display='block';
+      updateLimit();
+    }catch(err){ alert('Görsel işlenemedi: '+(err.message||err)); }
+  });
+  document.getElementById('composeImageRemoveBtn').addEventListener('click', ()=>{
+    composeImageDataUrl = null;
+    document.getElementById('composeImagePreviewWrap').style.display='none';
+    document.getElementById('composeImageInput').value = '';
+    updateLimit();
+  });
+  document.getElementById('composeSendBtn').addEventListener('click', async ()=>{
+    const text = textarea.value.trim();
+    if(!text && !composeImageDataUrl){ alert('Bir şey yazmalısın veya görsel eklemelisin.'); return; }
+    try{
+      await updateDoc(doc(db,'posts',postId), { text, image: composeImageDataUrl||'' });
+      closeModal('bookInfoModal');
+      showToast('Gönderi güncellendi!');
+      refresh();
+    }catch(err){ alert('Kaydedilemedi: '+(err.message||err)); }
+  });
+}
 function wirePostCards(container, refreshFn){
   const refresh = refreshFn || renderTimelineTab;
-  container.querySelectorAll('[data-del-post]').forEach(btn=>{
-    btn.addEventListener('click', async (e)=>{
+  container.querySelectorAll('[data-post-menu]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      if(!confirm('Bu gönderiyi silmek istediğine emin misin?')) return;
-      try{ await deleteDoc(doc(db,'posts',btn.dataset.delPost)); refresh(); }catch(err){ alert('Silinemedi: '+(err.message||err)); }
+      openPostMenu(btn, btn.dataset.postMenu, btn.dataset.canEdit==='1', refresh);
     });
   });
   container.querySelectorAll('.reaction-pill').forEach(btn=>{
