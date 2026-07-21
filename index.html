@@ -112,13 +112,11 @@
     .whoami{ gap:5px; }
     .whoami .rolechip{ display:none; }
     #whoamiName{ max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle; }
-    .header-title-area{ font-size:13px; }
   }
-  /* Dar/dikey ekranlarda: başlık alanını gizle (sidebar zaten hangi sekmede olduğunu gösteriyor),
-     haftalık tabloları sıkıştır — isim yazısını gizleyip sadece profil resmini bırak, "Durum"
+  /* Dar/dikey ekranlarda: haftalık tabloları sıkıştır — isim yazısını gizleyip sadece profil resmini bırak, "Durum"
      sütununu gizle, hücreleri küçült. Ekran genişleyince (yatay/tablet/masaüstü) hepsi normale döner. */
   @media (max-width:700px){
-    .header-title-area{ display:none; }
+    .header-title-area{ font-size:22px; }
     .card{ padding:16px 12px; }
     table.weekgrid .uc-name{ display:none; }
     table.weekgrid .th-date{ display:none; }
