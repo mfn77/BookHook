@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cantarell:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#F2F2F5; --paper-2:#E9E9ED; --card:#FFFFFF;
@@ -54,7 +54,7 @@
       radial-gradient(circle at 95% 90%, rgba(230,97,0,0.10), transparent 40%),
       var(--paper);
     background-attachment:fixed;
-    color:var(--ink); font-family:'Cantarell', 'Inter', Arial, sans-serif;
+    color:var(--ink); font-family:'Inter', Arial, sans-serif;
     min-height:100vh; -webkit-font-smoothing:antialiased;
   }
   html[data-theme="dark"] body{
@@ -65,9 +65,9 @@
       radial-gradient(circle at 95% 90%, rgba(255,163,72,0.10), transparent 40%),
       var(--paper);
   }
-  h1,h2,h3,.display{font-family:'Cantarell', 'Inter', Arial, sans-serif; font-weight:700;}
+  h1,h2,h3,.display{font-family:'Inter', Arial, sans-serif; font-weight:700;}
   .mono{font-family:'Roboto Mono', monospace;}
-  button, input, select, textarea{ font-family:'Cantarell', 'Inter', Arial, sans-serif; }
+  button, input, select, textarea{ font-family:'Inter', Arial, sans-serif; }
   button{ transition: transform .12s var(--ease), background-color .15s var(--ease), box-shadow .15s var(--ease), border-color .15s var(--ease); }
   button:not(:disabled):active{ transform: scale(0.96); }
   input, select, textarea{ transition: border-color .15s var(--ease), box-shadow .15s var(--ease); }
@@ -135,8 +135,8 @@
     display:flex; justify-content:flex-start; align-items:center; gap:10px;
     position:sticky; top:0; z-index:9;
   }
-  .header-title-area{ font-family:'Cantarell',sans-serif; font-weight:700; font-size:15px; color:var(--ink); flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .whoami{ display:flex; align-items:center; gap:7px; font-family:'Cantarell', sans-serif; font-size:12px; color:var(--ink-70); flex:0 0 auto; min-width:0; position:relative; font-weight:600; text-align:left; margin-left:auto; }
+  .header-title-area{ font-family:'Inter',sans-serif; font-weight:700; font-size:15px; color:var(--ink); flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .whoami{ display:flex; align-items:center; gap:7px; font-family:'Inter', sans-serif; font-size:12px; color:var(--ink-70); flex:0 0 auto; min-width:0; position:relative; font-weight:600; text-align:left; margin-left:auto; }
   .header-pill{
     display:inline-flex; align-items:center; gap:6px; height:38px; padding:0 14px;
     background:var(--paper-2); border:1px solid var(--line); border-radius:999px;
@@ -159,7 +159,7 @@
   }
   #hamburgerMenu button{
     display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:12px 16px; border:none; background:none;
-    font-family:'Cantarell', sans-serif; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer;
+    font-family:'Inter', sans-serif; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer;
   }
   #hamburgerMenu button:hover{background:rgba(33,144,164,0.10);}
   .theme-switch{ position:relative; display:inline-block; width:40px; height:22px; flex:0 0 auto; }
@@ -178,7 +178,7 @@
   .sidebar-tabs.tabs button{
     flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
     width:100%; height:56px; border-radius:14px;
-    font-family:'Cantarell', sans-serif; font-size:9.5px; font-weight:700; line-height:1.15;
+    font-family:'Inter', sans-serif; font-size:9.5px; font-weight:700; line-height:1.15;
     background:none; border:none; padding:6px 2px; color:var(--ink-70); cursor:pointer; text-align:center;
   }
   .sidebar-tabs.tabs button .tab-icon{ font-size:18px; line-height:1; }
@@ -189,7 +189,7 @@
   .card h2{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .card-info-btn{
     width:22px; height:22px; border-radius:50%; border:1.5px solid var(--ink-70); background:none;
-    color:var(--ink-70); font-family:'Cantarell',serif; font-style:italic; font-weight:700; font-size:11.5px;
+    color:var(--ink-70); font-family:'Inter',serif; font-style:italic; font-weight:700; font-size:11.5px;
     display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto;
   }
   .card-info-btn:hover{ border-color:var(--gold); color:var(--gold); }
@@ -357,7 +357,7 @@
   .stamp-btn.read.selected{ border-color:var(--forest); background:var(--forest); color:#fff; transform:scale(1.06); box-shadow:var(--shadow);}
   .stamp-btn.skip.selected{ border-color:var(--cloth); background:var(--cloth); color:#fff; transform:scale(1.06); box-shadow:var(--shadow);}
   .stamp-btn.big{width:76px; height:76px; font-size:28px;}
-  .chip{ display:inline-block; font-family:'Cantarell', sans-serif; font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; border:none; color:var(--ink-70); background:var(--paper-2); margin-top:3px;}
+  .chip{ display:inline-block; font-family:'Inter', sans-serif; font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; border:none; color:var(--ink-70); background:var(--paper-2); margin-top:3px;}
   .chip.warn{color:var(--rust-dark); background:rgba(230,97,0,0.14);}
   .chip.danger{color:var(--cloth-dark); background:rgba(224,27,36,0.12); font-weight:700;}
   .chip.ok{color:var(--forest-dark); background:rgba(38,162,105,0.14);}
@@ -368,7 +368,7 @@
   table.weekgrid{ width:100%; border-collapse:collapse; font-family:'Roboto Mono', monospace; font-size:12px; min-width:520px;}
   table.weekgrid th, table.weekgrid td{ border:none; border-bottom:1px solid var(--line); padding:10px 6px; text-align:center;}
   table.weekgrid th{ background:var(--paper-2); font-weight:600; color:var(--ink-70); font-size:11px; text-transform:uppercase; letter-spacing:.02em;}
-  table.weekgrid td.name-cell{ text-align:left; font-family:'Cantarell', sans-serif; font-weight:600; font-size:13.5px; white-space:nowrap;}
+  table.weekgrid td.name-cell{ text-align:left; font-family:'Inter', sans-serif; font-weight:600; font-size:13.5px; white-space:nowrap;}
   .stamp-mini{display:inline-block; width:22px; height:22px; border-radius:50%; line-height:22px; font-size:12px; cursor:default;}
   .stamp-mini.read{background:var(--forest); color:#fff;}
   .stamp-mini.skip{background:var(--cloth); color:#fff;}
@@ -386,7 +386,7 @@
   }
   .social-pill-bar.hidden{ transform:translateX(-50%) translateY(100px); opacity:0; pointer-events:none; }
   .social-pill{
-    border:none; background:transparent; color:rgba(255,255,255,0.72); font-family:'Cantarell',sans-serif;
+    border:none; background:transparent; color:rgba(255,255,255,0.72); font-family:'Inter',sans-serif;
     height:32px; display:flex; align-items:center;
     font-weight:600; font-size:13px; padding:0 16px; border-radius:16px; cursor:pointer; transition: background 0.2s, color 0.2s;
   }
@@ -402,7 +402,7 @@
   }
   .discover-fab-nav{ display:flex; align-items:center; height:40px; gap:4px; background:rgba(24,24,30,0.62); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-radius:20px; padding:0 4px; box-shadow:0 6px 22px rgba(0,0,0,0.28); }
   .discover-fab-nav button{ width:30px; height:30px; border-radius:50%; border:none; background:rgba(255,255,255,0.14); color:#fff; font-size:12.5px; cursor:pointer; }
-  .compose-textarea{ width:100%; min-height:90px; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Cantarell',sans-serif; font-size:14.5px; background:var(--card); color:var(--ink); resize:vertical; }
+  .compose-textarea{ width:100%; min-height:90px; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:14.5px; background:var(--card); color:var(--ink); resize:vertical; }
   .post-card{
     background:var(--card); border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer;
   }
@@ -416,7 +416,7 @@
   .discover-cat-title{ font-family:'Roboto',sans-serif; font-weight:700; font-size:16px; margin-bottom:10px; }
   .discover-filters{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px; }
   .discover-filter-chip{
-    border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-family:'Cantarell',sans-serif;
+    border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-family:'Inter',sans-serif;
     font-weight:600; font-size:13px; padding:7px 14px; border-radius:16px; cursor:pointer; transition:background .15s, color .15s, border-color .15s;
   }
   .discover-filter-chip.active{ background:var(--cloth); border-color:var(--cloth); color:#fff; }
@@ -432,7 +432,7 @@
     border:2px dashed var(--line); color:var(--ink-70); font-size:30px; cursor:pointer; background:none;
   }
   .discover-pager{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:18px; }
-  .discover-pager button{ border:1.5px solid var(--line); background:var(--card); border-radius:14px; padding:8px 16px; font-family:'Cantarell',sans-serif; font-weight:600; font-size:13px; cursor:pointer; color:var(--ink); }
+  .discover-pager button{ border:1.5px solid var(--line); background:var(--card); border-radius:14px; padding:8px 16px; font-family:'Inter',sans-serif; font-weight:600; font-size:13px; cursor:pointer; color:var(--ink); }
   .discover-featured-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .discover-featured-card{ display:flex; flex-direction:column; background:var(--card); border-radius:14px; padding:10px; box-shadow:var(--shadow); cursor:pointer; }
   .discover-featured-cover{ width:100%; height:190px; object-fit:cover; border-radius:10px; box-shadow:var(--shadow); background:var(--paper-2); margin-bottom:8px; }
@@ -451,20 +451,20 @@
   .user-chip{cursor:pointer; border-radius:8px; padding:1px 4px; margin:-1px -4px;}
   .user-chip:hover{background:rgba(33,144,164,0.12);}
   button.primary{
-    font-family:'Cantarell', sans-serif; font-weight:700; font-size:14px; background:var(--gold); color:#fff;
+    font-family:'Inter', sans-serif; font-weight:700; font-size:14px; background:var(--gold); color:#fff;
     border:none; border-radius:999px; padding:11px 20px; cursor:pointer; box-shadow:none;
   }
   button.primary:hover:not(:disabled){box-shadow:var(--shadow);}
   button.primary:active{transform:scale(0.97);}
   button.primary:disabled{opacity:0.4; cursor:default;}
   button.secondary{
-    font-family:'Cantarell', sans-serif; font-weight:700; font-size:13.5px; background:rgba(33,144,164,0.08); color:var(--gold);
+    font-family:'Inter', sans-serif; font-weight:700; font-size:13.5px; background:rgba(33,144,164,0.08); color:var(--gold);
     border:1.5px solid var(--gold); border-radius:999px; padding:9px 16px; cursor:pointer;
   }
   button.secondary:hover:not(:disabled){background:rgba(33,144,164,0.14);}
   button.tiny{font-size:11.5px; padding:6px 12px; border-radius:999px;}
   input[type=text], input[type=email], input[type=password], input[type=date]{
-    font-family:'Cantarell', sans-serif; font-size:15px; padding:10px 12px; border:1.5px solid var(--line);
+    font-family:'Inter', sans-serif; font-size:15px; padding:10px 12px; border:1.5px solid var(--line);
     border-radius:12px; width:100%; background:rgba(var(--card-bg),0.6); color:var(--ink);
   }
   input:focus, select:focus, textarea:focus{
@@ -486,11 +486,11 @@
   .toast{
     position:fixed; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); background:rgba(28,28,30,0.92); color:#fff;
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-    padding:14px 18px; border-radius:16px; font-family:'Cantarell', sans-serif; font-size:14px;
+    padding:14px 18px; border-radius:16px; font-family:'Inter', sans-serif; font-size:14px;
     box-shadow:var(--shadow-lg); z-index:50; display:flex; justify-content:space-between; align-items:center; gap:10px;
     animation: fadeInUp .25s var(--ease);
   }
-  .toast button{background:none; border:none; color:#7EE0EF; font-weight:700; cursor:pointer; font-size:13px; font-family:'Cantarell', sans-serif;}
+  .toast button{background:none; border:none; color:#7EE0EF; font-weight:700; cursor:pointer; font-size:13px; font-family:'Inter', sans-serif;}
   .empty-state{text-align:center; padding:30px 10px; color:var(--ink-70);}
   .empty-state .big{font-size:34px; display:block; margin-bottom:8px;}
   ul.plain{margin:6px 0; padding-left:18px;}
@@ -498,7 +498,7 @@
     border:1px solid var(--line); border-radius:12px; margin-bottom:10px; padding:0 14px; background:var(--paper-2);
   }
   .guide-section summary{
-    padding:12px 0; font-weight:700; font-family:'Cantarell',sans-serif; font-size:14.5px; color:var(--ink); cursor:pointer; list-style:none;
+    padding:12px 0; font-weight:700; font-family:'Inter',sans-serif; font-size:14.5px; color:var(--ink); cursor:pointer; list-style:none;
   }
   .guide-section summary::-webkit-details-marker{ display:none; }
   .guide-section summary::before{ content:'▸'; display:inline-block; width:16px; color:var(--gold); transition:transform .15s var(--ease); }
@@ -506,19 +506,19 @@
   .guide-section ul.plain{ padding-bottom:12px; }
   .guide-section ul.plain li{ margin-bottom:8px; }
   ul.plain li{margin-bottom:4px; font-size:13.5px; color:var(--ink-70);}
-  .role-chip{font-family:'Cantarell', sans-serif; font-size:10px; font-weight:700; letter-spacing:.03em; padding:3px 10px; border-radius:20px; border:none; color:var(--gold); background:rgba(33,144,164,0.14);}
+  .role-chip{font-family:'Inter', sans-serif; font-size:10px; font-weight:700; letter-spacing:.03em; padding:3px 10px; border-radius:20px; border:none; color:var(--gold); background:rgba(33,144,164,0.14);}
   .auth-wrap{ max-width:400px; margin:40px auto; padding:0 16px;}
   .auth-toggle{display:flex; gap:6px; margin-bottom:14px; background:var(--paper-2); border-radius:999px; padding:4px; border:1px solid var(--line);}
-  .auth-toggle button{flex:1; padding:9px; border-radius:999px; border:none; background:none; font-family:'Cantarell',sans-serif; font-weight:700; cursor:pointer; color:var(--ink-70);}
+  .auth-toggle button{flex:1; padding:9px; border-radius:999px; border:none; background:none; font-family:'Inter',sans-serif; font-weight:700; cursor:pointer; color:var(--ink-70);}
   .auth-toggle button.active{background:var(--card); color:var(--gold); box-shadow:var(--shadow);}
   .field{margin-bottom:14px;}
-  .field label{display:block; font-family:'Cantarell', sans-serif; font-size:12px; font-weight:600; color:var(--ink-70); margin-bottom:5px;}
-  .auth-error{color:var(--cloth-dark); font-size:13px; margin-bottom:10px; font-family:'Cantarell', sans-serif;}
+  .field label{display:block; font-family:'Inter', sans-serif; font-size:12px; font-weight:600; color:var(--ink-70); margin-bottom:5px;}
+  .auth-error{color:var(--cloth-dark); font-size:13px; margin-bottom:10px; font-family:'Inter', sans-serif;}
   .banned-notice{background:rgba(224,27,36,0.08); border:none; border-left:4px solid var(--cloth); color:var(--cloth-dark); padding:12px 14px; border-radius:10px; font-size:13.5px; margin-bottom:14px;}
   .center-logo{text-align:center; margin-bottom:22px;}
   .center-logo-mark img{ width:auto; height:72px; display:block; margin:0 auto; }
-  .center-logo-word{ font-family:'Cantarell', sans-serif; font-weight:700; font-size:24px; color:var(--ink); margin-top:6px; letter-spacing:0.2px; }
-  .loading-note{text-align:center; padding:40px; color:var(--ink-70); font-family:'Cantarell', sans-serif; font-size:13px;}
+  .center-logo-word{ font-family:'Inter', sans-serif; font-weight:700; font-size:24px; color:var(--ink); margin-top:6px; letter-spacing:0.2px; }
+  .loading-note{text-align:center; padding:40px; color:var(--ink-70); font-family:'Inter', sans-serif; font-size:13px;}
 </style>
 </head>
 <body>
@@ -619,7 +619,7 @@
       <div class="card">
         <h2>En Az Bu Kadar Sayfa Okudun</h2>
         <div style="text-align:center; padding:16px 0;">
-          <span id="totalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Cantarell',sans-serif;">–</span>
+          <span id="totalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Inter',sans-serif;">–</span>
         </div>
       </div>
     </section>
@@ -766,7 +766,7 @@
       <div class="card">
         <h2>En Az Bu Kadar Sayfa Okudun</h2>
         <div style="text-align:center; padding:16px 0;">
-          <span id="mTotalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Cantarell',sans-serif;">–</span>
+          <span id="mTotalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Inter',sans-serif;">–</span>
         </div>
       </div>
     </section>
@@ -911,7 +911,7 @@
         <button type="button" class="card-add-btn" id="recPersonalAddBtn" aria-label="Şahsi öneri gönder">+</button>
         <div id="recPersonalFormWrap" style="display:none; margin-top:14px;">
           <div class="field"><label>Kime?</label>
-            <select id="recPersonalTarget" style="width:100%; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Cantarell',sans-serif; font-size:15px; background:var(--card); color:var(--ink);"></select>
+            <select id="recPersonalTarget" style="width:100%; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:15px; background:var(--card); color:var(--ink);"></select>
           </div>
           <div class="field"><label>Kitap Adı</label><input type="text" id="recPersonalBook" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div id="recPersonalBookSuggest" class="book-suggest-box"></div></div>
           <div class="field"><label>Not (opsiyonel)</label><input type="text" id="recPersonalNote" placeholder="neden önerdiğini kısaca yaz" /></div>
@@ -4399,7 +4399,7 @@ async function openBookDiscoverModal(book){
     ${groupHtml}
     <div class="rec-comments-label" style="margin-top:14px;">${myRating?'Puanını Güncelle':'Grupta Puan Ver'}</div>
     <div class="rating-star-row" id="ratingStarRow">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="rating-star" data-n="${n}">★</span>`).join('')}</div>
-    <textarea id="ratingCommentInput" placeholder="Yorumun (opsiyonel)" style="width:100%; margin-top:10px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Cantarell',sans-serif; font-size:14px; min-height:60px; background:var(--card); color:var(--ink);">${myRating?escapeHtml(myRating.comment||''):''}</textarea>
+    <textarea id="ratingCommentInput" placeholder="Yorumun (opsiyonel)" style="width:100%; margin-top:10px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; min-height:60px; background:var(--card); color:var(--ink);">${myRating?escapeHtml(myRating.comment||''):''}</textarea>
     <button class="primary" id="ratingSubmitBtn" style="width:100%; margin-top:8px;">Gönder</button>
     ${extHtml}
   `;
