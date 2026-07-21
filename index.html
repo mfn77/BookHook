@@ -876,6 +876,10 @@
         <h2>Geçmiş Hediyeler</h2>
         <div id="giftHistoryList"></div>
       </div>
+      <div class="card">
+        <h2>📚 Bugüne Kadar Hediye Edilen Kitaplar</h2>
+        <div id="giftBooksGrid"></div>
+      </div>
     </section>
 
     <!-- ORTAK: GRUP KURALLARI -->
@@ -1405,11 +1409,11 @@ document.getElementById('bookHistoryViewModal').addEventListener('click', (e)=>{
 /* ============ ORTAK: KİTAP BİLGİSİ (kapağa tıklayınca) ============ */
 document.getElementById('bookInfoModalClose').addEventListener('click', ()=>{ closeModal('bookInfoModal'); });
 document.getElementById('bookInfoModal').addEventListener('click', (e)=>{ if(e.target.id==='bookInfoModal') closeModal('bookInfoModal'); });
-async function showBookInfo(rawTitle, cover){
+async function showBookInfo(rawTitle, cover, prependHtml){
   if(!rawTitle) return;
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
-  body.innerHTML = `<span class="muted">Aranıyor…</span>`;
+  body.innerHTML = `${prependHtml||''}<span class="muted">Aranıyor…</span>`;
   // "Yazar - Kitap Adı" formatındaysa ikiye ayır (sadece başlık kısmını arama sorgusunda kullanmak için)
   let author = '', title = rawTitle;
   const dashIdx = rawTitle.indexOf(' - ');
@@ -1421,7 +1425,7 @@ async function showBookInfo(rawTitle, cover){
     const items = await searchOpenLibrary(searchQuery);
     if(items[0]){
       info = items[0];
-      body.innerHTML = `<span class="muted">Detaylar getiriliyor…</span>`;
+      body.innerHTML = `${prependHtml||''}<span class="muted">Detaylar getiriliyor…</span>`;
       info = await enrichFromOpenLibraryWork(info);
     }
     else lastError = 'Open Library: sonuç yok';
@@ -1439,7 +1443,7 @@ async function showBookInfo(rawTitle, cover){
     info.cover = cover || info.cover;
   }
   if(!info){
-    body.innerHTML = `<span class="muted">Bu kitap hakkında bilgi bulunamadı.${lastError?`<br/><span style="font-size:11px;">(${escapeHtml(lastError)})</span>`:''}</span>`;
+    body.innerHTML = `${prependHtml||''}<span class="muted">Bu kitap hakkında bilgi bulunamadı.${lastError?`<br/><span style="font-size:11px;">(${escapeHtml(lastError)})</span>`:''}</span>`;
     return;
   }
   const descShort = info.description ? escapeHtml(info.description).slice(0,320) + (info.description.length>320?'…':'') : '';
@@ -1451,6 +1455,7 @@ async function showBookInfo(rawTitle, cover){
     info.language ? (LANG_LABELS[info.language]||escapeHtml(info.language)) : ''
   ].filter(Boolean).join(' &middot; ');
   body.innerHTML = `
+    ${prependHtml||''}
     ${info.cover ? `<img src="${info.cover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.style.display='none';" />` : ''}
     <h2 style="margin:4px 0 2px;">${escapeHtml(info.title)}</h2>
     <div class="muted" style="margin-bottom:4px;">${escapeHtml(info.author)}${info.year?` &middot; ${info.year}`:''}${info.pageCount?` &middot; ${info.pageCount} sayfa`:''}</div>
@@ -3257,6 +3262,7 @@ async function renderGiftsTab(){
   markLoaded(content);
   wireGiftFormHandlers(content);
   await renderGiftHistory(myProfile.role==='admin');
+  await renderGiftBooksGrid();
 }
 
 async function buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver){
@@ -3425,6 +3431,38 @@ function wireGiftFormHandlers(content){
   });
 }
 
+let giftBooksGridCache = [];
+async function renderGiftBooksGrid(){
+  const host = keepOrLoading('giftBooksGrid');
+  let items = [];
+  try{
+    const snap = await getDocs(query(collection(db,'giftRequests'), where('received','==',true)));
+    snap.forEach(d=> items.push(d.data()));
+  }catch(e){ host.innerHTML = `<p class="muted">Yüklenemedi.</p>`; markLoaded(host); return; }
+  items = items.filter(it=>it.bookTitle).sort((a,b)=> new Date(b.receivedAt||b.updatedAt||0) - new Date(a.receivedAt||a.updatedAt||0));
+  if(!items.length){ host.innerHTML = `<p class="muted">Henüz tamamlanmış hediye yok.</p>`; markLoaded(host); return; }
+  giftBooksGridCache = items;
+  host.innerHTML = `<div class="discover-grid">${items.map((it,idx)=>{
+    const coverHtml = it.bookCover ? `<img src="${it.bookCover}" alt="" onerror="this.style.display='none';" />` : '';
+    return `<div class="discover-book-card" data-gift-book-idx="${idx}">
+      <div class="discover-book-cover-wrap">${coverHtml}</div>
+      <div class="discover-book-title">${escapeHtml(it.bookTitle)}</div>
+    </div>`;
+  }).join('')}</div>`;
+  host.querySelectorAll('[data-gift-book-idx]').forEach(card=>{
+    card.addEventListener('click', ()=>{
+      const it = giftBooksGridCache[parseInt(card.dataset.giftBookIdx,10)];
+      if(!it) return;
+      const monday = new Date(it.weekStart);
+      const sunday = new Date(monday); sunday.setDate(sunday.getDate()+6);
+      const weekLabel = `${fmtShort(it.weekStart)}–${fmtShort(sunday.toISOString().slice(0,10))}`;
+      const prependHtml = `<div class="rec-comments-label" style="margin-top:0;">🎁 Hediye Bilgisi</div>
+        <div class="muted" style="margin-bottom:12px; font-size:13px;">👤 ${escapeHtml(it.receiverName||'')} aldı &middot; 📅 ${weekLabel} haftası</div>`;
+      showBookInfo(it.bookTitle, it.bookCover, prependHtml);
+    });
+  });
+  markLoaded(host);
+}
 async function renderGiftHistory(isAdminView){
   const host = keepOrLoading('giftHistoryList');
   let items = [];
