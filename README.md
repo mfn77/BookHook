@@ -61,6 +61,14 @@ Canlı: `https://<kullanıcı-adın>.github.io/<repo-adın>/`
 
 ---
 
+## 🔒 Güvenlik
+
+- Firebase istemci yapılandırması (`apiKey` vb.) ve FCM VAPID anahtarı, Google'ın tasarımı gereği herkese açıktır — güvenlik bunlarla değil, `firestore.rules` ile sağlanır.
+- Kayıt olan hiçbir hesap kendini yönetici olarak işaretleyemez; kurallar bunu sunucu tarafında zorunlu olarak engeller (bkz. yukarıdaki "İlk Yönetici Hesabı").
+- Google Books API anahtarını kullanıyorsan, Google Cloud Console'da anahtara **HTTP referrer kısıtlaması** ekleyip sadece kendi alan adından çalışmasını sağlaman önerilir.
+
+---
+
 ## 🚀 Kurulum
 
 ### 1. Firebase Projesi
@@ -86,7 +94,14 @@ Open Library birincil kaynak olduğu için zorunlu değil; sadece Google Books'u
 Tüm dosyaları GitHub reponun `main` dalına yükle, **Settings → Pages** kısmından `main` dalını kaynak olarak seç. Site `https://<kullanıcı-adın>.github.io/<repo-adın>/` adresinde yayınlanır.
 
 ### 5. İlk Yönetici Hesabı
-`index.html` içindeki `ADMIN_EMAIL` sabitini kendi e-postanla değiştir; o e-postayla kayıt olan hesap otomatik olarak yönetici rolü alır.
+Güvenlik açısından, **kimse kayıt olurken kendini yönetici yapamaz** — Firestore kuralları her yeni hesabı zorunlu olarak `member` (üye) rolüyle oluşturur. Bu yüzden ilk yönetici hesabı elle atanmalı:
+
+1. Kendi hesabınla normal şekilde üye ol (e-posta/şifre veya Google ile).
+2. Firebase Console → **Firestore Database** → `users` koleksiyonuna gir, kendi belgeni bul.
+3. İçindeki `role` alanını `"member"`den `"admin"` olarak değiştir, kaydet.
+4. Artık uygulama içinde yönetici olarak görünürsün.
+
+**Sonraki yöneticiler için elle bir şey yapmana gerek yok** — yönetici olarak ☰ menü → **Üyeler** ekranına girip, yönetici yapmak istediğin kişinin yanındaki **"Yönetici Yap"** tuşuna basman yeterli.
 
 ---
 
