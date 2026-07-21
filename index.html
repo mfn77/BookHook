@@ -1368,12 +1368,18 @@ async function openSocialProfileView(uid){
 async function renderSocialProfilePosts(uid){
   const box = document.getElementById('socialProfilePosts');
   box.innerHTML = `<span class="muted">Yükleniyor…</span>`;
+  let fetchError = null;
   try{
-    const snap = await getDocs(query(collection(db,'posts'), where('uid','==',uid), orderBy('createdAt','desc'), limit(200)));
+    const snap = await getDocs(query(collection(db,'posts'), where('uid','==',uid), limit(300)));
     socialProfilePostsCache = [];
     snap.forEach(d=> socialProfilePostsCache.push({id:d.id, ...d.data()}));
-  }catch(e){ socialProfilePostsCache = []; }
+    socialProfilePostsCache.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+  }catch(e){ socialProfilePostsCache = []; fetchError = e; }
   socialProfilePostsPage = 0;
+  if(fetchError){
+    box.innerHTML = `<div class="rec-comments-label">📰 Gönderiler</div><div class="empty-state" style="padding:16px 0;"><span class="big">⚠️</span>Gönderiler yüklenemedi.<br/><span style="font-size:11px;">${escapeHtml(fetchError.message||String(fetchError))}</span></div>`;
+    return;
+  }
   renderSocialProfilePostsPage();
 }
 function renderSocialProfilePostsPage(){
@@ -1409,12 +1415,18 @@ async function renderProfileModalPosts(uid){
   const box = document.getElementById('profileModalPosts');
   box.style.display = 'block';
   box.innerHTML = `<span class="muted">Yükleniyor…</span>`;
+  let fetchError = null;
   try{
-    const snap = await getDocs(query(collection(db,'posts'), where('uid','==',uid), orderBy('createdAt','desc'), limit(200)));
+    const snap = await getDocs(query(collection(db,'posts'), where('uid','==',uid), limit(300)));
     profileModalPostsCache = [];
     snap.forEach(d=> profileModalPostsCache.push({id:d.id, ...d.data()}));
-  }catch(e){ profileModalPostsCache = []; }
+    profileModalPostsCache.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+  }catch(e){ profileModalPostsCache = []; fetchError = e; }
   profileModalPostsPage = 0;
+  if(fetchError){
+    box.innerHTML = `<div class="rec-comments-label">📰 Gönderiler</div><div class="empty-state" style="padding:16px 0;"><span class="big">⚠️</span>Gönderiler yüklenemedi.<br/><span style="font-size:11px;">${escapeHtml(fetchError.message||String(fetchError))}</span></div>`;
+    return;
+  }
   renderProfileModalPostsPage();
 }
 function renderProfileModalPostsPage(){
