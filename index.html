@@ -2701,11 +2701,7 @@ async function renderWormsShared(containerId, historyContainerId){
       const body = rows.map(r=>{
         const u = usersCache[r.uid];
         const bc = u.badgeCounts || {};
-        const liveTier = u.currentTier;
-        const cells = BADGE_DEFS.map(def=>{
-          const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
-          return `<td>${count}</td>`;
-        }).join('');
+        const cells = BADGE_DEFS.map(def=>`<td>${bc[def.key]||0}</td>`).join('');
         return `<tr><td class="name-cell">${userChipHtml(r.uid,18)}</td>${cells}</tr>`;
       }).join('');
       historyBox.innerHTML = `<table class="weekgrid">${head}${body}</table>`;
