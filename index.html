@@ -384,6 +384,16 @@
   .day-info-cell{cursor:pointer;}
   /* ============ SOSYAL SEKMESİ ============ */
   .social-subtab{ padding-bottom:100px; }
+  #pinnedPostBar{
+    position:sticky; top:0; z-index:60; background:var(--card); border:1px solid var(--gold); border-radius:12px;
+    padding:8px 12px; margin-bottom:10px; display:flex; align-items:center; gap:8px; cursor:pointer;
+    box-shadow:var(--shadow); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s;
+    overflow:hidden; white-space:nowrap;
+  }
+  #pinnedPostBar.hidden{ transform:translateY(-130%); opacity:0; }
+  #pinnedPostBar .pin-icon{ flex:0 0 auto; font-size:15px; }
+  #pinnedPostBar .pin-author{ font-weight:700; font-size:12.5px; flex:0 0 auto; }
+  #pinnedPostBar .pin-preview{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; font-size:12.5px; color:var(--ink-70); }
   .social-pill-bar{
     position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(0);
     display:flex; align-items:center; height:40px; gap:6px; padding:0 5px; background:rgba(24,24,30,0.6); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
@@ -619,6 +629,7 @@
     <!-- ADMIN TABS -->
     <section class="tab" id="tab-social" style="padding-bottom:0;">
       <div id="socialSubTimeline" class="social-subtab">
+        <div id="pinnedPostBar" style="display:none;"></div>
         <div id="timelineFeed"></div>
       </div>
       <div id="socialSubDiscover" class="social-subtab" style="display:none;">
@@ -1578,6 +1589,10 @@ async function notifyUser(uid, message, linkTab){
 async function notifyAdmins(message, linkTab){
   const adminUids = Object.keys(usersCache).filter(u=>usersCache[u].role==='admin' && !usersCache[u].banned);
   await Promise.all(adminUids.map(uid=>notifyUser(uid,message,linkTab)));
+}
+async function notifyAllMembers(message, linkTab, excludeUid){
+  const uids = Object.keys(usersCache).filter(u=> u!==excludeUid && !usersCache[u].banned);
+  await Promise.all(uids.map(uid=>notifyUser(uid,message,linkTab)));
 }
 function subscribeNotifs(){
   if(unsubNotifs) unsubNotifs();
@@ -3934,14 +3949,19 @@ function postBodyHtml(p){
     default: return escapeHtml(p.text||'');
   }
 }
+function isPostPinned(p){
+  return !!(p.pinnedUntil && new Date(p.pinnedUntil).getTime() > Date.now());
+}
 function renderPostCard(p){
   const canDelete = p.uid===currentUid || myProfile.role==='admin';
   const canEdit = p.uid===currentUid && p.type==='user_post';
+  const pinned = isPostPinned(p);
   return `<div class="post-card modal-card-anim" data-post-id="${p.id}">
     <div class="post-card-head">
       ${userChipHtml(p.uid)}
       <span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span>
-      ${canDelete?`<button type="button" class="post-menu-btn" data-post-menu="${p.id}" data-can-edit="${canEdit?'1':'0'}" style="margin-left:auto;" title="Seçenekler">⋮</button>`:''}
+      ${pinned?`<span title="Sabitlenmiş" style="margin-left:auto; font-size:13px;">📌</span>`:''}
+      ${canDelete?`<button type="button" class="post-menu-btn" data-post-menu="${p.id}" data-can-edit="${canEdit?'1':'0'}" data-is-pinned="${pinned?'1':'0'}" style="${pinned?'':'margin-left:auto;'}" title="Seçenekler">⋮</button>`:''}
     </div>
     <div class="post-card-body">${postBodyHtml(p)}</div>
     <div class="post-card-footer">
@@ -3951,6 +3971,7 @@ function renderPostCard(p){
   </div>`;
 }
 async function renderTimelineTab(){
+  renderPinnedPostBar();
   const feed = keepOrLoading('timelineFeed');
   let posts = [];
   try{
@@ -3962,9 +3983,11 @@ async function renderTimelineTab(){
   wirePostCards(feed);
   markLoaded(feed);
 }
-function openPostMenu(btn, postId, canEdit, refresh){
+function openPostMenu(btn, postId, canEdit, refresh, isPinned){
+  const isAdmin = myProfile.role==='admin';
   const html = `
     ${canEdit?`<button type="button" class="post-menu-item" id="postMenuEditBtn">✏️ Düzenle</button>`:''}
+    ${isAdmin ? (isPinned ? `<button type="button" class="post-menu-item" id="postMenuUnpinBtn">📌 Pini Kaldır</button>` : `<button type="button" class="post-menu-item" id="postMenuPinBtn">📌 Pinle</button>`) : ''}
     <button type="button" class="post-menu-item danger" id="postMenuDeleteBtn">🗑 Kaldır</button>
   `;
   showAnchoredPopover(btn, html);
@@ -3974,12 +3997,68 @@ function openPostMenu(btn, postId, canEdit, refresh){
     hideAnchoredPopover();
     openEditPostModal(postId, refresh);
   });
+  const pinBtn = document.getElementById('postMenuPinBtn');
+  if(pinBtn) pinBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    hideAnchoredPopover();
+    openPinDurationMenu(postId, refresh);
+  });
+  const unpinBtn = document.getElementById('postMenuUnpinBtn');
+  if(unpinBtn) unpinBtn.addEventListener('click', async (e)=>{
+    e.stopPropagation();
+    hideAnchoredPopover();
+    try{ await updateDoc(doc(db,'posts',postId), { pinnedUntil: null }); showToast('Sabitleme kaldırıldı.'); refresh(); renderPinnedPostBar(); }catch(err){ alert('Kaldırılamadı: '+(err.message||err)); }
+  });
   document.getElementById('postMenuDeleteBtn').addEventListener('click', async (e)=>{
     e.stopPropagation();
     hideAnchoredPopover();
     if(!confirm('Bu gönderiyi silmek istediğine emin misin?')) return;
-    try{ await deleteDoc(doc(db,'posts',postId)); refresh(); }catch(err){ alert('Silinemedi: '+(err.message||err)); }
+    try{ await deleteDoc(doc(db,'posts',postId)); refresh(); renderPinnedPostBar(); }catch(err){ alert('Silinemedi: '+(err.message||err)); }
   });
+}
+function openPinDurationMenu(postId, refresh){
+  const options = [
+    {label:'30 dakika', mins:30},
+    {label:'1 saat', mins:60},
+    {label:'1 gün', mins:1440},
+    {label:'1 ay', mins:43200},
+    {label:'6 ay', mins:259200}
+  ];
+  showSimpleInfoModal(`<h2 style="margin-bottom:10px;">Ne Kadar Sabitlensin?</h2>
+    <div style="display:flex; flex-direction:column; gap:4px;">
+      ${options.map(o=>`<button type="button" class="post-menu-item" data-pin-mins="${o.mins}">${o.label}</button>`).join('')}
+    </div>`);
+  document.querySelectorAll('#bookInfoModalBody [data-pin-mins]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const mins = parseInt(b.dataset.pinMins,10);
+      const until = new Date(Date.now() + mins*60000).toISOString();
+      try{
+        await updateDoc(doc(db,'posts',postId), { pinnedUntil: until });
+        closeModal('bookInfoModal');
+        showToast('Gönderi sabitlendi!');
+        if(refresh) refresh();
+        renderPinnedPostBar();
+      }catch(err){ alert('Sabitlenemedi: '+(err.message||err)); }
+    });
+  });
+}
+async function renderPinnedPostBar(){
+  const bar = document.getElementById('pinnedPostBar');
+  if(!bar) return;
+  let pinned = null;
+  try{
+    const snap = await getDocs(query(collection(db,'posts'), where('pinnedUntil','>', new Date().toISOString()), orderBy('pinnedUntil','desc'), limit(1)));
+    snap.forEach(d=>{ pinned = {id:d.id, ...d.data()}; });
+  }catch(e){}
+  if(!pinned){ bar.style.display='none'; bar.innerHTML=''; return; }
+  const previewText = (pinned.text || postBodyHtml(pinned).replace(/<[^>]+>/g,'')).slice(0,80);
+  bar.innerHTML = `<span class="pin-icon">📌</span><span class="pin-author">${escapeHtml(usersCache[pinned.uid]?.name||'')}</span><span class="pin-preview">${escapeHtml(previewText)}</span>`;
+  bar.style.display = 'flex';
+  bar.onclick = ()=>{
+    const card = document.querySelector(`.post-card[data-post-id="${pinned.id}"]`);
+    if(card) card.scrollIntoView({behavior:'smooth', block:'center'});
+    else openPostModal(pinned.id);
+  };
 }
 async function openEditPostModal(postId, refresh){
   let p = null;
@@ -4043,7 +4122,7 @@ function wirePostCards(container, refreshFn){
   container.querySelectorAll('[data-post-menu]').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      openPostMenu(btn, btn.dataset.postMenu, btn.dataset.canEdit==='1', refresh);
+      openPostMenu(btn, btn.dataset.postMenu, btn.dataset.canEdit==='1', refresh, btn.dataset.isPinned==='1');
     });
   });
   container.querySelectorAll('.reaction-pill').forEach(btn=>{
@@ -4154,9 +4233,10 @@ window.addEventListener('scroll', ()=>{
   if(!socialTab || !socialTab.classList.contains('active')) return;
   const bar = document.getElementById('socialPillBar');
   const fab = document.getElementById('socialFloatingAction');
+  const pinBar = document.getElementById('pinnedPostBar');
   const cur = window.scrollY;
-  if(cur > lastSocialScrollY + 4){ bar.classList.add('hidden'); fab.classList.add('hidden'); }
-  else if(cur < lastSocialScrollY - 4){ bar.classList.remove('hidden'); fab.classList.remove('hidden'); }
+  if(cur > lastSocialScrollY + 4){ bar.classList.add('hidden'); fab.classList.add('hidden'); if(pinBar) pinBar.classList.add('hidden'); }
+  else if(cur < lastSocialScrollY - 4){ bar.classList.remove('hidden'); fab.classList.remove('hidden'); if(pinBar) pinBar.classList.remove('hidden'); }
   lastSocialScrollY = cur;
 }, {passive:true});
 
@@ -4370,6 +4450,7 @@ function openComposeModal(){
     if(!text && !composeImageDataUrl){ alert('Bir şey yazmalısın veya görsel eklemelisin.'); return; }
     try{
       await createPost('user_post', { text, image: composeImageDataUrl||'' });
+      await notifyAllMembers(`${myProfile.name} yeni bir gönderi paylaştı.`, 'social', currentUid);
       closeModal('bookInfoModal');
       showToast('Gönderi paylaşıldı!');
       renderTimelineTab();
