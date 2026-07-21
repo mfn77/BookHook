@@ -3905,20 +3905,9 @@ function updateDiscoverFabVisibility(){
   const heading = document.getElementById('discoverHeaderTitle');
   if(!heading) return;
   const headingTop = heading.getBoundingClientRect().top;
-  const cur = window.scrollY;
-  if(headingTop <= 8){
-    discoverNavEnteredZone = true;
-  } else {
-    discoverNavEnteredZone = false;
-  }
-  if(!discoverNavEnteredZone){
-    prevBtn.classList.remove('visible'); nextBtn.classList.remove('visible');
-  } else {
-    prevBtn.classList.add('visible'); nextBtn.classList.add('visible');
-    if(cur > lastDiscoverNavScrollY + 4){ prevBtn.classList.add('slide-hidden'); nextBtn.classList.add('slide-hidden'); }
-    else if(cur < lastDiscoverNavScrollY - 4){ prevBtn.classList.remove('slide-hidden'); nextBtn.classList.remove('slide-hidden'); }
-  }
-  lastDiscoverNavScrollY = cur;
+  discoverNavEnteredZone = headingTop <= 8;
+  prevBtn.classList.toggle('visible', discoverNavEnteredZone);
+  nextBtn.classList.toggle('visible', discoverNavEnteredZone);
 }
 function setupDiscoverNavObserver(){
   positionDiscoverFabs();
