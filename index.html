@@ -311,6 +311,7 @@
   .post-menu-item:hover{ background:rgba(33,144,164,0.10); }
   .post-menu-item.danger{ color:var(--cloth-dark); }
   .rec-comments-label{ font-size:11px; font-weight:700; color:var(--ink-70); text-transform:uppercase; letter-spacing:0.4px; margin:12px 0 6px; }
+  .rec-comments-toggle{ display:block; width:100%; text-align:left; border:none; background:none; padding:0; margin:12px 0 6px; font-size:11px; font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:0.4px; cursor:pointer; }
   .reaction-bar{ display:flex; gap:5px; margin-top:8px; flex-wrap:wrap; }
   .reaction-pill{ border:1.5px solid var(--line); background:var(--card); border-radius:14px; padding:2px 8px; font-size:13.5px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; line-height:1.6; }
   .reaction-pill.mine{ background:rgba(33,144,164,0.14); border-color:var(--gold); }
@@ -2327,7 +2328,7 @@ function renderAdminToday(){
       const wasNew = isSelf && todayAnswers[btn.dataset.uid]!==btn.dataset.status;
       playMarkFx(btn, btn.dataset.status);
       await markStatus(btn.dataset.uid, btn.dataset.status);
-      if(wasNew) createPost(btn.dataset.status, {});
+      if(wasNew) createPost(btn.dataset.status, {variantText: pickVariantMessage(btn.dataset.status)});
     });
   });
 
@@ -2822,7 +2823,7 @@ document.getElementById('mReadBtn').addEventListener('click', async ()=>{
   await markStatus(currentUid,'read');
   renderMemberSurvey();
   notifyAdmins(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week');
-  if(wasNew) createPost('read', {});
+  if(wasNew) createPost('read', {variantText: pickVariantMessage('read')});
   const s = await computeStreak(currentUid);
   await checkAndAwardBadges(currentUid, s);
 });
@@ -2830,7 +2831,7 @@ document.getElementById('mSkipBtn').addEventListener('click', async ()=>{
   const wasNew = todayAnswers[currentUid] !== 'skip';
   try{ playMarkFx(document.getElementById('mSkipBtn'), 'skip'); }catch(e){}
   await markStatus(currentUid,'skip'); renderMemberSurvey(); notifyAdmins(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week');
-  if(wasNew) createPost('skip', {});
+  if(wasNew) createPost('skip', {variantText: pickVariantMessage('skip')});
 });
 
 async function renderMemberOwnWeek(){
@@ -3825,6 +3826,29 @@ async function setReaction(target, emoji){
 }
 
 /* ============ SOSYAL: TIMELINE + KEŞFET ============ */
+const READ_MESSAGES = {
+  morning: ["🌅 Sabahın köründe okumaya başladı.", "☀️ Güne kitapla başladı.", "📖 Sabah kahvesiyle birlikte kitabını da bitirdi.", "🌞 Erkenden okumasını halletti.", "🐦 Kuşlardan önce kalkıp okudu.", "🌻 Güne okuyarak merhaba dedi."],
+  afternoon: ["📚 Öğleden sonra kitabına vakit ayırdı.", "☕ Bir mola verip okudu.", "📖 Günün ortasında okuma molası verdi.", "🌤️ Öğlen arasında sayfalarını çevirdi.", "📗 Gün ortasında görevini tamamladı.", "🍃 Öğleyin biraz kitaba daldı."],
+  evening: ["🌆 Akşamüstü okumasını yaptı.", "🛋️ Günün yorgunluğunu kitapla attı.", "📖 Akşam kitabına döndü.", "🌇 Gün biterken okumasını tamamladı.", "✨ Akşam saatlerinde okudu.", "🍵 Akşam çayıyla birlikte kitabını da bitirdi."],
+  night: ["🌙 Gece yarısına doğru okudu.", "😴 Uyumadan önce kitabını bitirdi.", "🌃 Geceye kitapla girdi.", "🕯️ Herkes uyurken o okudu.", "⭐ Gecenin sessizliğinde okudu.", "🦉 Baykuş gibi geceleri okuyor."]
+};
+const SKIP_MESSAGES = {
+  morning: ["😅 Sabah olmuş ama kitap henüz açılmamış.", "🥱 Sabah biraz mola verdi.", "☁️ Bugünkü sayfalar bekliyor."],
+  afternoon: ["🙈 Öğlen oldu, kitap hâlâ kapalı.", "📵 Bugün araya bir şey girdi.", "⏳ Vakit bulamadı bugün."],
+  evening: ["😬 Akşam oldu, henüz okumadı.", "🌆 Gün bitmeden bir fırsat kalsın.", "📚 Kitap masada bekliyor."],
+  night: ["😴 Bugün kitapsız geçti.", "🌙 Yarın telafi vakti.", "💤 Bugünlük pas geçti."]
+};
+function timeBucket(hour){
+  if(hour>=5 && hour<12) return 'morning';
+  if(hour>=12 && hour<18) return 'afternoon';
+  if(hour>=18 && hour<22) return 'evening';
+  return 'night';
+}
+function pickVariantMessage(type){
+  const bucket = timeBucket(new Date().getHours());
+  const pool = (type==='read' ? READ_MESSAGES : SKIP_MESSAGES)[bucket];
+  return pool[Math.floor(Math.random()*pool.length)];
+}
 async function createPost(type, data, forUid, forName){
   try{
     await addDoc(collection(db,'posts'), {
@@ -3849,8 +3873,8 @@ function timeAgoLabel(iso){
 function postBodyHtml(p){
   const name = escapeHtml(p.name||'');
   switch(p.type){
-    case 'read': return `📖 Bugün okudu.`;
-    case 'skip': return `😴 Bugün okuyamadı.`;
+    case 'read': return p.variantText ? escapeHtml(p.variantText) : `📖 Bugün okudu.`;
+    case 'skip': return p.variantText ? escapeHtml(p.variantText) : `😴 Bugün okuyamadı.`;
     case 'badge_gained': return `${p.badgeIcon||'🏅'} <b>${escapeHtml(p.badgeLabel||'')}</b> rozetini kazandı!`;
     case 'badge_lost': return `💔 <b>${escapeHtml(p.badgeLabel||'')}</b> rozetini kaybetti.`;
     case 'gift_won': return `🎁 Bu hafta hediye kitap kazandı!`;
@@ -4600,7 +4624,7 @@ async function renderRecCard(it, isGroup){
       </div>
     </div>
     ${renderReactionBar(it.reactions, `rec:${it.id}`)}
-    ${comments.length ? `<div class="rec-comments-label">💬 ${comments.length} Yorum</div>${commentsHtml}` : ''}
+    ${comments.length ? `<button type="button" class="rec-comments-toggle" data-toggle-comments="${it.id}">💬 ${comments.length} Yorum</button><div class="rec-comments-wrap" id="recComments-${it.id}" style="display:none;">${commentsHtml}</div>` : ''}
     <div class="row" style="margin-top:10px;">
       <input type="text" class="rec-comment-input" placeholder="Yorum yaz..." data-rec-id="${it.id}" />
       <button class="secondary tiny rec-comment-send" data-rec-id="${it.id}" style="flex:0 0 auto;">Gönder</button>
@@ -4609,6 +4633,20 @@ async function renderRecCard(it, isGroup){
 }
 
 function wireRecCards(box, items, isGroup){
+  box.querySelectorAll('[data-toggle-comments]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const wrap = document.getElementById('recComments-'+btn.dataset.toggleComments);
+      if(!wrap) return;
+      if(wrap.style.display==='none'){
+        wrap.style.display = 'block';
+        wrap.classList.remove('slide-down-anim');
+        void wrap.offsetWidth;
+        wrap.classList.add('slide-down-anim');
+      } else {
+        wrap.style.display = 'none';
+      }
+    });
+  });
   box.querySelectorAll('.reaction-pill').forEach(btn=>{
     btn.addEventListener('click', ()=>{ showReactorsModal(btn.dataset.uids, btn.dataset.emoji); });
   });
