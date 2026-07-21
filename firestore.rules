@@ -19,10 +19,13 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'member';
       allow update: if isSignedIn() && (
-        request.auth.uid == uid ||
-        (isAdmin() && !isOwnerUid(uid))
+        (request.auth.uid == uid &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.get('isOwner', false) == resource.data.get('isOwner', false)) ||
+        (isAdmin() && request.auth.uid != uid && resource.data.isOwner != true &&
+          request.resource.data.get('isOwner', false) == resource.data.get('isOwner', false))
       );
-      allow delete: if isAdmin() && !isOwnerUid(uid);
+      allow delete: if isAdmin() && resource.data.isOwner != true;
 
       match /bookHistory/{itemId} {
         allow read: if isSignedIn();
