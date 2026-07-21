@@ -2623,8 +2623,12 @@ async function renderAdminMembers(){
       if(u.role==='admin' && adminCount<=1){ alert('Tek aktif yönetici sensin, önce başka birini yönetici yapmalısın.'); return; }
       const newRole = u.role==='admin' ? 'member' : 'admin';
       if(!confirm(`${u.name} artık "${newRole==='admin'?'yönetici':'üye'}" olsun mu?`)) return;
-      await updateDoc(doc(db,'users',uid), {role:newRole});
-      showToast(`${u.name} artık ${newRole==='admin'?'yönetici':'üye'}.`);
+      try{
+        await updateDoc(doc(db,'users',uid), {role:newRole});
+        showToast(`${u.name} artık ${newRole==='admin'?'yönetici':'üye'}.`);
+      }catch(err){
+        alert('Rol değiştirilemedi: '+(err.message||err));
+      }
     });
   });
   list.querySelectorAll('[data-toggle-ban]').forEach(btn=>{
