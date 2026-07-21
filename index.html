@@ -107,6 +107,7 @@
     header.top{ padding:10px 10px; gap:6px; }
     .sidebar-header{ height:54px; }
     .sidebar-tabs.tabs{ top:calc(54px + env(safe-area-inset-top, 0px)); }
+    #pinnedPostBar{ top:62px; }
     .header-pill{ padding:0 9px; font-size:11.5px; height:34px; }
     .header-pill.icon-pill{ width:34px; }
     .whoami{ gap:5px; }
@@ -385,12 +386,12 @@
   /* ============ SOSYAL SEKMESİ ============ */
   .social-subtab{ padding-bottom:100px; }
   #pinnedPostBar{
-    position:sticky; top:0; z-index:60; background:var(--card); border:1px solid var(--gold); border-radius:12px;
-    padding:8px 12px; margin-bottom:10px; display:flex; align-items:center; gap:8px; cursor:pointer;
+    position:fixed; top:70px; z-index:140; background:var(--card); border:1px solid var(--gold); border-radius:12px;
+    padding:8px 12px; display:flex; align-items:center; gap:8px; cursor:pointer;
     box-shadow:var(--shadow); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s;
     overflow:hidden; white-space:nowrap;
   }
-  #pinnedPostBar.hidden{ transform:translateY(-130%); opacity:0; }
+  #pinnedPostBar.hidden{ transform:translateY(-130%); opacity:0; pointer-events:none; }
   #pinnedPostBar .pin-icon{ flex:0 0 auto; font-size:15px; }
   #pinnedPostBar .pin-author{ font-weight:700; font-size:12.5px; flex:0 0 auto; }
   #pinnedPostBar .pin-preview{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; font-size:12.5px; color:var(--ink-70); }
@@ -1494,12 +1495,14 @@ document.getElementById('sidebarCollapseBtn').addEventListener('click', ()=>{
   document.getElementById('contentCol').classList.add('expanded');
   document.getElementById('sidebarExpandFab').classList.add('visible');
   setTimeout(repositionSocialPillBar, 340);
+  setTimeout(positionPinnedPostBar, 340);
 });
 document.getElementById('sidebarExpandFab').addEventListener('click', ()=>{
   document.getElementById('sidebarNav').classList.remove('collapsed');
   document.getElementById('contentCol').classList.remove('expanded');
   document.getElementById('sidebarExpandFab').classList.remove('visible');
   setTimeout(repositionSocialPillBar, 340);
+  setTimeout(positionPinnedPostBar, 340);
 });
 document.getElementById('photoLightbox').addEventListener('click', ()=>{ closeModal('photoLightbox'); });
 document.getElementById('profileModalBookHistoryBtn').addEventListener('click', async ()=>{
@@ -2026,9 +2029,17 @@ function buildHamburgerMenu(){
     buildHamburgerMenu();
   });
 }
+let prevTabBeforeProfile = null;
 document.getElementById('whoamiClickable').addEventListener('click', ()=>{
   document.getElementById('hamburgerMenu').style.display='none';
-  if(document.getElementById('tab-profile')) switchTab('profile');
+  if(activeTab === 'profile'){
+    const back = prevTabBeforeProfile;
+    prevTabBeforeProfile = null;
+    switchTab(back && document.getElementById('tab-'+back) ? back : getTabOrder()[0]);
+  } else if(document.getElementById('tab-profile')){
+    prevTabBeforeProfile = activeTab;
+    switchTab('profile');
+  }
 });
 document.getElementById('notifBellBtn').addEventListener('click', (e)=>{
   e.stopPropagation();
@@ -4284,16 +4295,27 @@ async function renderPinnedPostBar(){
     const snap = await getDocs(query(collection(db,'posts'), where('pinnedUntil','>', new Date().toISOString()), orderBy('pinnedUntil','desc'), limit(1)));
     snap.forEach(d=>{ pinned = {id:d.id, ...d.data()}; });
   }catch(e){}
-  if(!pinned){ bar.style.display='none'; bar.innerHTML=''; return; }
+  if(!pinned){ bar.style.display='none'; bar.innerHTML=''; document.getElementById('timelineFeed').style.marginTop=''; return; }
   const previewText = (pinned.text || postBodyHtml(pinned).replace(/<[^>]+>/g,'')).slice(0,80);
   bar.innerHTML = `<span class="pin-icon">📌</span><span class="pin-author">${escapeHtml(usersCache[pinned.uid]?.name||'')}</span><span class="pin-preview">${escapeHtml(previewText)}</span>`;
   bar.style.display = 'flex';
+  document.getElementById('timelineFeed').style.marginTop = '54px';
+  positionPinnedPostBar();
   bar.onclick = ()=>{
     const card = document.querySelector(`.post-card[data-post-id="${pinned.id}"]`);
     if(card) card.scrollIntoView({behavior:'smooth', block:'center'});
     else openPostModal(pinned.id);
   };
 }
+function positionPinnedPostBar(){
+  const contentCol = document.getElementById('contentCol');
+  const bar = document.getElementById('pinnedPostBar');
+  if(!contentCol || !bar) return;
+  const rect = contentCol.getBoundingClientRect();
+  bar.style.left = (rect.left + 16) + 'px';
+  bar.style.width = (rect.width - 32) + 'px';
+}
+window.addEventListener('resize', positionPinnedPostBar);
 async function openEditPostModal(postId, refresh){
   let p = null;
   try{ const snap = await getDoc(doc(db,'posts',postId)); if(snap.exists()) p = {id:postId, ...snap.data()}; }catch(e){}
