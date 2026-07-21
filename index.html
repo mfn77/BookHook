@@ -1275,7 +1275,7 @@ function avatarHtmlFromProfile(profile, size){
     : `<span style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:var(--gold);color:#fff;font-size:${Math.round(size*0.5)}px;font-family:'Roboto',sans-serif;font-weight:700;">${escapeHtml(initial)}</span>`;
   const iconSize = Math.max(10, Math.round(size*0.44));
   const badgeOverlay = tierDef
-    ? `<span class="badge-info-icon" data-badge-label="${escapeHtml(tierDef.label)}" style="cursor:pointer; position:absolute; right:-2px; bottom:-2px; width:${iconSize}px; height:${iconSize}px; border-radius:50%; background:${tierDef.color}; display:flex; align-items:center; justify-content:center; font-size:${Math.round(iconSize*0.62)}px; box-shadow:0 0 0 1.5px var(--card);">${tierDef.icon}</span>`
+    ? `<span class="tier-badge-icon" title="${escapeHtml(tierDef.label)}" style="position:absolute; right:-2px; bottom:-2px; width:${iconSize}px; height:${iconSize}px; border-radius:50%; background:${tierDef.color}; display:flex; align-items:center; justify-content:center; font-size:${Math.round(iconSize*0.62)}px; box-shadow:0 0 0 1.5px var(--card);">${tierDef.icon}</span>`
     : '';
   return `<span style="position:relative; display:inline-flex; border-radius:50%; ${ringStyle} margin-right:6px; vertical-align:middle; line-height:0;">${inner}${badgeOverlay}</span>`;
 }
