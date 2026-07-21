@@ -2190,7 +2190,7 @@ async function finalizeWeek(monday, force){
     await Promise.all(pairs.map(async p=>{
       if(p.giverUid) await notifyUser(p.giverUid, `Kura çekildi (${rangeLabel}): cezalısın, ${p.receiverName||'—'} için kitap hediyesi vereceksin. "Hediye Kitap" sekmesine bak.`, 'gifts');
       if(p.receiverUid) await notifyUser(p.receiverUid, `Kura çekildi (${rangeLabel}): tebrikler, ${p.giverName} sana kitap hediye edecek! "Hediye Kitap" sekmesinden isteğini gönderebilirsin.`, 'gifts');
-      if(p.receiverUid) createPost('gift_won', {}, p.receiverUid, p.receiverName);
+      if(p.receiverUid) createPost('gift_won', { variantText: pickGiftMessage('won') }, p.receiverUid, p.receiverName);
     }));
   }
   return {already:!didWrite, data};
@@ -2233,6 +2233,38 @@ function currentTierForStreak(streak){
   return tier;
 }
 const badgeCheckInFlight = new Set();
+const BADGE_GAINED_MESSAGES = {
+  b3: ["🔥 Ateşi yaktı, 3 gün aralıksız okudu!", "🔥 3 günlük seri başladı, devam!", "🔥 İlk ısınma turu: 3 gün üst üste!"],
+  b5: ["⭐ 5 gün aralıksız, yıldızını kazandı!", "⭐ Beşi devirdi, seri büyüyor!", "⭐ 5 günlük istikrar rozeti geldi!"],
+  b7: ["🎯 Tam bir hafta aralıksız okudu!", "🎯 7/7! Haftayı temiz geçirdi.", "🎯 Bir haftalık hedefi vurdu!"],
+  b14: ["💎 2 hafta aralıksız, elmas gibi parlıyor!", "💎 14 gün kesintisiz — bu bir alışkanlık artık!", "💎 İki haftalık seri tamamlandı!"],
+  b21: ["🏆 3 hafta aralıksız okudu, kupayı kaptı!", "🏆 21 gün! Artık gerçek bir okur.", "🏆 Üç haftalık maraton bitti, tebrikler!"],
+  b30: ["🐺 Tam bir ay aralıksız — Kitap Kurdu unvanı hak edildi!", "🐺 30 gün! Bu artık disiplin.", "🐺 Bir aylık seri: Kitap Kurdu doğdu!"]
+};
+const BADGE_LOST_MESSAGES = {
+  b3: ["💔 3 günlük seri sona erdi.", "😮‍💨 Ateş söndü, seri bozuldu."],
+  b5: ["💔 5 günlük seri bitti.", "😮‍💨 Yıldız serisi sona erdi."],
+  b7: ["💔 Haftalık seri bozuldu.", "😮‍💨 7 günlük hedef kaçtı."],
+  b14: ["💔 2 haftalık seri sona erdi.", "😮‍💨 14 günlük emek bir günde gitti."],
+  b21: ["💔 3 haftalık seri bitti.", "😮‍💨 21 günlük maraton durdu."],
+  b30: ["💔 Bir aylık seri sona erdi.", "😮‍💨 Kitap Kurdu serisi bozuldu."]
+};
+function pickBadgeGainedMessage(tierKey){
+  const pool = BADGE_GAINED_MESSAGES[tierKey] || ["🏅 Yeni bir rozet kazandı!"];
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function pickBadgeLostMessage(tierKey, count){
+  const pool = BADGE_LOST_MESSAGES[tierKey] || ["💔 Bir rozet serisi sona erdi."];
+  let msg = pool[Math.floor(Math.random()*pool.length)];
+  if(count>1) msg += ` (${count}. kez)`;
+  return msg;
+}
+const GIFT_WON_MESSAGES = ["🎁 Kura ona güldü, hediye kitap kazandı!", "🎉 Bu hafta şanslı, kitap hediyesi ona gidiyor!", "🎁 Hediye kurası ona çıktı!", "🍀 Şansı yaver gitti, kitap hediyesi kazandı!"];
+const GIFT_COMPLETED_MESSAGES = ["📦 Hediye kitabına kavuştu!", "🎉 Uzun bekleyiş bitti, kitap elinde!", "📬 Kitap teslim edildi, mutlu son!", "🥳 Hediyesi eline geçti!"];
+function pickGiftMessage(kind){
+  const pool = kind==='won' ? GIFT_WON_MESSAGES : GIFT_COMPLETED_MESSAGES;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
 async function checkAndAwardBadges(uid, streak){
   if(badgeCheckInFlight.has(uid)) return; // aynı kişi için eşzamanlı ikinci bir kontrolü atla (çift sayımı önler)
   badgeCheckInFlight.add(uid);
@@ -2268,11 +2300,11 @@ async function checkAndAwardBadges(uid, streak){
     if(notifyDef){
       const uTab = u.role==='admin' ? 'worms' : 'mworms';
       await notifyUser(uid, `🎉 Tebrikler! "${notifyDef.label}" rozetini kazandın!`, uTab);
-      createPost('badge_gained', { badgeKey:notifyDef.key, badgeLabel:notifyDef.label, badgeIcon:notifyDef.icon }, uid, u.name);
+      createPost('badge_gained', { badgeKey:notifyDef.key, badgeLabel:notifyDef.label, badgeIcon:notifyDef.icon, variantText: pickBadgeGainedMessage(notifyDef.key) }, uid, u.name);
     }
     if(historyIncremented && prevTier){
       const lostDef = BADGE_DEFS.find(d=>d.key===prevTier);
-      if(lostDef) createPost('badge_lost', { badgeKey:lostDef.key, badgeLabel:lostDef.label, badgeIcon:lostDef.icon }, uid, u.name);
+      if(lostDef) createPost('badge_lost', { badgeKey:lostDef.key, badgeLabel:lostDef.label, badgeIcon:lostDef.icon, variantText: pickBadgeLostMessage(lostDef.key, badgeCounts[lostDef.key]||1) }, uid, u.name);
     }
   }catch(e){ /* rozet kaydedilemezse sessizce geç */ }
   finally{ badgeCheckInFlight.delete(uid); }
@@ -3366,7 +3398,7 @@ function wireGiftFormHandlers(content){
       try{
         await updateDoc(doc(db,'giftRequests',btn.dataset.reqid), {received:true, receivedAt:new Date().toISOString()});
         await notifyUser(btn.dataset.giver, `${myProfile.name} hediye kitabını aldığını onayladı. 🎉`, 'gifts');
-        createPost('gift_completed', {});
+        createPost('gift_completed', { variantText: pickGiftMessage('completed') });
         showToast('Alındı olarak işaretlendi, teşekkürler!');
         renderGiftsTab();
       }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); }
@@ -3810,7 +3842,8 @@ async function setReaction(target, emoji){
   try{
     const snap = await getDoc(ref);
     if(!snap.exists()) return;
-    const reactions = snap.data().reactions || {};
+    const data = snap.data();
+    const reactions = data.reactions || {};
     const hasThis = (reactions[emoji]||[]).includes(currentUid);
     const updates = {};
     Object.keys(reactions).forEach(em=>{
@@ -3820,6 +3853,14 @@ async function setReaction(target, emoji){
     });
     updates[`reactions.${emoji}`] = hasThis ? arrayRemove(currentUid) : arrayUnion(currentUid);
     await updateDoc(ref, updates);
+    if(!hasThis){
+      const ownerUid = data.uid || data.fromUid;
+      if(ownerUid && ownerUid !== currentUid){
+        const kind = target.split(':')[0];
+        const tabHint = kind==='rec' ? 'recs' : 'social';
+        await notifyUser(ownerUid, `${myProfile.name} ${emoji} ile tepki verdi.`, tabHint);
+      }
+    }
   }catch(e){
     alert('Tepki kaydedilemedi: '+(e.message||e)+'\n\nBu genelde Firestore Rules izin vermediği için olur — yönetici kuralları güncellemesi gerekebilir.');
   }
@@ -3875,11 +3916,11 @@ function postBodyHtml(p){
   switch(p.type){
     case 'read': return p.variantText ? escapeHtml(p.variantText) : `📖 Bugün okudu.`;
     case 'skip': return p.variantText ? escapeHtml(p.variantText) : `😴 Bugün okuyamadı.`;
-    case 'badge_gained': return `${p.badgeIcon||'🏅'} <b>${escapeHtml(p.badgeLabel||'')}</b> rozetini kazandı!`;
-    case 'badge_lost': return `💔 <b>${escapeHtml(p.badgeLabel||'')}</b> rozetini kaybetti.`;
-    case 'gift_won': return `🎁 Bu hafta hediye kitap kazandı!`;
+    case 'badge_gained': return p.variantText ? escapeHtml(p.variantText) : `${p.badgeIcon||'🏅'} <b>${escapeHtml(p.badgeLabel||'')}</b> rozetini kazandı!`;
+    case 'badge_lost': return p.variantText ? escapeHtml(p.variantText) : `💔 <b>${escapeHtml(p.badgeLabel||'')}</b> rozetini kaybetti.`;
+    case 'gift_won': return p.variantText ? escapeHtml(p.variantText) : `🎁 Bu hafta hediye kitap kazandı!`;
     case 'gift_requested': return `📮 ${userChipHtml(p.giverUid)} kişisinden <b>${escapeHtml(p.bookTitle||'')}</b> istedi.`;
-    case 'gift_completed': return `🎉 Hediye kitabına kavuştu!`;
+    case 'gift_completed': return p.variantText ? escapeHtml(p.variantText) : `🎉 Hediye kitabına kavuştu!`;
     case 'new_member': return `👋 Kulübe katıldı, hoş geldin!`;
     case 'book_review': {
       const cover = p.bookCover ? `<img src="${p.bookCover}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml((p.bookAuthor?p.bookAuthor+' - ':'')+(p.bookTitle||''))}" data-book-cover="${escapeHtml(p.bookCover)}" />` : '';
