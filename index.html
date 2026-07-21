@@ -4787,22 +4787,26 @@ async function renderDiscoverHome(){
   });
   markLoaded(main);
 }
+const discoverCategoryCache = {};
+const DISCOVER_CACHE_TTL = 10*60*1000; // 10 dakika: bu süre içinde aynı kategoriye tekrar girilirse internete gitmez
 async function renderDiscoverCategoryGrid(slug){
   const main = document.getElementById('discoverFeed');
   showCachedOrPlaceholder(main, `<div class="empty-state">Yükleniyor…</div>`);
   const catLabel = (DISCOVER_CATEGORIES.find(c=>c.slug===slug)||{}).label || slug;
-  let groupDocs = [];
-  try{
-    const snap = await getDocs(query(collection(db,'groupBookRatings'), where('category','==',slug)));
-    snap.forEach(d=> groupDocs.push({id:d.id, ...d.data()}));
-  }catch(e){}
-  let extBooks = [];
-  try{ extBooks = await fetchDiscoverCategory(slug, 40); }catch(e){}
-  let additions = [];
-  try{
-    const snap = await getDocs(query(collection(db,'discoverAdditions'), where('category','==',slug)));
-    snap.forEach(d=> additions.push({id:d.id, ...d.data()}));
-  }catch(e){}
+
+  const groupPromise = getDocs(query(collection(db,'groupBookRatings'), where('category','==',slug)))
+    .then(snap=>{ const arr=[]; snap.forEach(d=>arr.push({id:d.id, ...d.data()})); return arr; })
+    .catch(()=>[]);
+  const additionsPromise = getDocs(query(collection(db,'discoverAdditions'), where('category','==',slug)))
+    .then(snap=>{ const arr=[]; snap.forEach(d=>arr.push({id:d.id, ...d.data()})); return arr; })
+    .catch(()=>[]);
+  const cached = discoverCategoryCache[slug];
+  const extPromise = (cached && (Date.now()-cached.timestamp) < DISCOVER_CACHE_TTL)
+    ? Promise.resolve(cached.data)
+    : fetchDiscoverCategory(slug, 40).catch(()=>[]).then(data=>{ discoverCategoryCache[slug] = { data, timestamp: Date.now() }; return data; });
+
+  const [groupDocs, extBooks, additions] = await Promise.all([groupPromise, extPromise, additionsPromise]);
+
   const groupIds = new Set(groupDocs.map(g=>g.id));
   const nonGroup = [
     ...extBooks.filter(b=>!groupIds.has(bookKeyFor(b))),
