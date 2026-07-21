@@ -12,20 +12,17 @@ service cloud.firestore {
       return isSignedIn() && myRole() == 'admin';
     }
     function isOwnerUid(targetUid) {
-      return get(/databases/$(database)/documents/users/$(targetUid)).data.isOwner == true;
+      return targetUid == 'ZqooOlqf0fafVe8HSzmbg2fyCJJ3';
     }
 
     match /users/{uid} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'member';
       allow update: if isSignedIn() && (
-        (request.auth.uid == uid &&
-          request.resource.data.role == resource.data.role &&
-          request.resource.data.isOwner == resource.data.isOwner) ||
-        (isAdmin() && request.auth.uid != uid && resource.data.isOwner != true &&
-          request.resource.data.isOwner == resource.data.isOwner)
+        request.auth.uid == uid ||
+        (isAdmin() && !isOwnerUid(uid))
       );
-      allow delete: if isAdmin() && resource.data.isOwner != true;
+      allow delete: if isAdmin() && !isOwnerUid(uid);
 
       match /bookHistory/{itemId} {
         allow read: if isSignedIn();
