@@ -407,6 +407,12 @@
     font-weight:600; font-size:13px; padding:0 16px; border-radius:16px; cursor:pointer; transition: background 0.2s, color 0.2s;
   }
   .social-pill.active{ background:var(--gold); color:#fff; }
+  .social-pill-group{ display:flex; align-items:center; height:32px; border-radius:16px; overflow:hidden; }
+  .social-pill-group.active{ background:var(--gold); }
+  .social-pill-group.active .social-pill-half{ color:#fff; }
+  .social-pill-half{ height:32px; padding:0 14px; border-radius:0; }
+  .social-pill-half#socialPillCloseBtn{ padding:0 12px; }
+  .social-pill-divider{ width:1px; height:16px; background:rgba(255,255,255,0.3); flex:0 0 auto; }
   .social-floating-action{
     position:fixed; bottom:18px; right:16px; z-index:150; display:flex; align-items:center; height:40px;
     transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s; opacity:1;
@@ -650,7 +656,11 @@
       </div>
       <div id="socialPillBar" style="display:none;">
         <button type="button" class="social-pill active" data-view="feed">Akış</button>
-        <button type="button" class="social-pill" data-view="profile">Profil</button>
+        <div class="social-pill-group" id="socialProfilePillGroup">
+          <button type="button" class="social-pill social-pill-half" data-view="profile">Profil</button>
+          <span class="social-pill-divider"></span>
+          <button type="button" class="social-pill social-pill-half" id="socialPillCloseBtn" title="Profili kapat">✕</button>
+        </div>
       </div>
       <div id="socialFloatingAction" class="social-floating-action">
         <button type="button" id="composePostBtn" class="social-fab">+</button>
@@ -1339,12 +1349,18 @@ async function openProfileModal(uid){
   }
 }
 function showSocialView(view){
-  document.querySelectorAll('#socialPillBar .social-pill').forEach(b=> b.classList.toggle('active', b.dataset.view===view));
+  document.querySelector('#socialPillBar > .social-pill[data-view="feed"]').classList.toggle('active', view==='feed');
+  document.getElementById('socialProfilePillGroup').classList.toggle('active', view==='profile');
   document.getElementById('socialFeedView').style.display = view==='feed' ? 'block' : 'none';
   document.getElementById('socialProfileView').style.display = view==='profile' ? 'block' : 'none';
 }
-document.querySelectorAll('#socialPillBar .social-pill').forEach(btn=>{
+document.querySelectorAll('#socialPillBar [data-view]').forEach(btn=>{
   btn.addEventListener('click', ()=> showSocialView(btn.dataset.view));
+});
+document.getElementById('socialPillCloseBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  document.getElementById('socialPillBar').style.display = 'none';
+  showSocialView('feed');
 });
 document.getElementById('socialProfileCloseBtn').addEventListener('click', ()=>{
   document.getElementById('socialPillBar').style.display = 'none';
