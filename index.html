@@ -402,10 +402,14 @@
   }
   .discover-pager{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:18px; }
   .discover-pager button{ border:1.5px solid var(--line); background:var(--card); border-radius:14px; padding:8px 16px; font-family:'Cantarell',sans-serif; font-weight:600; font-size:13px; cursor:pointer; color:var(--ink); }
-  .discover-featured-card{ display:flex; gap:14px; background:var(--card); border-radius:16px; padding:14px; margin-bottom:14px; box-shadow:var(--shadow); cursor:pointer; }
-  .discover-featured-cover{ width:88px; height:130px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); flex:0 0 auto; background:var(--paper-2); }
+  .discover-featured-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .discover-featured-card{ display:flex; flex-direction:column; background:var(--card); border-radius:14px; padding:10px; box-shadow:var(--shadow); cursor:pointer; }
+  .discover-featured-cover{ width:100%; height:190px; object-fit:cover; border-radius:10px; box-shadow:var(--shadow); background:var(--paper-2); margin-bottom:8px; }
   .discover-featured-info{ min-width:0; flex:1; }
-  .discover-featured-title{ font-weight:700; font-size:15.5px; margin-bottom:2px; }
+  .discover-featured-title{ font-weight:700; font-size:13.5px; margin-bottom:2px; line-height:1.25; }
+  .discover-cat-nav{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .discover-cat-nav button{ border:1.5px solid var(--line); background:var(--card); border-radius:12px; width:30px; height:30px; font-size:14px; cursor:pointer; color:var(--ink); flex:0 0 auto; }
+  .discover-cat-nav .discover-cat-title{ margin-bottom:0; flex:1; text-align:center; }
   .discover-pending-row{ display:flex; align-items:center; gap:10px; background:rgba(230,168,0,0.10); border-radius:12px; padding:10px 12px; margin-bottom:8px; }
   .rating-star-row{ display:flex; justify-content:center; gap:2px; font-size:26px; cursor:pointer; user-select:none; }
   .rating-star{ color:var(--line); transition:color 0.1s; }
@@ -3580,9 +3584,13 @@ function closeReactionDrawer(){
   if(currentReactionDrawerBtn) currentReactionDrawerBtn.classList.remove('expanded');
   currentReactionDrawerBtn = null;
 }
-function renderDrawerEmojiRow(target){
+function renderDrawerEmojiRow(target, availableWidth){
   const drawer = document.getElementById('reactionDrawer');
-  drawer.innerHTML = REACTION_EMOJIS.map(em=>`<button type="button" class="emoji-pick-btn" data-target="${target}" data-emoji="${em}">${em}</button>`).join('') +
+  const BTN_W = 34; // her emoji tuşunun kapladığı yaklaşık genişlik
+  let maxCount = Math.max(1, Math.floor((availableWidth - BTN_W) / BTN_W) - 1);
+  maxCount = Math.min(maxCount, REACTION_EMOJIS.length);
+  const shown = REACTION_EMOJIS.slice(0, maxCount);
+  drawer.innerHTML = shown.map(em=>`<button type="button" class="emoji-pick-btn" data-target="${target}" data-emoji="${em}">${em}</button>`).join('') +
     `<button type="button" class="emoji-pick-btn-toggle" id="drawerCustomToggleBtn" data-target="${target}">+</button>`;
   const toggleBtn = document.getElementById('drawerCustomToggleBtn');
   toggleBtn.addEventListener('click', (e)=>{
@@ -3608,20 +3616,13 @@ function toggleReactionDrawer(btn, target){
   if(currentReactionDrawerBtn === btn){ closeReactionDrawer(); return; }
   closeReactionDrawer();
   const drawer = document.getElementById('reactionDrawer');
-  renderDrawerEmojiRow(target);
-  drawer.style.display = 'flex';
-  drawer.classList.remove('open','flip-left');
   const r = btn.getBoundingClientRect();
-  void drawer.offsetWidth; // boyutunu ölçmek için önce görünür yap
-  const drawerWidth = drawer.offsetWidth || 220;
-  const fitsRight = (r.right + 8 + drawerWidth) < window.innerWidth;
-  if(fitsRight){
-    drawer.style.left = (r.right + 8) + 'px';
-    drawer.style.removeProperty('right');
-  } else {
-    drawer.classList.add('flip-left');
-    drawer.style.left = (r.left - 8 - drawerWidth) + 'px';
-  }
+  const availableWidth = window.innerWidth - r.right - 16;
+  drawer.style.display = 'flex';
+  drawer.classList.remove('open');
+  renderDrawerEmojiRow(target, availableWidth);
+  drawer.style.left = (r.right + 8) + 'px';
+  drawer.style.removeProperty('right');
   drawer.style.top = (r.top + r.height/2) + 'px';
   requestAnimationFrame(()=>{ drawer.classList.add('open'); });
   btn.classList.add('expanded');
@@ -3765,9 +3766,12 @@ async function openPostModal(postId){
     ${(c.uid===currentUid||myProfile.role==='admin')?`<button class="rec-comment-del" data-del-postcomment="${c.id}">✕</button>`:''}
   </div>`).join('');
   body.innerHTML = `
-    <div class="post-card-head">${userChipHtml(p.uid)}<span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span>${(p.uid===currentUid||myProfile.role==='admin')?`<button type="button" class="rec-comment-del" id="postModalDelBtn" style="margin-left:auto;" title="Sil">✕</button>`:''}</div>
+    <div class="post-card-head">${userChipHtml(p.uid)}<span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span></div>
     <div class="post-card-body" style="margin-bottom:10px;">${postBodyHtml(p)}</div>
-    ${renderReactionBar(p.reactions, `post:${p.id}`)}
+    <div class="post-card-footer">
+      ${renderReactionBar(p.reactions, `post:${p.id}`)}
+      ${(p.uid===currentUid||myProfile.role==='admin')?`<button type="button" class="secondary tiny" id="postModalDelBtn">Kaldır</button>`:''}
+    </div>
     <div class="rec-comments-label">💬 ${comments.length} Yorum</div>
     <div id="postModalComments">${commentsHtml}</div>
     <div class="row" style="margin-top:10px;">
@@ -4031,10 +4035,10 @@ async function renderDiscoverHome(){
       html += `<button type="button" class="secondary" id="discoverSeedBtn" style="width:100%; margin-bottom:10px;">🌱 Beğenilen 80 Kitaplık Listeyle Doldur</button>`;
     }
   }
-  html += featured.map((b,i)=>`<div class="discover-featured-card" data-featured-idx="${i}">
+  html += `<div class="discover-featured-grid">` + featured.map((b,i)=>`<div class="discover-featured-card" data-featured-idx="${i}">
     ${b.cover?`<img src="${b.cover}" class="discover-featured-cover" />`:`<div class="discover-featured-cover"></div>`}
     <div class="discover-featured-info"><div class="discover-featured-title">${escapeHtml(b.title)}</div><div class="muted">${escapeHtml(b.author||'')}</div></div>
-  </div>`).join('');
+  </div>`).join('') + `</div>`;
   html += `<button type="button" class="discover-add-card" id="discoverAddFeaturedBtn" style="width:100%; aspect-ratio:auto; height:52px; margin-top:8px;">+</button>`;
   main.innerHTML = html;
   const seedBtn = document.getElementById('discoverSeedBtn');
@@ -4103,7 +4107,11 @@ async function renderDiscoverCategoryGrid(slug){
     html += `<div class="discover-cat-title">👥 Grupta Puanlananlar</div>`;
     html += `<div class="discover-grid" style="margin-bottom:22px;">${groupDocs.map(g=>cardHtml(g,true)).join('')}</div>`;
   }
-  html += `<div class="discover-cat-title">${escapeHtml(catLabel)}</div>`;
+  html += `<div class="discover-cat-nav">
+    <button type="button" id="discoverCatPrevBtn">◀</button>
+    <div class="discover-cat-title">${escapeHtml(catLabel)}</div>
+    <button type="button" id="discoverCatNextBtn">▶</button>
+  </div>`;
   html += `<div class="discover-grid">${pageItems.map(b=>cardHtml(b,false)).join('')}<button type="button" class="discover-add-card" id="discoverAddCategoryBtn">+</button></div>`;
   if(totalPages>1){
     html += `<div class="discover-pager">
@@ -4113,6 +4121,24 @@ async function renderDiscoverCategoryGrid(slug){
     </div>`;
   }
   main.innerHTML = html;
+  const catPrevBtn = document.getElementById('discoverCatPrevBtn');
+  const catNextBtn = document.getElementById('discoverCatNextBtn');
+  function goToCategory(newSlug){
+    discoverActiveCategory = newSlug;
+    discoverPage = 0;
+    renderDiscoverFilters();
+    renderDiscoverCategoryGrid(newSlug);
+  }
+  if(catPrevBtn) catPrevBtn.addEventListener('click', ()=>{
+    const i = DISCOVER_CATEGORIES.findIndex(c=>c.slug===slug);
+    const prev = DISCOVER_CATEGORIES[(i-1+DISCOVER_CATEGORIES.length)%DISCOVER_CATEGORIES.length];
+    goToCategory(prev.slug);
+  });
+  if(catNextBtn) catNextBtn.addEventListener('click', ()=>{
+    const i = DISCOVER_CATEGORIES.findIndex(c=>c.slug===slug);
+    const next = DISCOVER_CATEGORIES[(i+1)%DISCOVER_CATEGORIES.length];
+    goToCategory(next.slug);
+  });
   main.querySelectorAll('.discover-book-card').forEach(card=>{
     card.addEventListener('click', ()=>{
       const book = discoverBooksCache[parseInt(card.dataset.idx,10)];
