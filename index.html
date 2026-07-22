@@ -2517,7 +2517,7 @@ function renderAdminToday(){
       const wasNew = isSelf && todayAnswers[btn.dataset.uid]!==btn.dataset.status;
       playMarkFx(btn, btn.dataset.status);
       await markStatus(btn.dataset.uid, btn.dataset.status);
-      if(wasNew) createPost(btn.dataset.status, {variantText: pickVariantMessage(btn.dataset.status)});
+      if(wasNew) createPost(btn.dataset.status, {variantText: await pickVariantMessage(btn.dataset.status)});
     });
   });
 
@@ -3016,7 +3016,7 @@ document.getElementById('mReadBtn').addEventListener('click', async ()=>{
   await markStatus(currentUid,'read');
   renderMemberSurvey();
   notifyAdmins(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week');
-  if(wasNew) createPost('read', {variantText: pickVariantMessage('read')});
+  if(wasNew) createPost('read', {variantText: await pickVariantMessage('read')});
   const s = await computeStreak(currentUid);
   await checkAndAwardBadges(currentUid, s);
 });
@@ -3024,7 +3024,7 @@ document.getElementById('mSkipBtn').addEventListener('click', async ()=>{
   const wasNew = todayAnswers[currentUid] !== 'skip';
   try{ playMarkFx(document.getElementById('mSkipBtn'), 'skip'); }catch(e){}
   await markStatus(currentUid,'skip'); renderMemberSurvey(); notifyAdmins(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week');
-  if(wasNew) createPost('skip', {variantText: pickVariantMessage('skip')});
+  if(wasNew) createPost('skip', {variantText: await pickVariantMessage('skip')});
 });
 
 async function renderMemberOwnWeek(){
@@ -4106,27 +4106,50 @@ async function setReaction(target, emoji){
 
 /* ============ SOSYAL: TIMELINE + KEŞFET ============ */
 const READ_MESSAGES = {
-  morning: ["🌅 Sabahın köründe okumaya başladı.", "☀️ Güne kitapla başladı.", "📖 Sabah kahvesiyle birlikte kitabını da bitirdi.", "🌞 Erkenden okumasını halletti.", "🐦 Kuşlardan önce kalkıp okudu.", "🌻 Güne okuyarak merhaba dedi."],
-  afternoon: ["📚 Öğleden sonra kitabına vakit ayırdı.", "☕ Bir mola verip okudu.", "📖 Günün ortasında okuma molası verdi.", "🌤️ Öğlen arasında sayfalarını çevirdi.", "📗 Gün ortasında görevini tamamladı.", "🍃 Öğleyin biraz kitaba daldı."],
-  evening: ["🌆 Akşamüstü okumasını yaptı.", "🛋️ Günün yorgunluğunu kitapla attı.", "📖 Akşam kitabına döndü.", "🌇 Gün biterken okumasını tamamladı.", "✨ Akşam saatlerinde okudu.", "🍵 Akşam çayıyla birlikte kitabını da bitirdi."],
-  night: ["🌙 Gece yarısına doğru okudu.", "😴 Uyumadan önce kitabını bitirdi.", "🌃 Geceye kitapla girdi.", "🕯️ Herkes uyurken o okudu.", "⭐ Gecenin sessizliğinde okudu.", "🦉 Baykuş gibi geceleri okuyor."]
+  dawn: ["🌅 Gün ağarırken okudu.", "🐦 Sabahın ilk ışıklarıyla kitabını açtı.", "☕ Kahvaltıdan önce okumasını halletti.", "🌤️ Güne kitapla merhaba dedi."],
+  morning: ["☀️ Sabah okumasını yaptı.", "📖 Kahvesini yudumlarken kitabını da bitirdi.", "🌞 Güne kitapla başladı.", "🐣 Sabah erkenden görevini tamamladı."],
+  midday: ["📚 Öğle vakti okumasını yaptı.", "🌤️ Öğlen arasını kitabına ayırdı.", "📗 Günün ortasında sayfalarını çevirdi.", "☕ Kısa bir molada okudu."],
+  afternoon: ["📖 Öğleden sonra kitabına döndü.", "🍃 İkindi vakti okumasını tamamladı.", "📙 Gün ortasında görevini bitirdi.", "🌻 Öğleden sonra biraz kitaba daldı."],
+  evening: ["🌆 Akşamüstü okumasını yaptı.", "🛋️ Günün yorgunluğunu kitapla attı.", "📖 Akşam vakti sayfalarını çevirdi.", "🌇 Gün biterken okumasını tamamladı."],
+  dusk: ["✨ Akşam saatlerinde okudu.", "🍵 Akşam çayıyla birlikte kitabını da bitirdi.", "🕯️ Akşam sessizliğinde okudu.", "🌆 Günün son ışıklarında kitabına daldı."],
+  night: ["🌙 Gece yarısına doğru okudu.", "😴 Uyumadan önce kitabını bitirdi.", "🌃 Geceye kitapla girdi.", "🦉 Baykuş gibi geceleri okuyor."],
+  lateNight: ["⭐ Gecenin bir yarısı okudu.", "🌌 Herkes uyurken o okudu.", "🕯️ Gecenin sessizliğinde sayfa çevirdi.", "🌠 Sabaha karşı kitabını bitirdi."]
 };
 const SKIP_MESSAGES = {
-  morning: ["😅 Sabah olmuş ama kitap henüz açılmamış.", "🥱 Sabah biraz mola verdi.", "☁️ Bugünkü sayfalar bekliyor."],
-  afternoon: ["🙈 Öğlen oldu, kitap hâlâ kapalı.", "📵 Bugün araya bir şey girdi.", "⏳ Vakit bulamadı bugün."],
-  evening: ["😬 Akşam oldu, henüz okumadı.", "🌆 Gün bitmeden bir fırsat kalsın.", "📚 Kitap masada bekliyor."],
-  night: ["😴 Bugün kitapsız geçti.", "🌙 Yarın telafi vakti.", "💤 Bugünlük pas geçti."]
+  dawn: ["😅 Sabah olmuş ama kitap henüz açılmamış.", "🥱 Sabah biraz mola verdi."],
+  morning: ["☁️ Bugünkü sayfalar bekliyor.", "🙈 Sabah kitaba vakit bulamadı."],
+  midday: ["🙈 Öğlen oldu, kitap hâlâ kapalı.", "⏳ Vakit bulamadı bugün."],
+  afternoon: ["📵 Bugün araya bir şey girdi.", "😬 Öğleden sonra da olmadı."],
+  evening: ["😬 Akşam oldu, henüz okumadı.", "🌆 Gün bitmeden bir fırsat kalsın."],
+  dusk: ["📚 Kitap masada bekliyor.", "😴 Akşam da geçti, okuyamadı."],
+  night: ["😴 Bugün kitapsız geçti.", "🌙 Yarın telafi vakti."],
+  lateNight: ["💤 Bugünlük pas geçti.", "🌌 Gece de kitapsız bitti."]
 };
 function timeBucket(hour){
-  if(hour>=5 && hour<12) return 'morning';
-  if(hour>=12 && hour<18) return 'afternoon';
-  if(hour>=18 && hour<22) return 'evening';
-  return 'night';
+  if(hour>=5 && hour<8) return 'dawn';
+  if(hour>=8 && hour<11) return 'morning';
+  if(hour>=11 && hour<14) return 'midday';
+  if(hour>=14 && hour<17) return 'afternoon';
+  if(hour>=17 && hour<20) return 'evening';
+  if(hour>=20 && hour<22) return 'dusk';
+  if(hour>=22 || hour<1) return 'night';
+  return 'lateNight';
 }
-function pickVariantMessage(type){
+async function getLastPostMessageOfType(type){
+  try{
+    const snap = await getDocs(query(collection(db,'posts'), orderBy('createdAt','desc'), limit(15)));
+    let found = null;
+    snap.forEach(d=>{ if(!found && d.data().type===type) found = d.data().variantText; });
+    return found;
+  }catch(e){ return null; }
+}
+async function pickVariantMessage(type){
   const bucket = timeBucket(new Date().getHours());
   const pool = (type==='read' ? READ_MESSAGES : SKIP_MESSAGES)[bucket];
-  return pool[Math.floor(Math.random()*pool.length)];
+  const lastText = await getLastPostMessageOfType(type);
+  const candidates = lastText ? pool.filter(m=>m!==lastText) : pool;
+  const finalPool = candidates.length ? candidates : pool;
+  return finalPool[Math.floor(Math.random()*finalPool.length)];
 }
 async function createPost(type, data, forUid, forName){
   try{
@@ -4136,6 +4159,11 @@ async function createPost(type, data, forUid, forName){
       ...data
     });
   }catch(e){ console.error('Gönderi oluşturulamadı:', e); }
+}
+function exactTimeLabel(iso){
+  const d = new Date(iso);
+  const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  return `${pad(d.getHours())}:${pad(d.getMinutes())} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 function timeAgoLabel(iso){
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -4403,7 +4431,7 @@ async function openPostModal(postId){
     ${(c.uid===currentUid||myProfile.role==='admin')?`<button class="rec-comment-del" data-del-postcomment="${c.id}">✕</button>`:''}
   </div>`).join('');
   body.innerHTML = `
-    <div class="post-card-head">${userChipHtml(p.uid)}<span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span></div>
+    <div class="post-card-head">${userChipHtml(p.uid)}<span class="post-card-time">&middot; ${exactTimeLabel(p.createdAt)}</span></div>
     <div class="post-card-body" style="margin-bottom:10px;">${postBodyHtml(p)}</div>
     <div class="post-card-footer">
       ${renderReactionBar(p.reactions, `post:${p.id}`)}
