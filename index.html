@@ -2139,12 +2139,8 @@ function renderTab(id){
   else if(id==='recs') renderRecsTab();
   else if(id==='bookhistory'){
     renderBookHistoryTab();
-    discoverActiveCategory = null;
-    discoverPage = 0;
-    renderDiscoverFilters();
-    renderDiscoverContent();
     setupDiscoverNavObserver();
-    repositionDiscoverFabNav();
+    positionDiscoverFabs();
   }
   else if(id==='social'){
     document.getElementById('socialFloatingAction').classList.remove('hidden');
@@ -4558,10 +4554,11 @@ document.getElementById('postModal').addEventListener('click', (e)=>{ if(e.targe
 /* --- Sosyal pill çubuğu: alt sekme geçişi + kaydırınca gizle/göster --- */
 let lastSocialScrollY = 0;
 function discoverGoToOffset(offset){
-  const total = DISCOVER_CATEGORIES.length + 1; // +1: "Önerilenler" durağı
-  const cur = discoverActiveCategory ? DISCOVER_CATEGORIES.findIndex(c=>c.slug===discoverActiveCategory) : -1;
-  const normalized = (((cur + offset + 1) % total) + total) % total - 1;
-  discoverActiveCategory = normalized === -1 ? null : DISCOVER_CATEGORIES[normalized].slug;
+  const total = DISCOVER_CATEGORIES.length;
+  const cur = DISCOVER_CATEGORIES.findIndex(c=>c.slug===discoverActiveCategory);
+  const curIdx = cur===-1 ? 0 : cur;
+  const next = ((curIdx + offset) % total + total) % total;
+  discoverActiveCategory = DISCOVER_CATEGORIES[next].slug;
   discoverPage = 0;
   renderDiscoverFilters();
   renderDiscoverContent();
@@ -5677,6 +5674,9 @@ function groupAvg(ratings){
   if(!vals.length) return 0;
   return vals.reduce((a,b)=>a+b,0)/vals.length;
 }
+let discoverActiveCategory = null;
+let discoverPage = 0;
+let discoverBooksCache = [];
 function renderDiscoverTab(){
   if(!discoverActiveCategory) discoverActiveCategory = CURATED_CATALOG[0].slug;
   discoverPage = 0;
@@ -5707,6 +5707,39 @@ function renderDiscoverContent(){
   renderDiscoverCategoryGrid(discoverActiveCategory);
 }
 
+function openBookPickerModal(onSelect){
+  showSimpleInfoModal(`
+    <h2 style="margin-bottom:10px;">Kitap Ekle</h2>
+    <input type="text" id="bookPickerInput" placeholder="Kitap adı yazın..." style="width:100%; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; background:var(--card); color:var(--ink); box-sizing:border-box;" />
+    <div id="bookPickerResults" style="margin-top:10px; text-align:left;"></div>
+  `);
+  const input = document.getElementById('bookPickerInput');
+  const results = document.getElementById('bookPickerResults');
+  let debounceTimer = null;
+  input.addEventListener('input', ()=>{
+    clearTimeout(debounceTimer);
+    const q = input.value.trim();
+    if(q.length < 2){ results.innerHTML=''; return; }
+    debounceTimer = setTimeout(async ()=>{
+      results.innerHTML = `<span class="muted">Aranıyor…</span>`;
+      try{
+        const items = await searchGoogleBooks(q);
+        if(!items.length){ results.innerHTML = `<span class="muted">Sonuç bulunamadı.</span>`; return; }
+        results.innerHTML = items.map((it,idx)=>`<div class="rec-comment-row" data-idx="${idx}" style="cursor:pointer;">
+          ${it.cover?`<img src="${it.cover}" style="width:32px;height:46px;object-fit:cover;border-radius:4px;" />`:''}
+          <div class="rec-comment-body"><b>${escapeHtml(it.title)}</b><div class="muted" style="font-size:11px;">${escapeHtml(it.author||'')}</div></div>
+        </div>`).join('');
+        results.querySelectorAll('[data-idx]').forEach(row=>{
+          row.addEventListener('click', ()=>{
+            const it = items[parseInt(row.dataset.idx,10)];
+            closeModal('bookInfoModal');
+            onSelect({ title: it.title, author: it.author||'', cover: it.cover||'', workKey: it.workKey||'' });
+          });
+        });
+      }catch(err){ results.innerHTML = `<span class="muted">Arama başarısız oldu.</span>`; }
+    }, 400);
+  });
+}
 async function renderDiscoverCategoryGrid(slug){
   const main = document.getElementById('discoverFeed');
   showCachedOrPlaceholder(main, `<div class="empty-state">Yükleniyor…</div>`);
