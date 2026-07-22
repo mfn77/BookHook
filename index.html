@@ -5667,7 +5667,16 @@ async function seedDiscoverCovers(){
     try{
       const items = await searchGoogleBooks(`${b.title} ${b.author}`);
       const item = items[0];
-      const data = { cover: (item && item.cover) ? item.cover : '', year: (item && item.year) ? item.year : '', fetchedAt: new Date().toISOString() };
+      let cover = (item && item.cover) ? item.cover : '';
+      let year = (item && item.year) ? item.year : '';
+      if(!cover){
+        try{
+          const olItems = await searchOpenLibrary(`${b.title} ${b.author}`);
+          const olItem = olItems[0];
+          if(olItem && olItem.cover){ cover = olItem.cover; if(!year) year = olItem.year||''; }
+        }catch(e){}
+      }
+      const data = { cover, year, fetchedAt: new Date().toISOString() };
       await setDoc(doc(db,'discoverCovers',key), data);
       discoverCoversCache[key] = data;
       if(data.cover){ found++; failStreak = 0; } else { failStreak++; }
@@ -5726,7 +5735,9 @@ function openBookPickerModal(onSelect){
     debounceTimer = setTimeout(async ()=>{
       results.innerHTML = `<span class="muted">Aranıyor…</span>`;
       try{
-        const items = await searchGoogleBooks(q);
+        let items = [];
+        try{ items = await searchOpenLibrary(q); }catch(e){ items = []; }
+        if(!items.length){ try{ items = await searchGoogleBooks(q); }catch(e){ items = []; } }
         if(!items.length){ results.innerHTML = `<span class="muted">Sonuç bulunamadı.</span>`; return; }
         results.innerHTML = items.map((it,idx)=>`<div class="rec-comment-row" data-idx="${idx}" style="cursor:pointer;">
           ${it.cover?`<img src="${it.cover}" style="width:32px;height:46px;object-fit:cover;border-radius:4px;" />`:''}
@@ -5735,12 +5746,48 @@ function openBookPickerModal(onSelect){
         results.querySelectorAll('[data-idx]').forEach(row=>{
           row.addEventListener('click', ()=>{
             const it = items[parseInt(row.dataset.idx,10)];
-            closeModal('bookInfoModal');
-            onSelect({ title: it.title, author: it.author||'', cover: it.cover||'', workKey: it.workKey||'' });
+            openBookPickerDetailsStep(it, onSelect);
           });
         });
       }catch(err){ results.innerHTML = `<span class="muted">Arama başarısız oldu.</span>`; }
     }, 400);
+  });
+}
+function openBookPickerDetailsStep(it, onSelect){
+  showSimpleInfoModal(`
+    <h2 style="margin-bottom:10px;">Kitap Bilgisi</h2>
+    <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px;">
+      ${it.cover?`<img src="${it.cover}" style="width:48px;height:68px;object-fit:cover;border-radius:6px;" />`:''}
+      <div><b>${escapeHtml(it.title)}</b><div class="muted" style="font-size:12px;">${escapeHtml(it.author||'')}</div></div>
+    </div>
+    <div class="field"><label>Neden okunmalı?</label><textarea id="bookPickerWhy" style="width:100%; min-height:60px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; background:var(--card); color:var(--ink); box-sizing:border-box;" placeholder="Bu kitap neden okunmalı, kısaca yaz"></textarea></div>
+    <div class="field"><label>Seviye</label>
+      <div style="display:flex; gap:8px;" id="bookPickerLevelRow">
+        <button type="button" class="secondary tiny" data-level="baslangic" style="flex:1;">🟢 Başlangıç</button>
+        <button type="button" class="secondary tiny" data-level="orta" style="flex:1;">🟡 Orta</button>
+        <button type="button" class="secondary tiny" data-level="ileri" style="flex:1;">🔴 İleri</button>
+      </div>
+    </div>
+    <button type="button" class="primary" id="bookPickerConfirmBtn" style="width:100%; margin-top:12px;">Ekle</button>
+  `);
+  let selectedLevel = null;
+  const levelBtns = document.querySelectorAll('#bookPickerLevelRow [data-level]');
+  levelBtns.forEach(b=>{
+    b.addEventListener('click', ()=>{
+      selectedLevel = b.dataset.level;
+      levelBtns.forEach(x=>{
+        const on = x===b;
+        x.style.background = on ? 'var(--gold)' : '';
+        x.style.color = on ? '#fff' : '';
+        x.style.borderColor = on ? 'var(--gold)' : '';
+      });
+    });
+  });
+  document.getElementById('bookPickerConfirmBtn').addEventListener('click', ()=>{
+    if(!selectedLevel){ alert('Bir seviye seç.'); return; }
+    const why = document.getElementById('bookPickerWhy').value.trim();
+    closeModal('bookInfoModal');
+    onSelect({ title: it.title, author: it.author||'', cover: it.cover||'', workKey: it.workKey||'', why, level: selectedLevel });
   });
 }
 let discoverPageSize = 100;
@@ -5823,7 +5870,8 @@ async function renderDiscoverCategoryGrid(slug){
     html += `<div class="discover-grid" style="margin-bottom:22px;">${groupDocs.map(g=>cardHtml(g,true)).join('')}</div>`;
   }
   html += `<div class="discover-cat-title">${escapeHtml(catLabel)}</div>`;
-  html += `<div class="discover-grid">${pageItems.map(b=>cardHtml(b,false)).join('')}<button type="button" class="discover-add-card" id="discoverAddCategoryBtn">+</button></div>`;
+  const canAddToCategory = slug!=='c01_toplu_onerilenler' || myProfile.isOwner;
+  html += `<div class="discover-grid">${pageItems.map(b=>cardHtml(b,false)).join('')}${canAddToCategory?`<button type="button" class="discover-add-card" id="discoverAddCategoryBtn">+</button>`:''}</div>`;
   if(totalPages>1){
     html += `<div class="discover-pager">
       ${discoverPage>0?`<button id="discoverPrevPageBtn">◀ Önceki Sayfa</button>`:''}
