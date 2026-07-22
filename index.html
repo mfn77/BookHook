@@ -2149,6 +2149,7 @@ function renderTab(id){
   else if(id==='week'){ renderAdminWeek(); adminWeekOffset=0; renderAdminOwnWeek(); }
   else if(id==='gifts'){
     renderGiftsTab();
+    renderGiftBooksGrid();
     if(myProfile.role==='admin'){ drawHistIndex.a=0; renderDrawHistoryCard('a'); }
     else { renderMemberLastWeek(); drawHistIndex.m=0; renderDrawHistoryCard('m'); }
   }
@@ -3418,7 +3419,6 @@ async function renderGiftsTab(){
 
   markLoaded(content);
   wireGiftFormHandlers(content);
-  await renderGiftBooksGrid();
 }
 
 async function buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver){
@@ -3605,7 +3605,7 @@ async function renderGiftBooksGrid(){
   if(!items.length){ host.innerHTML = `<p class="muted">Henüz tamamlanmış hediye yok.</p>`; markLoaded(host); return; }
   giftBooksGridCache = items;
   host.innerHTML = `<div class="discover-grid">${items.map((it,idx)=>{
-    const coverHtml = it.bookCover ? `<img src="${it.bookCover}" alt="" onerror="this.style.display='none';" />` : '';
+    const coverHtml = it.bookCover ? `<img src="${it.bookCover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(it.bookTitle).replace(/'/g,"\\'")}');" />` : placeholderCoverHtml(it.bookTitle);
     return `<div class="discover-book-card" data-gift-book-idx="${idx}">
       <div class="discover-book-cover-wrap">${coverHtml}</div>
       <div class="discover-book-title">${escapeHtml(it.bookTitle)}</div>
@@ -6791,7 +6791,7 @@ async function renderRecCard(it, isGroup){
     </div>`;
   };
   const commentsHtml = topComments.map(c=> renderComment(c,false) + repliesOf(c.id).map(r=>renderComment(r,true)).join('')).join('');
-  const coverHtml = it.coverUrl ? `<img src="${it.coverUrl}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(it.bookTitle)}" data-book-cover="${escapeHtml(it.coverUrl)}" style="width:52px; height:78px; object-fit:cover; border-radius:6px; box-shadow:var(--shadow); flex:0 0 auto; background:var(--paper-2); cursor:pointer;" onerror="this.style.display='none';" />` : '';
+  const coverHtml = `<span style="width:52px; height:78px; border-radius:6px; overflow:hidden; box-shadow:var(--shadow); flex:0 0 auto; display:inline-block;">${it.coverUrl ? `<img src="${it.coverUrl}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(it.bookTitle)}" data-book-cover="${escapeHtml(it.coverUrl)}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(it.bookTitle).replace(/'/g,"\\'")}');" />` : placeholderCoverHtml(it.bookTitle)}</span>`;
   return `<div class="receipt" data-rec-id="${it.id}">
     <div class="rweek"><span>${directionLabel} &middot; ${dtLabel}</span>${canDelete?`<button class="secondary tiny" data-del-rec="${it.id}">Sil</button>`:''}</div>
     <div style="display:flex; gap:12px; align-items:flex-start;">
