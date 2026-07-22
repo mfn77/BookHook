@@ -937,6 +937,9 @@
         <div class="rec-comments-label" style="margin-top:6px;">📚 Keşfet Kataloğu</div>
         <p class="muted" style="font-size:12.5px; margin-bottom:8px;">Kategori kataloğundaki ~1000 kitabın kapak/yıl bilgisini bir kerelik tarar ve herkes için kalıcı olarak kaydeder. Sadece bulunamayanları tekrar dener, uzun sürebilir.</p>
         <button type="button" class="secondary" id="settingsSeedCoversBtn" style="width:100%;">🔎 Kategori Kataloğunun Kapaklarını Tara</button>
+        <div class="rec-comments-label" style="margin-top:18px;">📖 Kategori Başına Gösterilen Kitap Sayısı</div>
+        <p class="muted" style="font-size:12.5px; margin-bottom:8px;">Bu ayar tüm kullanıcılar (ve diğer yöneticiler) için ortak geçerlidir.</p>
+        <div id="settingsPageSizeRow" style="display:flex; gap:8px;"></div>
       </div>
     </section>
 
@@ -5782,9 +5785,35 @@ function openBookPickerModal(onSelect){
     }, 400);
   });
 }
-function renderSettingsTab(){
+let discoverPageSize = 100;
+let discoverPageSizeLoaded = false;
+async function ensureDiscoverPageSizeLoaded(){
+  if(discoverPageSizeLoaded) return;
+  try{
+    const snap = await getDoc(doc(db,'settings','discover'));
+    if(snap.exists() && snap.data().pageSize) discoverPageSize = snap.data().pageSize;
+  }catch(e){}
+  discoverPageSizeLoaded = true;
+}
+async function renderSettingsTab(){
   const btn = document.getElementById('settingsSeedCoversBtn');
   if(btn) btn.onclick = seedDiscoverCovers;
+  await ensureDiscoverPageSizeLoaded();
+  const row = document.getElementById('settingsPageSizeRow');
+  const options = [100, 50, 20];
+  row.innerHTML = options.map(n=>`<button type="button" class="secondary tiny" data-pagesize="${n}" style="flex:1; ${discoverPageSize===n?'background:var(--gold); color:#fff; border-color:var(--gold);':''}">${n}</button>`).join('');
+  row.querySelectorAll('[data-pagesize]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const n = parseInt(b.dataset.pagesize,10);
+      try{
+        await setDoc(doc(db,'settings','discover'), { pageSize: n }, { merge:true });
+        discoverPageSize = n;
+        discoverPage = 0;
+        showToast(`Sayfa boyutu ${n} olarak ayarlandı.`);
+        renderSettingsTab();
+      }catch(err){ alert('Kaydedilemedi: '+(err.message||err)); }
+    });
+  });
 }
 async function renderDiscoverCategoryGrid(slug){
   const main = document.getElementById('discoverFeed');
@@ -5792,6 +5821,7 @@ async function renderDiscoverCategoryGrid(slug){
   const cat = CURATED_CATALOG.find(c=>c.slug===slug);
   const catLabel = cat ? `${cat.label} ${cat.emoji}` : slug;
   await ensureDiscoverCoversLoaded();
+  await ensureDiscoverPageSizeLoaded();
 
   const groupPromise = getDocs(query(collection(db,'groupBookRatings'), where('category','==',slug)))
     .then(snap=>{ const arr=[]; snap.forEach(d=>arr.push({id:d.id, ...d.data()})); return arr; })
@@ -5807,7 +5837,7 @@ async function renderDiscoverCategoryGrid(slug){
     ...catalogBooks.filter(b=>!groupIds.has(bookKeyFor(b))),
     ...additions.filter(b=>!groupIds.has(bookKeyFor(b)))
   ];
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = discoverPageSize;
   const totalPages = Math.max(1, Math.ceil(nonGroup.length / PAGE_SIZE));
   if(discoverPage >= totalPages) discoverPage = totalPages-1;
   if(discoverPage < 0) discoverPage = 0;
