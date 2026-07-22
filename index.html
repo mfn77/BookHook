@@ -4333,6 +4333,85 @@ function positionPinnedPostBar(){
   bar.style.width = (rect.width - 32) + 'px';
 }
 window.addEventListener('resize', positionPinnedPostBar);
+function resizeImageToDataUrl(file, maxDim, quality){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w > maxDim || h > maxDim){
+          if(w > h){ h = Math.round(h * maxDim/w); w = maxDim; }
+          else { w = Math.round(w * maxDim/h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+let composeImageDataUrl = null;
+document.getElementById('composePostBtn').addEventListener('click', ()=>{
+  composeImageDataUrl = null;
+  showSimpleInfoModal(`
+    <h2 style="margin-bottom:10px;">Yeni Gönderi</h2>
+    <textarea id="composeText" class="compose-textarea" maxlength="280" placeholder="Ne düşünüyorsun?"></textarea>
+    <div class="muted" id="composeCharCount" style="text-align:right; font-size:11px; margin-top:2px;"></div>
+    <div id="composeImagePreviewWrap" style="display:none; margin-top:10px; text-align:center;">
+      <img id="composeImagePreview" src="" style="max-width:100%; border-radius:10px;" />
+      <button type="button" class="secondary tiny" id="composeImageRemoveBtn" style="margin-top:6px;">Görseli Kaldır</button>
+    </div>
+    <input type="file" id="composeImageInput" accept="image/*" style="display:none;" />
+    <div class="row" style="margin-top:10px;">
+      <button type="button" class="secondary tiny" id="composeImageBtn">📷 Görsel Ekle</button>
+      <button type="button" class="primary" id="composeSendBtn" style="flex:1;">Paylaş</button>
+    </div>
+  `);
+  const textarea = document.getElementById('composeText');
+  const counter = document.getElementById('composeCharCount');
+  function updateLimit(){
+    const max = composeImageDataUrl ? 140 : 280;
+    textarea.maxLength = max;
+    if(textarea.value.length > max) textarea.value = textarea.value.slice(0, max);
+    counter.textContent = `${max - textarea.value.length} karakter kaldı`;
+  }
+  textarea.addEventListener('input', updateLimit);
+  updateLimit();
+  document.getElementById('composeImageBtn').addEventListener('click', ()=> document.getElementById('composeImageInput').click());
+  document.getElementById('composeImageInput').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    try{
+      composeImageDataUrl = await resizeImageToDataUrl(file, 800, 0.72);
+      document.getElementById('composeImagePreview').src = composeImageDataUrl;
+      document.getElementById('composeImagePreviewWrap').style.display='block';
+      updateLimit();
+    }catch(err){ alert('Görsel işlenemedi: '+(err.message||err)); }
+  });
+  document.getElementById('composeImageRemoveBtn').addEventListener('click', ()=>{
+    composeImageDataUrl = null;
+    document.getElementById('composeImagePreviewWrap').style.display='none';
+    document.getElementById('composeImageInput').value = '';
+    updateLimit();
+  });
+  document.getElementById('composeSendBtn').addEventListener('click', async ()=>{
+    const text = textarea.value.trim();
+    if(!text && !composeImageDataUrl){ alert('Bir şey yazmalısın veya görsel eklemelisin.'); return; }
+    try{
+      await createPost('user_post', { text, image: composeImageDataUrl||'' });
+      await notifyAllMembers(`${myProfile.name} yeni bir gönderi paylaştı.`, 'social', currentUid);
+      closeModal('bookInfoModal');
+      showToast('Gönderi paylaşıldı!');
+      renderTimelineTab();
+    }catch(err){ alert('Paylaşılamadı: '+(err.message||err)); }
+  });
+});
 async function openEditPostModal(postId, refresh){
   let p = null;
   try{ const snap = await getDoc(doc(db,'posts',postId)); if(snap.exists()) p = {id:postId, ...snap.data()}; }catch(e){}
@@ -5580,7 +5659,7 @@ async function seedDiscoverCovers(){
   for(const b of remaining){
     const key = bookKeyFor({title:b.title, author:b.author});
     try{
-      const items = await searchOpenLibrary(`${b.title} ${b.author}`);
+      const items = await searchGoogleBooks(`${b.title} ${b.author}`);
       const item = items[0];
       const data = { cover: (item && item.cover) ? item.cover : '', year: (item && item.year) ? item.year : '', fetchedAt: new Date().toISOString() };
       await setDoc(doc(db,'discoverCovers',key), data);
@@ -5598,220 +5677,26 @@ function groupAvg(ratings){
   if(!vals.length) return 0;
   return vals.reduce((a,b)=>a+b,0)/vals.length;
 }
-
-const CURATED_FEATURED_SEED = [
-  {title:"To Kill a Mockingbird", author:"Harper Lee"},
-  {title:"1984", author:"George Orwell"},
-  {title:"Pride and Prejudice", author:"Jane Austen"},
-  {title:"The Great Gatsby", author:"F. Scott Fitzgerald"},
-  {title:"The Catcher in the Rye", author:"J.D. Salinger"},
-  {title:"The Fellowship of the Ring", author:"J.R.R. Tolkien"},
-  {title:"The Hobbit", author:"J.R.R. Tolkien"},
-  {title:"Harry Potter and the Sorcerer's Stone", author:"J.K. Rowling"},
-  {title:"Animal Farm", author:"George Orwell"},
-  {title:"Brave New World", author:"Aldous Huxley"},
-  {title:"Fahrenheit 451", author:"Ray Bradbury"},
-  {title:"The Alchemist", author:"Paulo Coelho"},
-  {title:"One Hundred Years of Solitude", author:"Gabriel García Márquez"},
-  {title:"Crime and Punishment", author:"Fyodor Dostoevsky"},
-  {title:"War and Peace", author:"Leo Tolstoy"},
-  {title:"Anna Karenina", author:"Leo Tolstoy"},
-  {title:"Jane Eyre", author:"Charlotte Brontë"},
-  {title:"Wuthering Heights", author:"Emily Brontë"},
-  {title:"Moby-Dick", author:"Herman Melville"},
-  {title:"The Adventures of Huckleberry Finn", author:"Mark Twain"},
-  {title:"Don Quixote", author:"Miguel de Cervantes"},
-  {title:"The Odyssey", author:"Homer"},
-  {title:"Frankenstein", author:"Mary Shelley"},
-  {title:"Dracula", author:"Bram Stoker"},
-  {title:"The Picture of Dorian Gray", author:"Oscar Wilde"},
-  {title:"Little Women", author:"Louisa May Alcott"},
-  {title:"The Lion, the Witch and the Wardrobe", author:"C.S. Lewis"},
-  {title:"Charlotte's Web", author:"E.B. White"},
-  {title:"The Diary of a Young Girl", author:"Anne Frank"},
-  {title:"Night", author:"Elie Wiesel"},
-  {title:"The Kite Runner", author:"Khaled Hosseini"},
-  {title:"A Thousand Splendid Suns", author:"Khaled Hosseini"},
-  {title:"Life of Pi", author:"Yann Martel"},
-  {title:"The Book Thief", author:"Markus Zusak"},
-  {title:"The Fault in Our Stars", author:"John Green"},
-  {title:"The Perks of Being a Wallflower", author:"Stephen Chbosky"},
-  {title:"The Hunger Games", author:"Suzanne Collins"},
-  {title:"Divergent", author:"Veronica Roth"},
-  {title:"Percy Jackson and the Lightning Thief", author:"Rick Riordan"},
-  {title:"Dune", author:"Frank Herbert"},
-  {title:"Ender's Game", author:"Orson Scott Card"},
-  {title:"The Martian", author:"Andy Weir"},
-  {title:"Ready Player One", author:"Ernest Cline"},
-  {title:"The Handmaid's Tale", author:"Margaret Atwood"},
-  {title:"Slaughterhouse-Five", author:"Kurt Vonnegut"},
-  {title:"The Road", author:"Cormac McCarthy"},
-  {title:"Beloved", author:"Toni Morrison"},
-  {title:"The Color Purple", author:"Alice Walker"},
-  {title:"Their Eyes Were Watching God", author:"Zora Neale Hurston"},
-  {title:"Invisible Man", author:"Ralph Ellison"},
-  {title:"East of Eden", author:"John Steinbeck"},
-  {title:"Of Mice and Men", author:"John Steinbeck"},
-  {title:"The Grapes of Wrath", author:"John Steinbeck"},
-  {title:"A Tale of Two Cities", author:"Charles Dickens"},
-  {title:"Great Expectations", author:"Charles Dickens"},
-  {title:"Oliver Twist", author:"Charles Dickens"},
-  {title:"Les Misérables", author:"Victor Hugo"},
-  {title:"The Count of Monte Cristo", author:"Alexandre Dumas"},
-  {title:"Sapiens: A Brief History of Humankind", author:"Yuval Noah Harari"},
-  {title:"Educated", author:"Tara Westover"},
-  {title:"Atomic Habits", author:"James Clear"},
-  {title:"Man's Search for Meaning", author:"Viktor Frankl"},
-  {title:"The Power of Now", author:"Eckhart Tolle"},
-  {title:"Thinking, Fast and Slow", author:"Daniel Kahneman"},
-  {title:"Gone Girl", author:"Gillian Flynn"},
-  {title:"The Girl with the Dragon Tattoo", author:"Stieg Larsson"},
-  {title:"And Then There Were None", author:"Agatha Christie"},
-  {title:"The Da Vinci Code", author:"Dan Brown"},
-  {title:"Norwegian Wood", author:"Haruki Murakami"},
-  {title:"Kafka on the Shore", author:"Haruki Murakami"},
-  {title:"The Little Prince", author:"Antoine de Saint-Exupéry"},
-  {title:"Siddhartha", author:"Hermann Hesse"},
-  {title:"Meditations", author:"Marcus Aurelius"},
-  {title:"The Silent Patient", author:"Alex Michaelides"},
-  {title:"Where the Crawdads Sing", author:"Delia Owens"},
-  {title:"Circe", author:"Madeline Miller"},
-  {title:"The Song of Achilles", author:"Madeline Miller"},
-  {title:"Suç ve Ceza", author:"Fyodor Dostoyevski"},
-  {title:"Serseri", author:"Sabahattin Ali"},
-  {title:"Tutunamayanlar", author:"Oğuz Atay"},
-  {title:"İnce Memed", author:"Yaşar Kemal"}
-];
-async function seedFeaturedBooks(){
-  if(!confirm(`${CURATED_FEATURED_SEED.length} kitap "Tavsiye Kitaplar"a eklenecek, kapak/bilgi çekmek biraz sürebilir (1-2 dakika). Daha önce eklediysen tekrar eklenip kopya oluşabilir. Devam edilsin mi?`)) return;
-  showToast('Ekleniyor, bu biraz sürebilir…');
-  let added = 0;
-  for(const b of CURATED_FEATURED_SEED){
-    try{
-      const items = await searchOpenLibrary(`${b.title} ${b.author}`);
-      const found = items[0];
-      await addDoc(collection(db,'discoverFeatured'), {
-        title: found ? found.title : b.title,
-        author: found ? found.author : b.author,
-        cover: found ? found.cover : '',
-        workKey: found ? found.workKey : '',
-        approved: true, addedBy: currentUid, addedByName: myProfile.name, createdAt: new Date().toISOString()
-      });
-      added++;
-    }catch(e){}
-  }
-  showToast(`${added} kitap eklendi!`);
-  renderDiscoverHome();
-}
-function resizeImageToDataUrl(file, maxDim, quality){
-  return new Promise((resolve, reject)=>{
-    const reader = new FileReader();
-    reader.onload = ()=>{
-      const img = new Image();
-      img.onload = ()=>{
-        let w = img.width, h = img.height;
-        if(w > maxDim || h > maxDim){
-          if(w > h){ h = Math.round(h * maxDim/w); w = maxDim; }
-          else { w = Math.round(w * maxDim/h); h = maxDim; }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = reject;
-      img.src = reader.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-let composeImageDataUrl = null;
-function openComposeModal(){
-  composeImageDataUrl = null;
-  showSimpleInfoModal(`
-    <h2 style="margin-bottom:10px;">Yeni Gönderi</h2>
-    <textarea id="composeText" class="compose-textarea" maxlength="280" placeholder="Ne düşünüyorsun?"></textarea>
-    <div class="muted" id="composeCharCount" style="text-align:right; font-size:11px; margin-top:2px;">280 karakter kaldı</div>
-    <div id="composeImagePreviewWrap" style="display:none; margin-top:10px; text-align:center;">
-      <img id="composeImagePreview" style="max-width:100%; border-radius:10px;" />
-      <button type="button" class="secondary tiny" id="composeImageRemoveBtn" style="margin-top:6px;">Görseli Kaldır</button>
-    </div>
-    <input type="file" id="composeImageInput" accept="image/*" style="display:none;" />
-    <div class="row" style="margin-top:10px;">
-      <button type="button" class="secondary tiny" id="composeImageBtn">📷 Görsel Ekle</button>
-      <button type="button" class="primary" id="composeSendBtn" style="flex:1;">Paylaş</button>
-    </div>
-  `);
-  const textarea = document.getElementById('composeText');
-  const counter = document.getElementById('composeCharCount');
-  function updateLimit(){
-    const max = composeImageDataUrl ? 140 : 280;
-    textarea.maxLength = max;
-    if(textarea.value.length > max) textarea.value = textarea.value.slice(0, max);
-    counter.textContent = `${max - textarea.value.length} karakter kaldı`;
-  }
-  textarea.addEventListener('input', updateLimit);
-  updateLimit();
-  document.getElementById('composeImageBtn').addEventListener('click', ()=> document.getElementById('composeImageInput').click());
-  document.getElementById('composeImageInput').addEventListener('change', async (e)=>{
-    const file = e.target.files[0];
-    if(!file) return;
-    try{
-      composeImageDataUrl = await resizeImageToDataUrl(file, 800, 0.72);
-      document.getElementById('composeImagePreview').src = composeImageDataUrl;
-      document.getElementById('composeImagePreviewWrap').style.display='block';
-      updateLimit();
-    }catch(err){ alert('Görsel işlenemedi: '+(err.message||err)); }
-  });
-  document.getElementById('composeImageRemoveBtn').addEventListener('click', ()=>{
-    composeImageDataUrl = null;
-    document.getElementById('composeImagePreviewWrap').style.display='none';
-    document.getElementById('composeImageInput').value = '';
-    updateLimit();
-  });
-  document.getElementById('composeSendBtn').addEventListener('click', async ()=>{
-    const text = textarea.value.trim();
-    if(!text && !composeImageDataUrl){ alert('Bir şey yazmalısın veya görsel eklemelisin.'); return; }
-    try{
-      await createPost('user_post', { text, image: composeImageDataUrl||'' });
-      await notifyAllMembers(`${myProfile.name} yeni bir gönderi paylaştı.`, 'social', currentUid);
-      closeModal('bookInfoModal');
-      showToast('Gönderi paylaşıldı!');
-      renderTimelineTab();
-    }catch(err){ alert('Paylaşılamadı: '+(err.message||err)); }
-  });
-}
-document.getElementById('composePostBtn').addEventListener('click', openComposeModal);
-function openBookPickerModal(onPick){
-  showSimpleInfoModal(`<h2 style="margin-bottom:10px;">Kitap Ekle</h2>
-    <div class="field" style="text-align:left;"><label>Kitap Ara</label><input type="text" id="pickerBookInput" autocomplete="off" placeholder="kitap adını yazmaya başla" /><div id="pickerBookSuggest" class="book-suggest-box"></div></div>`);
-  const input = document.getElementById('pickerBookInput');
-  const box = document.getElementById('pickerBookSuggest');
-  attachBookAutocompleteEl(input, null, box, (sel)=>{
-    closeModal('bookInfoModal');
-    onPick(sel);
-  });
-}
-
-let discoverActiveCategory = null;
-let discoverPage = 0;
-let discoverBooksCache = [];
-
 function renderDiscoverTab(){
-  discoverActiveCategory = null;
+  if(!discoverActiveCategory) discoverActiveCategory = CURATED_CATALOG[0].slug;
   discoverPage = 0;
   renderDiscoverFilters();
   renderDiscoverContent();
 }
-function renderDiscoverFilters(){
+async function renderDiscoverFilters(){
   const bar = document.getElementById('discoverFilters');
-  bar.innerHTML = `<button type="button" class="discover-filter-chip${!discoverActiveCategory?' active':''}" data-slug="">Önerilenler</button>` +
+  let seedBtnHtml = '';
+  if(myProfile.role==='admin'){
+    await ensureDiscoverCoversLoaded();
+    seedBtnHtml = `<button type="button" class="secondary" id="discoverSeedCoversBtn" style="width:100%; margin-bottom:10px;">🔎 Kategori Kataloğunun Kapaklarını Tara</button>`;
+  }
+  bar.innerHTML = seedBtnHtml +
     DISCOVER_CATEGORIES.map(c=>`<button type="button" class="discover-filter-chip${discoverActiveCategory===c.slug?' active':''}" data-slug="${c.slug}">${escapeHtml(c.label)}</button>`).join('');
+  const seedCoversBtn = document.getElementById('discoverSeedCoversBtn');
+  if(seedCoversBtn) seedCoversBtn.addEventListener('click', seedDiscoverCovers);
   bar.querySelectorAll('.discover-filter-chip').forEach(chip=>{
     chip.addEventListener('click', ()=>{
-      const slug = chip.dataset.slug;
-      discoverActiveCategory = !slug ? null : (discoverActiveCategory===slug ? null : slug);
+      discoverActiveCategory = chip.dataset.slug;
       discoverPage = 0;
       renderDiscoverFilters();
       renderDiscoverContent();
@@ -5819,77 +5704,9 @@ function renderDiscoverFilters(){
   });
 }
 function renderDiscoverContent(){
-  if(discoverActiveCategory) renderDiscoverCategoryGrid(discoverActiveCategory);
-  else renderDiscoverHome();
+  renderDiscoverCategoryGrid(discoverActiveCategory);
 }
-async function renderDiscoverHome(){
-  const main = document.getElementById('discoverFeed');
-  showCachedOrPlaceholder(main, `<div class="empty-state">Yükleniyor…</div>`);
-  let featured = [], pending = [];
-  try{
-    const snap = await getDocs(query(collection(db,'discoverFeatured'), orderBy('createdAt','desc')));
-    snap.forEach(d=>{ const data = {id:d.id, ...d.data()}; (data.approved ? featured : pending).push(data); });
-  }catch(e){}
-  let html = '';
-  if(myProfile.role==='admin'){
-    html += `<button type="button" class="secondary" id="discoverSeedCoversBtn" style="width:100%; margin-bottom:14px;">🔎 Kategori Kataloğunun Kapaklarını Tara</button>`;
-  }
-  if(myProfile.role==='admin' && pending.length){
-    html += `<div class="discover-cat-title">⏳ Onay Bekleyen Öneriler</div>`;
-    html += pending.map(p=>`<div class="discover-pending-row">
-      ${p.cover?`<img src="${p.cover}" style="width:36px;height:52px;object-fit:cover;border-radius:5px;" />`:''}
-      <div style="flex:1; min-width:0;"><b>${escapeHtml(p.title)}</b><div class="muted" style="font-size:12px;">${escapeHtml(p.author||'')} &middot; ${escapeHtml(p.addedByName||'')} önerdi</div></div>
-      <button class="secondary tiny" data-approve-featured="${p.id}">Onayla</button>
-      <button class="secondary tiny" data-reject-featured="${p.id}">Sil</button>
-    </div>`).join('');
-  }
-  html += `<div class="discover-cat-title">📚 Tavsiye Kitaplar</div>`;
-  if(!featured.length){
-    html += `<div class="empty-state"><span class="big">📚</span>Henüz tavsiye kitap eklenmemiş.</div>`;
-    if(myProfile.role==='admin'){
-      html += `<button type="button" class="secondary" id="discoverSeedBtn" style="width:100%; margin-bottom:10px;">🌱 Beğenilen 80 Kitaplık Listeyle Doldur</button>`;
-    }
-  }
-  discoverBooksCache = [];
-  const featuredCardsHtml = featured.map(b=>{
-    const idx = discoverBooksCache.length;
-    discoverBooksCache.push(b);
-    const coverHtml = b.cover ? `<img src="${b.cover}" alt="" onerror="this.style.display='none';" />` : '';
-    return `<div class="discover-book-card" data-idx="${idx}">
-      <div class="discover-book-cover-wrap">${coverHtml}</div>
-      <div class="discover-book-title">${escapeHtml(b.title)}</div>
-    </div>`;
-  }).join('');
-  html += `<div class="discover-grid">${featuredCardsHtml}<button type="button" class="discover-add-card" id="discoverAddFeaturedBtn">+</button></div>`;
-  main.innerHTML = html;
-  const seedCoversBtn = document.getElementById('discoverSeedCoversBtn');
-  if(seedCoversBtn) seedCoversBtn.addEventListener('click', seedDiscoverCovers);
-  const seedBtn = document.getElementById('discoverSeedBtn');
-  if(seedBtn) seedBtn.addEventListener('click', seedFeaturedBooks);
-  main.querySelectorAll('.discover-book-card').forEach(card=>{
-    card.addEventListener('click', ()=>{
-      const book = discoverBooksCache[parseInt(card.dataset.idx,10)];
-      if(book) openBookDiscoverModal(book);
-    });
-  });
-  main.querySelectorAll('[data-approve-featured]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{ try{ await updateDoc(doc(db,'discoverFeatured',btn.dataset.approveFeatured), {approved:true}); renderDiscoverHome(); }catch(e){ alert('Onaylanamadı: '+(e.message||e)); } });
-  });
-  main.querySelectorAll('[data-reject-featured]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{ if(!confirm('Bu öneriyi silmek istediğine emin misin?')) return; try{ await deleteDoc(doc(db,'discoverFeatured',btn.dataset.rejectFeatured)); renderDiscoverHome(); }catch(e){ alert('Silinemedi: '+(e.message||e)); } });
-  });
-  document.getElementById('discoverAddFeaturedBtn').addEventListener('click', ()=>{
-    openBookPickerModal(async (sel)=>{
-      try{
-        await addDoc(collection(db,'discoverFeatured'), { ...sel, approved: myProfile.role==='admin', addedBy:currentUid, addedByName:myProfile.name, createdAt:new Date().toISOString() });
-        if(myProfile.role!=='admin'){ notifyAdmins(`${myProfile.name} "Tavsiye Kitaplar" için "${sel.title}" önerdi, onay bekliyor.`, 'social'); showToast('Öneri gönderildi, onaylandığında görünecek.'); }
-        else showToast('Eklendi!');
-        renderDiscoverHome();
-      }catch(err){ alert('Eklenemedi: '+(err.message||err)); }
-    });
-  });
-  markLoaded(main);
-}
+
 async function renderDiscoverCategoryGrid(slug){
   const main = document.getElementById('discoverFeed');
   showCachedOrPlaceholder(main, `<div class="empty-state">Yükleniyor…</div>`);
@@ -5929,7 +5746,7 @@ async function renderDiscoverCategoryGrid(slug){
     const ratingLabel = isGroup ? `⭐ ${groupAvg(b.ratings).toFixed(1)} &middot; Grupta ${Object.keys(b.ratings||{}).length}` : '';
     return `<div class="discover-book-card" data-idx="${idx}">
       <div class="discover-book-cover-wrap" style="border:2px solid ${borderColor};">${coverHtml}${isGroup?'<span class="discover-group-badge">Grupta</span>':''}</div>
-      <div class="discover-book-title">${escapeHtml(b.title)}</div>
+      <div class="discover-book-title">${b.author?escapeHtml(b.author)+' - ':''}${escapeHtml(b.title)}</div>
       ${ratingLabel?`<div class="discover-book-rating">${ratingLabel}</div>`:''}
     </div>`;
   }
