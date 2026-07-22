@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Playfair+Display:ital,wght@0,600;0,800;1,700;1,800&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Pirata+One&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#F2F2F5; --paper-2:#E9E9ED; --card:#FFFFFF;
@@ -924,6 +924,19 @@
       <div class="card">
         <h2 id="ruleRequestsTitle">Kural Önerileri</h2>
         <div id="ruleRequestsList"></div>
+      </div>
+    </section>
+
+    <!-- ADMIN: AYARLAR -->
+    <section class="tab" id="tab-settings">
+      <div class="card">
+        <h2>⚙️ Ayarlar</h2>
+        <div class="card-desc-wrap">
+          <p class="muted">Uygulamanın arka planda çalışan, sık kullanılmayan yönetici ayarları burada.</p>
+        </div>
+        <div class="rec-comments-label" style="margin-top:6px;">📚 Keşfet Kataloğu</div>
+        <p class="muted" style="font-size:12.5px; margin-bottom:8px;">Kategori kataloğundaki ~1000 kitabın kapak/yıl bilgisini bir kerelik tarar ve herkes için kalıcı olarak kaydeder. Sadece bulunamayanları tekrar dener, uzun sürebilir.</p>
+        <button type="button" class="secondary" id="settingsSeedCoversBtn" style="width:100%;">🔎 Kategori Kataloğunun Kapaklarını Tara</button>
       </div>
     </section>
 
@@ -1935,6 +1948,7 @@ const HAMBURGER_ADMIN_EXTRA = [
   {id:'manual', label:'Manuel Kura', icon:'⚙'},
   {id:'members', label:'Üyeler', icon:'⚈'},
   {id:'rules', label:'Grup Kuralları', icon:'§'},
+  {id:'settings', label:'Ayarlar', icon:'⚒'},
   {id:'profile', label:'Profilim', icon:'◍'}
 ];
 const HAMBURGER_MEMBER_EXTRA = [
@@ -2135,6 +2149,7 @@ function renderTab(id){
   else if(id==='mworms') renderMemberWorms();
   else if(id==='gifts') renderGiftsTab();
   else if(id==='rules') renderRulesTab();
+  else if(id==='settings') renderSettingsTab();
   else if(id==='profile') renderProfileTab();
   else if(id==='recs') renderRecsTab();
   else if(id==='bookhistory'){
@@ -5643,7 +5658,7 @@ function placeholderCoverHtml(title){
   for(let i=0;i<t.length;i++) hash = (hash*31 + t.charCodeAt(i)) & 0xffffffff;
   const pal = PLACEHOLDER_COVER_PALETTE[Math.abs(hash) % PLACEHOLDER_COVER_PALETTE.length];
   const firstLetter = t.charAt(0).toUpperCase();
-  const rest = t.slice(1).trim().toUpperCase();
+  const rest = t.slice(1);
   const gold = '#cdaa61';
   return `<div style="width:100%; height:100%; position:relative; overflow:hidden; box-sizing:border-box;
       background:
@@ -5651,16 +5666,13 @@ function placeholderCoverHtml(title){
         radial-gradient(ellipse at 30% 15%, rgba(255,255,255,0.14), transparent 55%),
         linear-gradient(160deg, ${pal.light}, ${pal.base} 45%, ${pal.dark} 100%);">
     <div style="position:absolute; inset:6%; border:1px solid ${gold}; opacity:0.85;"></div>
-    <div style="position:absolute; inset:6%; border:1px solid ${gold}; opacity:0.85; transform:scale(0.94);"></div>
     <div style="position:absolute; inset:11%; border:1px solid ${gold}; opacity:0.6;"></div>
     <div style="position:absolute; top:11%; left:11%; width:10px; height:10px; border-top:1px solid ${gold}; border-left:1px solid ${gold};"></div>
     <div style="position:absolute; top:11%; right:11%; width:10px; height:10px; border-top:1px solid ${gold}; border-right:1px solid ${gold};"></div>
     <div style="position:absolute; bottom:11%; left:11%; width:10px; height:10px; border-bottom:1px solid ${gold}; border-left:1px solid ${gold};"></div>
     <div style="position:absolute; bottom:11%; right:11%; width:10px; height:10px; border-bottom:1px solid ${gold}; border-right:1px solid ${gold};"></div>
-    <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:17% 14%; text-align:center;">
-      <div style="font-family:'Playfair Display',Georgia,serif; font-style:italic; font-weight:800; font-size:2.7em; color:${gold}; line-height:0.85; text-shadow:0 1px 3px rgba(0,0,0,0.55);">${escapeHtml(firstLetter)}</div>
-      <div style="width:34%; height:1px; background:${gold}; opacity:0.75; margin:7% 0;"></div>
-      <div style="font-family:'Playfair Display',Georgia,serif; font-weight:600; font-size:0.58em; letter-spacing:1.8px; color:${gold}; line-height:1.45; word-break:break-word; text-shadow:0 1px 2px rgba(0,0,0,0.45);">${escapeHtml(rest)}</div>
+    <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:18% 15%; text-align:center;">
+      <div style="font-family:'Pirata One',Georgia,serif; color:${gold}; line-height:1.25; word-break:break-word; text-shadow:0 1px 3px rgba(0,0,0,0.55);"><span style="font-size:1.5em;">${escapeHtml(firstLetter)}</span><span style="font-size:1.05em;">${escapeHtml(rest)}</span></div>
     </div>
   </div>`;
 }
@@ -5723,15 +5735,7 @@ function renderDiscoverTab(){
 }
 async function renderDiscoverFilters(){
   const bar = document.getElementById('discoverFilters');
-  let seedBtnHtml = '';
-  if(myProfile.role==='admin'){
-    await ensureDiscoverCoversLoaded();
-    seedBtnHtml = `<button type="button" class="secondary" id="discoverSeedCoversBtn" style="width:100%; margin-bottom:10px;">🔎 Kategori Kataloğunun Kapaklarını Tara</button>`;
-  }
-  bar.innerHTML = seedBtnHtml +
-    DISCOVER_CATEGORIES.map(c=>`<button type="button" class="discover-filter-chip${discoverActiveCategory===c.slug?' active':''}" data-slug="${c.slug}">${escapeHtml(c.label)}</button>`).join('');
-  const seedCoversBtn = document.getElementById('discoverSeedCoversBtn');
-  if(seedCoversBtn) seedCoversBtn.addEventListener('click', seedDiscoverCovers);
+  bar.innerHTML = DISCOVER_CATEGORIES.map(c=>`<button type="button" class="discover-filter-chip${discoverActiveCategory===c.slug?' active':''}" data-slug="${c.slug}">${escapeHtml(c.label)}</button>`).join('');
   bar.querySelectorAll('.discover-filter-chip').forEach(chip=>{
     chip.addEventListener('click', ()=>{
       discoverActiveCategory = chip.dataset.slug;
@@ -5777,6 +5781,10 @@ function openBookPickerModal(onSelect){
       }catch(err){ results.innerHTML = `<span class="muted">Arama başarısız oldu.</span>`; }
     }, 400);
   });
+}
+function renderSettingsTab(){
+  const btn = document.getElementById('settingsSeedCoversBtn');
+  if(btn) btn.onclick = seedDiscoverCovers;
 }
 async function renderDiscoverCategoryGrid(slug){
   const main = document.getElementById('discoverFeed');
