@@ -848,16 +848,12 @@
         </div>
         <div id="giftsContent"></div>
       </div>
-      <div class="card">
-        <h2>Geçmiş Hediyeler</h2>
-        <div id="giftHistoryList"></div>
-      </div>
       <div class="card" id="giftsMemberLastWeekWrap" style="display:none;">
         <h2>Geçen Haftanın Kurası</h2>
         <div id="mLastWeekBox"></div>
       </div>
       <div class="card">
-        <h2>Kura Geçmişi</h2>
+        <h2>Kura ve Hediye Geçmişi</h2>
         <p class="muted">Geçmiş haftaların kura sonuçlarına göz atabilirsin.</p>
         <div id="giftsDrawHistAdminWrap" style="display:none;">
           <div class="row" style="align-items:center; margin-bottom:10px;">
@@ -3413,7 +3409,6 @@ async function renderGiftsTab(){
 
   markLoaded(content);
   wireGiftFormHandlers(content);
-  await renderGiftHistory(myProfile.role==='admin');
   await renderGiftBooksGrid();
 }
 
@@ -3621,38 +3616,6 @@ async function renderGiftBooksGrid(){
   });
   markLoaded(host);
 }
-async function renderGiftHistory(isAdminView){
-  const host = keepOrLoading('giftHistoryList');
-  let items = [];
-  try{
-    if(isAdminView){
-      const snap = await getDocs(query(collection(db,'giftRequests'), where('received','==',true)));
-      snap.forEach(d=> items.push(d.data()));
-    } else {
-      const [snapG, snapR] = await Promise.all([
-        getDocs(query(collection(db,'giftRequests'), where('giverUid','==',currentUid), where('received','==',true))),
-        getDocs(query(collection(db,'giftRequests'), where('receiverUid','==',currentUid), where('received','==',true)))
-      ]);
-      const seen = new Set();
-      [...snapG.docs, ...snapR.docs].forEach(d=>{
-        if(!seen.has(d.id)){ seen.add(d.id); items.push(d.data()); }
-      });
-    }
-  }catch(e){ host.innerHTML = `<p class="muted">Yüklenemedi.</p>`; markLoaded(host); return; }
-  items.sort((a,b)=> new Date(b.receivedAt||0) - new Date(a.receivedAt||0));
-  if(items.length===0){ host.innerHTML = `<p class="muted">Henüz tamamlanmış hediye yok.</p>`; markLoaded(host); return; }
-  host.innerHTML = items.map(it=>{
-    const dt = it.receivedAt ? new Date(it.receivedAt) : null;
-    const dtLabel = dt && !isNaN(dt.getTime()) ? `${pad(dt.getDate())}.${pad(dt.getMonth()+1)}.${dt.getFullYear()}` : '';
-    return `<div class="member-row" style="display:block;">
-      <div class="muted mono" style="font-size:10.5px;">${dtLabel}</div>
-      <div style="margin-top:2px;">${userChipHtml(it.giverUid)} — <span class="chip ok">Hediye kitap gönderildi</span></div>
-      <div style="margin-top:4px;">${userChipHtml(it.receiverUid)} — <span class="chip ok">Hediye kitap alındı</span></div>
-    </div>`;
-  }).join('');
-  markLoaded(host);
-}
-
 /* ============ ORTAK: KİTAP ÖNERİLERİ ============ */
 async function renderRecsTab(){
   const select = document.getElementById('recPersonalTarget');
