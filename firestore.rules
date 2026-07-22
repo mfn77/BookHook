@@ -105,6 +105,11 @@ service cloud.firestore {
       allow create: if isSignedIn();
     }
 
+    match /discoverCovers/{bookKey} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isAdmin();
+    }
+
     match /recommendations/{recId} {
       allow read: if isSignedIn() && (
         resource.data.scope == 'group' ||
