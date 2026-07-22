@@ -1673,7 +1673,20 @@ function getPersistedHTML(key){
   try{ return localStorage.getItem(CACHE_PREFIX+currentUid+'_'+key); }catch(e){ return null; }
 }
 function setPersistedHTML(key, html){
-  try{ localStorage.setItem(CACHE_PREFIX+currentUid+'_'+key, html); }catch(e){ /* depolama dolu/kapalıysa sessizce geç */ }
+  try{ localStorage.setItem(CACHE_PREFIX+currentUid+'_'+key, html); }
+  catch(e){
+    // Depolama dolu olabilir: bu uygulamaya ait birkaç eski önbellek kaydını silip tekrar dene
+    // (yeni gösterilecek içerik, eski/kullanılmayan bir önbellekten daha değerli).
+    try{
+      const ownKeys = [];
+      for(let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if(k && k.startsWith(CACHE_PREFIX)) ownKeys.push(k);
+      }
+      ownKeys.slice(0, 8).forEach(k=>{ try{ localStorage.removeItem(k); }catch(e2){} });
+      localStorage.setItem(CACHE_PREFIX+currentUid+'_'+key, html);
+    }catch(e3){ /* hâlâ olmuyorsa sessizce geç */ }
+  }
 }
 function showCachedOrPlaceholder(el, placeholderHtml){
   if(!el) return;
@@ -2907,6 +2920,7 @@ async function renderAdminMembers(){
 document.getElementById('calcStreaksBtn').addEventListener('click', renderAdminWorms);
 async function renderWormsShared(containerId, historyContainerId){
   const list = keepOrLoading(containerId, 'Hesaplanıyor…');
+  const historyBox = historyContainerId ? keepOrLoading(historyContainerId, 'Hesaplanıyor…') : null;
   const uids = activeUids();
   const results = await Promise.all(uids.map(async uid=>{
     try{
@@ -2926,7 +2940,6 @@ async function renderWormsShared(containerId, historyContainerId){
   }
   markLoaded(list);
 
-  const historyBox = document.getElementById(historyContainerId);
   if(historyBox){
     const rows = results;
     if(rows.length===0){
