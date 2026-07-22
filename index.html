@@ -1008,7 +1008,6 @@
     </section>
 
     <section class="tab" id="tab-bookhistory">
-      <h2 id="discoverHeaderTitle">🔍 Keşfet</h2>
       <div id="discoverFilters" class="discover-filters"></div>
       <div id="discoverFeed" style="padding-bottom:90px;"></div>
       <button type="button" id="discoverFabPrev">◀</button>
@@ -3896,7 +3895,6 @@ function renderBookHistoryTab(){
 async function renderMyBooksTab(){
   await renderBookHistoryGrid(currentUid, 'bookHistoryGrid', true);
 }
-let discoverNavEnteredZone = false;
 function positionDiscoverFabs(){
   const contentCol = document.getElementById('contentCol');
   const prevBtn = document.getElementById('discoverFabPrev');
@@ -3910,17 +3908,10 @@ function updateDiscoverFabVisibility(){
   const bhTab = document.getElementById('tab-bookhistory');
   const prevBtn = document.getElementById('discoverFabPrev');
   const nextBtn = document.getElementById('discoverFabNext');
-  if(!bhTab || !bhTab.classList.contains('active') || !prevBtn || !nextBtn){
-    if(prevBtn) prevBtn.classList.remove('visible');
-    if(nextBtn) nextBtn.classList.remove('visible');
-    return;
-  }
-  const heading = document.getElementById('discoverHeaderTitle');
-  if(!heading) return;
-  const headingTop = heading.getBoundingClientRect().top;
-  discoverNavEnteredZone = headingTop <= 8;
-  prevBtn.classList.toggle('visible', discoverNavEnteredZone);
-  nextBtn.classList.toggle('visible', discoverNavEnteredZone);
+  if(!bhTab || !prevBtn || !nextBtn) return;
+  const isActive = bhTab.classList.contains('active');
+  prevBtn.classList.toggle('visible', isActive);
+  nextBtn.classList.toggle('visible', isActive);
 }
 function setupDiscoverNavObserver(){
   positionDiscoverFabs();
@@ -5859,7 +5850,7 @@ async function renderDiscoverCategoryGrid(slug){
     const ratingLabel = isGroup ? `⭐ ${groupAvg(b.ratings).toFixed(1)} &middot; Grupta ${Object.keys(b.ratings||{}).length}` : '';
     return `<div class="discover-book-card" data-idx="${idx}">
       <div class="discover-book-cover-wrap" style="border:2px solid ${borderColor};">${coverHtml}${isGroup?'<span class="discover-group-badge">Grupta</span>':''}</div>
-      <div class="discover-book-title">${b.author?escapeHtml(b.author)+' - ':''}${escapeHtml(b.title)}</div>
+      <div class="discover-book-title">${b.author?`<b>${escapeHtml(b.author)}</b> - `:''}<span style="font-weight:400;">${escapeHtml(b.title)}</span></div>
       ${ratingLabel?`<div class="discover-book-rating">${ratingLabel}</div>`:''}
     </div>`;
   }
@@ -5924,7 +5915,7 @@ async function openBookDiscoverModal(book){
     ${groupList.map(([uid,r])=>`<div class="rec-comment-row">
       <div class="rec-comment-body">${userChipHtml(uid,18)}<div style="color:var(--gold); font-size:12.5px; margin:2px 0;">⭐ ${r.score}/10</div>${r.comment?`<div style="margin-top:2px;">${escapeHtml(r.comment)}</div>`:''}</div>
     </div>`).join('')}` : '';
-  const levelHtml = level ? `<div class="muted" style="margin-top:4px; font-size:12.5px;">${LEVEL_LABELS[level]||''}</div>` : '';
+  const levelHtml = level ? `<div class="muted" style="margin-top:4px; font-size:12.5px;">Seviyesi: ${LEVEL_LABELS[level]||''}</div>` : '';
   const yearHtml = (coverInfo && coverInfo.year) ? `<div class="muted" style="font-size:12px;">${escapeHtml(String(coverInfo.year))}</div>` : '';
   const whyHtml = why ? `<p style="text-align:left; font-size:13.5px; line-height:1.5; margin-top:12px;"><b>Neden okunmalı?</b><br/>${escapeHtml(why)}</p>` : '';
   body.innerHTML = `
