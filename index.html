@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Playfair+Display:ital,wght@0,600;0,800;1,700;1,800&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#F2F2F5; --paper-2:#E9E9ED; --card:#FFFFFF;
@@ -5628,14 +5628,14 @@ CURATED_CATALOG.forEach(cat=>{
 const LEVEL_COLORS = { baslangic:'#26A269', orta:'#D4A017', ileri:'#E01B24' };
 const LEVEL_LABELS = { baslangic:'🟢 Başlangıç', orta:'🟡 Orta', ileri:'🔴 İleri' };
 const PLACEHOLDER_COVER_PALETTE = [
-  {light:'#7a5233', base:'#5c3d24', dark:'#3e2814'},
-  {light:'#8a2332', base:'#6b1a26', dark:'#4a111a'},
-  {light:'#2f6b52', base:'#1f4d3a', dark:'#143327'},
-  {light:'#a9822a', base:'#8a6d1f', dark:'#5c4a15'},
-  {light:'#3d5680', base:'#2c3e63', dark:'#1c2842'},
-  {light:'#7a4f7a', base:'#5c3a5c', dark:'#3d263d'},
-  {light:'#6b5c47', base:'#4a4032', dark:'#302a20'},
-  {light:'#43584f', base:'#2f4f4f', dark:'#1e3333'}
+  {light:'#7a5233', base:'#5c3d24', dark:'#2e1f13'},
+  {light:'#8a2332', base:'#5e161f', dark:'#320c11'},
+  {light:'#2f6b52', base:'#1a4534', dark:'#0e281f'},
+  {light:'#a9822a', base:'#7a611a', dark:'#453609'},
+  {light:'#3d5680', base:'#25355a', dark:'#141d30'},
+  {light:'#7a4f7a', base:'#4f3350', dark:'#2b1c2c'},
+  {light:'#6b5c47', base:'#42392a', dark:'#231d15'},
+  {light:'#43584f', base:'#26362f', dark:'#141e19'}
 ];
 function placeholderCoverHtml(title){
   const t = (title||'').trim();
@@ -5644,16 +5644,23 @@ function placeholderCoverHtml(title){
   const pal = PLACEHOLDER_COVER_PALETTE[Math.abs(hash) % PLACEHOLDER_COVER_PALETTE.length];
   const firstLetter = t.charAt(0).toUpperCase();
   const rest = t.slice(1).trim().toUpperCase();
+  const gold = '#cdaa61';
   return `<div style="width:100%; height:100%; position:relative; overflow:hidden; box-sizing:border-box;
       background:
-        radial-gradient(ellipse at 28% 18%, rgba(255,255,255,0.16), transparent 55%),
-        repeating-linear-gradient(125deg, rgba(255,255,255,0.045) 0px, rgba(255,255,255,0.045) 1px, transparent 1px, transparent 4px),
-        repeating-linear-gradient(35deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 5px),
-        linear-gradient(160deg, ${pal.light}, ${pal.base} 48%, ${pal.dark} 100%);">
-    <div style="position:absolute; inset:7%; border:1px solid rgba(255,255,255,0.28); pointer-events:none;"></div>
-    <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10% 12%; text-align:center; color:rgba(255,247,228,0.95); font-family:Georgia,'Times New Roman',serif;">
-      <div style="font-size:2.6em; font-weight:700; font-style:italic; line-height:1; letter-spacing:0.5px; text-shadow:0 1px 3px rgba(0,0,0,0.45);">${escapeHtml(firstLetter)}</div>
-      <div style="font-size:0.62em; font-weight:600; letter-spacing:1.6px; margin-top:4%; line-height:1.35; word-break:break-word; text-shadow:0 1px 2px rgba(0,0,0,0.35);">${escapeHtml(rest)}</div>
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px),
+        radial-gradient(ellipse at 30% 15%, rgba(255,255,255,0.14), transparent 55%),
+        linear-gradient(160deg, ${pal.light}, ${pal.base} 45%, ${pal.dark} 100%);">
+    <div style="position:absolute; inset:6%; border:1px solid ${gold}; opacity:0.85;"></div>
+    <div style="position:absolute; inset:6%; border:1px solid ${gold}; opacity:0.85; transform:scale(0.94);"></div>
+    <div style="position:absolute; inset:11%; border:1px solid ${gold}; opacity:0.6;"></div>
+    <div style="position:absolute; top:11%; left:11%; width:10px; height:10px; border-top:1px solid ${gold}; border-left:1px solid ${gold};"></div>
+    <div style="position:absolute; top:11%; right:11%; width:10px; height:10px; border-top:1px solid ${gold}; border-right:1px solid ${gold};"></div>
+    <div style="position:absolute; bottom:11%; left:11%; width:10px; height:10px; border-bottom:1px solid ${gold}; border-left:1px solid ${gold};"></div>
+    <div style="position:absolute; bottom:11%; right:11%; width:10px; height:10px; border-bottom:1px solid ${gold}; border-right:1px solid ${gold};"></div>
+    <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:17% 14%; text-align:center;">
+      <div style="font-family:'Playfair Display',Georgia,serif; font-style:italic; font-weight:800; font-size:2.7em; color:${gold}; line-height:0.85; text-shadow:0 1px 3px rgba(0,0,0,0.55);">${escapeHtml(firstLetter)}</div>
+      <div style="width:34%; height:1px; background:${gold}; opacity:0.75; margin:7% 0;"></div>
+      <div style="font-family:'Playfair Display',Georgia,serif; font-weight:600; font-size:0.58em; letter-spacing:1.8px; color:${gold}; line-height:1.45; word-break:break-word; text-shadow:0 1px 2px rgba(0,0,0,0.45);">${escapeHtml(rest)}</div>
     </div>
   </div>`;
 }
@@ -5667,15 +5674,21 @@ async function ensureDiscoverCoversLoaded(){
   }catch(e){}
   discoverCoversLoaded = true;
 }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function seedDiscoverCovers(){
   await ensureDiscoverCoversLoaded();
   const allBooks = [];
   CURATED_CATALOG.forEach(cat=> cat.books.forEach(b=> allBooks.push({title:b.t, author:b.a})));
-  const remaining = allBooks.filter(b=> !discoverCoversCache[bookKeyFor({title:b.title, author:b.author})]);
+  // Daha önce hiç denenmemiş VEYA denenip kapak bulunamamış kitapları tekrar dener (kalıcı olarak
+  // sadece gerçekten bir kapak bulununca "tamam" sayılır; boş sonuçlar sürekli yeniden denenir).
+  const remaining = allBooks.filter(b=>{
+    const cached = discoverCoversCache[bookKeyFor({title:b.title, author:b.author})];
+    return !cached || !cached.cover;
+  });
   if(!remaining.length){ showToast('Zaten tüm kapaklar taranmış.'); return; }
-  if(!confirm(`${remaining.length} kitabın kapağı/yılı aranacak, bu BAYA uzun sürebilir (onlarca dakika olabilir). Sayfadan ayrılma. Devam edilsin mi?`)) return;
+  if(!confirm(`${remaining.length} kitabın kapağı/yılı aranacak, bu BAYA uzun sürebilir (10-20 dakika olabilir, hız sınırına çarpmamak için istekler arasında bekleme var). Sayfadan ayrılma. Devam edilsin mi?`)) return;
   showToast(`${remaining.length} kitap taranıyor, bu uzun sürecek…`);
-  let done=0, found=0;
+  let done=0, found=0, failStreak=0;
   for(const b of remaining){
     const key = bookKeyFor({title:b.title, author:b.author});
     try{
@@ -5684,10 +5697,12 @@ async function seedDiscoverCovers(){
       const data = { cover: (item && item.cover) ? item.cover : '', year: (item && item.year) ? item.year : '', fetchedAt: new Date().toISOString() };
       await setDoc(doc(db,'discoverCovers',key), data);
       discoverCoversCache[key] = data;
-      if(data.cover) found++;
-    }catch(e){}
+      if(data.cover){ found++; failStreak = 0; } else { failStreak++; }
+    }catch(e){ failStreak++; }
     done++;
-    if(done % 25 === 0) showToast(`${done}/${remaining.length} tarandı, ${found} kapak bulundu…`);
+    if(done % 20 === 0) showToast(`${done}/${remaining.length} tarandı, ${found} kapak bulundu…`);
+    // Art arda çok fazla başarısızlık olursa (hız sınırına çarpıldığının işareti) biraz daha uzun bekle
+    await sleep(failStreak > 5 ? 1200 : 220);
   }
   showToast(`Tamamlandı! ${found}/${remaining.length} kapak bulundu.`);
   renderDiscoverContent();
