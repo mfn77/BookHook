@@ -2909,9 +2909,11 @@ async function renderWormsShared(containerId, historyContainerId){
   const list = keepOrLoading(containerId, 'Hesaplanıyor…');
   const uids = activeUids();
   const results = await Promise.all(uids.map(async uid=>{
-    const streak = await computeStreak(uid);
-    await checkAndAwardBadges(uid, streak);
-    return {uid, streak};
+    try{
+      const streak = await computeStreak(uid);
+      await checkAndAwardBadges(uid, streak);
+      return {uid, streak};
+    }catch(e){ return {uid, streak:0}; }
   }));
   results.sort((a,b)=>b.streak-a.streak);
 
@@ -2926,19 +2928,13 @@ async function renderWormsShared(containerId, historyContainerId){
 
   const historyBox = document.getElementById(historyContainerId);
   if(historyBox){
-    const rows = results.filter(r=>{
-      const u = usersCache[r.uid];
-      const bc = u?.badgeCounts;
-      const hasHistorical = bc && BADGE_DEFS.some(def=>bc[def.key]>0);
-      const hasLiveTier = !!u?.currentTier;
-      return hasHistorical || hasLiveTier;
-    });
+    const rows = results;
     if(rows.length===0){
-      historyBox.innerHTML = `<p class="muted">Henüz kimse bir rozet kazanmadı.</p>`;
+      historyBox.innerHTML = `<p class="muted">Henüz üye yok.</p>`;
     } else {
       const head = `<tr><th style="text-align:left;">Üye</th>` + BADGE_DEFS.map(def=>`<th class="badge-info-icon" data-badge-label="${escapeHtml(def.label)}" style="cursor:pointer;">${def.icon}</th>`).join('') + `</tr>`;
       const body = rows.map(r=>{
-        const u = usersCache[r.uid];
+        const u = usersCache[r.uid] || {};
         const bc = u.badgeCounts || {};
         const liveTier = u.currentTier;
         const cells = BADGE_DEFS.map(def=>{
@@ -6438,38 +6434,23 @@ async function seedDiscoverCovers(){
     return !cached || !cached.cover;
   });
   if(!remaining.length){ showToast('Zaten tüm kapaklar taranmış.'); return; }
-  if(!confirm(`${remaining.length} kitabın kapağı/yılı aranacak, bu BAYA uzun sürebilir (10-20 dakika olabilir, hız sınırına çarpmamak için istekler arasında bekleme var). Sayfadan ayrılma. Devam edilsin mi?`)) return;
+  if(!confirm(`${remaining.length} kitabın kapağı/yılı aranacak. Sayfadan ayrılma. Devam edilsin mi?`)) return;
   showToast(`${remaining.length} kitap taranıyor, bu uzun sürecek…`);
   let done=0, found=0, failStreak=0;
   for(const b of remaining){
     const key = bookKeyFor({title:b.title, author:b.author});
+    const enTitle = ENGLISH_SEARCH_TITLES[key];
     try{
-      const items = await searchGoogleBooks(`${b.title} ${b.author}`);
-      const item = items[0];
-      let cover = (item && item.cover) ? item.cover : '';
-      let year = (item && item.year) ? item.year : '';
-      if(!cover){
-        try{
-          const olItems = await searchOpenLibrary(`${b.title} ${b.author}`);
-          const olItem = olItems[0];
-          if(olItem && olItem.cover){ cover = olItem.cover; if(!year) year = olItem.year||''; }
-        }catch(e){}
-      }
-      const enTitle = ENGLISH_SEARCH_TITLES[key];
-      if(!cover && enTitle){
-        try{
-          const enItems = await searchOpenLibrary(enTitle);
-          const enItem = enItems[0];
-          if(enItem && enItem.cover){ cover = enItem.cover; if(!year) year = enItem.year||''; }
-        }catch(e){}
-        if(!cover){
-          try{
-            const enItems2 = await searchGoogleBooks(enTitle);
-            const enItem2 = enItems2[0];
-            if(enItem2 && enItem2.cover){ cover = enItem2.cover; if(!year) year = enItem2.year||''; }
-          }catch(e){}
-        }
-      }
+      const queries = enTitle
+        ? [ searchOpenLibrary(enTitle), searchGoogleBooks(enTitle) ]
+        : [ searchGoogleBooks(`${b.title} ${b.author}`), searchOpenLibrary(`${b.title} ${b.author}`) ];
+      const settled = await Promise.allSettled(queries);
+      const pick = (r)=> (r.status==='fulfilled' && r.value && r.value[0]) ? r.value[0] : null;
+      const candidates = settled.map(pick).filter(Boolean);
+      const withCover = candidates.find(c=>c.cover);
+      const withYear = candidates.find(c=>c.year) || withCover;
+      const cover = withCover ? withCover.cover : '';
+      const year = withYear ? withYear.year : '';
       const data = { cover, year, fetchedAt: new Date().toISOString() };
       await setDoc(doc(db,'discoverCovers',key), data);
       discoverCoversCache[key] = data;
@@ -6478,7 +6459,7 @@ async function seedDiscoverCovers(){
     done++;
     if(done % 20 === 0) showToast(`${done}/${remaining.length} tarandı, ${found} kapak bulundu…`);
     // Art arda çok fazla başarısızlık olursa (hız sınırına çarpıldığının işareti) biraz daha uzun bekle
-    await sleep(failStreak > 5 ? 1200 : 220);
+    await sleep(failStreak > 8 ? 700 : 90);
   }
   showToast(`Tamamlandı! ${found}/${remaining.length} kapak bulundu.`);
   renderDiscoverContent();
