@@ -1753,8 +1753,18 @@ async function notifyUser(uid, message, linkTab){
     const prefs = (recipient && recipient.notifPrefs) || {};
     if(prefs[category] === false) return; // alıcı bu kategoriyi kapatmış
   }
-  try{ await addDoc(collection(db,'notifications',uid,'items'), { message, linkTab: linkTab||null, read:false, createdAt:new Date().toISOString() }); }
-  catch(e){ console.error('Bildirim gönderilemedi (notifyUser):', uid, e); }
+  try{
+    // Son 15 saniye içinde AYNI mesaj bu kişiye zaten gönderilmişse (hangi sebepten olursa
+    // olsun tekrar çağrılmış olsun), ikinci kez yazmıyoruz — çift bildirimi burada kesin olarak engelliyor.
+    const recentSnap = await getDocs(query(collection(db,'notifications',uid,'items'), orderBy('createdAt','desc'), limit(3)));
+    let isDuplicate = false;
+    recentSnap.forEach(d=>{
+      const data = d.data();
+      if(data.message===message && (Date.now()-new Date(data.createdAt).getTime()) < 15000) isDuplicate = true;
+    });
+    if(isDuplicate) return;
+    await addDoc(collection(db,'notifications',uid,'items'), { message, linkTab: linkTab||null, read:false, createdAt:new Date().toISOString() });
+  }catch(e){ console.error('Bildirim gönderilemedi (notifyUser):', uid, e); }
 }
 async function notifyAdmins(message, linkTab){
   const adminUids = Object.keys(usersCache).filter(u=>usersCache[u].role==='admin' && !usersCache[u].banned);
@@ -2599,12 +2609,15 @@ function renderAdminToday(){
       stampBtnInFlight.add(key);
       try{
         const isSelf = btn.dataset.uid===currentUid;
-        const wasNew = isSelf && todayAnswers[btn.dataset.uid]!==btn.dataset.status;
+        const isSettingMark = todayAnswers[btn.dataset.uid] !== btn.dataset.status;
+        const wasNew = isSelf && isSettingMark;
         playMarkFx(btn, btn.dataset.status);
         await markStatus(btn.dataset.uid, btn.dataset.status);
         if(wasNew) createPost(btn.dataset.status, {variantText: await pickVariantMessage(btn.dataset.status)});
-        const markedName = (usersCache[btn.dataset.uid] && usersCache[btn.dataset.uid].name) || '';
-        notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week');
+        if(isSettingMark){
+          const markedName = (usersCache[btn.dataset.uid] && usersCache[btn.dataset.uid].name) || '';
+          notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week');
+        }
       } finally {
         setTimeout(()=> stampBtnInFlight.delete(key), 1200);
       }
@@ -3103,7 +3116,7 @@ document.getElementById('mReadBtn').addEventListener('click', async ()=>{
   try{ playMarkFx(document.getElementById('mReadBtn'), 'read'); }catch(e){}
   await markStatus(currentUid,'read');
   renderMemberSurvey();
-  notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week');
+  if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week');
   if(wasNew) createPost('read', {variantText: await pickVariantMessage('read')});
   const s = await computeStreak(currentUid);
   await checkAndAwardBadges(currentUid, s);
@@ -3114,7 +3127,7 @@ document.getElementById('mSkipBtn').addEventListener('click', async ()=>{
   stampBtnInFlight.add('m|skip');
   const wasNew = todayAnswers[currentUid] !== 'skip';
   try{ playMarkFx(document.getElementById('mSkipBtn'), 'skip'); }catch(e){}
-  await markStatus(currentUid,'skip'); renderMemberSurvey(); notifyAllMembers(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week');
+  await markStatus(currentUid,'skip'); renderMemberSurvey(); if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week');
   if(wasNew) createPost('skip', {variantText: await pickVariantMessage('skip')});
   setTimeout(()=> stampBtnInFlight.delete('m|skip'), 1200);
 });
