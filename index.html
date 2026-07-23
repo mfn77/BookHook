@@ -6872,15 +6872,10 @@ async function openBookDiscoverModal(book){
   const levelHtml = level ? `<div class="muted" style="margin-top:4px; font-size:12.5px;">Seviyesi: ${LEVEL_LABELS[level]||''}</div>` : '';
   const yearHtml = (coverInfo && coverInfo.year) ? `<div class="muted" style="font-size:12px;">${escapeHtml(String(coverInfo.year))}</div>` : '';
   const whyHtml = why ? `<p style="text-align:left; font-size:13.5px; line-height:1.5; margin-top:12px;"><b>Neden okunmalı?</b><br/>${escapeHtml(why)}</p>` : '';
-  const coverMenuBtn = myProfile.role==='admin'
-    ? `<button type="button" class="post-menu-btn" id="coverFixMenuBtn" style="position:absolute; top:-6px; right:-6px; background:rgba(0,0,0,0.55); color:#fff; border-radius:50%; width:26px; height:26px; line-height:26px; padding:0;" title="Kapak seçenekleri">⋮</button>`
-    : '';
+  const isAdminView = myProfile.role==='admin';
   body.innerHTML = `
     <div style="text-align:center;">
-      <div style="position:relative; width:110px; height:160px; margin:0 auto 10px;">
-        <div style="width:100%; height:100%; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); border:3px solid ${LEVEL_COLORS[level]||'var(--line)'};">${coverHtml}</div>
-        ${coverMenuBtn}
-      </div>
+      <div id="coverFixTarget" style="width:110px; height:160px; margin:0 auto 10px; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); border:3px solid ${LEVEL_COLORS[level]||'var(--line)'}; ${isAdminView?'cursor:pointer;':''}" ${isAdminView?'title="Kapağı düzelt (sadece yönetici)"':''}>${coverHtml}</div>
       <h2 style="margin:0 0 2px;">${escapeHtml(book.title)}</h2>
       <div class="muted">${escapeHtml(book.author||'')}</div>
       ${yearHtml}
@@ -6893,11 +6888,13 @@ async function openBookDiscoverModal(book){
     <textarea id="ratingCommentInput" placeholder="Yorumun (opsiyonel)" style="width:100%; margin-top:10px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; min-height:60px; background:var(--card); color:var(--ink);">${myRating?escapeHtml(myRating.comment||''):''}</textarea>
     <button class="primary" id="ratingSubmitBtn" style="width:100%; margin-top:8px;">Gönder</button>
   `;
-  const coverFixBtn = document.getElementById('coverFixMenuBtn');
-  if(coverFixBtn) coverFixBtn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    openCoverFixMenu(coverFixBtn, bookKey, book);
-  });
+  if(isAdminView){
+    const coverTarget = document.getElementById('coverFixTarget');
+    coverTarget.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openCoverFixMenu(coverTarget, bookKey, book);
+    });
+  }
   let selectedScore = myRating ? myRating.score : 0;
   const stars = body.querySelectorAll('.rating-star');
   function paintStars(n){ stars.forEach(s=> s.classList.toggle('filled', parseInt(s.dataset.n,10)<=n)); }
