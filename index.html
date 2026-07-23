@@ -2598,6 +2598,8 @@ function renderAdminToday(){
       playMarkFx(btn, btn.dataset.status);
       await markStatus(btn.dataset.uid, btn.dataset.status);
       if(wasNew) createPost(btn.dataset.status, {variantText: await pickVariantMessage(btn.dataset.status)});
+      const markedName = (usersCache[btn.dataset.uid] && usersCache[btn.dataset.uid].name) || '';
+      notifyAdmins(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week');
     });
   });
 
