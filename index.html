@@ -540,6 +540,8 @@
   .auth-toggle button{flex:1; padding:9px; border-radius:999px; border:none; background:none; font-family:'Inter',sans-serif; font-weight:700; cursor:pointer; color:var(--ink-70);}
   .auth-toggle button.active{background:var(--card); color:var(--gold); box-shadow:var(--shadow);}
   .field{margin-bottom:14px;}
+  @keyframes fieldFlashError{ 0%,100%{ box-shadow:0 0 0 0 rgba(224,27,36,0); } 50%{ box-shadow:0 0 0 4px rgba(224,27,36,0.35); } }
+  .field-flash-error{ animation: fieldFlashError 0.5s ease-in-out 2; border-color:#E01B24 !important; }
   .field label{display:block; font-family:'Inter', sans-serif; font-size:12px; font-weight:600; color:var(--ink-70); margin-bottom:5px;}
   .auth-error{color:var(--cloth-dark); font-size:13px; margin-bottom:10px; font-family:'Inter', sans-serif;}
   .banned-notice{background:rgba(224,27,36,0.08); border:none; border-left:4px solid var(--cloth); color:var(--cloth-dark); padding:12px 14px; border-radius:10px; font-size:13.5px; margin-bottom:14px;}
@@ -908,7 +910,28 @@
     <!-- ADMIN: AYARLAR -->
     <section class="tab" id="tab-settings">
       <div class="card">
-        <h2>⚙️ Ayarlar</h2>
+        <h2>Şifre Değiştir</h2>
+        <p class="muted">Google ile giriş yaptıysan bu alanı kullanamazsın, şifreni Google hesabından yönetirsin.</p>
+        <div class="field"><label>Mevcut Şifre</label><input type="password" id="settingsCurPassword" /></div>
+        <div class="field"><label>Yeni Şifre (en az 6 karakter)</label><input type="password" id="settingsNewPassword" /></div>
+        <div class="auth-error" id="settingsPasswordError"></div>
+        <button class="secondary" id="settingsChangePasswordBtn">Şifreyi Değiştir</button>
+      </div>
+      <div class="card">
+        <h2>🔔 Bildirim Ayarları</h2>
+        <p class="muted" style="font-size:12.5px; margin-bottom:10px;">Hangi bildirimleri almak istediğini seçebilirsin.</p>
+        <div class="member-row" style="justify-content:space-between; align-items:center;">
+          <span>🎁 Hediye bildirimleri</span>
+          <input type="checkbox" id="notifPrefGifts" style="width:20px; height:20px;" />
+        </div>
+        <div class="member-row" style="justify-content:space-between; align-items:center;">
+          <span>📰 Sosyal (Akış, Öneriler) bildirimleri</span>
+          <input type="checkbox" id="notifPrefSocial" style="width:20px; height:20px;" />
+        </div>
+      </div>
+      <div id="settingsAdminOnlyWrap" style="display:none;">
+      <div class="card">
+        <h2>⚙️ Yönetici Ayarları</h2>
         <div class="card-desc-wrap">
           <p class="muted">Uygulamanın arka planda çalışan, sık kullanılmayan yönetici ayarları burada.</p>
         </div>
@@ -930,6 +953,7 @@
         </div>
         <div id="drawsList"></div>
       </div>
+      </div>
     </section>
 
     <!-- ORTAK: PROFİLİM -->
@@ -950,15 +974,6 @@
         <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" id="profileReadingCover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
         <div class="auth-error" id="profileError"></div>
         <button class="primary" id="profileSaveBtn">Bilgileri Kaydet</button>
-      </div>
-
-      <div class="card">
-        <h2>Şifre Değiştir</h2>
-        <p class="muted">Google ile giriş yaptıysan bu alanı kullanamazsın, şifreni Google hesabından yönetirsin.</p>
-        <div class="field"><label>Mevcut Şifre</label><input type="password" id="curPassword" /></div>
-        <div class="field"><label>Yeni Şifre (en az 6 karakter)</label><input type="password" id="newPassword" /></div>
-        <div class="auth-error" id="passwordError"></div>
-        <button class="secondary" id="changePasswordBtn">Şifreyi Değiştir</button>
       </div>
 
       <div class="card">
@@ -1717,8 +1732,15 @@ function showToast(msg){
 }
 
 /* ============ BİLDİRİM SİSTEMİ (uygulama içi) ============ */
+const NOTIF_CATEGORY_BY_TAB = { gifts:'gifts', social:'social', recs:'social' };
 async function notifyUser(uid, message, linkTab){
   if(!uid) return;
+  const category = NOTIF_CATEGORY_BY_TAB[linkTab];
+  if(category){
+    const recipient = usersCache[uid];
+    const prefs = (recipient && recipient.notifPrefs) || {};
+    if(prefs[category] === false) return; // alıcı bu kategoriyi kapatmış
+  }
   try{ await addDoc(collection(db,'notifications',uid,'items'), { message, linkTab: linkTab||null, read:false, createdAt:new Date().toISOString() }); }
   catch(e){ console.error('Bildirim gönderilemedi (notifyUser):', uid, e); }
 }
@@ -1961,6 +1983,7 @@ const HAMBURGER_ADMIN_EXTRA = [
 ];
 const HAMBURGER_MEMBER_EXTRA = [
   {id:'rules', label:'Grup Kuralları', icon:'§'},
+  {id:'settings', label:'Ayarlar', icon:'⚒'},
   {id:'profile', label:'Profilim', icon:'◍'}
 ];
 
@@ -2061,11 +2084,13 @@ document.getElementById('whoamiClickable').addEventListener('click', ()=>{
 });
 document.getElementById('notifBellBtn').addEventListener('click', (e)=>{
   e.stopPropagation();
+  if(profileGateActive){ flashRequiredFields(); showToast('Devam etmek için önce soyad, telefon ve adres bilgilerini doldurup kaydetmen gerekiyor.'); return; }
   document.getElementById('hamburgerMenu').style.display='none';
   openNotifModal();
 });
 document.getElementById('hamburgerBtn').addEventListener('click', (e)=>{
   e.stopPropagation();
+  if(profileGateActive){ flashRequiredFields(); showToast('Devam etmek için önce soyad, telefon ve adres bilgilerini doldurup kaydetmen gerekiyor.'); return; }
   const menu = document.getElementById('hamburgerMenu');
   menu.style.display = menu.style.display==='block' ? 'none' : 'block';
 });
@@ -2084,13 +2109,34 @@ function buildNav(){
     btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
   });
   buildHamburgerMenu();
-  switchTab(tabs[0].id);
+  switchTab(profileGateActive ? 'profile' : tabs[0].id);
 }
 
 function getTabOrder(){
   return myProfile && myProfile.role==='admin' ? ADMIN_TABS.map(t=>t.id) : MEMBER_TABS.map(t=>t.id);
 }
+let profileGateActive = false;
+const PROFILE_GATE_FIELDS = ['profileSurname','profilePhone','profileAddress'];
+function flashRequiredFields(){
+  let anyEmpty = false;
+  PROFILE_GATE_FIELDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(!el.value.trim()){
+      anyEmpty = true;
+      el.classList.remove('field-flash-error');
+      void el.offsetWidth;
+      el.classList.add('field-flash-error');
+    }
+  });
+  return anyEmpty;
+}
 function switchTab(id){
+  if(profileGateActive && id!=='profile'){
+    flashRequiredFields();
+    showToast('Devam etmek için önce soyad, telefon ve adres bilgilerini doldurup kaydetmen gerekiyor.');
+    return;
+  }
   const order = getTabOrder();
   const oldIdx = order.indexOf(activeTab);
   const newIdx = order.indexOf(id);
@@ -2158,7 +2204,7 @@ function renderTab(id){
   else if(id==='worms') renderAdminWorms();
   else if(id==='msurvey') renderMemberSurvey();
   else if(id==='mtoday'){ renderMemberWeekAll(); memberWeekOffset=0; renderMemberOwnWeek(); }
-  else if(id==='settings'){ renderSettingsTab(); renderAdminDraws(); }
+  else if(id==='settings'){ renderSettingsTab(); if(myProfile.role==='admin') renderAdminDraws(); }
   else if(id==='mworms') renderMemberWorms();
   else if(id==='rules') renderRulesTab();
   else if(id==='profile') renderProfileTab();
@@ -3181,9 +3227,6 @@ function renderProfileTab(){
   document.getElementById('profileReadingCover').value = myProfile.currentlyReadingCover || '';
   document.getElementById('profilePhotoWrap').innerHTML = avatarHtmlFromProfile(myProfile, 88);
   document.getElementById('profileError').textContent = '';
-  document.getElementById('passwordError').textContent = '';
-  const pwCard = document.getElementById('changePasswordBtn').closest('.card');
-  pwCard.style.display = isGoogleUser() ? 'none' : 'block';
 }
 function resizeImageFile(file, maxSize){
   return new Promise((resolve,reject)=>{
@@ -3231,19 +3274,30 @@ document.getElementById('profileSaveBtn').addEventListener('click', async ()=>{
   const errBox = document.getElementById('profileError');
   errBox.textContent = '';
   if(!name){ errBox.textContent = 'İsim boş olamaz.'; return; }
+  if(!surname || !phone || !address){
+    flashRequiredFields();
+    errBox.textContent = 'Soyad, telefon ve adres alanları zorunludur.';
+    return;
+  }
   try{
     await updateDoc(doc(db,'users',currentUid), {name, surname, phone, address, bio, currentlyReading, currentlyReadingCover});
     myProfile.name = name; myProfile.surname = surname; myProfile.phone = phone; myProfile.address = address;
     myProfile.bio = bio; myProfile.currentlyReading = currentlyReading; myProfile.currentlyReadingCover = currentlyReadingCover;
     document.getElementById('whoamiAvatar').innerHTML = avatarHtmlFromProfile(myProfile,18);
   document.getElementById('whoamiName').textContent = myProfile.name;
-    showToast('Profilin güncellendi.');
+    if(profileGateActive){
+      profileGateActive = false;
+      showToast('Profilin tamamlandı, artık uygulamayı kullanabilirsin!');
+      buildNav();
+    } else {
+      showToast('Profilin güncellendi.');
+    }
   }catch(err){ errBox.textContent = 'Kaydedilemedi: ' + (err.message||err); }
 });
-document.getElementById('changePasswordBtn').addEventListener('click', async ()=>{
-  const curPass = document.getElementById('curPassword').value;
-  const newPass = document.getElementById('newPassword').value;
-  const errBox = document.getElementById('passwordError');
+document.getElementById('settingsChangePasswordBtn').addEventListener('click', async ()=>{
+  const curPass = document.getElementById('settingsCurPassword').value;
+  const newPass = document.getElementById('settingsNewPassword').value;
+  const errBox = document.getElementById('settingsPasswordError');
   errBox.textContent = '';
   if(!curPass || !newPass){ errBox.textContent = 'Her iki alanı da doldur.'; return; }
   if(newPass.length<6){ errBox.textContent = 'Yeni şifre en az 6 karakter olmalı.'; return; }
@@ -3251,8 +3305,8 @@ document.getElementById('changePasswordBtn').addEventListener('click', async ()=
     const cred = EmailAuthProvider.credential(auth.currentUser.email, curPass);
     await reauthenticateWithCredential(auth.currentUser, cred);
     await updatePassword(auth.currentUser, newPass);
-    document.getElementById('curPassword').value='';
-    document.getElementById('newPassword').value='';
+    document.getElementById('settingsCurPassword').value='';
+    document.getElementById('settingsNewPassword').value='';
     showToast('Şifren değiştirildi.');
   }catch(err){ errBox.textContent = friendlyAuthError(err); }
 });
@@ -6589,24 +6643,46 @@ async function ensureDiscoverPageSizeLoaded(){
   discoverPageSizeLoaded = true;
 }
 async function renderSettingsTab(){
-  const btn = document.getElementById('settingsSeedCoversBtn');
-  if(btn) btn.onclick = seedDiscoverCovers;
-  await ensureDiscoverPageSizeLoaded();
-  const row = document.getElementById('settingsPageSizeRow');
-  const options = [100, 50, 20];
-  row.innerHTML = options.map(n=>`<button type="button" class="secondary tiny" data-pagesize="${n}" style="flex:1; ${discoverPageSize===n?'background:var(--gold); color:#fff; border-color:var(--gold);':''}">${n}</button>`).join('');
-  row.querySelectorAll('[data-pagesize]').forEach(b=>{
-    b.addEventListener('click', async ()=>{
-      const n = parseInt(b.dataset.pagesize,10);
-      try{
-        await setDoc(doc(db,'settings','discover'), { pageSize: n }, { merge:true });
-        discoverPageSize = n;
-        discoverPage = 0;
-        showToast(`Sayfa boyutu ${n} olarak ayarlandı.`);
-        renderSettingsTab();
-      }catch(err){ alert('Kaydedilemedi: '+(err.message||err)); }
+  document.getElementById('settingsPasswordError').textContent = '';
+  const pwCard = document.getElementById('settingsChangePasswordBtn').closest('.card');
+  pwCard.style.display = isGoogleUser() ? 'none' : 'block';
+  const adminWrap = document.getElementById('settingsAdminOnlyWrap');
+  adminWrap.style.display = myProfile.role==='admin' ? 'block' : 'none';
+  if(myProfile.role==='admin'){
+    const btn = document.getElementById('settingsSeedCoversBtn');
+    if(btn) btn.onclick = seedDiscoverCovers;
+    await ensureDiscoverPageSizeLoaded();
+    const row = document.getElementById('settingsPageSizeRow');
+    const options = [100, 50, 20];
+    row.innerHTML = options.map(n=>`<button type="button" class="secondary tiny" data-pagesize="${n}" style="flex:1; ${discoverPageSize===n?'background:var(--gold); color:#fff; border-color:var(--gold);':''}">${n}</button>`).join('');
+    row.querySelectorAll('[data-pagesize]').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        const n = parseInt(b.dataset.pagesize,10);
+        try{
+          await setDoc(doc(db,'settings','discover'), { pageSize: n }, { merge:true });
+          discoverPageSize = n;
+          discoverPage = 0;
+          showToast(`Sayfa boyutu ${n} olarak ayarlandı.`);
+          renderSettingsTab();
+        }catch(err){ alert('Kaydedilemedi: '+(err.message||err)); }
+      });
     });
-  });
+  }
+  const prefs = myProfile.notifPrefs || {};
+  const giftsChk = document.getElementById('notifPrefGifts');
+  const socialChk = document.getElementById('notifPrefSocial');
+  giftsChk.checked = prefs.gifts !== false;
+  socialChk.checked = prefs.social !== false;
+  const saveNotifPref = async (field, val)=>{
+    try{
+      const newPrefs = { ...(myProfile.notifPrefs||{}), [field]: val };
+      await updateDoc(doc(db,'users',currentUid), { notifPrefs: newPrefs });
+      myProfile.notifPrefs = newPrefs;
+      showToast('Bildirim ayarı güncellendi.');
+    }catch(err){ alert('Kaydedilemedi: '+(err.message||err)); }
+  };
+  giftsChk.onchange = ()=> saveNotifPref('gifts', giftsChk.checked);
+  socialChk.onchange = ()=> saveNotifPref('social', socialChk.checked);
 }
 async function renderDiscoverCategoryGrid(slug){
   const main = document.getElementById('discoverFeed');
@@ -6971,6 +7047,7 @@ onAuthStateChanged(auth, async (user)=>{
     profSnap = await getDoc(doc(db,'users',user.uid));
   }
   myProfile = profSnap.data();
+  profileGateActive = !(myProfile.surname && myProfile.surname.trim() && myProfile.phone && myProfile.phone.trim() && myProfile.address && myProfile.address.trim());
 
   if(myProfile.banned){
     await signOut(auth);
