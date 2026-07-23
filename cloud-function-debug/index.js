@@ -134,3 +134,51 @@ exports.readingReminderNight = onSchedule(
     await sendReminderToUnmarked("Zaman geçiyor, oku hadi! 😡🫡");
   }
 );
+
+// Profili eksik (soyad/telefon/adres) olan üyelere günde 2 kez hatırlatma gönderir.
+// Not: Yeni kayıt olan üyeler artık uygulama içinde profillerini doldurmadan geçemiyor,
+// bu fonksiyon sadece bu zorunluluktan ÖNCE kayıt olmuş, profili eksik kalmış üyeler için var.
+// Profilini tamamlayan bir üyeye bir daha bildirim gitmez.
+async function sendProfileCompletionReminders() {
+  const usersSnap = await db.collection("users").get();
+  const tokens = [];
+  usersSnap.forEach((d) => {
+    const u = d.data();
+    if (u.banned) return;
+    const complete = (u.surname && u.surname.trim()) && (u.phone && u.phone.trim()) && (u.address && u.address.trim());
+    if (complete) return;
+    (u.fcmTokens || []).forEach((t) => tokens.push(t));
+  });
+  console.log(`[profil-hatirlatma] Eksik profilli, bildirim gidecek token sayısı: ${tokens.length}`);
+
+  if (!tokens.length) {
+    console.log("[profil-hatirlatma] Gönderilecek token yok, çıkılıyor.");
+    return;
+  }
+
+  try {
+    const response = await messaging.sendEachForMulticast({
+      data: { title: "BookHook", body: "Profil bilgilerini (soyad, telefon, adres) doldurman gerekiyor.", linkTab: "profile" },
+      tokens,
+    });
+    console.log(`[profil-hatirlatma] Gönderim tamamlandı. successCount=${response.successCount} failureCount=${response.failureCount}`);
+  } catch (e) {
+    console.error("[profil-hatirlatma] Hatırlatma gönderilemedi:", e);
+  }
+}
+
+// Her gün Türkiye saatiyle 10:00
+exports.profileCompletionReminderMorning = onSchedule(
+  { schedule: "0 10 * * *", timeZone: "Europe/Istanbul" },
+  async () => {
+    await sendProfileCompletionReminders();
+  }
+);
+
+// Her gün Türkiye saatiyle 20:00
+exports.profileCompletionReminderEvening = onSchedule(
+  { schedule: "0 20 * * *", timeZone: "Europe/Istanbul" },
+  async () => {
+    await sendProfileCompletionReminders();
+  }
+);
