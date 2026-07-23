@@ -1080,7 +1080,7 @@
   </div>
 </div>
 
-<div id="anchoredPopover" style="display:none; position:absolute; z-index:230; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-lg); padding:10px 14px; font-size:13.5px; max-width:220px; text-align:center;"></div>
+<div id="anchoredPopover" style="display:none; position:absolute; z-index:400; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-lg); padding:10px 14px; font-size:13.5px; max-width:220px; text-align:center;"></div>
 
 <div id="reactionDrawer"></div>
 
@@ -1638,7 +1638,7 @@ function hideAnchoredPopover(){
 }
 document.addEventListener('click', (e)=>{
   const pop = document.getElementById('anchoredPopover');
-  if(pop.style.display==='block' && !pop.contains(e.target) && !e.target.closest('.badge-info-icon') && !e.target.closest('.total-pages-clickable')){
+  if(pop.style.display==='block' && !pop.contains(e.target) && !e.target.closest('.badge-info-icon') && !e.target.closest('.total-pages-clickable') && !e.target.closest('#coverFixTarget')){
     hideAnchoredPopover();
   }
 });
