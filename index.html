@@ -2604,7 +2604,7 @@ function renderAdminToday(){
         await markStatus(btn.dataset.uid, btn.dataset.status);
         if(wasNew) createPost(btn.dataset.status, {variantText: await pickVariantMessage(btn.dataset.status)});
         const markedName = (usersCache[btn.dataset.uid] && usersCache[btn.dataset.uid].name) || '';
-        notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week', currentUid);
+        notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week');
       } finally {
         setTimeout(()=> stampBtnInFlight.delete(key), 1200);
       }
@@ -3103,7 +3103,7 @@ document.getElementById('mReadBtn').addEventListener('click', async ()=>{
   try{ playMarkFx(document.getElementById('mReadBtn'), 'read'); }catch(e){}
   await markStatus(currentUid,'read');
   renderMemberSurvey();
-  notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', currentUid);
+  notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week');
   if(wasNew) createPost('read', {variantText: await pickVariantMessage('read')});
   const s = await computeStreak(currentUid);
   await checkAndAwardBadges(currentUid, s);
@@ -3114,7 +3114,7 @@ document.getElementById('mSkipBtn').addEventListener('click', async ()=>{
   stampBtnInFlight.add('m|skip');
   const wasNew = todayAnswers[currentUid] !== 'skip';
   try{ playMarkFx(document.getElementById('mSkipBtn'), 'skip'); }catch(e){}
-  await markStatus(currentUid,'skip'); renderMemberSurvey(); notifyAllMembers(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week', currentUid);
+  await markStatus(currentUid,'skip'); renderMemberSurvey(); notifyAllMembers(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week');
   if(wasNew) createPost('skip', {variantText: await pickVariantMessage('skip')});
   setTimeout(()=> stampBtnInFlight.delete('m|skip'), 1200);
 });
