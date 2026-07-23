@@ -923,6 +923,9 @@
         <div class="rec-comments-label" style="margin-top:18px;">📚 Geçmiş Gönderileri Grupla</div>
         <p class="muted" style="font-size:12.5px; margin-bottom:8px;">Geçmişteki tekli kitap puanlama/ekleme gönderilerinden aynı kişiye ait, birbirine bir saatten yakın olanları geriye dönük olarak birleştirir. Tek seferlik ve geri alınamaz.</p>
         <button type="button" class="secondary" id="settingsMigrateBatchBtn" style="width:100%;">📚 Geçmiş Gönderileri Şimdi Grupla</button>
+        <div class="rec-comments-label" style="margin-top:18px;">🏅 Rozet Geçmişini Yeniden Hesapla</div>
+        <p class="muted" style="font-size:12.5px; margin-bottom:8px;">Test/hatalı işaretlemelerden dolayı yanlış çıkan rozet sayılarını, okuma kayıtlarından baştan hesaplayıp düzeltir. Herkes için geçerli, tek seferlik.</p>
+        <button type="button" class="secondary" id="settingsRecalcBadgesBtn" style="width:100%;">🏅 Rozet Geçmişini Şimdi Yeniden Hesapla</button>
       </div>
       <div class="card">
         <h2>🎲 Kura Sonuçları</h2>
@@ -2470,6 +2473,51 @@ function currentTierForStreak(streak){
   let tier = null;
   BADGE_DEFS.forEach(def=>{ if(streak>=def.days) tier = def.key; });
   return tier;
+}
+async function recalculateAllBadges(){
+  if(!confirm('Bu işlem, HERKESİN rozet geçmişini (Rozet Geçmişi tablosundaki sayılar) okuma kayıtlarından baştan hesaplayıp üzerine yazacak. Test/hatalı işaretlemelerden kaynaklanan yanlış sayıları düzeltir. Devam edilsin mi?')) return;
+  showToast('Rozet geçmişi yeniden hesaplanıyor, bu biraz sürebilir…');
+  try{
+    const daysSnap = await getDocs(collection(db,'days'));
+    let dateStrs = [];
+    daysSnap.forEach(d=> dateStrs.push(d.id));
+    dateStrs.sort();
+    const todayKey = todayStr();
+    const historicalDates = dateStrs.filter(d=> d < todayKey); // bugünü computeStreak'e bırakıyoruz
+
+    const perDayAnswers = {};
+    await Promise.all(historicalDates.map(async (dateStr)=>{
+      const ansSnap = await getDocs(collection(db,'days',dateStr,'answers'));
+      const map = {};
+      ansSnap.forEach(d=> map[d.id] = d.data().status);
+      perDayAnswers[dateStr] = map;
+    }));
+
+    const uids = Object.keys(usersCache).filter(u=>!usersCache[u].banned);
+    let updatedCount = 0;
+    for(const uid of uids){
+      let badgeCounts = {};
+      let curStreak = 0, curTier = null;
+      for(const dateStr of historicalDates){
+        const status = perDayAnswers[dateStr][uid];
+        if(status === 'read'){
+          curStreak++;
+          curTier = currentTierForStreak(curStreak);
+        } else {
+          if(curTier) badgeCounts[curTier] = (badgeCounts[curTier]||0) + 1;
+          curStreak = 0; curTier = null;
+        }
+      }
+      const liveStreak = await computeStreak(uid);
+      const liveTier = currentTierForStreak(liveStreak);
+      try{
+        await updateDoc(doc(db,'users',uid), { badgeCounts, currentTier: liveTier, lastStreak: liveStreak, currentStreak: liveStreak });
+        updatedCount++;
+      }catch(e){ console.error('Rozet güncellenemedi:', uid, e); }
+    }
+    showToast(`Tamamlandı! ${updatedCount} kullanıcının rozet geçmişi yeniden hesaplandı.`);
+    if(activeTab==='worms' || activeTab==='mworms') renderTab(activeTab);
+  }catch(err){ alert('Hata: '+(err.message||err)); }
 }
 const badgeCheckInFlight = new Set();
 const stampBtnInFlight = new Set();
@@ -6846,6 +6894,8 @@ async function renderSettingsTab(){
     if(btn) btn.onclick = seedDiscoverCovers;
     const migrateBtn = document.getElementById('settingsMigrateBatchBtn');
     if(migrateBtn) migrateBtn.onclick = migrateBatchPostsRetroactively;
+    const recalcBtn = document.getElementById('settingsRecalcBadgesBtn');
+    if(recalcBtn) recalcBtn.onclick = recalculateAllBadges;
     await ensureDiscoverPageSizeLoaded();
     const row = document.getElementById('settingsPageSizeRow');
     const options = [100, 50, 20];
