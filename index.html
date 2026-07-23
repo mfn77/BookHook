@@ -1539,6 +1539,13 @@ document.getElementById('bookHistoryViewModal').addEventListener('click', (e)=>{
 /* ============ ORTAK: KİTAP BİLGİSİ (kapağa tıklayınca) ============ */
 document.getElementById('bookInfoModalClose').addEventListener('click', ()=>{ closeModal('bookInfoModal'); });
 document.getElementById('bookInfoModal').addEventListener('click', (e)=>{ if(e.target.id==='bookInfoModal') closeModal('bookInfoModal'); });
+async function addBookToMyLibrary(title, author, cover){
+  try{
+    await addDoc(collection(db,'users',currentUid,'bookHistory'), { author: author||'', title, cover: cover||'', addedAt: new Date().toISOString() });
+    createPost('book_added', { bookTitle: title, bookAuthor: author||'', bookCover: cover||'' });
+    showToast('Kitaplığına eklendi!');
+  }catch(err){ alert('Eklenemedi: '+(err.message||err)); }
+}
 async function showBookInfo(rawTitle, cover, prependHtml){
   if(!rawTitle) return;
   const body = document.getElementById('bookInfoModalBody');
@@ -1593,7 +1600,9 @@ async function showBookInfo(rawTitle, cover, prependHtml){
     ${descShort?`<p style="text-align:left; font-size:13.5px; line-height:1.5;">${descShort}</p>`:''}
     ${info.isbn?`<div class="muted" style="font-size:11px; margin-top:8px;">ISBN: ${escapeHtml(info.isbn)}</div>`:''}
     ${info.link?`<a href="${info.link}" target="_blank" rel="noopener" style="display:inline-block; margin-top:10px; font-size:13px; color:var(--gold);">Daha fazla bilgi →</a>`:''}
+    <button type="button" class="secondary tiny" id="addToMyLibraryBtn" style="margin-top:10px; width:100%;">📚 Kitaplığıma Ekle</button>
   `;
+  document.getElementById('addToMyLibraryBtn').addEventListener('click', ()=> addBookToMyLibrary(info.title, info.author, info.cover));
 }
 document.body.addEventListener('click', (e)=>{
   const cover = e.target.closest('.book-cover-clickable');
@@ -6927,7 +6936,9 @@ async function openBookDiscoverModal(book){
     <div class="rating-star-row" id="ratingStarRow">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="rating-star" data-n="${n}">★</span>`).join('')}</div>
     <textarea id="ratingCommentInput" placeholder="Yorumun (opsiyonel)" style="width:100%; margin-top:10px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; min-height:60px; background:var(--card); color:var(--ink);">${myRating?escapeHtml(myRating.comment||''):''}</textarea>
     <button class="primary" id="ratingSubmitBtn" style="width:100%; margin-top:8px;">Gönder</button>
+    <button type="button" class="secondary tiny" id="addToMyLibraryBtnDiscover" style="width:100%; margin-top:8px;">📚 Kitaplığıma Ekle</button>
   `;
+  document.getElementById('addToMyLibraryBtnDiscover').addEventListener('click', ()=> addBookToMyLibrary(book.title, book.author, (coverInfo&&coverInfo.cover)||''));
   if(isAdminView){
     const coverTarget = document.getElementById('coverFixTarget');
     coverTarget.addEventListener('click', (e)=>{
