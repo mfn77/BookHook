@@ -6684,6 +6684,85 @@ async function renderSettingsTab(){
   giftsChk.onchange = ()=> saveNotifPref('gifts', giftsChk.checked);
   socialChk.onchange = ()=> saveNotifPref('social', socialChk.checked);
 }
+function openCoverFixMenu(btn, bookKey, book){
+  const html = `
+    <button type="button" class="post-menu-item" id="coverRescanBtn">🔄 Kapağı Yeniden Tara</button>
+    <button type="button" class="post-menu-item" id="coverManualBtn">🔍 Manuel Ara ve Seç</button>
+  `;
+  showAnchoredPopover(btn, html);
+  document.getElementById('coverRescanBtn').addEventListener('click', async (e)=>{
+    e.stopPropagation();
+    hideAnchoredPopover();
+    showToast('Kapak yeniden aranıyor…');
+    try{
+      const enTitle = ENGLISH_SEARCH_TITLES[bookKey];
+      const q = enTitle || `${book.title} ${book.author||''}`;
+      let cover = '', year = '';
+      try{
+        const items = await searchOpenLibrary(q);
+        const item = items[0];
+        if(item && item.cover){ cover = item.cover; year = item.year||''; }
+      }catch(err){}
+      if(!cover){
+        try{
+          const items2 = await searchGoogleBooks(q);
+          const item2 = items2[0];
+          if(item2 && item2.cover){ cover = item2.cover; year = item2.year||''; }
+        }catch(err){}
+      }
+      if(!cover){ alert('Yeniden tarama da bir sonuç bulamadı. Manuel ara ve seç seçeneğini kullanabilirsin.'); return; }
+      await setDoc(doc(db,'discoverCovers',bookKey), { cover, year, fetchedAt:new Date().toISOString() });
+      discoverCoversCache[bookKey] = { cover, year };
+      showToast('Kapak güncellendi!');
+      openBookDiscoverModal(book);
+    }catch(err){ alert('Tarama başarısız: '+(err.message||err)); }
+  });
+  document.getElementById('coverManualBtn').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    hideAnchoredPopover();
+    openManualCoverSearchModal(bookKey, book);
+  });
+}
+function openManualCoverSearchModal(bookKey, book){
+  showSimpleInfoModal(`
+    <h2 style="margin-bottom:10px;">Manuel Kapak Ara</h2>
+    <input type="text" id="coverSearchInput" value="${escapeHtml(book.title)} ${escapeHtml(book.author||'')}" style="width:100%; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; background:var(--card); color:var(--ink); box-sizing:border-box;" />
+    <div id="coverSearchResults" style="margin-top:10px; text-align:left;"></div>
+  `);
+  const input = document.getElementById('coverSearchInput');
+  const results = document.getElementById('coverSearchResults');
+  async function runSearch(){
+    const q = input.value.trim();
+    if(q.length < 2){ results.innerHTML=''; return; }
+    results.innerHTML = `<span class="muted">Aranıyor…</span>`;
+    try{
+      let items = [];
+      try{ items = await searchOpenLibrary(q); }catch(e){}
+      try{ items = items.concat(await searchGoogleBooks(q)); }catch(e){}
+      items = items.filter(it=>it.cover);
+      if(!items.length){ results.innerHTML = `<span class="muted">Kapaklı sonuç bulunamadı.</span>`; return; }
+      results.innerHTML = items.map((it,idx)=>`<div class="rec-comment-row" data-idx="${idx}" style="cursor:pointer;">
+        <img src="${it.cover}" style="width:36px;height:52px;object-fit:cover;border-radius:4px;" />
+        <div class="rec-comment-body"><b>${escapeHtml(it.title)}</b><div class="muted" style="font-size:11px;">${escapeHtml(it.author||'')}${it.year?' · '+escapeHtml(String(it.year)):''}</div></div>
+      </div>`).join('');
+      results.querySelectorAll('[data-idx]').forEach(row=>{
+        row.addEventListener('click', async ()=>{
+          const it = items[parseInt(row.dataset.idx,10)];
+          try{
+            await setDoc(doc(db,'discoverCovers',bookKey), { cover: it.cover, year: it.year||'', fetchedAt:new Date().toISOString() });
+            discoverCoversCache[bookKey] = { cover: it.cover, year: it.year||'' };
+            closeModal('bookInfoModal');
+            showToast('Kapak güncellendi!');
+            openBookDiscoverModal(book);
+          }catch(err){ alert('Kaydedilemedi: '+(err.message||err)); }
+        });
+      });
+    }catch(err){ results.innerHTML = `<span class="muted">Arama başarısız oldu.</span>`; }
+  }
+  let debounceTimer = null;
+  input.addEventListener('input', ()=>{ clearTimeout(debounceTimer); debounceTimer = setTimeout(runSearch, 400); });
+  runSearch();
+}
 async function renderDiscoverCategoryGrid(slug){
   const main = document.getElementById('discoverFeed');
   showCachedOrPlaceholder(main, `<div class="empty-state">Yükleniyor…</div>`);
@@ -6793,9 +6872,15 @@ async function openBookDiscoverModal(book){
   const levelHtml = level ? `<div class="muted" style="margin-top:4px; font-size:12.5px;">Seviyesi: ${LEVEL_LABELS[level]||''}</div>` : '';
   const yearHtml = (coverInfo && coverInfo.year) ? `<div class="muted" style="font-size:12px;">${escapeHtml(String(coverInfo.year))}</div>` : '';
   const whyHtml = why ? `<p style="text-align:left; font-size:13.5px; line-height:1.5; margin-top:12px;"><b>Neden okunmalı?</b><br/>${escapeHtml(why)}</p>` : '';
+  const coverMenuBtn = myProfile.role==='admin'
+    ? `<button type="button" class="post-menu-btn" id="coverFixMenuBtn" style="position:absolute; top:-6px; right:-6px; background:rgba(0,0,0,0.55); color:#fff; border-radius:50%; width:26px; height:26px; line-height:26px; padding:0;" title="Kapak seçenekleri">⋮</button>`
+    : '';
   body.innerHTML = `
     <div style="text-align:center;">
-      <div style="width:110px; height:160px; margin:0 auto 10px; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); border:3px solid ${LEVEL_COLORS[level]||'var(--line)'};">${coverHtml}</div>
+      <div style="position:relative; width:110px; height:160px; margin:0 auto 10px;">
+        <div style="width:100%; height:100%; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); border:3px solid ${LEVEL_COLORS[level]||'var(--line)'};">${coverHtml}</div>
+        ${coverMenuBtn}
+      </div>
       <h2 style="margin:0 0 2px;">${escapeHtml(book.title)}</h2>
       <div class="muted">${escapeHtml(book.author||'')}</div>
       ${yearHtml}
@@ -6808,6 +6893,11 @@ async function openBookDiscoverModal(book){
     <textarea id="ratingCommentInput" placeholder="Yorumun (opsiyonel)" style="width:100%; margin-top:10px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; min-height:60px; background:var(--card); color:var(--ink);">${myRating?escapeHtml(myRating.comment||''):''}</textarea>
     <button class="primary" id="ratingSubmitBtn" style="width:100%; margin-top:8px;">Gönder</button>
   `;
+  const coverFixBtn = document.getElementById('coverFixMenuBtn');
+  if(coverFixBtn) coverFixBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    openCoverFixMenu(coverFixBtn, bookKey, book);
+  });
   let selectedScore = myRating ? myRating.score : 0;
   const stars = body.querySelectorAll('.rating-star');
   function paintStars(n){ stars.forEach(s=> s.classList.toggle('filled', parseInt(s.dataset.n,10)<=n)); }
