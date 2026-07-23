@@ -1278,6 +1278,31 @@ function nowLogical(){ const d=new Date(); if(d.getHours()<6){ d.setDate(d.getDa
 function todayStr(){ return toStr(nowLogical()); }
 function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function turkishLastVowelInfo(name){
+  const n = (name||'').trim();
+  const vowelsBack = 'aıou', vowelsFront = 'eiöü';
+  const allVowels = vowelsBack + vowelsFront;
+  const lastChar = n ? n[n.length-1].toLocaleLowerCase('tr-TR') : '';
+  const endsInVowel = allVowels.includes(lastChar);
+  let lastVowel = null;
+  for(let i=n.length-1;i>=0;i--){
+    const c = n[i].toLocaleLowerCase('tr-TR');
+    if(allVowels.includes(c)){ lastVowel = c; break; }
+  }
+  const isBack = lastVowel ? vowelsBack.includes(lastVowel) : true;
+  const isRounded = lastVowel ? 'ouöü'.includes(lastVowel) : false;
+  return { endsInVowel, isBack, isRounded };
+}
+function turkishDativeName(name){
+  const { endsInVowel, isBack } = turkishLastVowelInfo(name);
+  const v = isBack ? 'a' : 'e';
+  return `${name}'${endsInVowel ? 'y'+v : v}`;
+}
+function turkishAccusativeName(name){
+  const { endsInVowel, isBack, isRounded } = turkishLastVowelInfo(name);
+  const v = isBack ? (isRounded?'u':'ı') : (isRounded?'ü':'i');
+  return `${name}'${endsInVowel ? 'y'+v : v}`;
+}
 
 /* ============ ORTAK KURA ALGORİTMASI ============ */
 // statsArr: [{uid,name,miss,read,marked}]
@@ -4352,15 +4377,17 @@ function postBodyHtml(p){
     }
     case 'book_added': {
       const cover = p.bookCover ? `<img src="${p.bookCover}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml((p.bookAuthor?p.bookAuthor+' - ':'')+(p.bookTitle||''))}" data-book-cover="${escapeHtml(p.bookCover)}" />` : '';
-      return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div>📖 Kitaplığına <b>${escapeHtml(p.bookTitle||'')}</b>'ı ekledi.</div></div>`;
+      const addedSuffix = turkishAccusativeName(p.bookTitle||'').split("'").pop();
+      return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div>📖 Kitaplığına <b>${escapeHtml(p.bookTitle||'')}</b>'${addedSuffix} ekledi.</div></div>`;
     }
     case 'book_added_batch': return `📖 Kitaplığına ${(p.items||[]).length} kitap ekledi. <span class="muted" style="font-size:12px;">(detaylar için tıkla)</span>`;
     case 'record_dethrone': return `👑 ${p.recordIcon||'🏆'} <b>${escapeHtml(p.recordLabel||'')}</b> rekorunda <b>${escapeHtml(p.dethronedName||'')}</b>'ı geçti! (${p.recordCount})`;
     case 'no_lottery': return `🍀 Bu hafta (${escapeHtml(p.weekLabel||'')}) kimse cezalı olmadı, kura çekilmedi!`;
-    case 'rec_personal': return `✎ ${escapeHtml(p.toName||'')}'ye kitap önerdi.`;
+    case 'rec_personal': return `✎ ${turkishDativeName(escapeHtml(p.toName||''))} kitap önerdi.`;
     case 'rec_group': {
       const cover = p.bookCover ? `<img src="${p.bookCover}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml(p.bookTitle||'')}" data-book-cover="${escapeHtml(p.bookCover)}" />` : '';
-      return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div>✎ Gruba <b>${escapeHtml(p.bookTitle||'')}</b>'ı önerdi.</div></div>`;
+      const recSuffix = turkishAccusativeName(p.bookTitle||'').split("'").pop();
+      return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div>✎ Gruba <b>${escapeHtml(p.bookTitle||'')}</b>'${recSuffix} önerdi.</div></div>`;
     }
     default: return escapeHtml(p.text||'');
   }
