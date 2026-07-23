@@ -1073,7 +1073,7 @@
   </div>
 </div>
 
-<div id="bookInfoModal" class="modal-overlay-anim" style="display:none; position:fixed; inset:0; background:rgba(36,49,75,0.55); z-index:220; align-items:center; justify-content:center; padding:20px;">
+<div id="bookInfoModal" class="modal-overlay-anim" style="display:none; position:fixed; inset:0; background:rgba(36,49,75,0.55); z-index:260; align-items:center; justify-content:center; padding:20px;">
   <div class="card modal-card-anim" style="max-width:420px; width:100%; max-height:82vh; overflow-y:auto; position:relative; margin-bottom:0;">
     <button id="bookInfoModalClose" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-70);">✕</button>
     <div id="bookInfoModalBody" style="text-align:center;"><span class="muted">Aranıyor…</span></div>
@@ -6688,6 +6688,7 @@ function openCoverFixMenu(btn, bookKey, book){
   const html = `
     <button type="button" class="post-menu-item" id="coverRescanBtn">🔄 Kapağı Yeniden Tara</button>
     <button type="button" class="post-menu-item" id="coverManualBtn">🔍 Manuel Ara ve Seç</button>
+    <button type="button" class="post-menu-item" id="coverLinkBtn">🔗 Linkten Koy</button>
   `;
   showAnchoredPopover(btn, html);
   document.getElementById('coverRescanBtn').addEventListener('click', async (e)=>{
@@ -6710,7 +6711,7 @@ function openCoverFixMenu(btn, bookKey, book){
           if(item2 && item2.cover){ cover = item2.cover; year = item2.year||''; }
         }catch(err){}
       }
-      if(!cover){ alert('Yeniden tarama da bir sonuç bulamadı. Manuel ara ve seç seçeneğini kullanabilirsin.'); return; }
+      if(!cover){ alert('Yeniden tarama da bir sonuç bulamadı. Manuel ara ve seç veya linkten koy seçeneğini kullanabilirsin.'); return; }
       await setDoc(doc(db,'discoverCovers',bookKey), { cover, year, fetchedAt:new Date().toISOString() });
       discoverCoversCache[bookKey] = { cover, year };
       showToast('Kapak güncellendi!');
@@ -6721,6 +6722,41 @@ function openCoverFixMenu(btn, bookKey, book){
     e.stopPropagation();
     hideAnchoredPopover();
     openManualCoverSearchModal(bookKey, book);
+  });
+  document.getElementById('coverLinkBtn').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    hideAnchoredPopover();
+    openCoverLinkModal(bookKey, book);
+  });
+}
+function openCoverLinkModal(bookKey, book){
+  showSimpleInfoModal(`
+    <h2 style="margin-bottom:10px;">Linkten Kapak Koy</h2>
+    <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px;">
+      ${book.title?`<div><b>${escapeHtml(book.title)}</b><div class="muted" style="font-size:12px;">${escapeHtml(book.author||'')}</div></div>`:''}
+    </div>
+    <div class="field"><label>Kapak Görseli Linki</label><input type="text" id="coverLinkInput" placeholder="https://..." style="width:100%; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; background:var(--card); color:var(--ink); box-sizing:border-box;" /></div>
+    <div id="coverLinkPreviewWrap" style="display:none; text-align:center; margin:10px 0;"><img id="coverLinkPreview" style="width:90px; height:130px; object-fit:cover; border-radius:6px; box-shadow:var(--shadow);" /></div>
+    <button type="button" class="primary" id="coverLinkSaveBtn" style="width:100%; margin-top:8px;">Kaydet</button>
+  `);
+  const input = document.getElementById('coverLinkInput');
+  const previewWrap = document.getElementById('coverLinkPreviewWrap');
+  const preview = document.getElementById('coverLinkPreview');
+  input.addEventListener('input', ()=>{
+    const url = input.value.trim();
+    if(url){ preview.src = url; previewWrap.style.display = 'block'; }
+    else { previewWrap.style.display = 'none'; }
+  });
+  document.getElementById('coverLinkSaveBtn').addEventListener('click', async ()=>{
+    const url = input.value.trim();
+    if(!url){ alert('Önce bir link yapıştır.'); return; }
+    try{
+      await setDoc(doc(db,'discoverCovers',bookKey), { cover: url, year: (discoverCoversCache[bookKey]&&discoverCoversCache[bookKey].year)||'', fetchedAt:new Date().toISOString() });
+      discoverCoversCache[bookKey] = { ...(discoverCoversCache[bookKey]||{}), cover: url };
+      closeModal('bookInfoModal');
+      showToast('Kapak güncellendi!');
+      openBookDiscoverModal(book);
+    }catch(err){ alert('Kaydedilemedi: '+(err.message||err)); }
   });
 }
 function openManualCoverSearchModal(bookKey, book){
