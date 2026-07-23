@@ -941,6 +941,9 @@
         <div class="rec-comments-label" style="margin-top:18px;">📖 Kategori Başına Gösterilen Kitap Sayısı</div>
         <p class="muted" style="font-size:12.5px; margin-bottom:8px;">Bu ayar tüm kullanıcılar (ve diğer yöneticiler) için ortak geçerlidir.</p>
         <div id="settingsPageSizeRow" style="display:flex; gap:8px;"></div>
+        <div class="rec-comments-label" style="margin-top:18px;">📚 Geçmiş Gönderileri Grupla</div>
+        <p class="muted" style="font-size:12.5px; margin-bottom:8px;">Geçmişteki tekli kitap puanlama/ekleme gönderilerinden aynı kişiye ait, birbirine bir saatten yakın olanları geriye dönük olarak birleştirir. Tek seferlik ve geri alınamaz.</p>
+        <button type="button" class="secondary" id="settingsMigrateBatchBtn" style="width:100%;">📚 Geçmiş Gönderileri Şimdi Grupla</button>
       </div>
       <div class="card">
         <h2>🎲 Kura Sonuçları</h2>
@@ -1194,7 +1197,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, addDoc,
-  collection, onSnapshot, query, orderBy, limit, where, runTransaction, arrayUnion, arrayRemove
+  collection, onSnapshot, query, orderBy, limit, startAfter, where, runTransaction, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getStorage, ref as storageRef, uploadBytes, getDownloadURL
@@ -1542,7 +1545,7 @@ document.getElementById('bookInfoModal').addEventListener('click', (e)=>{ if(e.t
 async function addBookToMyLibrary(title, author, cover){
   try{
     await addDoc(collection(db,'users',currentUid,'bookHistory'), { author: author||'', title, cover: cover||'', addedAt: new Date().toISOString() });
-    createPost('book_added', { bookTitle: title, bookAuthor: author||'', bookCover: cover||'' });
+    createOrBatchPost('book_added', { bookTitle: title, bookAuthor: author||'', bookCover: cover||'' });
     showToast('Kitaplığına eklendi!');
   }catch(err){ alert('Eklenemedi: '+(err.message||err)); }
 }
@@ -4027,7 +4030,7 @@ document.getElementById('bhSaveBtn').addEventListener('click', async ()=>{
   if(!title){ alert('Kitap adı yaz.'); return; }
   try{
     await addDoc(collection(db,'users',currentUid,'bookHistory'), { author, title, cover, addedAt: new Date().toISOString() });
-    createPost('book_added', { bookTitle: title, bookAuthor: author, bookCover: cover });
+    createOrBatchPost('book_added', { bookTitle: title, bookAuthor: author, bookCover: cover });
     document.getElementById('bhSearchInput').value='';
     document.getElementById('bhAuthorInput').value='';
     document.getElementById('bhTitleInput').value='';
@@ -4204,6 +4207,82 @@ async function createPost(type, data, forUid, forName){
     });
   }catch(e){ console.error('Gönderi oluşturulamadı:', e); }
 }
+const BATCHABLE_TYPES = {
+  book_review: { batchType:'book_review_batch', extract:(p)=>({ bookTitle:p.bookTitle, bookAuthor:p.bookAuthor, bookCover:p.bookCover, rating:p.rating, reviewText:p.reviewText, at:p.createdAt }) },
+  book_added: { batchType:'book_added_batch', extract:(p)=>({ bookTitle:p.bookTitle, bookAuthor:p.bookAuthor, bookCover:p.bookCover, at:p.createdAt }) }
+};
+async function migrateBatchPostsRetroactively(){
+  if(!confirm('Bu işlem, geçmişteki tekli kitap puanlama/ekleme gönderilerinden aynı kişiye ait ve birbirine 1 saatten yakın olanları birleştirecek. Bu geri alınamaz (birleşenler silinip tek gönderiye dönüşür). Devam edilsin mi?')) return;
+  showToast('Geçmiş gönderiler taranıyor…');
+  try{
+    const snap = await getDocs(query(collection(db,'posts'), where('type','in',['book_review','book_added'])));
+    const posts = [];
+    snap.forEach(d=> posts.push({id:d.id, ...d.data()}));
+    const groups = {};
+    posts.forEach(p=>{
+      const key = p.uid+'|'+p.type;
+      if(!groups[key]) groups[key] = [];
+      groups[key].push(p);
+    });
+    let mergedPostCount = 0, groupCount = 0;
+    async function commitChain(chain){
+      if(chain.length<2) return;
+      groupCount++;
+      mergedPostCount += chain.length;
+      const type = chain[0].type;
+      const cfg = BATCHABLE_TYPES[type];
+      const items = chain.map(p=> cfg.extract(p));
+      const last = chain[chain.length-1];
+      await updateDoc(doc(db,'posts',last.id), { type: cfg.batchType, items, createdAt: last.createdAt });
+      await Promise.all(chain.slice(0,-1).map(p=> deleteDoc(doc(db,'posts',p.id))));
+    }
+    for(const key in groups){
+      const arr = groups[key].slice().sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
+      let chain = [arr[0]];
+      for(let i=1;i<arr.length;i++){
+        const prev = chain[chain.length-1];
+        const gapMs = new Date(arr[i].createdAt) - new Date(prev.createdAt);
+        if(gapMs <= 60*60*1000){
+          chain.push(arr[i]);
+        } else {
+          await commitChain(chain);
+          chain = [arr[i]];
+        }
+      }
+      await commitChain(chain);
+    }
+    showToast(`Tamamlandı! ${groupCount} grup birleştirildi (${mergedPostCount} eski gönderi).`);
+    if(activeTab==='social') renderTimelineTab();
+  }catch(err){ alert('Hata: '+(err.message||err)); }
+}
+async function createOrBatchPost(singleType, itemData){
+  const cfg = BATCHABLE_TYPES[singleType];
+  try{
+    const oneHourAgoMs = Date.now() - 60*60*1000;
+    const snap = await getDocs(query(collection(db,'posts'), where('uid','==',currentUid), limit(30)));
+    let candidates = [];
+    snap.forEach(d=>{
+      const data = d.data();
+      if(data.type===singleType || data.type===cfg.batchType) candidates.push({id:d.id, ...data});
+    });
+    candidates.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+    const existing = candidates[0];
+    const isRecent = existing && (new Date(existing.createdAt).getTime() >= oneHourAgoMs);
+    const itemWithTime = { ...itemData, at: new Date().toISOString() };
+    if(existing && isRecent){
+      if(existing.type === cfg.batchType){
+        const newItems = [...(existing.items||[]), itemWithTime];
+        await updateDoc(doc(db,'posts',existing.id), { items:newItems, createdAt:new Date().toISOString() });
+      } else {
+        const firstItem = cfg.extract(existing);
+        const newItems = [firstItem, itemWithTime];
+        await updateDoc(doc(db,'posts',existing.id), { type: cfg.batchType, items:newItems, createdAt:new Date().toISOString() });
+      }
+      return;
+    }
+    await createPost(singleType, itemData);
+  }catch(e){ console.error('Gönderi birleştirilemedi, tekli oluşturuluyor:', e); await createPost(singleType, itemData); }
+}
 function exactTimeLabel(iso){
   const d = new Date(iso);
   const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -4236,6 +4315,7 @@ function postBodyHtml(p){
       const cover = p.bookCover ? `<img src="${p.bookCover}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml((p.bookAuthor?p.bookAuthor+' - ':'')+(p.bookTitle||''))}" data-book-cover="${escapeHtml(p.bookCover)}" />` : '';
       return `<div style="display:flex; gap:10px;">${cover}<div style="min-width:0;"><b>${escapeHtml(p.bookTitle||'')}</b><div style="color:var(--gold); font-size:13px; margin:2px 0;">⭐ ${p.rating}/10 verdi</div>${p.reviewText?`<div class="muted" style="font-size:13px;">"${escapeHtml(p.reviewText)}"</div>`:''}</div></div>`;
     }
+    case 'book_review_batch': return `⭐ ${(p.items||[]).length} kitap puanlaması yaptı. <span class="muted" style="font-size:12px;">(detaylar için tıkla)</span>`;
     case 'user_post': {
       const txt = p.text ? escapeHtml(p.text).replace(/\n/g,'<br/>') : '';
       const img = p.image ? `<img src="${p.image}" alt="" style="max-width:100%; border-radius:10px; margin-top:8px; display:block;" />` : '';
@@ -4245,6 +4325,7 @@ function postBodyHtml(p){
       const cover = p.bookCover ? `<img src="${p.bookCover}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml((p.bookAuthor?p.bookAuthor+' - ':'')+(p.bookTitle||''))}" data-book-cover="${escapeHtml(p.bookCover)}" />` : '';
       return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div>📖 Kitaplığına <b>${escapeHtml(p.bookTitle||'')}</b>'ı ekledi.</div></div>`;
     }
+    case 'book_added_batch': return `📖 Kitaplığına ${(p.items||[]).length} kitap ekledi. <span class="muted" style="font-size:12px;">(detaylar için tıkla)</span>`;
     case 'record_dethrone': return `👑 ${p.recordIcon||'🏆'} <b>${escapeHtml(p.recordLabel||'')}</b> rekorunda <b>${escapeHtml(p.dethronedName||'')}</b>'ı geçti! (${p.recordCount})`;
     case 'no_lottery': return `🍀 Bu hafta (${escapeHtml(p.weekLabel||'')}) kimse cezalı olmadı, kura çekilmedi!`;
     case 'rec_personal': return `✎ ${escapeHtml(p.toName||'')}'ye kitap önerdi.`;
@@ -4276,18 +4357,69 @@ function renderPostCard(p){
     </div>
   </div>`;
 }
+let timelinePostDocs = [];
+let timelineAllPosts = [];
+let timelineOlderClicks = 0;
+const TIMELINE_PAGE_SIZE = 50;
 async function renderTimelineTab(){
   renderPinnedPostBar();
   const feed = keepOrLoading('timelineFeed');
-  let posts = [];
+  timelinePostDocs = [];
+  timelineAllPosts = [];
+  timelineOlderClicks = 0;
   try{
     const snap = await getDocs(query(collection(db,'posts'), orderBy('createdAt','desc'), limit(60)));
-    snap.forEach(d=> posts.push({id:d.id, ...d.data()}));
+    snap.forEach(d=>{ timelinePostDocs.push(d); timelineAllPosts.push({id:d.id, ...d.data()}); });
   }catch(e){}
-  if(!posts.length){ feed.innerHTML = `<div class="empty-state"><span class="big">📰</span>Henüz gönderi yok. Okuma işaretlemeleri, rozetler ve hediyeler burada görünecek.</div>`; markLoaded(feed); return; }
-  feed.innerHTML = posts.map(p=> renderPostCard(p)).join('');
-  wirePostCards(feed);
+  if(!timelineAllPosts.length){ feed.innerHTML = `<div class="empty-state"><span class="big">📰</span>Henüz gönderi yok. Okuma işaretlemeleri, rozetler ve hediyeler burada görünecek.</div>`; markLoaded(feed); return; }
+  renderTimelineFeedHtml(feed);
   markLoaded(feed);
+}
+function renderTimelineFeedHtml(feed){
+  let html = timelineAllPosts.map(p=> renderPostCard(p)).join('');
+  const hasMore = timelinePostDocs.length>0 && timelinePostDocs[timelinePostDocs.length-1];
+  if(timelineOlderClicks < 5){
+    html += `<div style="text-align:center; padding:16px 0;"><button type="button" class="secondary" id="timelineLoadOlderBtn">⬇️ Daha Eski Gönderileri Gör</button></div>`;
+  } else {
+    html += `<div style="text-align:center; padding:16px 0;">
+      <div class="muted" style="margin-bottom:8px; font-size:12.5px;">Daha eski gönderiler için bir tarih seç:</div>
+      <input type="date" id="timelineJumpDateInput" style="margin-right:6px;" />
+      <button type="button" class="secondary" id="timelineJumpDateBtn">Git</button>
+    </div>`;
+  }
+  feed.innerHTML = html;
+  wirePostCards(feed, renderTimelineTab);
+  const olderBtn = document.getElementById('timelineLoadOlderBtn');
+  if(olderBtn) olderBtn.addEventListener('click', async ()=>{
+    olderBtn.disabled = true;
+    olderBtn.textContent = 'Yükleniyor…';
+    const lastDoc = timelinePostDocs[timelinePostDocs.length-1];
+    try{
+      const snap = await getDocs(query(collection(db,'posts'), orderBy('createdAt','desc'), startAfter(lastDoc), limit(TIMELINE_PAGE_SIZE)));
+      let gotAny = false;
+      snap.forEach(d=>{ gotAny = true; timelinePostDocs.push(d); timelineAllPosts.push({id:d.id, ...d.data()}); });
+      timelineOlderClicks++;
+      if(!gotAny) showToast('Gösterilecek daha eski gönderi kalmadı.');
+      renderTimelineFeedHtml(feed);
+    }catch(e){ alert('Yüklenemedi: '+(e.message||e)); olderBtn.disabled=false; olderBtn.textContent='⬇️ Daha Eski Gönderileri Gör'; }
+  });
+  const jumpBtn = document.getElementById('timelineJumpDateBtn');
+  if(jumpBtn) jumpBtn.addEventListener('click', async ()=>{
+    const dateVal = document.getElementById('timelineJumpDateInput').value;
+    if(!dateVal){ alert('Önce bir tarih seç.'); return; }
+    jumpBtn.disabled = true;
+    try{
+      const cutoff = dateVal + 'T23:59:59.999Z';
+      const snap = await getDocs(query(collection(db,'posts'), orderBy('createdAt','desc'), where('createdAt','<=',cutoff), limit(60)));
+      timelinePostDocs = [];
+      timelineAllPosts = [];
+      timelineOlderClicks = 0;
+      snap.forEach(d=>{ timelinePostDocs.push(d); timelineAllPosts.push({id:d.id, ...d.data()}); });
+      if(!timelineAllPosts.length){ showToast('Bu tarihten önce gönderi bulunamadı.'); jumpBtn.disabled=false; return; }
+      renderTimelineFeedHtml(feed);
+      showToast(`${dateVal} tarihine gidildi.`);
+    }catch(e){ alert('Gidilemedi: '+(e.message||e)); jumpBtn.disabled=false; }
+  });
 }
 function openPostMenu(btn, postId, canEdit, refresh, isPinned){
   const isAdmin = myProfile.role==='admin';
@@ -4553,9 +4685,21 @@ async function openPostModal(postId){
     <div class="rec-comment-body">${userChipHtml(c.uid,18)}<div style="margin-top:2px;">${escapeHtml(c.text)}</div>${renderReactionBar(c.reactions, `postcomment:${postId}|${c.id}`)}</div>
     ${(c.uid===currentUid||myProfile.role==='admin')?`<button class="rec-comment-del" data-del-postcomment="${c.id}">✕</button>`:''}
   </div>`).join('');
+  const batchItemsHtml = (p.type==='book_review_batch' || p.type==='book_added_batch') ? `
+    <div class="rec-comments-label" style="margin-top:2px;">📋 Kronolojik Liste</div>
+    ${(p.items||[]).slice().sort((a,b)=> new Date(a.at)-new Date(b.at)).map(it=>`<div class="rec-comment-row">
+      ${it.bookCover?`<img src="${it.bookCover}" alt="" style="width:32px;height:46px;object-fit:cover;border-radius:4px;" />`:''}
+      <div class="rec-comment-body">
+        <b>${escapeHtml(it.bookTitle||'')}</b>
+        <div class="muted" style="font-size:11px;">${timeAgoLabel(it.at)}</div>
+        ${p.type==='book_review_batch' ? `<div style="color:var(--gold); font-size:12.5px; margin-top:2px;">⭐ ${it.rating}/10${it.reviewText?` — "${escapeHtml(it.reviewText)}"`:''}</div>` : `<div class="muted" style="font-size:12.5px; margin-top:2px;">Kitaplığa eklendi</div>`}
+      </div>
+    </div>`).join('')}
+  ` : '';
   body.innerHTML = `
     <div class="post-card-head">${userChipHtml(p.uid)}<span class="post-card-time">&middot; ${exactTimeLabel(p.createdAt)}</span></div>
     <div class="post-card-body" style="margin-bottom:10px;">${postBodyHtml(p)}</div>
+    ${batchItemsHtml}
     <div class="post-card-footer">
       ${renderReactionBar(p.reactions, `post:${p.id}`)}
       ${(p.uid===currentUid||myProfile.role==='admin')?`<button type="button" class="secondary tiny" id="postModalDelBtn">Kaldır</button>`:''}
@@ -6664,6 +6808,8 @@ async function renderSettingsTab(){
   if(myProfile.role==='admin'){
     const btn = document.getElementById('settingsSeedCoversBtn');
     if(btn) btn.onclick = seedDiscoverCovers;
+    const migrateBtn = document.getElementById('settingsMigrateBatchBtn');
+    if(migrateBtn) migrateBtn.onclick = migrateBatchPostsRetroactively;
     await ensureDiscoverPageSizeLoaded();
     const row = document.getElementById('settingsPageSizeRow');
     const options = [100, 50, 20];
@@ -6964,7 +7110,7 @@ async function openBookDiscoverModal(book){
       const verifySnap = await getDoc(doc(db,'groupBookRatings',bookKey));
       const verifyOk = verifySnap.exists() && verifySnap.data().ratings && verifySnap.data().ratings[currentUid] && verifySnap.data().ratings[currentUid].score===selectedScore;
       if(!verifyOk){ alert('Puan kaydedilmiş gibi göründü ama doğrulanamadı. Lütfen Keşfet sekmesine dönüp tekrar kontrol et; sorun sürerse bana haber ver.'); }
-      await createPost('book_review', { bookTitle: book.title, bookAuthor: book.author||'', bookCover: (coverInfo&&coverInfo.cover)||'', rating: selectedScore, reviewText: comment });
+      await createOrBatchPost('book_review', { bookTitle: book.title, bookAuthor: book.author||'', bookCover: (coverInfo&&coverInfo.cover)||'', rating: selectedScore, reviewText: comment });
       closeModal('bookDiscoverModal');
       showToast('Puanın kaydedildi, Akış\'ta paylaşıldı!');
     }catch(err){ alert('Kaydedilemedi: '+(err.message||err)); }
