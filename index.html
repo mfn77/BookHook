@@ -4583,6 +4583,10 @@ async function openPostModal(postId){
       await addDoc(collection(db,'posts',postId,'comments'), { uid:currentUid, name:myProfile.name, text, createdAt:new Date().toISOString() });
       await updateDoc(doc(db,'posts',postId), { commentCount: (p.commentCount||0)+1 });
       if(p.uid!==currentUid) await notifyUser(p.uid, `${myProfile.name} gönderine yorum yaptı.`, 'social');
+      const priorCommenterUids = new Set(comments.map(c=>c.uid));
+      priorCommenterUids.delete(currentUid);
+      priorCommenterUids.delete(p.uid);
+      await Promise.all([...priorCommenterUids].map(uid=> notifyUser(uid, `${myProfile.name} de yorum yaptığın bir gönderiye yorum yaptı.`, 'social')));
       openPostModal(postId);
     }catch(err){ alert('Yorum gönderilemedi: '+(err.message||err)); }
   });
