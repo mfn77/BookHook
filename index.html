@@ -2161,6 +2161,7 @@ function flashRequiredFields(){
   return anyEmpty;
 }
 function switchTab(id){
+  if(typeof closeReactionDrawer==='function') closeReactionDrawer();
   if(profileGateActive && id!=='profile'){
     flashRequiredFields();
     showToast('Devam etmek için önce soyad, telefon ve adres bilgilerini doldurup kaydetmen gerekiyor.');
@@ -4119,8 +4120,8 @@ function renderDrawerEmojiRow(target, availableWidth){
       <button type="button" class="emoji-pick-btn-toggle" id="drawerCustomSendBtn">✓</button>`;
     const input = document.getElementById('drawerCustomInput');
     input.focus();
-    document.getElementById('drawerCustomSendBtn').addEventListener('click', async (ev)=>{
-      ev.stopPropagation();
+    const sendBtn = document.getElementById('drawerCustomSendBtn');
+    const doSend = async ()=>{
       const val = input.value.trim();
       if(!val) return;
       await setReaction(target, val);
@@ -4129,7 +4130,12 @@ function renderDrawerEmojiRow(target, availableWidth){
       const pill = bar && Array.from(bar.querySelectorAll('.reaction-pill')).find(p=>p.dataset.emoji===val);
       if(pill){ pill.classList.add('reaction-burst'); setTimeout(()=>pill.classList.remove('reaction-burst'), 300); }
       closeReactionDrawer();
+    };
+    sendBtn.addEventListener('click', (ev)=>{ ev.stopPropagation(); doSend(); });
+    input.addEventListener('keydown', (ev)=>{
+      if(ev.key==='Enter'){ ev.preventDefault(); ev.stopPropagation(); doSend(); }
     });
+    input.addEventListener('click', (ev)=> ev.stopPropagation());
   });
 }
 function toggleReactionDrawer(btn, target){
