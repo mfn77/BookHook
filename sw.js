@@ -77,7 +77,7 @@ messaging.onBackgroundMessage((payload) => {
     body,
     icon: './icon-192.png',
     badge: './icon-192.png',
-    data: { linkTab: (payload.data && payload.data.linkTab) || null }
+    data: { linkTab: (payload.data && payload.data.linkTab) || null, postId: (payload.data && payload.data.postId) || null }
   });
 });
 
@@ -85,16 +85,17 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = self.registration.scope; // manifest'teki scope ile birebir aynı, tam URL
   const linkTab = (event.notification.data && event.notification.data.linkTab) || null;
+  const postId = (event.notification.data && event.notification.data.postId) || null;
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.startsWith(targetUrl) && 'focus' in client) {
-          if (linkTab) client.postMessage({ type: 'notifClick', linkTab });
+          if (linkTab) client.postMessage({ type: 'notifClick', linkTab, postId });
           return client.focus();
         }
       }
       if (clients.openWindow) {
-        const openUrl = linkTab ? targetUrl + '?tab=' + encodeURIComponent(linkTab) : targetUrl;
+        const openUrl = linkTab ? targetUrl + '?tab=' + encodeURIComponent(linkTab) + (postId ? '&post=' + encodeURIComponent(postId) : '') : targetUrl;
         return clients.openWindow(openUrl);
       }
     })

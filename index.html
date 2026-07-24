@@ -1751,7 +1751,7 @@ function showToast(msg){
 
 /* ============ BİLDİRİM SİSTEMİ (uygulama içi) ============ */
 const NOTIF_CATEGORY_BY_TAB = { gifts:'gifts', social:'social', recs:'social' };
-async function notifyUser(uid, message, linkTab){
+async function notifyUser(uid, message, linkTab, postId){
   if(!uid) return;
   const category = NOTIF_CATEGORY_BY_TAB[linkTab];
   if(category){
@@ -1770,7 +1770,7 @@ async function notifyUser(uid, message, linkTab){
     for(let i=0;i<message.length;i++) hash = (hash*31 + message.charCodeAt(i)) & 0xffffffff;
     const bucket = Math.floor(Date.now()/10000);
     const docId = `${bucket}_${Math.abs(hash)}`;
-    await setDoc(doc(db,'notifications',uid,'items',docId), { message, linkTab: linkTab||null, read:false, createdAt:new Date().toISOString() });
+    await setDoc(doc(db,'notifications',uid,'items',docId), { message, linkTab: linkTab||null, postId: postId||null, read:false, createdAt:new Date().toISOString() });
   }catch(e){ console.error('Bildirim gönderilemedi (notifyUser):', uid, e); }
 }
 async function notifyAdmins(message, linkTab){
@@ -1875,7 +1875,7 @@ async function renderNotifsTab(){
   box.innerHTML = items.map(it=>{
     const dt = new Date(it.createdAt);
     const dtLabel = isNaN(dt.getTime()) ? '' : `${pad(dt.getDate())}.${pad(dt.getMonth()+1)} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-    const clickable = it.linkTab ? ' style="cursor:pointer;" data-notif-id="'+it.id+'" data-notif-tab="'+it.linkTab+'"' : '';
+    const clickable = it.linkTab ? ' style="cursor:pointer;" data-notif-id="'+it.id+'" data-notif-tab="'+it.linkTab+'"'+(it.postId?' data-notif-post="'+it.postId+'"':'') : '';
     return `<div class="member-row notif-row" style="display:block; ${it.read?'opacity:0.55;':''}"${clickable}>
       <div class="muted mono" style="font-size:10.5px;">${dtLabel}</div>
       <div>${escapeHtml(it.message)}</div>
@@ -1885,9 +1885,11 @@ async function renderNotifsTab(){
     row.addEventListener('click', async ()=>{
       const tab = row.dataset.notifTab;
       const id = row.dataset.notifId;
+      const postId = row.dataset.notifPost;
       try{ await updateDoc(doc(db,'notifications',currentUid,'items',id), {read:true}); }catch(e){}
       closeModal('notifModal');
       if(document.getElementById('tab-'+tab)) switchTab(tab);
+      if(postId) setTimeout(()=> openPostModal(postId), 250);
     });
   });
   markLoaded(box);
@@ -4089,7 +4091,8 @@ function reactionTargetRef(target){
 }
 function renderReactionBar(reactions, target){
   reactions = reactions || {};
-  const activeEmojis = REACTION_EMOJIS.filter(em => (reactions[em]||[]).length>0);
+  const allEmojis = [...REACTION_EMOJIS, ...Object.keys(reactions).filter(em => !REACTION_EMOJIS.includes(em))];
+  const activeEmojis = allEmojis.filter(em => (reactions[em]||[]).length>0);
   const pills = activeEmojis.map(em=>{
     const uids = reactions[em] || [];
     const mine = uids.includes(currentUid);
@@ -4186,7 +4189,8 @@ async function setReaction(target, emoji){
       if(ownerUid && ownerUid !== currentUid){
         const kind = target.split(':')[0];
         const tabHint = kind==='rec' ? 'recs' : 'social';
-        await notifyUser(ownerUid, `${myProfile.name} ${emoji} ile tepki verdi.`, tabHint);
+        const postIdForNotif = (kind==='post' || kind==='postcomment') ? target.split(':')[1].split('|')[0] : null;
+        await notifyUser(ownerUid, `${myProfile.name} ${emoji} ile tepki verdi.`, tabHint, postIdForNotif);
       }
     }
   }catch(e){
@@ -4780,11 +4784,11 @@ async function openPostModal(postId){
     try{
       await addDoc(collection(db,'posts',postId,'comments'), { uid:currentUid, name:myProfile.name, text, createdAt:new Date().toISOString() });
       await updateDoc(doc(db,'posts',postId), { commentCount: (p.commentCount||0)+1 });
-      if(p.uid!==currentUid) await notifyUser(p.uid, `${myProfile.name} gönderine yorum yaptı.`, 'social');
+      if(p.uid!==currentUid) await notifyUser(p.uid, `${myProfile.name} gönderine yorum yaptı.`, 'social', p.id);
       const priorCommenterUids = new Set(comments.map(c=>c.uid));
       priorCommenterUids.delete(currentUid);
       priorCommenterUids.delete(p.uid);
-      await Promise.all([...priorCommenterUids].map(uid=> notifyUser(uid, `${myProfile.name} de yorum yaptığın bir gönderiye yorum yaptı.`, 'social')));
+      await Promise.all([...priorCommenterUids].map(uid=> notifyUser(uid, `${myProfile.name} de yorum yaptığın bir gönderiye yorum yaptı.`, 'social', p.id)));
       openPostModal(postId);
     }catch(err){ alert('Yorum gönderilemedi: '+(err.message||err)); }
   });
@@ -7416,10 +7420,13 @@ onAuthStateChanged(auth, async (user)=>{
   buildNav();
   setupCardInfoButtons();
 
-  // Bildirime tıklanarak açılmışsa (?tab=xxx), ilgili sekmeye geç ve URL'yi temizle.
-  const notifTabParam = new URLSearchParams(location.search).get('tab');
+  // Bildirime tıklanarak açılmışsa (?tab=xxx&post=yyy), ilgili sekmeye/gönderiye geç ve URL'yi temizle.
+  const notifUrlParams = new URLSearchParams(location.search);
+  const notifTabParam = notifUrlParams.get('tab');
+  const notifPostParam = notifUrlParams.get('post');
   if(notifTabParam && document.getElementById('tab-'+notifTabParam)){
     switchTab(notifTabParam);
+    if(notifPostParam) setTimeout(()=> openPostModal(notifPostParam), 250);
     history.replaceState(null, '', location.pathname);
   }
 
@@ -7449,6 +7456,7 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.addEventListener('message', (e)=>{
       if(e.data && e.data.type==='notifClick' && e.data.linkTab && document.getElementById('tab-'+e.data.linkTab)){
         switchTab(e.data.linkTab);
+        if(e.data.postId) setTimeout(()=> openPostModal(e.data.postId), 250);
       }
     });
   }
