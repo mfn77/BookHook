@@ -4343,7 +4343,7 @@ function timeAgoLabel(iso){
   const hrs = Math.floor(mins/60);
   if(hrs < 24) return `${hrs} sa önce`;
   const days = Math.floor(hrs/24);
-  if(days < 7) return `${days} gün önce`;
+  if(days < 10) return `${days} gün önce`;
   const d = new Date(iso);
   return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
 }
@@ -4731,7 +4731,7 @@ async function openPostModal(postId){
     comments.sort((a,b)=> new Date(a.createdAt) - new Date(b.createdAt));
   }catch(e){}
   const commentsHtml = comments.map(c=>`<div class="rec-comment-row">
-    <div class="rec-comment-body">${userChipHtml(c.uid,18)}<div style="margin-top:2px;">${escapeHtml(c.text)}</div>${renderReactionBar(c.reactions, `postcomment:${postId}|${c.id}`)}</div>
+    <div class="rec-comment-body">${userChipHtml(c.uid,18)}<span class="muted" style="font-size:11px; margin-left:4px;">· ${timeAgoLabel(c.createdAt)}</span><div style="margin-top:2px;">${escapeHtml(c.text)}</div>${renderReactionBar(c.reactions, `postcomment:${postId}|${c.id}`)}</div>
     ${(c.uid===currentUid||myProfile.role==='admin')?`<button class="rec-comment-del" data-del-postcomment="${c.id}">✕</button>`:''}
   </div>`).join('');
   const batchItemsHtml = (p.type==='book_review_batch' || p.type==='book_added_batch') ? `
