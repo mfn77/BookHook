@@ -185,7 +185,9 @@
   .sidebar-tabs.tabs button .tab-icon{ font-size:18px; line-height:1; }
   .sidebar-tabs.tabs button.active{ background:var(--gold); color:#fff; }
   .sidebar-tabs.tabs button.active .tab-icon{ filter:brightness(0) invert(1); }
-  .sidebar-tabs.tabs button:hover:not(.active){ background:var(--paper-2); color:var(--ink); }
+  @media (hover: hover){
+    .sidebar-tabs.tabs button:hover:not(.active){ background:var(--paper-2); color:var(--ink); }
+  }
   .card{ position:relative; max-width:100%; overflow-x:hidden; }
   .card h2{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .card-info-btn{
@@ -2133,7 +2135,7 @@ function buildNav(){
   const nav = document.getElementById('tabs');
   nav.innerHTML = tabs.map((t,i)=>`<button data-tab="${t.id}" class="${i===0?'active':''}"><span class="tab-icon mono-icon">${t.icon}</span><span>${t.label}</span></button>`).join('');
   nav.querySelectorAll('button').forEach(btn=>{
-    btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
+    btn.addEventListener('click', ()=>{ switchTab(btn.dataset.tab); btn.blur(); });
   });
   buildHamburgerMenu();
   switchTab(profileGateActive ? 'profile' : tabs[0].id);
