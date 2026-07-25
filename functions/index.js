@@ -41,6 +41,7 @@ exports.sendPushOnNotification = onDocumentCreated(
         body: data.message || "",
         linkTab: data.linkTab || "",
         postId: data.postId || "",
+        notifId: event.params.itemId || "",
       },
       tokens,
     };
