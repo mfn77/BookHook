@@ -50,35 +50,29 @@ self.addEventListener("fetch", (e) => {
   );
 });
 
-/* ============ FIREBASE CLOUD MESSAGING (arka plan push bildirimleri) ============
-   Önceden ayrı bir firebase-messaging-sw.js dosyasındaydı. Aynı klasörde iki service
-   worker (bu dosya + firebase-messaging-sw.js) aynı kapsamda (scope) kayıtlı olduğu
-   için, telefon kapalıyken gelen push bazen push dinleyicisi OLMAYAN bu dosyaya
-   yönlendirilip sessizce kayboluyordu. Artık push'u da BURADA (tek dosyada) işliyoruz,
-   böylece çakışma tamamen ortadan kalkıyor. */
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
-
-firebase.initializeApp({
-  apiKey: "AIzaSyDpRov8Qs7rPQ7lILyhs7DuRHdQpTJZWJ4",
-  authDomain: "bookhook-77.firebaseapp.com",
-  projectId: "bookhook-77",
-  storageBucket: "bookhook-77.firebasestorage.app",
-  messagingSenderId: "611511209042",
-  appId: "1:611511209042:web:3fa319fb5ee6ca5daba38b"
-});
-
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  const title = (payload.data && payload.data.title) || 'BookHook';
-  const body = (payload.data && payload.data.body) || '';
-  self.registration.showNotification(title, {
-    body,
-    icon: './icon-192.png',
-    badge: './icon-192.png',
-    data: { linkTab: (payload.data && payload.data.linkTab) || null, postId: (payload.data && payload.data.postId) || null }
-  });
+/* ============ PUSH BİLDİRİMLERİ ============
+   Önceden Firebase'in messaging.onBackgroundMessage() sarmalayıcısı kullanılıyordu.
+   Chrome, her push mesajının event.waitUntil() içinde ZAMANINDA bir bildirime
+   dönüştüğünü doğrulayabilmek istiyor; bu doğrulama başarısız olursa (veya
+   gecikirse) kendi "bu site arka planda güncellendi" yedek bildirimini gösteriyor.
+   Firebase'in SDK'sı bu garantiyi her zaman güvenilir şekilde sağlayamadığı için,
+   push olayını burada doğrudan ve manuel olarak işliyoruz — hiçbir ekstra kütüphane
+   veya gecikme olmadan, doğrudan event.waitUntil() ile sarmalanmış tek bir
+   showNotification() çağrısı. */
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try{ payload = event.data ? event.data.json() : {}; }catch(e){}
+  const data = (payload && payload.data) || payload || {};
+  const title = data.title || 'BookHook';
+  const body = data.body || '';
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: './icon-192.png',
+      badge: './icon-192.png',
+      data: { linkTab: data.linkTab || null, postId: data.postId || null }
+    })
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {
