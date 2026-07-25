@@ -142,7 +142,7 @@
   .whoami{ display:flex; align-items:center; gap:7px; font-family:'Inter', sans-serif; font-size:12px; color:var(--ink-70); flex:0 0 auto; min-width:0; position:relative; font-weight:600; text-align:left; margin-left:auto; }
   .header-pill{
     display:inline-flex; align-items:center; gap:6px; height:38px; padding:0 14px;
-    background:var(--paper-2); border:1px solid var(--line); border-radius:999px;
+    background:var(--paper-2); border:1px solid var(--line); border-radius:16px;
     color:var(--ink); font-weight:600; font-size:13px; cursor:default; min-width:0;
   }
   .header-pill.icon-pill{ padding:0; width:46px; flex:0 0 auto; justify-content:center; font-size:16px; cursor:pointer; position:relative; }
@@ -238,11 +238,11 @@
     100%{ transform:scale(1) rotate(0deg); }
   }
   .stamp-btn.pop-read::after{
-    content:''; position:absolute; inset:-0.2em; border-radius:999px; border:0.16em solid var(--forest);
+    content:''; position:absolute; inset:-0.2em; border-radius:16px; border:0.16em solid var(--forest);
     animation: ringExpand 0.55s ease-out forwards; pointer-events:none;
   }
   .stamp-btn.pop-skip::after{
-    content:''; position:absolute; inset:-0.2em; border-radius:999px; border:0.16em solid var(--cloth);
+    content:''; position:absolute; inset:-0.2em; border-radius:16px; border:0.16em solid var(--cloth);
     animation: ringExpand 0.5s ease-out forwards; pointer-events:none;
   }
   @keyframes ringExpand{
@@ -340,7 +340,7 @@
   .member-meta{font-family:'Roboto Mono', monospace; font-size:10.5px; color:var(--ink-70); margin-top:2px;}
   .stamp-btns{display:flex; gap:8px; flex:0 0 auto;}
   .stamp-btn{
-    width:64px; height:50px; border-radius:999px; border:2px solid var(--line); background:var(--card);
+    width:64px; height:50px; border-radius:16px; border:2px solid var(--line); background:var(--card);
     display:flex; align-items:center; justify-content:center; font-size:19px; cursor:pointer;
     transition:transform .15s var(--ease), background-color .15s var(--ease), border-color .15s var(--ease), box-shadow .15s var(--ease);
     color:var(--ink-70); position:relative;
