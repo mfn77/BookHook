@@ -7451,7 +7451,21 @@ onAuthStateChanged(auth, async (user)=>{
 
 /* ============ SERVICE WORKER ============ */
 if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); });
+  window.addEventListener('load', async ()=>{
+    try{
+      // Eskiden ayrı bir firebase-messaging-sw.js dosyası da kayıtlıydı; şimdi her şey sw.js
+      // içinde. O eski kayıt hâlâ cihazda kalmışsa (asla otomatik silinmiyor), her push'ta
+      // Chrome'un çakışma/güncelleme algılamasına sebep olabiliyor. Onu burada temizliyoruz.
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for(const reg of regs){
+        const scriptUrl = (reg.active && reg.active.scriptURL) || (reg.installing && reg.installing.scriptURL) || (reg.waiting && reg.waiting.scriptURL) || '';
+        if(scriptUrl && !scriptUrl.endsWith('/sw.js')){
+          await reg.unregister();
+        }
+      }
+    }catch(e){}
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
   if('serviceWorker' in navigator){
     navigator.serviceWorker.addEventListener('message', (e)=>{
       if(e.data && e.data.type==='notifClick' && e.data.linkTab && document.getElementById('tab-'+e.data.linkTab)){
