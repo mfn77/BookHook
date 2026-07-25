@@ -128,29 +128,33 @@
   .whoami{ display:flex; align-items:center; gap:7px; font-family:'Inter', sans-serif; font-size:12px; color:var(--ink-70); flex:0 0 auto; min-width:0; position:relative; font-weight:600; text-align:left; margin-left:auto; }
   .header-pill{
     display:inline-flex; align-items:center; gap:6px; height:38px; padding:0 14px;
-    background:var(--paper-2); border:1px solid var(--line); border-radius:999px;
+    background:none; border:1px solid var(--line); border-radius:999px;
     color:var(--ink); font-weight:600; font-size:13px; cursor:default; min-width:0;
+    transition: background-color .12s var(--ease);
   }
-  .header-pill.icon-pill{ padding:0; width:38px; flex:0 0 auto; justify-content:center; font-size:16px; cursor:pointer; position:relative; }
+  .header-pill.icon-pill{ padding:0; width:38px; flex:0 0 auto; justify-content:center; font-size:16px; cursor:pointer; position:relative; border:none; }
   #whoamiClickable{ min-width:0; overflow:hidden; }
   #whoamiName{ max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle; }
-  #whoamiClickable:hover, .icon-pill:hover{ background:var(--line); }
-  #logoutBtn.header-pill{ cursor:pointer; background:none; border:1.5px solid var(--cloth); color:var(--cloth-dark); }
+  @media (hover: hover){
+    #whoamiClickable:hover, .icon-pill:hover{ background:rgba(0,0,0,0.06); }
+    html[data-theme="dark"] #whoamiClickable:hover, html[data-theme="dark"] .icon-pill:hover{ background:rgba(255,255,255,0.08); }
+  }
+  #logoutBtn.header-pill{ cursor:pointer; background:none; border:1px solid var(--cloth); color:var(--cloth-dark); }
   #logoutBtn.header-pill:hover{ background:rgba(224,27,36,0.08); }
   .whoami .rolechip{display:inline-block; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; letter-spacing:.03em; border:none; color:var(--gold); background:rgba(53,132,228,0.14);}
   .mono-icon{ filter:grayscale(1) brightness(0.55) contrast(1.4); display:inline-block; }
   html[data-theme="dark"] .mono-icon{ filter:grayscale(1) brightness(1.8) contrast(1.1); }
   #hamburgerMenu{
-    position:absolute; top:calc(100% + 8px); right:0; background:rgba(var(--card-bg),0.94);
-    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-    border:1px solid var(--line); border-radius:var(--radius-md); box-shadow:var(--shadow-lg);
-    z-index:60; min-width:210px; overflow:hidden; text-align:left;
+    position:absolute; top:calc(100% + 8px); right:0; background:var(--card);
+    border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-lg);
+    z-index:60; min-width:210px; overflow:hidden; text-align:left; padding:6px;
   }
   #hamburgerMenu button{
-    display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:12px 16px; border:none; background:none;
-    font-family:'Inter', sans-serif; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer;
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:10px 12px; border:none; background:none;
+    font-family:'Inter', sans-serif; font-size:14px; font-weight:500; color:var(--ink); cursor:pointer; border-radius:8px;
   }
-  #hamburgerMenu button:hover{background:rgba(53,132,228,0.10);}
+  #hamburgerMenu button:hover{background:rgba(0,0,0,0.06);}
+  html[data-theme="dark"] #hamburgerMenu button:hover{background:rgba(255,255,255,0.08);}
   .theme-switch{ position:relative; display:inline-block; width:40px; height:22px; flex:0 0 auto; }
   .theme-switch input{ opacity:0; width:0; height:0; }
   .theme-switch .slider{ position:absolute; cursor:pointer; inset:0; background:var(--line); border-radius:22px; transition:.2s var(--ease); }
@@ -416,10 +420,15 @@
   .discover-cat-title{ font-family:'Roboto',sans-serif; font-weight:700; font-size:16px; margin-bottom:10px; }
   .discover-filters{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px; }
   .discover-filter-chip{
-    border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-family:'Inter',sans-serif;
-    font-weight:600; font-size:13px; padding:7px 14px; border-radius:16px; cursor:pointer; transition:background .15s, color .15s, border-color .15s;
+    border:1px solid var(--line); background:var(--card); color:var(--ink-70); font-family:'Inter',sans-serif;
+    font-weight:600; font-size:13px; padding:7px 14px; border-radius:10px; cursor:pointer; transition:background .12s, color .12s, border-color .12s;
   }
-  .discover-filter-chip.active{ background:var(--cloth); border-color:var(--cloth); color:#fff; }
+  .discover-filter-chip.active{ background:rgba(53,132,228,0.13); border-color:transparent; color:var(--gold-dark); }
+  html[data-theme="dark"] .discover-filter-chip.active{ background:rgba(120,174,237,0.18); color:var(--gold); }
+  @media (hover: hover){
+    .discover-filter-chip:hover:not(.active){ background:rgba(0,0,0,0.04); }
+    html[data-theme="dark"] .discover-filter-chip:hover:not(.active){ background:rgba(255,255,255,0.06); }
+  }
   .discover-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(84px,1fr)); gap:16px 10px; }
   .discover-book-card{ cursor:pointer; }
   .discover-book-cover-wrap{ width:100%; aspect-ratio:2/3; border-radius:10px; overflow:hidden; box-shadow:var(--shadow); background:var(--paper-2); position:relative; }
