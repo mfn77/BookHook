@@ -20,7 +20,8 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 - Members mark whether they read on a given day ("Read" / "Did not read"), with the logical day boundary rolling over at 06:00 local time.
 - Admins can mark on behalf of any member and edit past days.
 - A weekly report table shows every member's status per day, with per-week penalty/pass/clean summaries.
-- Streak tracking and a tiered badge system (3/5/7/14/21/30 consecutive days), with a badge history table.
+- Streak tracking and a tiered badge system (3/5/7/14/21/30 consecutive days), with a badge history table that can be recomputed from scratch by an admin at any time (fixes any drift from manual test edits).
+- Reading check-in posts are automatically merged: if the same member has several within one hour, they collapse into a single post ("X kitap puanlaması yaptı", etc.) that expands into a chronological list on click, instead of flooding the feed.
 
 ### Lottery and Gift Books
 
@@ -30,17 +31,23 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 
 ### Social (Feed and Discover)
 
-- A shared feed automatically posts reading check-ins, badges earned or lost, gift books won or received, new member sign-ups, and book ratings/reviews.
+- A shared feed automatically posts reading check-ins, badges earned or lost, gift books won or received, new member sign-ups, book ratings/reviews, and library additions.
 - Members can also compose their own text or image posts.
 - Posts and comments support emoji reactions, including a custom emoji picker.
-- A Discover tab surfaces popular books by genre (via Open Library), highlights books the group has rated, and lets members submit a 1-10 rating and review, which is also shared to the feed.
+- The feed loads the most recent posts first, with a "load older posts" control (up to five older batches) that switches to a date-jump picker for anything further back.
+- Commenting on a post notifies not just its owner but everyone else already in that comment thread; comments show a relative timestamp that steps from minutes to hours to days, falling back to a full date after 9 days.
+- A Discover tab surfaces popular books by genre (via Open Library, with an internal English/original-title lookup to improve match rates on Turkish-titled catalog entries), highlights books the group has rated, and lets members submit a 1-10 rating and review, which is also shared to the feed.
+- Admins can tap a Discover book's cover to rescan for a better match, search manually, or paste a direct image URL, correcting bad covers on the spot.
+- A "Add to My Library" button is available anywhere a book's cover can be tapped (Discover, gifted-books history, another member's reading history).
 
 ### Other
 
+- New members must complete their surname, phone, and address before using the rest of the app; the profile screen is enforced until saved. Existing members with incomplete profiles from before this was added receive a twice-daily reminder push until they fill it in.
 - Personal reading history ("library") per member, viewable from any profile.
 - Tapping a book cover or title anywhere in the app shows author, publisher, genre, and rating information (Open Library, with Google Books as a fallback).
 - Personal and group book recommendations with comments and reactions.
-- Real-time push notifications (Firebase Cloud Messaging), plus scheduled reminders sent twice daily to members who have not yet checked in.
+- A Settings screen (available to both members and admins) for changing your password and per-category notification preferences (gifts, social); admins additionally see catalog maintenance tools there (cover scanning, page size, data cleanup, badge recomputation).
+- Real-time push notifications (Firebase Cloud Messaging), plus scheduled reminders sent twice daily to members who have not yet checked in. Tapping a comment or reaction notification opens the specific post directly, even from a closed app.
 - Installable as a PWA on mobile and desktop, with offline asset caching via a service worker.
 
 ## Tech Stack
@@ -63,7 +70,10 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 ├── favicon.png
 ├── logo-mark.png            In-app logo (sign-in screen and sidebar), transparent background
 ├── firestore.rules          Firestore security rules
-└── cloud-function-debug/
+├── firebase.json            Firebase CLI config (points to the functions/ source folder)
+├── .firebaserc              Firebase CLI project alias
+└── functions/
+    ├── package.json         Cloud Functions dependencies (firebase-admin, firebase-functions)
     └── index.js             Cloud Functions source (push notifications and scheduled reminders)
 ```
 
@@ -84,16 +94,22 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 
 ### Cloud Functions
 
-Deploy the contents of `cloud-function-debug/index.js` to your Firebase project:
+From the repository root (where `firebase.json` and `.firebaserc` live), install dependencies and deploy:
 
 ```
+cd functions
+npm install
+cd ..
 firebase deploy --only functions
 ```
 
-This provisions three functions:
+This provisions four functions:
 
 - `sendPushOnNotification` - sends a push notification whenever an in-app notification document is created.
-- `readingReminderNoon` / `readingReminderNight` - scheduled functions that run daily at 14:00 and 22:00 (Europe/Istanbul time) and notify members who have not yet checked in for the day. These require Cloud Scheduler, which is only available on the Blaze plan.
+- `readingReminderNoon` / `readingReminderNight` - scheduled functions that run daily at 14:00 and 22:00 (Europe/Istanbul time) and notify members who have not yet checked in for the day.
+- `profileCompletionReminderMorning` / `profileCompletionReminderEvening` - scheduled functions that run daily at 10:00 and 20:00 (Europe/Istanbul time) and notify any member with an incomplete profile (missing surname, phone, or address) until they fill it in. This exists only for members who joined before profile completion became mandatory at sign-up.
+
+All scheduled functions require Cloud Scheduler, which is only available on the Blaze plan.
 
 ### Google Books API Key (optional)
 
@@ -115,6 +131,7 @@ All configuration lives directly in `index.html` as plain constants near the top
 1. Push all files to the `main` branch of your GitHub repository.
 2. In the repository settings, under **Pages**, set the source to the `main` branch.
 3. The app will be published at `https://<your-username>.github.io/<your-repo>/`.
+4. Optionally, add a custom domain under **Pages → Custom domain** (four `A` records to GitHub's IPs, plus a `CNAME` record for `www`), and add that domain to **Firebase Console → Authentication → Settings → Authorized domains** — sign-in silently fails on any domain not listed there.
 
 ### First Admin Account
 
