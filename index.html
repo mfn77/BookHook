@@ -109,7 +109,7 @@
     .sidebar-tabs.tabs{ top:calc(54px + env(safe-area-inset-top, 0px)); }
     #pinnedPostBar{ top:62px; }
     .header-pill{ padding:0 9px; font-size:11.5px; height:34px; }
-    .header-pill.icon-pill{ width:34px; }
+    .header-pill.icon-pill{ width:40px; }
     .whoami{ gap:5px; }
     .whoami .rolechip{ display:none; }
     #whoamiName{ max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle; }
@@ -143,7 +143,7 @@
     background:var(--paper-2); border:1px solid var(--line); border-radius:999px;
     color:var(--ink); font-weight:600; font-size:13px; cursor:default; min-width:0;
   }
-  .header-pill.icon-pill{ padding:0; width:38px; flex:0 0 auto; justify-content:center; font-size:16px; cursor:pointer; position:relative; }
+  .header-pill.icon-pill{ padding:0; width:46px; flex:0 0 auto; justify-content:center; font-size:16px; cursor:pointer; position:relative; }
   #whoamiClickable{ min-width:0; overflow:hidden; }
   #whoamiName{ max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle; }
   #whoamiClickable:hover, .icon-pill:hover{ background:var(--line); }
@@ -163,6 +163,7 @@
     font-family:'Inter', sans-serif; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer;
   }
   #hamburgerMenu button:hover{background:rgba(33,144,164,0.10);}
+  .hb-menu-icon{ display:inline-flex; align-items:center; justify-content:center; width:20px; flex:0 0 auto; }
   .theme-switch{ position:relative; display:inline-block; width:40px; height:22px; flex:0 0 auto; }
   .theme-switch input{ opacity:0; width:0; height:0; }
   .theme-switch .slider{ position:absolute; cursor:pointer; inset:0; background:var(--line); border-radius:22px; transition:.2s var(--ease); }
@@ -235,11 +236,11 @@
     100%{ transform:scale(1) rotate(0deg); }
   }
   .stamp-btn.pop-read::after{
-    content:''; position:absolute; inset:-0.2em; border-radius:50%; border:0.16em solid var(--forest);
+    content:''; position:absolute; inset:-0.2em; border-radius:999px; border:0.16em solid var(--forest);
     animation: ringExpand 0.55s ease-out forwards; pointer-events:none;
   }
   .stamp-btn.pop-skip::after{
-    content:''; position:absolute; inset:-0.2em; border-radius:50%; border:0.16em solid var(--cloth);
+    content:''; position:absolute; inset:-0.2em; border-radius:999px; border:0.16em solid var(--cloth);
     animation: ringExpand 0.5s ease-out forwards; pointer-events:none;
   }
   @keyframes ringExpand{
@@ -337,7 +338,7 @@
   .member-meta{font-family:'Roboto Mono', monospace; font-size:10.5px; color:var(--ink-70); margin-top:2px;}
   .stamp-btns{display:flex; gap:8px; flex:0 0 auto;}
   .stamp-btn{
-    width:50px; height:50px; border-radius:50%; border:2px solid var(--line); background:var(--card);
+    width:64px; height:50px; border-radius:999px; border:2px solid var(--line); background:var(--card);
     display:flex; align-items:center; justify-content:center; font-size:19px; cursor:pointer;
     transition:transform .15s var(--ease), background-color .15s var(--ease), border-color .15s var(--ease), box-shadow .15s var(--ease);
     color:var(--ink-70); position:relative;
@@ -345,7 +346,7 @@
   .stamp-btn:active{transform:scale(0.92);}
   .stamp-btn.read.selected{ border-color:var(--forest); background:var(--forest); color:#fff; transform:scale(1.06); box-shadow:var(--shadow);}
   .stamp-btn.skip.selected{ border-color:var(--cloth); background:var(--cloth); color:#fff; transform:scale(1.06); box-shadow:var(--shadow);}
-  .stamp-btn.big{width:76px; height:76px; font-size:28px;}
+  .stamp-btn.big{width:96px; height:76px; font-size:28px;}
   .chip{ display:inline-block; font-family:'Inter', sans-serif; font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; border:none; color:var(--ink-70); background:var(--paper-2); margin-top:3px;}
   .chip.warn{color:var(--rust-dark); background:rgba(230,97,0,0.14);}
   .chip.danger{color:var(--cloth-dark); background:rgba(224,27,36,0.12); font-weight:700;}
@@ -413,7 +414,8 @@
   #discoverFabPrev.visible, #discoverFabNext.visible{ opacity:1; pointer-events:auto; }
   .compose-textarea{ width:100%; min-height:90px; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:14.5px; background:var(--card); color:var(--ink); resize:vertical; }
   .post-card{
-    background:var(--card); border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer;
+    background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3);
+    border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer;
   }
   .post-card-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
   .post-card-time{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
@@ -2061,7 +2063,7 @@ function buildHamburgerMenu(){
   const menu = document.getElementById('hamburgerMenu');
   const isDark = document.documentElement.getAttribute('data-theme')==='dark';
   const isAuto = getAutoThemeEnabled();
-  menu.innerHTML = items.map(it=>`<button data-tab="${it.id}"><span class="mono-icon">${it.icon}</span>${it.label}</button>`).join('')
+  menu.innerHTML = items.map(it=>`<button data-tab="${it.id}"><span class="hb-menu-icon mono-icon">${it.icon}</span>${it.label}</button>`).join('')
     + `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--line); ${isAuto?'opacity:0.5;':''}">
         <span style="font-family:'Roboto',sans-serif; font-size:14px; color:var(--ink);">🌙 Karanlık Tema</span>
         <label class="theme-switch">
@@ -2076,8 +2078,8 @@ function buildHamburgerMenu(){
           <span class="slider"></span>
         </label>
       </div>
-      <button data-guide="1"><svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>Kullanım Rehberi</button>
-      <button data-logout="1" style="border-top:1px solid var(--line); color:var(--cloth-dark);"><svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>Çıkış</button>`;
+      <button data-guide="1"><span class="hb-menu-icon"><svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></span>Kullanım Rehberi</button>
+      <button data-logout="1" style="border-top:1px solid var(--line); color:var(--cloth-dark);"><span class="hb-menu-icon"><svg class="svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg></span>Çıkış</button>`;
   menu.querySelector('[data-guide]').addEventListener('click', ()=>{
     menu.style.display='none';
     document.getElementById('guideModal').style.display='flex';
