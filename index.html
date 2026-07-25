@@ -487,10 +487,11 @@
   .row > *{flex:1;}
   .receipt{ background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius-md); padding:16px; margin-bottom:14px; position:relative;}
   .receipt .rweek{ font-family:'Roboto Mono', monospace; font-size:11px; color:var(--ink-70); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;}
-  .pair-line{ display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); font-size:14.5px;}
+  .pair-line{ display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); font-size:14.5px;}
   .pair-line:last-child{border-bottom:none;}
-  .pair-line .giver{font-weight:700; color:var(--cloth-dark);}
-  .pair-line .receiver{font-weight:700; color:var(--forest-dark);}
+  .pair-line .giver{font-weight:700; color:var(--cloth-dark); display:flex; justify-content:flex-start; align-items:center; min-width:0; overflow-wrap:anywhere;}
+  .pair-line .receiver{font-weight:700; color:var(--forest-dark); display:flex; justify-content:flex-end; align-items:center; min-width:0; overflow-wrap:anywhere; text-align:right;}
+  .pair-line .arrow{ justify-self:center; }
   .pair-line .arrow{color:var(--gold); font-size:16px;}
   .empty-note{font-family:'Roboto Mono', monospace; font-size:12px; color:var(--ink-70); font-style:normal;}
   .worm-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line);}
@@ -2788,7 +2789,7 @@ async function renderAdminDraws(){
       body = d.pairs.map(p=>{
         const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
         const receiverHtml = `<span class="receiver">${p.receiverUid ? userChipHtml(p.receiverUid) : escapeHtml(p.receiverName)}</span>`;
-        if(!p.receiverUid) return `<div class="pair-line">${giverHtml} — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
+        if(!p.receiverUid) return `<div class="pair-line">${giverHtml}<span class="arrow">—</span><span class="empty-note" style="text-align:right;">uygun alıcı bulunamadı</span></div>`;
         return `<div class="pair-line">${giverHtml}<span class="arrow">🎁→</span>${receiverHtml}</div>`;
       }).join('');
     }
@@ -2888,7 +2889,7 @@ document.getElementById('manualDrawBtn').addEventListener('click', async ()=>{
     body = `<div class="empty-note">Bu tabloya göre cezalı çıkan yok.</div>`;
   } else {
     body = pairs.map(p=>{
-      if(!p.receiverUid && !p.receiverName) return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span> — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
+      if(!p.receiverUid && !p.receiverName) return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow">—</span><span class="empty-note" style="text-align:right;">uygun alıcı bulunamadı</span></div>`;
       return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow">🎁→</span><span class="receiver">${escapeHtml(p.receiverName)}</span>'e kitap hediye edecek</div>`;
     }).join('');
   }
@@ -3224,7 +3225,7 @@ async function renderMemberLastWeek(){
     body = d.pairs.map(p=>{
       const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
       const receiverHtml = `<span class="receiver">${p.receiverUid ? userChipHtml(p.receiverUid) : escapeHtml(p.receiverName)}</span>`;
-      if(!p.receiverUid) return `<div class="pair-line">${giverHtml} — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
+      if(!p.receiverUid) return `<div class="pair-line">${giverHtml}<span class="arrow">—</span><span class="empty-note" style="text-align:right;">uygun alıcı bulunamadı</span></div>`;
       return `<div class="pair-line">${giverHtml}<span class="arrow">🎁→</span>${receiverHtml}</div>`;
     }).join('');
   }
@@ -3261,7 +3262,7 @@ async function renderDrawHistoryCard(prefix){
     body = d.pairs.map(p=>{
       const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
       const receiverHtml = `<span class="receiver">${p.receiverUid ? userChipHtml(p.receiverUid) : escapeHtml(p.receiverName)}</span>`;
-      if(!p.receiverUid) return `<div class="pair-line">${giverHtml} — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
+      if(!p.receiverUid) return `<div class="pair-line">${giverHtml}<span class="arrow">—</span><span class="empty-note" style="text-align:right;">uygun alıcı bulunamadı</span></div>`;
       return `<div class="pair-line">${giverHtml}<span class="arrow">🎁→</span>${receiverHtml}</div>`;
     }).join('');
   }
