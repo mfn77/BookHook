@@ -87,12 +87,12 @@
   .content-col{ margin-left:78px; }
   .content-col.expanded{ margin-left:0; }
   .sidebar-collapse-btn{
-    margin-top:auto; flex:0 0 auto; width:34px; height:34px; border-radius:50%; border:1.5px solid var(--line);
+    margin-top:auto; flex:0 0 auto; width:34px; height:34px; border-radius:10px; border:1.5px solid var(--line);
     background:var(--card); color:var(--ink-70); font-size:13px; cursor:pointer;
   }
   .sidebar-expand-fab{
     position:fixed; left:16px; bottom:18px; z-index:150; display:none;
-    width:40px; height:40px; border-radius:50%; background:var(--gold); color:#fff; font-size:16px; border:none;
+    width:40px; height:40px; border-radius:12px; background:var(--gold); color:#fff; font-size:16px; border:none;
     box-shadow:0 6px 18px rgba(0,0,0,0.28); cursor:pointer; align-items:center; justify-content:center; line-height:1;
     transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s; opacity:1;
   }
@@ -194,7 +194,7 @@
   .card{ position:relative; max-width:100%; overflow-x:hidden; }
   .card h2{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .card-info-btn{
-    width:22px; height:22px; border-radius:50%; border:1.5px solid var(--ink-70); background:none;
+    width:22px; height:22px; border-radius:6px; border:1.5px solid var(--ink-70); background:none;
     color:var(--ink-70); font-family:'Inter',serif; font-style:italic; font-weight:700; font-size:11.5px;
     display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto;
   }
@@ -273,12 +273,12 @@
   .bh-author{ font-size:10px; color:var(--ink-70); line-height:1.25; }
   .bh-title{ font-size:11.5px; font-weight:700; line-height:1.25; margin-top:1px; }
   .bh-delete{
-    position:absolute; top:-6px; right:6px; width:20px; height:20px; border-radius:50%; border:none;
+    position:absolute; top:-6px; right:6px; width:20px; height:20px; border-radius:6px; border:none;
     background:rgba(0,0,0,0.62); color:#fff; font-size:11px; cursor:pointer; line-height:1;
   }
   .card-add-btn{
     display:flex; align-items:center; justify-content:center; width:38px; height:38px;
-    border-radius:50%; border:none; background:var(--gold); color:#fff; font-size:20px;
+    border-radius:10px; border:none; background:var(--gold); color:#fff; font-size:20px;
     font-weight:700; cursor:pointer; margin:14px auto 0; box-shadow:var(--shadow);
     transition: transform .15s var(--ease);
   }
@@ -314,7 +314,7 @@
   #reactionDrawer .emoji-pick-btn-toggle{ font-size:15px; padding:4px 6px; color:var(--ink-70); border:none; background:none; cursor:pointer; }
   #reactionDrawer .drawer-custom-input{ width:52px; font-size:20px; text-align:center; padding:4px; border:1.5px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); }
   .reaction-add-btn.expanded{ transform:scale(1.22); background:var(--gold); color:#fff; border-color:var(--gold); }
-  .reaction-add-btn{ border:1.5px solid var(--line); background:var(--card); border-radius:50%; width:26px; height:26px; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; line-height:1; }
+  .reaction-add-btn{ border:1.5px solid var(--line); background:var(--card); border-radius:8px; width:26px; height:26px; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; line-height:1; }
   .emoji-pick-btn{ font-size:26px; border:none; background:none; cursor:pointer; padding:6px; border-radius:10px; }
   .emoji-pick-btn:hover{ background:rgba(33,144,164,0.10); }
   main{padding:16px 14px 40px; max-width:1200px; width:100%; margin:0 auto; position:relative; overflow-x:hidden;}
@@ -361,7 +361,7 @@
   table.weekgrid th, table.weekgrid td{ border:none; border-bottom:1px solid var(--line); padding:10px 6px; text-align:center;}
   table.weekgrid th{ background:var(--paper-2); font-weight:600; color:var(--ink-70); font-size:11px; text-transform:uppercase; letter-spacing:.02em;}
   table.weekgrid td.name-cell{ text-align:left; font-family:'Inter', sans-serif; font-weight:600; font-size:13.5px; white-space:nowrap;}
-  .stamp-mini{display:inline-block; width:22px; height:22px; border-radius:50%; line-height:22px; font-size:12px; cursor:default;}
+  .stamp-mini{display:inline-block; width:22px; height:22px; border-radius:6px; line-height:22px; font-size:12px; cursor:default;}
   .stamp-mini.read{background:var(--forest); color:#fff;}
   .stamp-mini.skip{background:var(--cloth); color:#fff;}
   .stamp-mini.empty{background:transparent; color:var(--line); border:1px dashed var(--line);}
@@ -404,12 +404,12 @@
   }
   .social-floating-action.hidden{ transform:translateY(100px); opacity:0; pointer-events:none; }
   .social-fab{
-    width:40px; height:40px; border-radius:50%; background:var(--gold); color:#fff; font-size:20px; font-weight:400; border:none;
+    width:40px; height:40px; border-radius:12px; background:var(--gold); color:#fff; font-size:20px; font-weight:400; border:none;
     box-shadow:0 6px 18px rgba(0,0,0,0.28); cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;
   }
   #discoverFabPrev, #discoverFabNext{
     position:fixed; bottom:18px; transform:translate(-50%, 0); z-index:150; opacity:0; pointer-events:none;
-    width:44px; height:44px; border-radius:50%; border:none; background:var(--gold); color:#fff; font-size:16px; cursor:pointer;
+    width:44px; height:44px; border-radius:14px; border:none; background:var(--gold); color:#fff; font-size:16px; cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,0.28);
     transition: left 0.2s, transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.28s;
   }
@@ -465,17 +465,17 @@
   .user-chip:hover{background:rgba(33,144,164,0.12);}
   button.primary{
     font-family:'Inter', sans-serif; font-weight:700; font-size:14px; background:var(--gold); color:#fff;
-    border:none; border-radius:999px; padding:11px 20px; cursor:pointer; box-shadow:none;
+    border:none; border-radius:10px; padding:11px 20px; cursor:pointer; box-shadow:none;
   }
   button.primary:hover:not(:disabled){box-shadow:var(--shadow);}
   button.primary:active{transform:scale(0.97);}
   button.primary:disabled{opacity:0.4; cursor:default;}
   button.secondary{
     font-family:'Inter', sans-serif; font-weight:700; font-size:13.5px; background:rgba(33,144,164,0.08); color:var(--gold);
-    border:1.5px solid var(--gold); border-radius:999px; padding:9px 16px; cursor:pointer;
+    border:1.5px solid var(--gold); border-radius:10px; padding:9px 16px; cursor:pointer;
   }
   button.secondary:hover:not(:disabled){background:rgba(33,144,164,0.14);}
-  button.tiny{font-size:11.5px; padding:6px 12px; border-radius:999px;}
+  button.tiny{font-size:11.5px; padding:6px 12px; border-radius:8px;}
   input[type=text], input[type=email], input[type=password], input[type=date]{
     font-family:'Inter', sans-serif; font-size:15px; padding:10px 12px; border:1.5px solid var(--line);
     border-radius:12px; width:100%; background:rgba(var(--card-bg),0.6); color:var(--ink);
@@ -521,8 +521,8 @@
   ul.plain li{margin-bottom:4px; font-size:13.5px; color:var(--ink-70);}
   .role-chip{font-family:'Inter', sans-serif; font-size:10px; font-weight:700; letter-spacing:.03em; padding:3px 10px; border-radius:20px; border:none; color:var(--gold); background:rgba(33,144,164,0.14);}
   .auth-wrap{ max-width:400px; margin:40px auto; padding:0 16px;}
-  .auth-toggle{display:flex; gap:6px; margin-bottom:14px; background:var(--paper-2); border-radius:999px; padding:4px; border:1px solid var(--line);}
-  .auth-toggle button{flex:1; padding:9px; border-radius:999px; border:none; background:none; font-family:'Inter',sans-serif; font-weight:700; cursor:pointer; color:var(--ink-70);}
+  .auth-toggle{display:flex; gap:6px; margin-bottom:14px; background:var(--paper-2); border-radius:12px; padding:4px; border:1px solid var(--line);}
+  .auth-toggle button{flex:1; padding:9px; border-radius:8px; border:none; background:none; font-family:'Inter',sans-serif; font-weight:700; cursor:pointer; color:var(--ink-70);}
   .auth-toggle button.active{background:var(--card); color:var(--gold); box-shadow:var(--shadow);}
   .field{margin-bottom:14px;}
   @keyframes fieldFlashError{ 0%,100%{ box-shadow:0 0 0 0 rgba(224,27,36,0); } 50%{ box-shadow:0 0 0 4px rgba(224,27,36,0.35); } }

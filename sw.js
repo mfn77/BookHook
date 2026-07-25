@@ -69,7 +69,7 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(title, {
       body,
       icon: './icon-192.png',
-      badge: './icon-192.png',
+      badge: './notif-icon.png',
       data: { linkTab: data.linkTab || null, postId: data.postId || null }
     })
   );
