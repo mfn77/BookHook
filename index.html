@@ -151,7 +151,7 @@
   #whoamiClickable:hover, .icon-pill:hover{ background:var(--line); }
   #logoutBtn.header-pill{ cursor:pointer; background:none; border:1.5px solid var(--cloth); color:var(--cloth-dark); }
   #logoutBtn.header-pill:hover{ background:rgba(224,27,36,0.08); }
-  .whoami .rolechip{display:inline-block; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; letter-spacing:.03em; border:none; color:var(--gold); background:rgba(33,144,164,0.14);}
+  .whoami .rolechip{display:inline-block; padding:2px 9px; border-radius:8px; font-size:9.5px; font-weight:700; letter-spacing:.03em; border:none; color:var(--gold); background:rgba(33,144,164,0.14);}
   .mono-icon{ filter:grayscale(1) brightness(0.55) contrast(1.4); display:inline-block; }
   html[data-theme="dark"] .mono-icon{ filter:grayscale(1) brightness(1.8) contrast(1.1); }
   #hamburgerMenu{
@@ -349,7 +349,7 @@
   .stamp-btn.read.selected{ border-color:var(--forest); background:var(--forest); color:#fff; transform:scale(1.06); box-shadow:var(--shadow);}
   .stamp-btn.skip.selected{ border-color:var(--cloth); background:var(--cloth); color:#fff; transform:scale(1.06); box-shadow:var(--shadow);}
   .stamp-btn.big{width:96px; height:76px; font-size:28px;}
-  .chip{ display:inline-block; font-family:'Inter', sans-serif; font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; border:none; color:var(--ink-70); background:var(--paper-2); margin-top:3px;}
+  .chip{ display:inline-block; font-family:'Inter', sans-serif; font-size:11px; font-weight:600; padding:3px 10px; border-radius:8px; border:none; color:var(--ink-70); background:var(--paper-2); margin-top:3px;}
   .chip.warn{color:var(--rust-dark); background:rgba(230,97,0,0.14);}
   .chip.danger{color:var(--cloth-dark); background:rgba(224,27,36,0.12); font-weight:700;}
   .chip.ok{color:var(--forest-dark); background:rgba(38,162,105,0.14);}
@@ -519,7 +519,7 @@
   .guide-section ul.plain{ padding-bottom:12px; }
   .guide-section ul.plain li{ margin-bottom:8px; }
   ul.plain li{margin-bottom:4px; font-size:13.5px; color:var(--ink-70);}
-  .role-chip{font-family:'Inter', sans-serif; font-size:10px; font-weight:700; letter-spacing:.03em; padding:3px 10px; border-radius:20px; border:none; color:var(--gold); background:rgba(33,144,164,0.14);}
+  .role-chip{font-family:'Inter', sans-serif; font-size:10px; font-weight:700; letter-spacing:.03em; padding:3px 10px; border-radius:8px; border:none; color:var(--gold); background:rgba(33,144,164,0.14);}
   .auth-wrap{ max-width:400px; margin:40px auto; padding:0 16px;}
   .auth-toggle{display:flex; gap:6px; margin-bottom:14px; background:var(--paper-2); border-radius:12px; padding:4px; border:1px solid var(--line);}
   .auth-toggle button{flex:1; padding:9px; border-radius:8px; border:none; background:none; font-family:'Inter',sans-serif; font-weight:700; cursor:pointer; color:var(--ink-70);}
@@ -2636,7 +2636,7 @@ function renderAdminToday(){
         if(wasNew) createPost(btn.dataset.status, {variantText: await pickVariantMessage(btn.dataset.status)});
         if(isSettingMark){
           const markedName = (usersCache[btn.dataset.uid] && usersCache[btn.dataset.uid].name) || '';
-          notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week');
+          notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week', currentUid);
         }
       } finally {
         setTimeout(()=> stampBtnInFlight.delete(key), 1200);
@@ -3136,7 +3136,7 @@ document.getElementById('mReadBtn').addEventListener('click', async ()=>{
   try{ playMarkFx(document.getElementById('mReadBtn'), 'read'); }catch(e){}
   await markStatus(currentUid,'read');
   renderMemberSurvey();
-  if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week');
+  if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', currentUid);
   if(wasNew) createPost('read', {variantText: await pickVariantMessage('read')});
   const s = await computeStreak(currentUid);
   await checkAndAwardBadges(currentUid, s);
@@ -3147,7 +3147,7 @@ document.getElementById('mSkipBtn').addEventListener('click', async ()=>{
   stampBtnInFlight.add('m|skip');
   const wasNew = todayAnswers[currentUid] !== 'skip';
   try{ playMarkFx(document.getElementById('mSkipBtn'), 'skip'); }catch(e){}
-  await markStatus(currentUid,'skip'); renderMemberSurvey(); if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week');
+  await markStatus(currentUid,'skip'); renderMemberSurvey(); if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week', currentUid);
   if(wasNew) createPost('skip', {variantText: await pickVariantMessage('skip')});
   setTimeout(()=> stampBtnInFlight.delete('m|skip'), 1200);
 });
@@ -7441,13 +7441,15 @@ onAuthStateChanged(auth, async (user)=>{
   buildNav();
   setupCardInfoButtons();
 
-  // Bildirime tıklanarak açılmışsa (?tab=xxx&post=yyy), ilgili sekmeye/gönderiye geç ve URL'yi temizle.
+  // Bildirime tıklanarak açılmışsa (?tab=xxx&post=yyy&notif=zzz), ilgili sekmeye/gönderiye geç ve URL'yi temizle.
   const notifUrlParams = new URLSearchParams(location.search);
   const notifTabParam = notifUrlParams.get('tab');
   const notifPostParam = notifUrlParams.get('post');
+  const notifIdParam = notifUrlParams.get('notif');
   if(notifTabParam && document.getElementById('tab-'+notifTabParam)){
     switchTab(notifTabParam);
     if(notifPostParam) setTimeout(()=> openPostModal(notifPostParam), 250);
+    if(notifIdParam) markNotifReadById(notifIdParam);
     history.replaceState(null, '', location.pathname);
   }
 
@@ -7492,9 +7494,13 @@ if('serviceWorker' in navigator){
       if(e.data && e.data.type==='notifClick' && e.data.linkTab && document.getElementById('tab-'+e.data.linkTab)){
         switchTab(e.data.linkTab);
         if(e.data.postId) setTimeout(()=> openPostModal(e.data.postId), 250);
+        if(e.data.notifId) markNotifReadById(e.data.notifId);
       }
     });
   }
+}
+async function markNotifReadById(id){
+  try{ await updateDoc(doc(db,'notifications',currentUid,'items',id), {read:true}); }catch(e){}
 }
 </script>
 </body>

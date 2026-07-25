@@ -70,7 +70,7 @@ self.addEventListener('push', (event) => {
       body,
       icon: './icon-192.png',
       badge: './notif-icon.png',
-      data: { linkTab: data.linkTab || null, postId: data.postId || null }
+      data: { linkTab: data.linkTab || null, postId: data.postId || null, notifId: data.notifId || null }
     })
   );
 });
@@ -80,16 +80,17 @@ self.addEventListener('notificationclick', (event) => {
   const targetUrl = self.registration.scope; // manifest'teki scope ile birebir aynı, tam URL
   const linkTab = (event.notification.data && event.notification.data.linkTab) || null;
   const postId = (event.notification.data && event.notification.data.postId) || null;
+  const notifId = (event.notification.data && event.notification.data.notifId) || null;
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.startsWith(targetUrl) && 'focus' in client) {
-          if (linkTab) client.postMessage({ type: 'notifClick', linkTab, postId });
+          if (linkTab) client.postMessage({ type: 'notifClick', linkTab, postId, notifId });
           return client.focus();
         }
       }
       if (clients.openWindow) {
-        const openUrl = linkTab ? targetUrl + '?tab=' + encodeURIComponent(linkTab) + (postId ? '&post=' + encodeURIComponent(postId) : '') : targetUrl;
+        const openUrl = linkTab ? targetUrl + '?tab=' + encodeURIComponent(linkTab) + (postId ? '&post=' + encodeURIComponent(postId) : '') + (notifId ? '&notif=' + encodeURIComponent(notifId) : '') : targetUrl;
         return clients.openWindow(openUrl);
       }
     })
