@@ -491,8 +491,7 @@
   .pair-line:last-child{border-bottom:none;}
   .pair-line .giver{font-weight:700; color:var(--cloth-dark); display:flex; justify-content:flex-start; align-items:center; min-width:0; overflow-wrap:anywhere;}
   .pair-line .receiver{font-weight:700; color:var(--forest-dark); display:flex; justify-content:flex-end; align-items:center; min-width:0; overflow-wrap:anywhere; text-align:right;}
-  .pair-line .arrow{ justify-self:center; }
-  .pair-line .arrow{color:var(--gold); font-size:16px;}
+  .pair-line .arrow{ justify-self:center; display:flex; align-items:center; color:var(--gold);}
   .empty-note{font-family:'Roboto Mono', monospace; font-size:12px; color:var(--ink-70); font-style:normal;}
   .worm-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line);}
   .worm-row:last-child{border-bottom:none;}
@@ -744,7 +743,7 @@
 
     <section class="tab" id="tab-worms">
       <div class="card">
-        <h2>🐺 Kitap Kurtları</h2>
+        <h2>Kitap Kurtları</h2>
         <p class="muted">Profil resmindeki renkli çerçeve ve köşe simgesi, o kişinin o anki aktif serisini gösterir; seri bozulunca kaybolur.</p>
         <button class="secondary" id="calcStreaksBtn">Serileri Hesapla</button>
         <div id="wormsList" style="margin-top:12px;"></div>
@@ -806,7 +805,7 @@
 
     <section class="tab" id="tab-mworms">
       <div class="card">
-        <h2>🐺 Kitap Kurtları</h2>
+        <h2>Kitap Kurtları</h2>
         <p class="muted">Profil resmindeki renkli çerçeve ve köşe simgesi, o kişinin o anki aktif serisini gösterir; seri bozulunca kaybolur.</p>
         <div id="mWormsList"></div>
       </div>
@@ -820,7 +819,7 @@
     <!-- ORTAK: HEDİYE KİTAP -->
     <section class="tab" id="tab-gifts">
       <div class="card">
-        <h2>🎁 Hediye Kitap</h2>
+        <h2>Hediye Kitap</h2>
         <div class="card-desc-wrap">
           <p class="muted" id="giftsIntro"></p>
         </div>
@@ -851,7 +850,7 @@
         </div>
       </div>
       <div class="card">
-        <h2>📚 Bugüne Kadar Hediye Edilen Kitaplar</h2>
+        <h2>Bugüne Kadar Hediye Edilen Kitaplar</h2>
         <div id="giftBooksGrid"></div>
       </div>
     </section>
@@ -2790,7 +2789,7 @@ async function renderAdminDraws(){
         const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
         const receiverHtml = `<span class="receiver">${p.receiverUid ? userChipHtml(p.receiverUid) : escapeHtml(p.receiverName)}</span>`;
         if(!p.receiverUid) return `<div class="pair-line">${giverHtml}<span class="arrow">—</span><span class="empty-note" style="text-align:right;">uygun alıcı bulunamadı</span></div>`;
-        return `<div class="pair-line">${giverHtml}<span class="arrow">🎁→</span>${receiverHtml}</div>`;
+        return `<div class="pair-line">${giverHtml}<span class="arrow"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>${receiverHtml}</div>`;
       }).join('');
     }
     return `<div class="receipt">
@@ -2890,7 +2889,7 @@ document.getElementById('manualDrawBtn').addEventListener('click', async ()=>{
   } else {
     body = pairs.map(p=>{
       if(!p.receiverUid && !p.receiverName) return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow">—</span><span class="empty-note" style="text-align:right;">uygun alıcı bulunamadı</span></div>`;
-      return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow">🎁→</span><span class="receiver">${escapeHtml(p.receiverName)}</span>'e kitap hediye edecek</div>`;
+      return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><span class="receiver">${escapeHtml(p.receiverName)}</span>'e kitap hediye edecek</div>`;
     }).join('');
   }
   resultBox.innerHTML = `<div class="receipt"><div class="rweek">${escapeHtml(label)} &middot; Cezalı: ${giverCount} &middot; Temiz/Pas: ${safeCount}</div>${body}</div>`;
@@ -2914,7 +2913,7 @@ async function renderManualHistory(){
       ? `<div class="empty-note">Cezalı çıkan olmadı.</div>`
       : d.pairs.map(p=> !p.receiverName
           ? `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span> — <span class="empty-note">alıcı yok</span></div>`
-          : `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow">🎁→</span><span class="receiver">${escapeHtml(p.receiverName)}</span></div>`
+          : `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><span class="receiver">${escapeHtml(p.receiverName)}</span></div>`
         ).join('');
     return `<div class="receipt"><div class="rweek">${escapeHtml(d.label)}</div>${body}</div>`;
   }).join('');
@@ -3226,7 +3225,7 @@ async function renderMemberLastWeek(){
       const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
       const receiverHtml = `<span class="receiver">${p.receiverUid ? userChipHtml(p.receiverUid) : escapeHtml(p.receiverName)}</span>`;
       if(!p.receiverUid) return `<div class="pair-line">${giverHtml}<span class="arrow">—</span><span class="empty-note" style="text-align:right;">uygun alıcı bulunamadı</span></div>`;
-      return `<div class="pair-line">${giverHtml}<span class="arrow">🎁→</span>${receiverHtml}</div>`;
+      return `<div class="pair-line">${giverHtml}<span class="arrow"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>${receiverHtml}</div>`;
     }).join('');
   }
   box.innerHTML = `<div class="receipt"><div class="rweek">Hafta: ${rangeLabel}</div>${body}</div>`;
@@ -3263,7 +3262,7 @@ async function renderDrawHistoryCard(prefix){
       const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
       const receiverHtml = `<span class="receiver">${p.receiverUid ? userChipHtml(p.receiverUid) : escapeHtml(p.receiverName)}</span>`;
       if(!p.receiverUid) return `<div class="pair-line">${giverHtml}<span class="arrow">—</span><span class="empty-note" style="text-align:right;">uygun alıcı bulunamadı</span></div>`;
-      return `<div class="pair-line">${giverHtml}<span class="arrow">🎁→</span>${receiverHtml}</div>`;
+      return `<div class="pair-line">${giverHtml}<span class="arrow"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>${receiverHtml}</div>`;
     }).join('');
   }
   box.innerHTML = `<div class="receipt"><div class="rweek">Hafta: ${rangeLabel} &middot; Cezalı: ${d.giverCount} &middot; Temiz/Pas: ${d.safeCount}</div>${body}</div>`;
@@ -5880,7 +5879,7 @@ const CURATED_CATALOG = [
     {t:'Seçme Şiirler', a:'Paul Celan', w:'Holokost sonrası şiirin en güçlü ve en etkileyici seslerinden biri olarak dilin sınırlarını zorlayan eserler vermiştir.', lv:'ileri'},
   ]},
 ];
-const DISCOVER_CATEGORIES = CURATED_CATALOG.map(c=>({label:c.label+' '+c.emoji, slug:c.slug}));
+const DISCOVER_CATEGORIES = CURATED_CATALOG.map(c=>({label:c.label, slug:c.slug}));
 function bookKeyFor(book){
   if(book.workKey) return book.workKey.replace(/^\/works\//,'').replace(/[^a-zA-Z0-9_-]/g,'_');
   return ((book.title||book.t||'')+'_'+(book.author||book.a||'')).toLowerCase().replace(/[^a-z0-9]+/g,'_').slice(0,80);
