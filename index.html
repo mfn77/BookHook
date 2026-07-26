@@ -476,6 +476,8 @@
   }
   button.secondary:hover:not(:disabled){background:rgba(33,144,164,0.14);}
   button.tiny{font-size:11.5px; padding:6px 12px; border-radius:8px;}
+  @keyframes libBtnPulse{ 0%{ transform:scale(1); } 40%{ transform:scale(0.93); opacity:0.7; } 100%{ transform:scale(1); opacity:0.55; } }
+  .lib-btn-pulse{ animation: libBtnPulse 0.28s ease-out forwards; pointer-events:none; }
   input[type=text], input[type=email], input[type=password], input[type=date]{
     font-family:'Inter', sans-serif; font-size:15px; padding:10px 12px; border:1.5px solid var(--line);
     border-radius:12px; width:100%; background:rgba(var(--card-bg),0.6); color:var(--ink);
@@ -1582,6 +1584,76 @@ async function addBookToMyLibrary(title, author, cover, listType){
     showToast(listType==='want' ? 'Okumak istediklerine eklendi!' : 'Kitaplığına eklendi!');
   }catch(err){ alert('Eklenemedi: '+(err.message||err)); }
 }
+async function checkBookListStatus(title){
+  let inHistory = false, inWant = false, historyId = null, wantId = null;
+  try{
+    const snap1 = await getDocs(query(collection(db,'users',currentUid,'bookHistory'), where('title','==',title)));
+    snap1.forEach(d=>{ inHistory = true; historyId = d.id; });
+  }catch(e){}
+  try{
+    const snap2 = await getDocs(query(collection(db,'users',currentUid,'wantToRead'), where('title','==',title)));
+    snap2.forEach(d=>{ inWant = true; wantId = d.id; });
+  }catch(e){}
+  return { inHistory, inWant, historyId, wantId };
+}
+async function removeFromMyLibraryById(docId, listType){
+  const collectionName = listType==='want' ? 'wantToRead' : 'bookHistory';
+  try{
+    await deleteDoc(doc(db,'users',currentUid,collectionName,docId));
+    showToast(listType==='want' ? 'Okumak istediklerinden kaldırıldı.' : 'Kitaplığından kaldırıldı.');
+  }catch(err){ alert('Kaldırılamadı: '+(err.message||err)); }
+}
+function libraryButtonsHtml(status, widthStyle, idSuffix){
+  idSuffix = idSuffix || '';
+  if(status.inHistory){
+    return `<button type="button" class="secondary tiny" id="removeFromLibBtn${idSuffix}" data-id="${status.historyId}" data-list="history" style="${widthStyle}">Listeden Kaldır</button>`;
+  }
+  if(status.inWant){
+    return `<div style="display:flex; gap:8px; margin-top:10px;">
+      <button type="button" class="secondary tiny" id="addToMyLibraryBtn${idSuffix}" style="flex:1;">Okudum</button>
+      <button type="button" class="secondary tiny" id="removeFromLibBtn${idSuffix}" data-id="${status.wantId}" data-list="want" style="flex:1;">Listeden Kaldır</button>
+    </div>`;
+  }
+  return `<div style="display:flex; gap:8px; margin-top:10px;">
+    <button type="button" class="secondary tiny" id="addToMyLibraryBtn${idSuffix}" style="flex:1;">Okudum</button>
+    <button type="button" class="secondary tiny" id="addToWantToReadBtn${idSuffix}" style="flex:1;">Okumak İstiyorum</button>
+  </div>`;
+}
+async function refreshLibraryButtons(wrapId, title, author, cover, idSuffix){
+  const wrap = document.getElementById(wrapId);
+  if(!wrap) return;
+  wrap.style.transition = 'opacity .16s ease, transform .16s ease';
+  wrap.style.opacity = '0';
+  wrap.style.transform = 'scale(0.97)';
+  await new Promise(r=> setTimeout(r, 160));
+  const status = await checkBookListStatus(title);
+  wrap.innerHTML = libraryButtonsHtml(status, 'width:100%;', idSuffix);
+  wrap.style.transform = 'scale(0.97)';
+  requestAnimationFrame(()=>{
+    wrap.style.opacity = '1';
+    wrap.style.transform = 'scale(1)';
+  });
+  wireLibraryButtons(wrapId, title, author, cover, idSuffix);
+}
+function wireLibraryButtons(wrapId, title, author, cover, idSuffix){
+  idSuffix = idSuffix || '';
+  const wrap = document.getElementById(wrapId);
+  if(!wrap) return;
+  const refresh = ()=> refreshLibraryButtons(wrapId, title, author, cover, idSuffix);
+  const pulseAndRun = async (btn, action)=>{
+    if(btn.disabled) return;
+    btn.disabled = true;
+    btn.classList.add('lib-btn-pulse');
+    await action();
+    refresh();
+  };
+  const myLibBtn = wrap.querySelector('#addToMyLibraryBtn'+idSuffix);
+  if(myLibBtn) myLibBtn.addEventListener('click', ()=> pulseAndRun(myLibBtn, ()=> addBookToMyLibrary(title, author, cover)));
+  const wantBtn = wrap.querySelector('#addToWantToReadBtn'+idSuffix);
+  if(wantBtn) wantBtn.addEventListener('click', ()=> pulseAndRun(wantBtn, ()=> addBookToMyLibrary(title, author, cover, 'want')));
+  const removeBtn = wrap.querySelector('#removeFromLibBtn'+idSuffix);
+  if(removeBtn) removeBtn.addEventListener('click', ()=> pulseAndRun(removeBtn, ()=> removeFromMyLibraryById(removeBtn.dataset.id, removeBtn.dataset.list)));
+}
 async function showBookInfo(rawTitle, cover, prependHtml, sourceContext){
   if(!rawTitle) return;
   const body = document.getElementById('bookInfoModalBody');
@@ -1636,24 +1708,15 @@ async function showBookInfo(rawTitle, cover, prependHtml, sourceContext){
     ${descShort?`<p style="text-align:left; font-size:13.5px; line-height:1.5;">${descShort}</p>`:''}
     ${info.isbn?`<div class="muted" style="font-size:11px; margin-top:8px;">ISBN: ${escapeHtml(info.isbn)}</div>`:''}
     ${info.link?`<a href="${info.link}" target="_blank" rel="noopener" style="display:inline-block; margin-top:10px; font-size:13px; color:var(--gold);">Daha fazla bilgi →</a>`:''}
-    ${sourceContext==='history' ? '' : sourceContext==='wantToRead'
-      ? `<button type="button" class="secondary tiny" id="addToMyLibraryBtn" style="width:100%; margin-top:10px;">Okudum</button>`
-      : `<div style="display:flex; gap:8px; margin-top:10px;">
-      <button type="button" class="secondary tiny" id="addToMyLibraryBtn" style="flex:1;">Okudum</button>
-      <button type="button" class="secondary tiny" id="addToWantToReadBtn" style="flex:1;">İstiyorum</button>
-    </div>`}
+    ${sourceContext==='history' ? '' : `<div id="libraryBtnsWrap" style="margin-top:10px;"><span class="muted" style="font-size:12px;">…</span></div>`}
   `;
-  const myLibBtn = document.getElementById('addToMyLibraryBtn');
-  if(myLibBtn) myLibBtn.addEventListener('click', ()=> addBookToMyLibrary(info.title, info.author, info.cover));
-  const wantBtn = document.getElementById('addToWantToReadBtn');
-  if(wantBtn) wantBtn.addEventListener('click', ()=> addBookToMyLibrary(info.title, info.author, info.cover, 'want'));
+  if(sourceContext!=='history') await refreshLibraryButtons('libraryBtnsWrap', info.title, info.author, info.cover);
 }
 document.body.addEventListener('click', (e)=>{
   const cover = e.target.closest('.book-cover-clickable');
   if(cover && cover.dataset.bookTitle){
     let sourceContext;
     if(cover.closest('#bookHistoryGrid')) sourceContext = 'history';
-    else if(cover.closest('#wantToReadGrid')) sourceContext = 'wantToRead';
     showBookInfo(cover.dataset.bookTitle, cover.dataset.bookCover||cover.src||'', undefined, sourceContext);
   }
 });
@@ -7207,13 +7270,9 @@ async function openBookDiscoverModal(book){
     <div class="rating-star-row" id="ratingStarRow">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="rating-star" data-n="${n}">★</span>`).join('')}</div>
     <textarea id="ratingCommentInput" placeholder="Yorumun (opsiyonel)" style="width:100%; margin-top:10px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; min-height:60px; background:var(--card); color:var(--ink);">${myRating?escapeHtml(myRating.comment||''):''}</textarea>
     <button class="primary" id="ratingSubmitBtn" style="width:100%; margin-top:8px;">Gönder</button>
-    <div style="display:flex; gap:8px; margin-top:8px;">
-      <button type="button" class="secondary tiny" id="addToMyLibraryBtnDiscover" style="flex:1;">Okudum</button>
-      <button type="button" class="secondary tiny" id="addToWantToReadBtnDiscover" style="flex:1;">İstiyorum</button>
-    </div>
+    <div id="libraryBtnsWrapDiscover" style="margin-top:8px;"><span class="muted" style="font-size:12px;">…</span></div>
   `;
-  document.getElementById('addToMyLibraryBtnDiscover').addEventListener('click', ()=> addBookToMyLibrary(book.title, book.author, (coverInfo&&coverInfo.cover)||''));
-  document.getElementById('addToWantToReadBtnDiscover').addEventListener('click', ()=> addBookToMyLibrary(book.title, book.author, (coverInfo&&coverInfo.cover)||'', 'want'));
+  await refreshLibraryButtons('libraryBtnsWrapDiscover', book.title, book.author, (coverInfo&&coverInfo.cover)||'', 'Discover');
   if(isAdminView){
     const coverTarget = document.getElementById('coverFixTarget');
     coverTarget.addEventListener('click', (e)=>{
