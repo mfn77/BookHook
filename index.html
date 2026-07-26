@@ -1017,6 +1017,21 @@
     <!-- ORTAK: KİTAP GEÇMİŞİM (hamburger menüden erişilir) -->
     <section class="tab" id="tab-mybooks">
       <div class="card">
+        <h2>Okumak İstediklerim</h2>
+        <div class="card-desc-wrap">
+          <p class="muted">İleride okumak istediğin kitapları buraya ekleyip bir liste oluşturabilirsin. Bu, kitap geçmişinden ayrı, sadece senin görebileceğin bir liste.</p>
+        </div>
+        <div id="wantToReadGrid" class="bh-grid"></div>
+        <button type="button" class="card-add-btn" id="wantToReadAddBtn" aria-label="Kitap ekle">+</button>
+        <div id="wantToReadFormWrap" style="display:none; margin-top:14px;">
+          <div class="field"><label>Kitap Ara</label><input type="text" id="wtrSearchInput" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div id="wtrSearchSuggest" class="book-suggest-box"></div></div>
+          <div class="field"><label>Yazar</label><input type="text" id="wtrAuthorInput" placeholder="listeden seçince otomatik dolar" /></div>
+          <div class="field"><label>Kitap Adı</label><input type="text" id="wtrTitleInput" /></div>
+          <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" id="wtrCoverInput" placeholder="internetten bulduğun kapak görselinin linki" /></div>
+          <button class="primary" id="wtrSaveBtn">Ekle</button>
+        </div>
+      </div>
+      <div class="card">
         <h2>Kitap Geçmişim</h2>
         <div class="card-desc-wrap">
           <p class="muted">Bugüne kadar okuduğun kitapları buraya ekleyip küçük bir kitaplık oluşturabilirsin. Bu, profilinden başkalarının da görebileceği bir liste.</p>
@@ -1557,14 +1572,17 @@ document.getElementById('bookHistoryViewModal').addEventListener('click', (e)=>{
 /* ============ ORTAK: KİTAP BİLGİSİ (kapağa tıklayınca) ============ */
 document.getElementById('bookInfoModalClose').addEventListener('click', ()=>{ closeModal('bookInfoModal'); });
 document.getElementById('bookInfoModal').addEventListener('click', (e)=>{ if(e.target.id==='bookInfoModal') closeModal('bookInfoModal'); });
-async function addBookToMyLibrary(title, author, cover){
+async function addBookToMyLibrary(title, author, cover, listType){
+  const collectionName = listType==='want' ? 'wantToRead' : 'bookHistory';
   try{
-    await addDoc(collection(db,'users',currentUid,'bookHistory'), { author: author||'', title, cover: cover||'', addedAt: new Date().toISOString() });
-    createOrBatchPost('book_added', { bookTitle: title, bookAuthor: author||'', bookCover: cover||'' });
-    showToast('Kitaplığına eklendi!');
+    await addDoc(collection(db,'users',currentUid,collectionName), { author: author||'', title, cover: cover||'', addedAt: new Date().toISOString() });
+    if(listType!=='want'){
+      createOrBatchPost('book_added', { bookTitle: title, bookAuthor: author||'', bookCover: cover||'' });
+    }
+    showToast(listType==='want' ? 'Okumak istediklerine eklendi!' : 'Kitaplığına eklendi!');
   }catch(err){ alert('Eklenemedi: '+(err.message||err)); }
 }
-async function showBookInfo(rawTitle, cover, prependHtml){
+async function showBookInfo(rawTitle, cover, prependHtml, sourceContext){
   if(!rawTitle) return;
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
@@ -1618,13 +1636,26 @@ async function showBookInfo(rawTitle, cover, prependHtml){
     ${descShort?`<p style="text-align:left; font-size:13.5px; line-height:1.5;">${descShort}</p>`:''}
     ${info.isbn?`<div class="muted" style="font-size:11px; margin-top:8px;">ISBN: ${escapeHtml(info.isbn)}</div>`:''}
     ${info.link?`<a href="${info.link}" target="_blank" rel="noopener" style="display:inline-block; margin-top:10px; font-size:13px; color:var(--gold);">Daha fazla bilgi →</a>`:''}
-    <button type="button" class="secondary tiny" id="addToMyLibraryBtn" style="margin-top:10px; width:100%;">📚 Kitaplığıma Ekle</button>
+    ${sourceContext==='history' ? '' : sourceContext==='wantToRead'
+      ? `<button type="button" class="secondary tiny" id="addToMyLibraryBtn" style="width:100%; margin-top:10px;">Okudum</button>`
+      : `<div style="display:flex; gap:8px; margin-top:10px;">
+      <button type="button" class="secondary tiny" id="addToMyLibraryBtn" style="flex:1;">Okudum</button>
+      <button type="button" class="secondary tiny" id="addToWantToReadBtn" style="flex:1;">İstiyorum</button>
+    </div>`}
   `;
-  document.getElementById('addToMyLibraryBtn').addEventListener('click', ()=> addBookToMyLibrary(info.title, info.author, info.cover));
+  const myLibBtn = document.getElementById('addToMyLibraryBtn');
+  if(myLibBtn) myLibBtn.addEventListener('click', ()=> addBookToMyLibrary(info.title, info.author, info.cover));
+  const wantBtn = document.getElementById('addToWantToReadBtn');
+  if(wantBtn) wantBtn.addEventListener('click', ()=> addBookToMyLibrary(info.title, info.author, info.cover, 'want'));
 }
 document.body.addEventListener('click', (e)=>{
   const cover = e.target.closest('.book-cover-clickable');
-  if(cover && cover.dataset.bookTitle) showBookInfo(cover.dataset.bookTitle, cover.dataset.bookCover||cover.src||'');
+  if(cover && cover.dataset.bookTitle){
+    let sourceContext;
+    if(cover.closest('#bookHistoryGrid')) sourceContext = 'history';
+    else if(cover.closest('#wantToReadGrid')) sourceContext = 'wantToRead';
+    showBookInfo(cover.dataset.bookTitle, cover.dataset.bookCover||cover.src||'', undefined, sourceContext);
+  }
 });
 document.getElementById('profileModalClose').addEventListener('click', ()=>{ closeModal('profileModal'); });
 document.getElementById('profileModal').addEventListener('click', (e)=>{ if(e.target.id==='profileModal') closeModal('profileModal'); });
@@ -3980,7 +4011,8 @@ function renderBookHistoryTab(){
   setupDiscoverNavObserver();
 }
 async function renderMyBooksTab(){
-  await renderBookHistoryGrid(currentUid, 'bookHistoryGrid', true);
+  await renderBookHistoryGrid(currentUid, 'wantToReadGrid', true, 'wantToRead');
+  await renderBookHistoryGrid(currentUid, 'bookHistoryGrid', true, 'bookHistory');
 }
 function positionDiscoverFabs(){
   const contentCol = document.getElementById('contentCol');
@@ -4010,11 +4042,12 @@ function setupDiscoverNavObserver(){
 }
 const BH_PAGE_SIZE = 8;
 const bhPageState = {};
-async function renderBookHistoryGrid(uid, gridId, editable){
+async function renderBookHistoryGrid(uid, gridId, editable, collectionName){
+  collectionName = collectionName || 'bookHistory';
   const grid = keepOrLoading(gridId);
   let items = [];
   try{
-    const snap = await getDocs(query(collection(db,'users',uid,'bookHistory'), orderBy('addedAt','desc')));
+    const snap = await getDocs(query(collection(db,'users',uid,collectionName), orderBy('addedAt','desc')));
     snap.forEach(d=> items.push({ id:d.id, ...d.data() }));
   }catch(e){}
   if(!items.length){
@@ -4050,15 +4083,15 @@ async function renderBookHistoryGrid(uid, gridId, editable){
 
   grid.innerHTML = pagerHtml + `<div class="bh-grid-inner">${cardsHtml}</div>`;
   if(totalPages>1){
-    grid.querySelector('.bh-prev-btn')?.addEventListener('click', ()=>{ bhPageState[gridId]--; renderBookHistoryGrid(uid, gridId, editable); });
-    grid.querySelector('.bh-next-btn')?.addEventListener('click', ()=>{ bhPageState[gridId]++; renderBookHistoryGrid(uid, gridId, editable); });
+    grid.querySelector('.bh-prev-btn')?.addEventListener('click', ()=>{ bhPageState[gridId]--; renderBookHistoryGrid(uid, gridId, editable, collectionName); });
+    grid.querySelector('.bh-next-btn')?.addEventListener('click', ()=>{ bhPageState[gridId]++; renderBookHistoryGrid(uid, gridId, editable, collectionName); });
   }
   if(editable){
     grid.querySelectorAll('.bh-delete').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         try{
-          await deleteDoc(doc(db,'users',currentUid,'bookHistory',btn.dataset.id));
-          renderBookHistoryGrid(currentUid, gridId, true);
+          await deleteDoc(doc(db,'users',currentUid,collectionName,btn.dataset.id));
+          renderBookHistoryGrid(currentUid, gridId, true, collectionName);
         }catch(e){ alert('Silinemedi: '+(e.message||e)); }
       });
     });
@@ -4066,6 +4099,28 @@ async function renderBookHistoryGrid(uid, gridId, editable){
   markLoaded(grid);
 }
 setupAddToggle('bookHistoryAddBtn', 'bookHistoryFormWrap');
+setupAddToggle('wantToReadAddBtn', 'wantToReadFormWrap');
+attachBookAutocomplete('wtrSearchInput', null, 'wtrSearchSuggest', (sel)=>{
+  document.getElementById('wtrAuthorInput').value = sel.author;
+  document.getElementById('wtrTitleInput').value = sel.title;
+  document.getElementById('wtrCoverInput').value = sel.cover || '';
+  document.getElementById('wtrSearchInput').value = '';
+});
+document.getElementById('wtrSaveBtn').addEventListener('click', async ()=>{
+  const author = document.getElementById('wtrAuthorInput').value.trim();
+  const title = document.getElementById('wtrTitleInput').value.trim();
+  const cover = document.getElementById('wtrCoverInput').value.trim();
+  if(!title){ alert('Kitap adı yaz.'); return; }
+  try{
+    await addDoc(collection(db,'users',currentUid,'wantToRead'), { author, title, cover, addedAt: new Date().toISOString() });
+    document.getElementById('wtrSearchInput').value='';
+    document.getElementById('wtrAuthorInput').value='';
+    document.getElementById('wtrTitleInput').value='';
+    document.getElementById('wtrCoverInput').value='';
+    closeAddForm('wantToReadAddBtn','wantToReadFormWrap');
+    renderBookHistoryGrid(currentUid, 'wantToReadGrid', true, 'wantToRead');
+  }catch(err){ alert('Eklenemedi: '+(err.message||err)); }
+});
 attachBookAutocomplete('bhSearchInput', null, 'bhSearchSuggest', (sel)=>{
   document.getElementById('bhAuthorInput').value = sel.author;
   document.getElementById('bhTitleInput').value = sel.title;
@@ -7152,9 +7207,13 @@ async function openBookDiscoverModal(book){
     <div class="rating-star-row" id="ratingStarRow">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="rating-star" data-n="${n}">★</span>`).join('')}</div>
     <textarea id="ratingCommentInput" placeholder="Yorumun (opsiyonel)" style="width:100%; margin-top:10px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; min-height:60px; background:var(--card); color:var(--ink);">${myRating?escapeHtml(myRating.comment||''):''}</textarea>
     <button class="primary" id="ratingSubmitBtn" style="width:100%; margin-top:8px;">Gönder</button>
-    <button type="button" class="secondary tiny" id="addToMyLibraryBtnDiscover" style="width:100%; margin-top:8px;">📚 Kitaplığıma Ekle</button>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button type="button" class="secondary tiny" id="addToMyLibraryBtnDiscover" style="flex:1;">Okudum</button>
+      <button type="button" class="secondary tiny" id="addToWantToReadBtnDiscover" style="flex:1;">İstiyorum</button>
+    </div>
   `;
   document.getElementById('addToMyLibraryBtnDiscover').addEventListener('click', ()=> addBookToMyLibrary(book.title, book.author, (coverInfo&&coverInfo.cover)||''));
+  document.getElementById('addToWantToReadBtnDiscover').addEventListener('click', ()=> addBookToMyLibrary(book.title, book.author, (coverInfo&&coverInfo.cover)||'', 'want'));
   if(isAdminView){
     const coverTarget = document.getElementById('coverFixTarget');
     coverTarget.addEventListener('click', (e)=>{
