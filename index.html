@@ -2877,7 +2877,7 @@ async function renderAdminDraws(){
     const rangeLabel = `${fmtShort(d.weekStart)} — ${fmtShort(d.weekEnd)}`;
     let body;
     if(!d.pairs || d.pairs.length===0){
-      body = `<div class="empty-note">Bu hafta cezalı çıkan olmadı — herkese kolay gelsin! 🎉</div>`;
+      body = `<div class="empty-note">Bu hafta cezalı çıkmadığı için kura çekilmedi.</div>`;
     } else {
       body = d.pairs.map(p=>{
         const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
@@ -3313,7 +3313,7 @@ async function renderMemberLastWeek(){
   const rangeLabel = `${fmtShort(d.weekStart)} — ${fmtShort(d.weekEnd)}`;
   let body;
   if(!d.pairs || d.pairs.length===0){
-    body = `<div class="empty-note">O hafta cezalı çıkan olmadı — herkese kolay gelsin! 🎉</div>`;
+    body = `<div class="empty-note">Bu hafta cezalı çıkmadığı için kura çekilmedi.</div>`;
   } else {
     body = d.pairs.map(p=>{
       const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
@@ -3350,7 +3350,7 @@ async function renderDrawHistoryCard(prefix){
   nextBtn.disabled = drawHistIndex[prefix] <= 0;
   let body;
   if(!d.pairs || d.pairs.length===0){
-    body = `<div class="empty-note">O hafta cezalı çıkan olmadı — herkese kolay gelsin! 🎉</div>`;
+    body = `<div class="empty-note">Bu hafta cezalı çıkmadığı için kura çekilmedi.</div>`;
   } else {
     body = d.pairs.map(p=>{
       const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
