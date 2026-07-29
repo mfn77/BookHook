@@ -2300,7 +2300,7 @@ function switchTab(id){
    kombinasyonuyla karar verir ============ */
 (function setupSwipeNav(){
   let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, contentLeft=0, pendingSettleTimeout=null;
-  let lastMoveX=0, lastMoveTime=0, velocity=0, bookIcon=null;
+  let lastMoveX=0, lastMoveTime=0, lastMoveWallTime=0, velocity=0, bookIcon=null, watchdogInterval=null;
   const contentCol = document.querySelector('.content-col');
   const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
   const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
@@ -2368,9 +2368,31 @@ function switchTab(id){
     document.documentElement.style.overflow = '';
     document.body.style.overflow = '';
   }
+  function stopWatchdog(){
+    if(watchdogInterval){ clearInterval(watchdogInterval); watchdogInterval=null; }
+  }
+  function startWatchdog(){
+    stopWatchdog();
+    watchdogInterval = setInterval(()=>{
+      if(dragging && Date.now()-lastMoveWallTime > 450){
+        // Dokunuş (touchend/touchcancel hiç gelmeden) sessizce kaybolmuş olmalı — kendimizi
+        // güvenli şekilde, sekme değiştirmeden, olduğu yere geri dönerek sıfırlıyoruz.
+        dragging = false;
+        touchStartX = null;
+        unlockPageScroll();
+        contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
+        contentCol.style.transform = 'translateX(0)';
+        settlePreview(0);
+        if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
+        pendingSettleTimeout = setTimeout(()=>{ endPreview(); pendingSettleTimeout=null; }, 240);
+        stopWatchdog();
+      }
+    }, 200);
+  }
 
   document.addEventListener('touchstart', (e)=>{
     endPreview(); // hızlı art arda kaydırmalarda önceki katman takılı kalmasın diye önce her ihtimale karşı temizle
+    stopWatchdog();
     if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
     // Önceki kaydırmadan yarım kalmış bir dönüşüm varsa (hızlı art arda kaydırmada olabiliyor),
     // yeni jestin her zaman temiz bir konumdan başlaması için burada kesin olarak sıfırlıyoruz.
@@ -2388,6 +2410,7 @@ function switchTab(id){
     velocity = 0;
     lastMoveX = touchStartX;
     lastMoveTime = e.timeStamp;
+    lastMoveWallTime = Date.now();
     containerWidth = contentCol.offsetWidth || window.innerWidth;
     contentLeft = contentCol.getBoundingClientRect().left;
   }, {passive:true});
@@ -2414,12 +2437,14 @@ function switchTab(id){
       // vermediğinden bağımsız, garantili bir kilit.
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
+      startWatchdog();
     }
     if(dragging && e.cancelable) e.preventDefault(); // yön netleşince dikey kaydırmayı kilitle
     const dt = e.timeStamp - lastMoveTime;
     if(dt > 0) velocity = (touch.clientX - lastMoveX) / dt;
     lastMoveX = touch.clientX;
     lastMoveTime = e.timeStamp;
+    lastMoveWallTime = Date.now();
     contentCol.style.transform = `translateX(${dx}px)`;
     updatePreview(dx);
   }, {passive:false});
@@ -2432,6 +2457,7 @@ function switchTab(id){
     if(!dragging){ return; }
     dragging = false;
     unlockPageScroll();
+    stopWatchdog();
     const order = getTabOrder();
     const idx = order.indexOf(activeTab);
     const distanceOk = Math.abs(dx) > containerWidth * DISTANCE_THRESHOLD_RATIO;
@@ -2475,6 +2501,7 @@ function switchTab(id){
     if(!dragging) return;
     dragging = false;
     unlockPageScroll();
+    stopWatchdog();
     if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
     contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
     contentCol.style.transform = 'translateX(0)';
