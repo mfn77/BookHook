@@ -2265,7 +2265,9 @@ function flashRequiredFields(){
   });
   return anyEmpty;
 }
+let lastTabSwitchTime = 0;
 function switchTab(id){
+  lastTabSwitchTime = Date.now();
   if(typeof closeReactionDrawer==='function') closeReactionDrawer();
   if(profileGateActive && id!=='profile'){
     flashRequiredFields();
@@ -2426,20 +2428,19 @@ function switchTab(id){
       // ile geri alamıyoruz. Bu yüzden eşiği mümkün olduğunca düşük tutup, yatay eğilim belirir
       // belirmez hemen kilitliyoruz.
       if(Math.abs(dx) < 4 || Math.abs(dx) <= Math.abs(dy)*1.15) return;
+      // Bir sekmeye yeni geçilmişse, o sekmenin verisi hâlâ asenkron olarak yükleniyor olabilir.
+      // Tam o sırada (DOM güncellenirken) bir kaydırma başlatırsak dokunuş tarayıcı tarafından
+      // kaybolabiliyor. Bu yüzden geçişten hemen sonraki çok kısa bir süre boyunca yeni bir
+      // kaydırma animasyonu başlatmıyoruz (sayfa normal şekilde kaydırılabilir kalır).
+      if(Date.now() - lastTabSwitchTime < 350){ touchStartX=null; return; }
       const order = getTabOrder();
       const idx = order.indexOf(activeTab);
       if(idx===-1 || profileGateActive || (dx<0 && idx>=order.length-1) || (dx>0 && idx<=0)){ touchStartX=null; return; }
       dragging = true;
       contentCol.style.transition = 'none';
       startPreview();
-      // Dokunuş olaylarının zamanlamasıyla uğraşmak yerine, sayfayı burada doğrudan ve kesin
-      // olarak kaydırılamaz hale getiriyoruz — bu, tarayıcının erken scroll kararı verip
-      // vermediğinden bağımsız, garantili bir kilit.
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
       startWatchdog();
     }
-    if(dragging && e.cancelable) e.preventDefault(); // yön netleşince dikey kaydırmayı kilitle
     const dt = e.timeStamp - lastMoveTime;
     if(dt > 0) velocity = (touch.clientX - lastMoveX) / dt;
     lastMoveX = touch.clientX;
@@ -2447,7 +2448,7 @@ function switchTab(id){
     lastMoveWallTime = Date.now();
     contentCol.style.transform = `translateX(${dx}px)`;
     updatePreview(dx);
-  }, {passive:false});
+  }, {passive:true});
 
   document.addEventListener('touchend', (e)=>{
     if(touchStartX===null) return;
