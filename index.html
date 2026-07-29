@@ -2436,6 +2436,22 @@ function switchTab(id){
       pendingSettleTimeout = setTimeout(()=>{ endPreview(); pendingSettleTimeout=null; }, 240);
     }
   }, {passive:true});
+
+  // Tarayıcı bazen (özellikle yavaş/uzun dokunuşlarda) dokunuş dizisini touchend yerine
+  // touchcancel ile kesiyor. Bunu dinlemezsek her şey yarım kalmış halde donup kalıyor ve
+  // tarayıcı kontrolü sessizce native kaydırmaya bırakıyor. Burada da güvenli şekilde
+  // sıfırlıyoruz (asla sekme değiştirmeyi tamamlamaya çalışmadan, sadece eski haline dönerek).
+  document.addEventListener('touchcancel', ()=>{
+    touchStartX = null;
+    if(!dragging) return;
+    dragging = false;
+    if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
+    contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
+    contentCol.style.transform = 'translateX(0)';
+    settlePreview(0);
+    if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
+    pendingSettleTimeout = setTimeout(()=>{ endPreview(); pendingSettleTimeout=null; }, 240);
+  }, {passive:true});
 })();
 
 function renderTab(id){
