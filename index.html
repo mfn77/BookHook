@@ -2294,9 +2294,14 @@ function switchTab(id){
   renderTab(id);
 }
 
-/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) ============ */
+/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) — parmakla birlikte anlık kayar, iOS/Android'deki gibi mesafe + hız kombinasyonuyla karar verir ============ */
 (function setupSwipeNav(){
-  let touchStartX=null, touchStartY=0, touchStartTime=0;
+  let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0;
+  let lastMoveX=0, lastMoveTime=0, velocity=0;
+  const contentCol = document.querySelector('.content-col');
+  const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
+  const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
+
   document.addEventListener('touchstart', (e)=>{
     if(e.touches.length!==1){ touchStartX=null; return; }
     const t = e.target;
@@ -2305,21 +2310,58 @@ function switchTab(id){
     }
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
-    touchStartTime = Date.now();
+    dragging = false;
+    velocity = 0;
+    lastMoveX = touchStartX;
+    lastMoveTime = e.timeStamp;
+    containerWidth = contentCol.offsetWidth || window.innerWidth;
   }, {passive:true});
-  document.addEventListener('touchend', (e)=>{
+
+  document.addEventListener('touchmove', (e)=>{
     if(touchStartX===null || !myProfile) return;
-    const touch = e.changedTouches[0];
+    const touch = e.touches[0];
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
-    const dt = Date.now() - touchStartTime;
-    touchStartX = null;
-    if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)*1.5 && dt < 600){
+    if(!dragging){
+      if(Math.abs(dx) < 12 || Math.abs(dx) <= Math.abs(dy)*1.5) return;
       const order = getTabOrder();
       const idx = order.indexOf(activeTab);
-      if(idx===-1) return;
-      if(dx < 0 && idx < order.length-1) switchTab(order[idx+1]);
-      else if(dx > 0 && idx > 0) switchTab(order[idx-1]);
+      if(idx===-1 || (dx<0 && idx>=order.length-1) || (dx>0 && idx<=0)){ touchStartX=null; return; }
+      dragging = true;
+      contentCol.style.transition = 'none';
+    }
+    const dt = e.timeStamp - lastMoveTime;
+    if(dt > 0) velocity = (touch.clientX - lastMoveX) / dt;
+    lastMoveX = touch.clientX;
+    lastMoveTime = e.timeStamp;
+    contentCol.style.transform = `translateX(${dx}px)`;
+  }, {passive:true});
+
+  document.addEventListener('touchend', (e)=>{
+    if(touchStartX===null) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartX;
+    touchStartX = null;
+    if(!dragging){ return; }
+    dragging = false;
+    const order = getTabOrder();
+    const idx = order.indexOf(activeTab);
+    const distanceOk = Math.abs(dx) > containerWidth * DISTANCE_THRESHOLD_RATIO;
+    const flickOk = Math.abs(velocity) > VELOCITY_THRESHOLD && Math.sign(velocity)===Math.sign(dx);
+    const shouldComplete = (distanceOk || flickOk) && idx!==-1;
+    contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
+    if(shouldComplete){
+      const goingNext = dx < 0;
+      const targetIdx = goingNext ? idx+1 : idx-1;
+      const flyDist = goingNext ? -containerWidth : containerWidth;
+      contentCol.style.transform = `translateX(${flyDist}px)`;
+      setTimeout(()=>{
+        contentCol.style.transition = 'none';
+        contentCol.style.transform = 'translateX(0)';
+        switchTab(order[targetIdx]);
+      }, 240);
+    } else {
+      contentCol.style.transform = 'translateX(0)';
     }
   }, {passive:true});
 })();
