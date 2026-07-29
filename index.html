@@ -1853,7 +1853,22 @@ async function captureTabSnapshot(tabId){
   snapshotCaptureBusy = true;
   try{
     const paperColor = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim() || '#ffffff';
-    const canvas = await html2canvas(sec, { scale: Math.min(window.devicePixelRatio || 1, 2), backgroundColor: paperColor, logging:false, useCORS:true, ignoreElements:(el)=> el.id==='swipePreviewOverlay' });
+    const viewportW = sec.offsetWidth;
+    const viewportH = window.innerHeight;
+    const canvas = await html2canvas(sec, {
+      scale: Math.min(window.devicePixelRatio || 1, 2),
+      backgroundColor: paperColor,
+      logging: false,
+      useCORS: true,
+      ignoreElements: (el)=> el.id==='swipePreviewOverlay',
+      x: 0, y: 0,
+      width: viewportW,
+      height: viewportH,
+      scrollX: 0,
+      scrollY: -window.scrollY, // sayfa o an aşağı kaydırılmış olsa bile her zaman en tepeden yakala
+      windowWidth: viewportW,
+      windowHeight: viewportH
+    });
     setPersistedSnapshot(tabId, canvas.toDataURL('image/jpeg', 0.9));
   }catch(e){ /* fotoğraf çekilemezse sessizce geç, önizleme boş kalır */ }
   snapshotCaptureBusy = false;
