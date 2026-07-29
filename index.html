@@ -2396,9 +2396,6 @@ function switchTab(id){
         contentCol.style.transition = 'none';
         contentCol.style.transform = 'translateX(0)';
         endPreview(true);
-        // Önizleme sırasında içerik zaten güncel render edildiği için tam switchTab yerine
-        // sadece "aktif" durumunu sessizce güncelliyoruz — yoksa aynı yönde ikinci bir giriş
-        // animasyonu daha oynayıp tuhaf bir "çift kayma" hissi verirdi.
         activeTab = targetId;
         document.querySelectorAll('nav.tabs button').forEach(b=> b.classList.toggle('active', b.dataset.tab===targetId));
         document.querySelectorAll('section.tab').forEach(s=> s.classList.remove('active','anim-from-right','anim-from-left','anim-fade'));
@@ -2408,6 +2405,10 @@ function switchTab(id){
         const def = allTabDefs.find(t=>t.id===targetId);
         const titleEl = document.getElementById('currentTabTitle');
         if(titleEl) titleEl.textContent = def ? def.label : '';
+        // Önizleme sırasında içerik farklı bir konumlandırma bağlamında (sabit konumlu katmanda)
+        // render edildiği için, asıl yerine geri koyduktan sonra ölçüler bozulmasın diye
+        // burada bir kez daha (artık doğru bağlamda) render ediyoruz.
+        renderTab(targetId);
       }, 240);
     } else {
       contentCol.style.transform = 'translateX(0)';
