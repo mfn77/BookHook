@@ -561,7 +561,6 @@
     .social-floating-action{ bottom:calc(70px + env(safe-area-inset-bottom,0px)) !important; }
   }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -1825,54 +1824,6 @@ function setPersistedHTML(key, html){
     }catch(e3){ /* hâlâ olmuyorsa sessizce geç */ }
   }
 }
-/* ============ SEKME "FOTOĞRAFLARI" (kaydırma animasyonunda anlık önizleme için) ============
-   Bir sekmeden ayrılırken o sekmenin küçük/sıkıştırılmış bir görüntüsünü alıp hem bellekte hem
-   localStorage'da (oturumlar arası kalıcı) saklıyoruz. Bir dahaki kaydırmada (hatta uygulamayı
-   kapatıp yeniden açtıktan sonraki İLK kaydırmada bile) gerçek içerik yerine bu hazır görüntüyü
-   anlık gösterip, sekmeye tam ulaşınca gerçek (canlı) içeriğe geçiyoruz. */
-const tabSnapshots = {};
-const SNAPSHOT_PREFIX = 'snap_';
-function loadAllPersistedSnapshots(){
-  try{
-    const prefix = CACHE_PREFIX+currentUid+'_'+SNAPSHOT_PREFIX;
-    for(let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
-      if(k && k.startsWith(prefix)) tabSnapshots[k.slice(prefix.length)] = localStorage.getItem(k);
-    }
-  }catch(e){}
-}
-function setPersistedSnapshot(tabId, dataUrl){
-  tabSnapshots[tabId] = dataUrl;
-  setPersistedHTML(SNAPSHOT_PREFIX+tabId, dataUrl);
-}
-let snapshotCaptureBusy = false;
-async function captureTabSnapshot(tabId){
-  if(snapshotCaptureBusy || typeof html2canvas==='undefined') return;
-  const sec = document.getElementById('tab-'+tabId);
-  if(!sec || !sec.classList.contains('active')) return;
-  snapshotCaptureBusy = true;
-  try{
-    const paperColor = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim() || '#ffffff';
-    const viewportW = sec.offsetWidth;
-    const viewportH = window.innerHeight;
-    const canvas = await html2canvas(sec, {
-      scale: Math.min(window.devicePixelRatio || 1, 2),
-      backgroundColor: paperColor,
-      logging: false,
-      useCORS: true,
-      ignoreElements: (el)=> el.id==='swipePreviewOverlay',
-      x: 0, y: 0,
-      width: viewportW,
-      height: viewportH,
-      scrollX: 0,
-      scrollY: -window.scrollY, // sayfa o an aşağı kaydırılmış olsa bile her zaman en tepeden yakala
-      windowWidth: viewportW,
-      windowHeight: viewportH
-    });
-    setPersistedSnapshot(tabId, canvas.toDataURL('image/jpeg', 0.9));
-  }catch(e){ /* fotoğraf çekilemezse sessizce geç, önizleme boş kalır */ }
-  snapshotCaptureBusy = false;
-}
 function showCachedOrPlaceholder(el, placeholderHtml){
   if(!el) return;
   if(el.dataset.loaded === '1') return;
@@ -2324,9 +2275,6 @@ function switchTab(id){
   const order = getTabOrder();
   const oldIdx = order.indexOf(activeTab);
   const newIdx = order.indexOf(id);
-  if(activeTab && activeTab!==id){
-    captureTabSnapshot(activeTab); // sekme hâlâ görünürken (aşağıdaki kod .active'i kaldırmadan önce) fotoğrafını çek
-  }
   let direction = 'fade';
   if(oldIdx!==-1 && newIdx!==-1 && oldIdx!==newIdx){
     direction = newIdx > oldIdx ? 'right' : 'left';
@@ -2346,35 +2294,13 @@ function switchTab(id){
   renderTab(id);
 }
 
-/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) — parmakla birlikte anlık kayar, hedef sekmenin
-   son bilinen "fotoğrafını" (varsa) yanında anlık gösterir, iOS/Android'deki gibi mesafe + hız
-   kombinasyonuyla karar verir. Gerçek sekme elemanlarına HİÇ dokunmuyor, sadece bir resim
-   gösterip kaldırıyor — bu yüzden hiçbir sekmenin özel mantığını bozma riski yok. ============ */
+/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) — parmakla birlikte anlık kayar, iOS/Android'deki gibi mesafe + hız kombinasyonuyla karar verir ============ */
 (function setupSwipeNav(){
   let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0;
-  let lastMoveX=0, lastMoveTime=0, velocity=0, previewOverlay=null;
+  let lastMoveX=0, lastMoveTime=0, velocity=0;
   const contentCol = document.querySelector('.content-col');
   const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
   const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
-
-  function startPreview(targetId, goingNext){
-    const rect = contentCol.getBoundingClientRect();
-    previewOverlay = document.createElement('div');
-    previewOverlay.id = 'swipePreviewOverlay';
-    previewOverlay.style.cssText = `position:fixed; top:${rect.top}px; left:${goingNext ? rect.left+containerWidth : rect.left-containerWidth}px; width:${containerWidth}px; height:${rect.height}px; z-index:5; overflow:hidden; background:var(--paper); pointer-events:none;`;
-    const snap = tabSnapshots[targetId];
-    if(snap){
-      const img = document.createElement('img');
-      img.src = snap;
-      img.style.cssText = 'width:100%; height:100%; object-fit:cover; object-position:top;';
-      previewOverlay.appendChild(img);
-    }
-    document.body.appendChild(previewOverlay);
-  }
-  function endPreview(){
-    if(previewOverlay && previewOverlay.parentNode) previewOverlay.parentNode.removeChild(previewOverlay);
-    previewOverlay = null;
-  }
 
   document.addEventListener('touchstart', (e)=>{
     if(e.touches.length!==1){ touchStartX=null; return; }
@@ -2403,14 +2329,12 @@ function switchTab(id){
       if(idx===-1 || profileGateActive || (dx<0 && idx>=order.length-1) || (dx>0 && idx<=0)){ touchStartX=null; return; }
       dragging = true;
       contentCol.style.transition = 'none';
-      startPreview(order[dx<0 ? idx+1 : idx-1], dx<0);
     }
     const dt = e.timeStamp - lastMoveTime;
     if(dt > 0) velocity = (touch.clientX - lastMoveX) / dt;
     lastMoveX = touch.clientX;
     lastMoveTime = e.timeStamp;
     contentCol.style.transform = `translateX(${dx}px)`;
-    if(previewOverlay) previewOverlay.style.transform = `translateX(${dx}px)`;
   }, {passive:true});
 
   document.addEventListener('touchend', (e)=>{
@@ -2426,23 +2350,18 @@ function switchTab(id){
     const flickOk = Math.abs(velocity) > VELOCITY_THRESHOLD && Math.sign(velocity)===Math.sign(dx);
     const shouldComplete = (distanceOk || flickOk) && idx!==-1;
     contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
-    if(previewOverlay) previewOverlay.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
     if(shouldComplete){
       const goingNext = dx < 0;
       const targetIdx = goingNext ? idx+1 : idx-1;
       const flyDist = goingNext ? -containerWidth : containerWidth;
       contentCol.style.transform = `translateX(${flyDist}px)`;
-      if(previewOverlay) previewOverlay.style.transform = `translateX(${flyDist}px)`;
       setTimeout(()=>{
         contentCol.style.transition = 'none';
         contentCol.style.transform = 'translateX(0)';
-        endPreview();
         switchTab(order[targetIdx]);
       }, 240);
     } else {
       contentCol.style.transform = 'translateX(0)';
-      if(previewOverlay) previewOverlay.style.transform = 'translateX(0)';
-      setTimeout(endPreview, 240);
     }
   }, {passive:true});
 })();
@@ -7679,7 +7598,6 @@ onAuthStateChanged(auth, async (user)=>{
     initialUsersSnap.forEach(d=> usersCache[d.id] = d.data());
   }catch(e){}
 
-  loadAllPersistedSnapshots();
   unsubUsers = onSnapshot(collection(db,'users'), (snap)=>{
     usersCache = {};
     snap.forEach(d=> usersCache[d.id] = d.data());
