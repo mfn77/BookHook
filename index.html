@@ -100,7 +100,7 @@
   .sidebar-header{ height:62px; display:flex; align-items:center; justify-content:center; margin-bottom:0; flex:0 0 auto; position:sticky; top:env(safe-area-inset-top, 0px); }
   .sidebar-tabs.tabs{ position:sticky; top:calc(62px + env(safe-area-inset-top, 0px)); }
   .sidebar-logo{ width:38px; height:auto; display:block; }
-  .content-col{ flex:1; min-width:0; max-width:100%; display:flex; flex-direction:column; overflow-x:hidden; }
+  .content-col{ flex:1; min-width:0; max-width:100%; display:flex; flex-direction:column; overflow-x:hidden; touch-action:pan-y; }
   @media (max-width:380px){
     .sidebar{ width:62px; }
     .content-col{ margin-left:62px; }
@@ -2308,7 +2308,7 @@ function switchTab(id){
   function buildBookIcon(){
     const wrap = document.createElement('div');
     wrap.id = 'swipeBookIcon';
-    wrap.style.cssText = 'position:fixed; top:50%; transform:translateY(-50%); width:88px; height:68px; z-index:5; pointer-events:none; color:var(--gold); opacity:0.92;';
+    wrap.style.cssText = 'position:fixed; top:50%; transform:translateY(-50%); width:88px; height:68px; z-index:5; pointer-events:none; color:var(--gold); opacity:0; transition:opacity 0.15s;';
     wrap.innerHTML = `
       <svg viewBox="0 0 100 76" width="88" height="68" style="position:absolute; top:0; left:0; overflow:visible;">
         <path d="M50 8 C40 3,18 3,8 10 L8 68 C18 61,40 61,50 66 Z" fill="var(--paper)" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"></path>
@@ -2329,13 +2329,26 @@ function switchTab(id){
   }
   function updatePreview(dx){
     if(!bookIcon) return;
-    const iconHalfW = 44;
+    const iconW = 88, iconHalfW = 44;
     const gapWidth = Math.abs(dx);
     const goingNext = dx < 0;
-    // İkon her zaman o an AÇILAN boşluğun ortasında dursun — böylece asla gerçek içeriğin
-    // üzerine binmez, sadece kendi tarafında (sağa gidiyorsak sağda, sola gidiyorsak solda) kalır.
-    const centerOfGap = goingNext ? (contentLeft + containerWidth - gapWidth/2) : (contentLeft + gapWidth/2);
-    bookIcon.style.left = (centerOfGap - iconHalfW) + 'px';
+    // İkon HİÇBİR ZAMAN gerçek içeriğe binmesin: boşluk ikon genişliğinden dar olduğunda
+    // ikonu boşluğun iç kenarına yasla (taşan kısmı ekranın dışında/görünmez kalsın),
+    // boşluk yeterince büyüyünce normal şekilde ortalanmaya devam etsin.
+    let iconLeft;
+    if(goingNext){
+      const rightEdge = contentLeft + containerWidth;
+      const desiredLeft = (rightEdge - gapWidth/2) - iconHalfW;
+      iconLeft = Math.max(desiredLeft, rightEdge - gapWidth);
+    } else {
+      const leftEdge = contentLeft;
+      const desiredRight = (leftEdge + gapWidth/2) + iconHalfW;
+      const iconRight = Math.min(desiredRight, leftEdge + gapWidth);
+      iconLeft = iconRight - iconW;
+    }
+    bookIcon.style.left = iconLeft + 'px';
+    // İkon, boşluk küçükken görünmesin; belli bir eşiği geçince belirsin (kenardan girmiş hissi verir).
+    bookIcon.style.opacity = gapWidth > 26 ? '0.92' : '0';
     const flipPage = document.getElementById('swipeBookFlipPage');
     if(flipPage){
       // Sayfa çevirme, sürüklemenin tamamlanma eşiğiyle (yaklaşık yarısıyla) uyumlu bir hızda ilerlesin.
@@ -2381,9 +2394,10 @@ function switchTab(id){
     const dy = touch.clientY - touchStartY;
     if(!dragging){
       // Dikey kaydırmayı gereksiz yere kilitlememek için yön belirsizken bekliyoruz, ama tarayıcı
-      // scroll kararını çok erken verdiği için eşiği düşük tutuyoruz — yatay niyet netleşir netleşmez
-      // hemen kilitliyoruz.
-      if(Math.abs(dx) < 6 || Math.abs(dx) <= Math.abs(dy)*1.3) return;
+      // scroll kararını ÇOK erken (birkaç piksel hareketle) verip bunu daha sonra preventDefault
+      // ile geri alamıyoruz. Bu yüzden eşiği mümkün olduğunca düşük tutup, yatay eğilim belirir
+      // belirmez hemen kilitliyoruz.
+      if(Math.abs(dx) < 4 || Math.abs(dx) <= Math.abs(dy)*1.15) return;
       const order = getTabOrder();
       const idx = order.indexOf(activeTab);
       if(idx===-1 || profileGateActive || (dx<0 && idx>=order.length-1) || (dx>0 && idx<=0)){ touchStartX=null; return; }
