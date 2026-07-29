@@ -1852,8 +1852,9 @@ async function captureTabSnapshot(tabId){
   if(!sec || !sec.classList.contains('active')) return;
   snapshotCaptureBusy = true;
   try{
-    const canvas = await html2canvas(sec, { scale:0.35, backgroundColor:null, logging:false, useCORS:true, ignoreElements:(el)=> el.id==='swipePreviewOverlay' });
-    setPersistedSnapshot(tabId, canvas.toDataURL('image/jpeg', 0.55));
+    const paperColor = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim() || '#ffffff';
+    const canvas = await html2canvas(sec, { scale: Math.min(window.devicePixelRatio || 1, 2), backgroundColor: paperColor, logging:false, useCORS:true, ignoreElements:(el)=> el.id==='swipePreviewOverlay' });
+    setPersistedSnapshot(tabId, canvas.toDataURL('image/jpeg', 0.9));
   }catch(e){ /* fotoğraf çekilemezse sessizce geç, önizleme boş kalır */ }
   snapshotCaptureBusy = false;
 }
