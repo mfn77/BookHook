@@ -2299,12 +2299,11 @@ function switchTab(id){
    gösterir, animasyon sürerken dikey kaydırmayı kilitler, iOS/Android'deki gibi mesafe + hız
    kombinasyonuyla karar verir ============ */
 (function setupSwipeNav(){
-  let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0;
+  let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, contentLeft=0;
   let lastMoveX=0, lastMoveTime=0, velocity=0, bookIcon=null;
   const contentCol = document.querySelector('.content-col');
   const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
   const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
-  const ICON_TRAVEL_RATIO = 0.32; // sürüklemenin bu oranı kadarında ikon tam ortada olur, sonrası sabit kalır
 
   function buildBookIcon(){
     const wrap = document.createElement('div');
@@ -2316,7 +2315,7 @@ function switchTab(id){
         <path d="M50 8 C60 3,82 3,92 10 L92 68 C82 61,60 61,50 66 Z" fill="var(--paper)" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"></path>
         <line x1="50" y1="8" x2="50" y2="66" stroke="currentColor" stroke-width="2.5"></line>
       </svg>
-      <div id="swipeBookFlipPage" style="position:absolute; top:5px; left:50px; width:42px; height:58px; transform-origin:left center;">
+      <div id="swipeBookFlipPage" style="position:absolute; top:5px; left:44px; width:42px; height:58px; transform-origin:left center;">
         <svg viewBox="0 0 42 58" width="42" height="58" style="filter:drop-shadow(1px 0 1px rgba(0,0,0,0.15));">
           <path d="M0 6 C10 2,32 2,42 8 L42 50 C32 47,10 47,0 51 Z" fill="var(--card)" stroke="currentColor" stroke-width="3"></path>
         </svg>
@@ -2328,18 +2327,20 @@ function switchTab(id){
     bookIcon = buildBookIcon();
     document.body.appendChild(bookIcon);
   }
-  function updatePreview(dx, goingNext){
+  function updatePreview(dx){
     if(!bookIcon) return;
     const iconHalfW = 44;
-    const screenCenter = window.innerWidth/2;
-    const startX = goingNext ? window.innerWidth + iconHalfW : -iconHalfW; // kenarın hemen dışı
-    const travelProgress = Math.min(1, Math.abs(dx) / (containerWidth * ICON_TRAVEL_RATIO));
-    const currentX = startX + (screenCenter - startX) * travelProgress;
-    bookIcon.style.left = (currentX - iconHalfW) + 'px';
+    const gapWidth = Math.abs(dx);
+    const goingNext = dx < 0;
+    // İkon her zaman o an AÇILAN boşluğun ortasında dursun — böylece asla gerçek içeriğin
+    // üzerine binmez, sadece kendi tarafında (sağa gidiyorsak sağda, sola gidiyorsak solda) kalır.
+    const centerOfGap = goingNext ? (contentLeft + containerWidth - gapWidth/2) : (contentLeft + gapWidth/2);
+    bookIcon.style.left = (centerOfGap - iconHalfW) + 'px';
     const flipPage = document.getElementById('swipeBookFlipPage');
     if(flipPage){
-      // Basit ve güvenilir 2B "sayfa çevirme": yatayda sıkışıp (kenardan bakılıyormuş gibi) diğer yöne açılır.
-      const flipProgress = Math.max(-1, Math.min(1, dx / containerWidth));
+      // Sayfa çevirme, tüm ekran genişliği yerine çok daha kısa bir mesafede (genişliğin ~%28'i)
+      // tamamlansın ki parmak hareketinin en başından itibaren belirgin şekilde görünsün.
+      const flipProgress = Math.max(-1, Math.min(1, dx / (containerWidth * 0.28)));
       flipPage.style.transform = `scaleX(${Math.cos(flipProgress*Math.PI)})`;
     }
   }
@@ -2366,6 +2367,7 @@ function switchTab(id){
     lastMoveX = touchStartX;
     lastMoveTime = e.timeStamp;
     containerWidth = contentCol.offsetWidth || window.innerWidth;
+    contentLeft = contentCol.getBoundingClientRect().left;
   }, {passive:true});
 
   document.addEventListener('touchmove', (e)=>{
@@ -2391,7 +2393,7 @@ function switchTab(id){
     lastMoveX = touch.clientX;
     lastMoveTime = e.timeStamp;
     contentCol.style.transform = `translateX(${dx}px)`;
-    updatePreview(dx, dx<0);
+    updatePreview(dx);
   }, {passive:false});
 
   document.addEventListener('touchend', (e)=>{
