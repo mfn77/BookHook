@@ -2364,6 +2364,10 @@ function switchTab(id){
     if(bookIcon && bookIcon.parentNode) bookIcon.parentNode.removeChild(bookIcon);
     bookIcon = null;
   }
+  function unlockPageScroll(){
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+  }
 
   document.addEventListener('touchstart', (e)=>{
     endPreview(); // hızlı art arda kaydırmalarda önceki katman takılı kalmasın diye önce her ihtimale karşı temizle
@@ -2372,6 +2376,7 @@ function switchTab(id){
     // yeni jestin her zaman temiz bir konumdan başlaması için burada kesin olarak sıfırlıyoruz.
     contentCol.style.transition = 'none';
     contentCol.style.transform = 'translateX(0)';
+    unlockPageScroll();
     if(e.touches.length!==1){ touchStartX=null; return; }
     const t = e.target;
     if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal')){
@@ -2404,6 +2409,11 @@ function switchTab(id){
       dragging = true;
       contentCol.style.transition = 'none';
       startPreview();
+      // Dokunuş olaylarının zamanlamasıyla uğraşmak yerine, sayfayı burada doğrudan ve kesin
+      // olarak kaydırılamaz hale getiriyoruz — bu, tarayıcının erken scroll kararı verip
+      // vermediğinden bağımsız, garantili bir kilit.
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
     }
     if(dragging && e.cancelable) e.preventDefault(); // yön netleşince dikey kaydırmayı kilitle
     const dt = e.timeStamp - lastMoveTime;
@@ -2421,6 +2431,7 @@ function switchTab(id){
     touchStartX = null;
     if(!dragging){ return; }
     dragging = false;
+    unlockPageScroll();
     const order = getTabOrder();
     const idx = order.indexOf(activeTab);
     const distanceOk = Math.abs(dx) > containerWidth * DISTANCE_THRESHOLD_RATIO;
@@ -2463,6 +2474,7 @@ function switchTab(id){
     touchStartX = null;
     if(!dragging) return;
     dragging = false;
+    unlockPageScroll();
     if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
     contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
     contentCol.style.transform = 'translateX(0)';
