@@ -2440,19 +2440,26 @@ function switchTab(id){
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
     if(!dragging){
-      // Dikey kaydırmayı gereksiz yere kilitlememek için yön belirsizken bekliyoruz, ama tarayıcı
-      // scroll kararını ÇOK erken (birkaç piksel hareketle) verip bunu daha sonra preventDefault
-      // ile geri alamıyoruz. Bu yüzden eşiği mümkün olduğunca düşük tutup, yatay eğilim belirir
-      // belirmez hemen kilitliyoruz.
-      if(Math.abs(dx) < 4 || Math.abs(dx) <= Math.abs(dy)*1.15) return;
+      // Dikey kaydırmayı gereksiz yere kilitlememek için yön belirsizken bekliyoruz. Eşik önceden
+      // gevşekti — bu, hafifçe dikey başlayıp sonra yataya dönen jestlerde tarayıcının önce
+      // scroll'a karar verip sonra bizimle çakışmasına (jitter/takılmaya) sebep oluyordu. Şimdi
+      // çok daha net bir yatay üstünlük istiyoruz.
+      if(Math.abs(dx) < 5 || Math.abs(dx) <= Math.abs(dy)*2.2) return;
       const order = getTabOrder();
       const idx = order.indexOf(activeTab);
       if(idx===-1 || profileGateActive || (dx<0 && idx>=order.length-1) || (dx>0 && idx<=0)){ touchStartX=null; return; }
       dragging = true;
       contentCol.style.transition = 'none';
       startPreview();
+      // Dokunuş olaylarının zamanlamasıyla uğraşmak yerine, sayfayı burada doğrudan ve kesin
+      // olarak kaydırılamaz hale getiriyoruz — bu, tarayıcının erken scroll kararı verip
+      // vermediğinden bağımsız, garantili bir kilit.
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
       startWatchdog();
     }
+    if(dragging && e.cancelable) e.preventDefault();
+    if(dragging && e.cancelable) e.preventDefault();
     const dt = e.timeStamp - lastMoveTime;
     if(dt > 0) velocity = (touch.clientX - lastMoveX) / dt;
     lastMoveX = touch.clientX;
@@ -2460,7 +2467,7 @@ function switchTab(id){
     lastMoveWallTime = Date.now();
     contentCol.style.transform = `translateX(${dx}px)`;
     updatePreview(dx);
-  }, {passive:true});
+  }, {passive:false});
 
   document.addEventListener('touchend', (e)=>{
     if(touchStartX===null) return;
