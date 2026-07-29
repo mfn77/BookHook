@@ -2310,25 +2310,38 @@ function switchTab(id){
   function buildBookIcon(){
     const wrap = document.createElement('div');
     wrap.id = 'swipeBookIcon';
-    wrap.style.cssText = 'position:fixed; top:50%; transform:translateY(-50%); width:88px; height:68px; z-index:5; pointer-events:none; color:var(--gold); opacity:0; transition:opacity 0.15s;';
+    wrap.style.cssText = 'position:fixed; top:50%; transform:translateY(-50%); width:88px; height:76px; z-index:5; pointer-events:none; opacity:0; transition:opacity 0.15s;';
     wrap.innerHTML = `
-      <svg viewBox="0 0 100 76" width="88" height="68" style="position:absolute; top:0; left:0; overflow:visible; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.12));">
-        <path d="M50 8 C40 3,18 3,8 10 L8 68 C18 61,40 61,50 66 Z" fill="var(--card)" stroke="var(--gold)" stroke-width="3" stroke-linejoin="round"></path>
-        <path d="M50 8 C60 3,82 3,92 10 L92 68 C82 61,60 61,50 66 Z" fill="var(--card)" stroke="var(--gold)" stroke-width="3" stroke-linejoin="round"></path>
-        <path d="M50 8 L50 66" stroke="var(--gold-dark)" stroke-width="3.5" stroke-linecap="round"></path>
-        <line x1="16" y1="22" x2="40" y2="19" stroke="var(--gold)" stroke-width="1.6" opacity="0.45" stroke-linecap="round"></line>
-        <line x1="16" y1="31" x2="40" y2="28" stroke="var(--gold)" stroke-width="1.6" opacity="0.45" stroke-linecap="round"></line>
-        <line x1="16" y1="40" x2="36" y2="38.5" stroke="var(--gold)" stroke-width="1.6" opacity="0.35" stroke-linecap="round"></line>
-        <line x1="60" y1="19" x2="84" y2="22" stroke="var(--gold)" stroke-width="1.6" opacity="0.45" stroke-linecap="round"></line>
-        <line x1="60" y1="28" x2="84" y2="31" stroke="var(--gold)" stroke-width="1.6" opacity="0.45" stroke-linecap="round"></line>
-        <line x1="64" y1="38.5" x2="84" y2="40" stroke="var(--gold)" stroke-width="1.6" opacity="0.35" stroke-linecap="round"></line>
+      <svg viewBox="0 0 100 84" width="88" height="74" style="position:absolute; top:0; left:0; overflow:visible; filter:drop-shadow(0 3px 4px rgba(0,0,0,0.18));">
+        <defs>
+          <linearGradient id="swipeBookCoverL" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8a5a34"/>
+            <stop offset="100%" stop-color="#6b4423"/>
+          </linearGradient>
+          <linearGradient id="swipeBookCoverR" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#7c4f2d"/>
+            <stop offset="100%" stop-color="#5e3a1e"/>
+          </linearGradient>
+          <linearGradient id="swipeBookPage" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fdf6e9"/>
+            <stop offset="100%" stop-color="#f2e6cf"/>
+          </linearGradient>
+        </defs>
+        <path d="M50 12 C40 6,18 6,8 13 L8 72 C18 65,40 65,50 71 Z" fill="url(#swipeBookCoverL)"></path>
+        <path d="M50 12 C60 6,82 6,92 13 L92 72 C82 65,60 65,50 71 Z" fill="url(#swipeBookCoverR)"></path>
+        <path d="M50 16 C41 11,21 11,12 17 L12 69 C21 63,41 63,50 68 Z" fill="url(#swipeBookPage)"></path>
+        <path d="M50 16 L50 68" stroke="#d8c7a6" stroke-width="1" opacity="0.6"></path>
+        <line x1="19" y1="27" x2="41" y2="24.5" stroke="#c9b590" stroke-width="1.6" stroke-linecap="round"></line>
+        <line x1="19" y1="35" x2="41" y2="32.5" stroke="#c9b590" stroke-width="1.6" stroke-linecap="round"></line>
+        <line x1="19" y1="43" x2="37" y2="41" stroke="#c9b590" stroke-width="1.6" stroke-linecap="round"></line>
+        <path d="M56 4 L66 4 L66 30 L61 24 L56 30 Z" fill="#b5382e"></path>
       </svg>
-      <div id="swipeBookFlipPage" style="position:absolute; top:0; left:44px; width:44px; height:68px; overflow:hidden; transform-origin:left center;">
-        <svg viewBox="0 0 100 76" width="88" height="68" style="position:absolute; top:0; left:-44px; filter:drop-shadow(1px 0 1px rgba(0,0,0,0.15));">
-          <path d="M50 8 C60 3,82 3,92 10 L92 68 C82 61,60 61,50 66 Z" fill="var(--card)" stroke="var(--gold)" stroke-width="3" stroke-linejoin="round"></path>
-          <line x1="60" y1="19" x2="84" y2="22" stroke="var(--gold)" stroke-width="1.6" opacity="0.45" stroke-linecap="round"></line>
-          <line x1="60" y1="28" x2="84" y2="31" stroke="var(--gold)" stroke-width="1.6" opacity="0.45" stroke-linecap="round"></line>
-          <line x1="64" y1="38.5" x2="84" y2="40" stroke="var(--gold)" stroke-width="1.6" opacity="0.35" stroke-linecap="round"></line>
+      <div id="swipeBookFlipPage" style="position:absolute; top:14px; left:44px; width:37px; height:47px; overflow:hidden; transform-origin:left center;">
+        <svg viewBox="0 0 100 84" width="88" height="74" style="position:absolute; top:-14px; left:-44px; filter:drop-shadow(1px 0 1px rgba(0,0,0,0.15));">
+          <path d="M50 16 C59 11,79 11,88 17 L88 69 C79 63,59 63,50 68 Z" fill="url(#swipeBookPage)"></path>
+          <line x1="59" y1="24.5" x2="81" y2="27" stroke="#c9b590" stroke-width="1.6" stroke-linecap="round"></line>
+          <line x1="59" y1="32.5" x2="81" y2="35" stroke="#c9b590" stroke-width="1.6" stroke-linecap="round"></line>
+          <line x1="63" y1="41" x2="81" y2="43" stroke="#c9b590" stroke-width="1.6" stroke-linecap="round"></line>
         </svg>
       </div>
     `;
