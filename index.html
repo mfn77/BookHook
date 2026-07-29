@@ -2299,7 +2299,7 @@ function switchTab(id){
    gösterir, animasyon sürerken dikey kaydırmayı kilitler, iOS/Android'deki gibi mesafe + hız
    kombinasyonuyla karar verir ============ */
 (function setupSwipeNav(){
-  let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, contentLeft=0;
+  let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, contentLeft=0, pendingSettleTimeout=null;
   let lastMoveX=0, lastMoveTime=0, velocity=0, bookIcon=null;
   const contentCol = document.querySelector('.content-col');
   const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
@@ -2315,8 +2315,8 @@ function switchTab(id){
         <path d="M50 8 C60 3,82 3,92 10 L92 68 C82 61,60 61,50 66 Z" fill="var(--paper)" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"></path>
         <line x1="50" y1="8" x2="50" y2="66" stroke="currentColor" stroke-width="2.5"></line>
       </svg>
-      <div id="swipeBookFlipPage" style="position:absolute; top:5px; left:44px; width:42px; height:58px; transform-origin:left center;">
-        <svg viewBox="0 0 42 58" width="42" height="58" style="filter:drop-shadow(1px 0 1px rgba(0,0,0,0.15));">
+      <div id="swipeBookFlipPage" style="position:absolute; top:7px; left:44px; width:37px; height:52px; transform-origin:left center;">
+        <svg viewBox="0 0 42 58" width="37" height="52" style="filter:drop-shadow(1px 0 1px rgba(0,0,0,0.15));">
           <path d="M0 6 C10 2,32 2,42 8 L42 50 C32 47,10 47,0 51 Z" fill="var(--card)" stroke="currentColor" stroke-width="3"></path>
         </svg>
       </div>
@@ -2338,9 +2338,8 @@ function switchTab(id){
     bookIcon.style.left = (centerOfGap - iconHalfW) + 'px';
     const flipPage = document.getElementById('swipeBookFlipPage');
     if(flipPage){
-      // Sayfa çevirme, tüm ekran genişliği yerine çok daha kısa bir mesafede (genişliğin ~%28'i)
-      // tamamlansın ki parmak hareketinin en başından itibaren belirgin şekilde görünsün.
-      const flipProgress = Math.max(-1, Math.min(1, dx / (containerWidth * 0.28)));
+      // Sayfa çevirme, sürüklemenin tamamlanma eşiğiyle (yaklaşık yarısıyla) uyumlu bir hızda ilerlesin.
+      const flipProgress = Math.max(-1, Math.min(1, dx / (containerWidth * 0.55)));
       flipPage.style.transform = `scaleX(${Math.cos(flipProgress*Math.PI)})`;
     }
   }
@@ -2355,6 +2354,11 @@ function switchTab(id){
 
   document.addEventListener('touchstart', (e)=>{
     endPreview(); // hızlı art arda kaydırmalarda önceki katman takılı kalmasın diye önce her ihtimale karşı temizle
+    if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
+    // Önceki kaydırmadan yarım kalmış bir dönüşüm varsa (hızlı art arda kaydırmada olabiliyor),
+    // yeni jestin her zaman temiz bir konumdan başlaması için burada kesin olarak sıfırlıyoruz.
+    contentCol.style.transition = 'none';
+    contentCol.style.transform = 'translateX(0)';
     if(e.touches.length!==1){ touchStartX=null; return; }
     const t = e.target;
     if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal')){
@@ -2418,17 +2422,18 @@ function switchTab(id){
       contentCol.style.transform = `translateX(${flyDist}px)`;
       settlePreview(goingNext ? -1 : 1);
       if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
-      setTimeout(()=>{
+      pendingSettleTimeout = setTimeout(()=>{
         contentCol.style.transition = 'none';
         contentCol.style.transform = 'translateX(0)';
         endPreview();
         switchTab(order[targetIdx]);
+        pendingSettleTimeout = null;
       }, 240);
     } else {
       contentCol.style.transform = 'translateX(0)';
       settlePreview(0);
       if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
-      setTimeout(endPreview, 240);
+      pendingSettleTimeout = setTimeout(()=>{ endPreview(); pendingSettleTimeout=null; }, 240);
     }
   }, {passive:true});
 })();
