@@ -2294,13 +2294,45 @@ function switchTab(id){
   renderTab(id);
 }
 
-/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) — parmakla birlikte anlık kayar, iOS/Android'deki gibi mesafe + hız kombinasyonuyla karar verir ============ */
+/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) — parmakla birlikte anlık kayar, hedef sekmenin
+   gerçek içeriğini de yanında canlı gösterir, iOS/Android'deki gibi mesafe + hız kombinasyonuyla karar verir ============ */
 (function setupSwipeNav(){
-  let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0;
+  let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, containerHeight=0, containerTop=0, containerLeft=0;
   let lastMoveX=0, lastMoveTime=0, velocity=0;
+  let previewOverlay=null, previewSection=null, previewTargetId=null, previewOriginalNextSibling=null;
   const contentCol = document.querySelector('.content-col');
   const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
   const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
+
+  function startPreview(targetId, goingNext){
+    previewTargetId = targetId;
+    previewSection = document.getElementById('tab-'+targetId);
+    if(!previewSection) return false;
+    previewOriginalNextSibling = previewSection.nextSibling;
+    const rect = contentCol.getBoundingClientRect();
+    containerTop = rect.top; containerLeft = rect.left; containerHeight = rect.height;
+    previewOverlay = document.createElement('div');
+    previewOverlay.id = 'swipePreviewOverlay';
+    previewOverlay.style.cssText = `position:fixed; top:${containerTop}px; left:${goingNext ? containerLeft+containerWidth : containerLeft-containerWidth}px; width:${containerWidth}px; height:${containerHeight}px; z-index:5; overflow:hidden; background:var(--paper); pointer-events:none;`;
+    previewOverlay.appendChild(previewSection);
+    document.body.appendChild(previewOverlay);
+    previewSection.style.display = 'block';
+    previewSection.style.height = '100%';
+    previewSection.style.overflowY = 'auto';
+    try{ renderTab(targetId); }catch(e){}
+    return true;
+  }
+  function endPreview(restoreToContentCol){
+    if(!previewSection) return;
+    previewSection.style.display = '';
+    previewSection.style.height = '';
+    previewSection.style.overflowY = '';
+    if(restoreToContentCol){
+      contentCol.insertBefore(previewSection, previewOriginalNextSibling);
+    }
+    if(previewOverlay && previewOverlay.parentNode) previewOverlay.parentNode.removeChild(previewOverlay);
+    previewOverlay = null; previewSection = null; previewTargetId = null; previewOriginalNextSibling = null;
+  }
 
   document.addEventListener('touchstart', (e)=>{
     if(e.touches.length!==1){ touchStartX=null; return; }
@@ -2326,15 +2358,17 @@ function switchTab(id){
       if(Math.abs(dx) < 12 || Math.abs(dx) <= Math.abs(dy)*1.5) return;
       const order = getTabOrder();
       const idx = order.indexOf(activeTab);
-      if(idx===-1 || (dx<0 && idx>=order.length-1) || (dx>0 && idx<=0)){ touchStartX=null; return; }
+      if(idx===-1 || profileGateActive || (dx<0 && idx>=order.length-1) || (dx>0 && idx<=0)){ touchStartX=null; return; }
       dragging = true;
       contentCol.style.transition = 'none';
+      startPreview(order[dx<0 ? idx+1 : idx-1], dx<0);
     }
     const dt = e.timeStamp - lastMoveTime;
     if(dt > 0) velocity = (touch.clientX - lastMoveX) / dt;
     lastMoveX = touch.clientX;
     lastMoveTime = e.timeStamp;
     contentCol.style.transform = `translateX(${dx}px)`;
+    if(previewOverlay) previewOverlay.style.transform = `translateX(${dx}px)`;
   }, {passive:true});
 
   document.addEventListener('touchend', (e)=>{
@@ -2350,18 +2384,35 @@ function switchTab(id){
     const flickOk = Math.abs(velocity) > VELOCITY_THRESHOLD && Math.sign(velocity)===Math.sign(dx);
     const shouldComplete = (distanceOk || flickOk) && idx!==-1;
     contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
+    if(previewOverlay) previewOverlay.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
     if(shouldComplete){
       const goingNext = dx < 0;
       const targetIdx = goingNext ? idx+1 : idx-1;
+      const targetId = order[targetIdx];
       const flyDist = goingNext ? -containerWidth : containerWidth;
       contentCol.style.transform = `translateX(${flyDist}px)`;
+      if(previewOverlay) previewOverlay.style.transform = `translateX(${flyDist}px)`;
       setTimeout(()=>{
         contentCol.style.transition = 'none';
         contentCol.style.transform = 'translateX(0)';
-        switchTab(order[targetIdx]);
+        endPreview(true);
+        // Önizleme sırasında içerik zaten güncel render edildiği için tam switchTab yerine
+        // sadece "aktif" durumunu sessizce güncelliyoruz — yoksa aynı yönde ikinci bir giriş
+        // animasyonu daha oynayıp tuhaf bir "çift kayma" hissi verirdi.
+        activeTab = targetId;
+        document.querySelectorAll('nav.tabs button').forEach(b=> b.classList.toggle('active', b.dataset.tab===targetId));
+        document.querySelectorAll('section.tab').forEach(s=> s.classList.remove('active','anim-from-right','anim-from-left','anim-fade'));
+        const sec = document.getElementById('tab-'+targetId);
+        if(sec) sec.classList.add('active');
+        const allTabDefs = [...ADMIN_TABS, ...MEMBER_TABS, ...HAMBURGER_ADMIN_EXTRA, ...HAMBURGER_MEMBER_EXTRA];
+        const def = allTabDefs.find(t=>t.id===targetId);
+        const titleEl = document.getElementById('currentTabTitle');
+        if(titleEl) titleEl.textContent = def ? def.label : '';
       }, 240);
     } else {
       contentCol.style.transform = 'translateX(0)';
+      if(previewOverlay) previewOverlay.style.transform = 'translateX(0)';
+      setTimeout(()=> endPreview(true), 240);
     }
   }, {passive:true});
 })();
