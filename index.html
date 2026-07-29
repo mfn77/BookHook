@@ -2294,15 +2294,54 @@ function switchTab(id){
   renderTab(id);
 }
 
-/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) — parmakla birlikte anlık kayar, iOS/Android'deki gibi mesafe + hız kombinasyonuyla karar verir ============ */
+/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) — parmakla birlikte anlık kayar, boşta kalan
+   tarafta parmakla senkronize sayfa çeviren bir kitap animasyonu gösterir, animasyon sürerken
+   dikey kaydırmayı kilitler, iOS/Android'deki gibi mesafe + hız kombinasyonuyla karar verir ============ */
 (function setupSwipeNav(){
   let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0;
-  let lastMoveX=0, lastMoveTime=0, velocity=0;
+  let lastMoveX=0, lastMoveTime=0, velocity=0, previewOverlay=null;
   const contentCol = document.querySelector('.content-col');
   const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
   const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
 
+  function buildBookIcon(){
+    const wrap = document.createElement('div');
+    wrap.id = 'swipeBookIcon';
+    wrap.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:88px; height:68px; perspective:340px; color:var(--gold); opacity:0.92;';
+    wrap.innerHTML = `
+      <svg viewBox="0 0 100 76" width="88" height="68" style="position:absolute; top:0; left:0; overflow:visible;">
+        <path d="M50 8 C40 3,18 3,8 10 L8 68 C18 61,40 61,50 66 Z" fill="var(--paper)" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"></path>
+        <path d="M50 8 C60 3,82 3,92 10 L92 68 C82 61,60 61,50 66 Z" fill="var(--paper)" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"></path>
+        <line x1="50" y1="8" x2="50" y2="66" stroke="currentColor" stroke-width="2.5"></line>
+      </svg>
+      <div id="swipeBookFlipPage" style="position:absolute; top:5px; left:50px; width:42px; height:58px; transform-origin:left center; transform-style:preserve-3d; transition:none;">
+        <svg viewBox="0 0 42 58" width="42" height="58" style="position:absolute; top:0; left:0; backface-visibility:hidden; filter:drop-shadow(1px 0 1px rgba(0,0,0,0.15));">
+          <path d="M0 6 C10 2,32 2,42 8 L42 50 C32 47,10 47,0 51 Z" fill="var(--card)" stroke="currentColor" stroke-width="3"></path>
+        </svg>
+      </div>
+    `;
+    return wrap;
+  }
+
+  function startPreview(goingNext){
+    const rect = contentCol.getBoundingClientRect();
+    previewOverlay = document.createElement('div');
+    previewOverlay.id = 'swipePreviewOverlay';
+    previewOverlay.style.cssText = `position:fixed; top:${rect.top}px; left:${goingNext ? rect.left+containerWidth : rect.left-containerWidth}px; width:${containerWidth}px; height:${rect.height}px; z-index:5; overflow:hidden; background:var(--paper); pointer-events:none;`;
+    previewOverlay.appendChild(buildBookIcon());
+    document.body.appendChild(previewOverlay);
+  }
+  function updateBookFlip(progress){
+    const flipPage = document.getElementById('swipeBookFlipPage');
+    if(flipPage) flipPage.style.transform = `rotateY(${Math.max(-170, Math.min(170, progress*180))}deg)`;
+  }
+  function endPreview(){
+    if(previewOverlay && previewOverlay.parentNode) previewOverlay.parentNode.removeChild(previewOverlay);
+    previewOverlay = null;
+  }
+
   document.addEventListener('touchstart', (e)=>{
+    endPreview(); // hızlı art arda kaydırmalarda önceki katman takılı kalmasın diye önce her ihtimale karşı temizle
     if(e.touches.length!==1){ touchStartX=null; return; }
     const t = e.target;
     if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal')){
@@ -2329,13 +2368,19 @@ function switchTab(id){
       if(idx===-1 || profileGateActive || (dx<0 && idx>=order.length-1) || (dx>0 && idx<=0)){ touchStartX=null; return; }
       dragging = true;
       contentCol.style.transition = 'none';
+      startPreview(dx<0);
     }
+    if(dragging && e.cancelable) e.preventDefault(); // yön netleşince dikey kaydırmayı kilitle
     const dt = e.timeStamp - lastMoveTime;
     if(dt > 0) velocity = (touch.clientX - lastMoveX) / dt;
     lastMoveX = touch.clientX;
     lastMoveTime = e.timeStamp;
     contentCol.style.transform = `translateX(${dx}px)`;
-  }, {passive:true});
+    if(previewOverlay){
+      previewOverlay.style.transform = `translateX(${dx}px)`;
+      updateBookFlip(dx/containerWidth);
+    }
+  }, {passive:false});
 
   document.addEventListener('touchend', (e)=>{
     if(touchStartX===null) return;
@@ -2350,18 +2395,27 @@ function switchTab(id){
     const flickOk = Math.abs(velocity) > VELOCITY_THRESHOLD && Math.sign(velocity)===Math.sign(dx);
     const shouldComplete = (distanceOk || flickOk) && idx!==-1;
     contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
+    const flipPage = document.getElementById('swipeBookFlipPage');
+    if(flipPage) flipPage.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
+    if(previewOverlay) previewOverlay.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
     if(shouldComplete){
       const goingNext = dx < 0;
       const targetIdx = goingNext ? idx+1 : idx-1;
       const flyDist = goingNext ? -containerWidth : containerWidth;
       contentCol.style.transform = `translateX(${flyDist}px)`;
+      if(previewOverlay) previewOverlay.style.transform = `translateX(${flyDist}px)`;
+      if(flipPage) flipPage.style.transform = `rotateY(${goingNext ? -180 : 180}deg)`;
       setTimeout(()=>{
         contentCol.style.transition = 'none';
         contentCol.style.transform = 'translateX(0)';
+        endPreview();
         switchTab(order[targetIdx]);
       }, 240);
     } else {
       contentCol.style.transform = 'translateX(0)';
+      if(previewOverlay) previewOverlay.style.transform = 'translateX(0)';
+      if(flipPage) flipPage.style.transform = 'rotateY(0deg)';
+      setTimeout(endPreview, 240);
     }
   }, {passive:true});
 })();
