@@ -2411,13 +2411,17 @@ function switchTab(id){
     const idx = order.indexOf(activeTab);
     const distanceOk = Math.abs(dx) > containerWidth * DISTANCE_THRESHOLD_RATIO;
     const flickOk = Math.abs(velocity) > VELOCITY_THRESHOLD && Math.sign(velocity)===Math.sign(dx);
-    const shouldComplete = (distanceOk || flickOk) && idx!==-1;
+    const goingNext = dx < 0;
+    const targetIdx = goingNext ? idx+1 : idx-1;
+    // Parmağını sürüklerken yön değiştirip (vazgeçip tam tersine gidip) en baştaki/sondaki
+    // sekmede olmayan bir yöne geçmeye çalışmış olabilirsin — burada hedefin gerçekten var
+    // olduğunu doğruluyoruz, yoksa var olmayan bir sekmeye geçip boş sayfada kalırdı.
+    const targetExists = targetIdx>=0 && targetIdx<order.length;
+    const shouldComplete = (distanceOk || flickOk) && idx!==-1 && targetExists;
     contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
     const flipPage = document.getElementById('swipeBookFlipPage');
     if(flipPage) flipPage.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
     if(shouldComplete){
-      const goingNext = dx < 0;
-      const targetIdx = goingNext ? idx+1 : idx-1;
       const flyDist = goingNext ? -containerWidth : containerWidth;
       contentCol.style.transform = `translateX(${flyDist}px)`;
       settlePreview(goingNext ? -1 : 1);
