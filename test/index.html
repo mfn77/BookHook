@@ -3010,6 +3010,16 @@ function renderAdminToday(){
 // Bir haftanın kendi geçmişini GNOME Hava Durumu tarzı şerit olarak üretir. Haftalık pas hakkı
 // kuralına göre: haftanın ilk "okumadı"sı ücretsiz pastır (sarı), ikinci ve sonrakiler cezadır (kırmızı).
 // uid verilmezse currentUid kullanılır; extraColClass küçük (satır içi) varyant için 'small' gibi bir sınıf eklemeye yarar.
+const WEEKHIST_HILL_PATHS = {
+  // Okudu: normal başlar, ortada yükselir, tekrar normale döner.
+  'wh-read':    'M0,60 L0,40 Q50,6 100,40 L100,60 Z',
+  // Cezalı okumadı: normal başlar, ortada alçalır, tekrar normale döner.
+  'wh-penalty': 'M0,60 L0,40 Q50,54 100,40 L100,60 Z',
+  // Pas hakkı: normal başlar ve normal devam eder (düz).
+  'wh-pas':     'M0,60 L0,40 L100,40 L100,60 Z',
+  // Henüz üye değil / işaretleme yok: düz, çok ince bir şerit.
+  'wh-empty':   'M0,60 L0,48 L100,48 L100,60 Z'
+};
 function buildWeekHistoryHTML(dates, perDate, joinDs, uid, extraColClass){
   uid = uid || currentUid;
   extraColClass = extraColClass ? ' '+extraColClass : '';
@@ -3028,12 +3038,13 @@ function buildWeekHistoryHTML(dates, perDate, joinDs, uid, extraColClass){
         else { cls='wh-penalty'; icon='✕'; title = rec.auto?'Otomatik okumadı (ceza)':'Okumadı (ceza)'; }
       }
     }
+    const hillPath = WEEKHIST_HILL_PATHS[cls];
     return `
       <div class="weekhist-col${extraColClass} ${cls}" title="${title}">
         <div class="weekhist-daylabel">${dow}<span class="weekhist-date">${dateLbl}</span></div>
         <div class="weekhist-icon">${icon}</div>
         <div class="weekhist-fillwrap">
-          <svg class="weekhist-hill" viewBox="0 0 100 60" preserveAspectRatio="none"><path d="M0,60 L0,24 Q50,0 100,24 L100,60 Z"/></svg>
+          <svg class="weekhist-hill" viewBox="0 0 100 60" preserveAspectRatio="none"><path d="${hillPath}"/></svg>
         </div>
       </div>`;
   }).join('');
