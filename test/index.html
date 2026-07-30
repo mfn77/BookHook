@@ -401,6 +401,24 @@
     .weekhist-icon{ font-size:14px; height:18px; margin-top:6px; }
     .weekhist-fillwrap{ height:52px; margin-top:4px; }
   }
+  /* Küçük (satır içi) varyant: birden çok üyeyi listeleyen haftalık karne için */
+  .weekhist-col.small{ min-width:0; padding-top:5px; }
+  .weekhist-col.small .weekhist-daylabel{ font-size:9.5px; }
+  .weekhist-col.small .weekhist-date{ display:none; }
+  .weekhist-col.small .weekhist-icon{ font-size:11px; height:15px; margin:3px 0 0; }
+  .weekhist-col.small .weekhist-fillwrap{ height:26px; margin-top:3px; }
+  .weekrep-list{ display:flex; flex-direction:column; }
+  .weekrep-row{ display:flex; align-items:center; gap:10px; padding:9px 2px; border-bottom:1px solid var(--line); }
+  .weekrep-row:last-child{ border-bottom:none; }
+  .weekrep-name{ flex:0 0 auto; width:126px; min-width:74px; overflow:hidden; }
+  .weekrep-strip{ flex:1 1 auto; min-width:0; display:flex; align-items:stretch; border-radius:10px; overflow:hidden; background:var(--paper-2); border:1px solid var(--line); }
+  .weekrep-status{ flex:0 0 auto; min-width:64px; text-align:right; }
+  @media (max-width:700px){
+    .weekrep-name{ width:40px; min-width:40px; }
+    .weekrep-name .uc-name{ display:none; }
+    .weekrep-status{ min-width:0; }
+    .weekrep-status .chip{ font-size:9.5px; padding:3px 6px; }
+  }
   /* ============ SOSYAL SEKMESİ ============ */
   .social-subtab{ padding-bottom:100px; }
   #pinnedPostBar{
@@ -726,7 +744,7 @@
           <div class="mono" id="editPastWeekRangeLabel" style="text-align:center; flex:1;"></div>
           <button class="secondary tiny" id="editPastWeekNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
         </div>
-        <div class="libcard"><table class="weekgrid weekday-table" id="editPastWeekGrid"></table></div>
+        <div class="libcard"><div id="editPastWeekGrid"></div></div>
       </div>
     </section>
 
@@ -735,15 +753,14 @@
         <h2>Bu haftanın karnesi</h2>
         <p class="muted">Haftalık pas hakkı: <b>1</b>. 2. "okumadım" cezaya düşürür. Gün, gece okumalar için ertesi gün 06:00'a kadar sürer.</p>
         <button class="secondary" id="refreshWeekBtn" style="margin-bottom:10px;">Yenile</button>
-        <div class="libcard"><table class="weekgrid weekday-table" id="weekGrid"></table></div>
+        <div class="libcard"><div id="weekGrid"></div></div>
       </div>
 
       <div class="card">
         <h2>Haftalık Geçmişim</h2>
         <p class="muted">Cevap vermediğin geçmiş günler otomatik "okumadı" olarak görünür.</p>
-        <div class="row" style="align-items:center; margin-bottom:10px;">
+        <div class="row" style="align-items:center; margin-bottom:10px; justify-content:space-between;">
           <button class="secondary tiny" id="aWeekPrevBtn" style="flex:0 0 auto;">◀ Önceki Hafta</button>
-          <div class="mono" id="aWeekRangeLabel" style="text-align:center; flex:1;"></div>
           <button class="secondary tiny" id="aWeekNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
         </div>
         <div class="libcard"><div class="weekhist-card"><div class="weekhist-strip" id="aOwnWeekGrid"></div></div></div>
@@ -830,9 +847,8 @@
       <div class="card">
         <h2>Haftalık Geçmişim</h2>
         <p class="muted">Cevap vermediğin geçmiş günler otomatik "okumadı" olarak görünür.</p>
-        <div class="row" style="align-items:center; margin-bottom:10px;">
+        <div class="row" style="align-items:center; margin-bottom:10px; justify-content:space-between;">
           <button class="secondary tiny" id="mWeekPrevBtn" style="flex:0 0 auto;">◀ Önceki Hafta</button>
-          <div class="mono" id="mWeekRangeLabel" style="text-align:center; flex:1;"></div>
           <button class="secondary tiny" id="mWeekNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
         </div>
         <div class="libcard"><div class="weekhist-card"><div class="weekhist-strip" id="mOwnWeekGrid"></div></div></div>
@@ -2992,16 +3008,19 @@ function renderAdminToday(){
 }
 // Bir haftanın kendi geçmişini GNOME Hava Durumu tarzı şerit olarak üretir. Haftalık pas hakkı
 // kuralına göre: haftanın ilk "okumadı"sı ücretsiz pastır (sarı), ikinci ve sonrakiler cezadır (kırmızı).
-function buildWeekHistoryHTML(dates, perDate, joinDs){
+// uid verilmezse currentUid kullanılır; extraColClass küçük (satır içi) varyant için 'small' gibi bir sınıf eklemeye yarar.
+function buildWeekHistoryHTML(dates, perDate, joinDs, uid, extraColClass){
+  uid = uid || currentUid;
+  extraColClass = extraColClass ? ' '+extraColClass : '';
   let passUsed = false;
   return dates.map((d,i)=>{
     const dow = DOW[i];
     const dateLbl = fmtShort(d);
     let cls='wh-empty', icon='', title='';
     if(joinDs && d < joinDs){
-      title = 'Henüz üye değildin';
+      title = 'Henüz üye değildi';
     } else {
-      const rec = perDate[i][currentUid];
+      const rec = perDate[i][uid];
       if(rec && rec.status==='read'){ cls='wh-read'; icon='✓'; title='Okudu'; }
       else if(rec && rec.status==='skip'){
         if(!passUsed){ passUsed = true; cls='wh-pas'; icon='–'; title = rec.auto?'Otomatik okumadı (haftalık pas hakkı)':'Okumadı (haftalık pas hakkı)'; }
@@ -3009,7 +3028,7 @@ function buildWeekHistoryHTML(dates, perDate, joinDs){
       }
     }
     return `
-      <div class="weekhist-col ${cls}" title="${title}">
+      <div class="weekhist-col${extraColClass} ${cls}" title="${title}">
         <div class="weekhist-daylabel">${dow}<span class="weekhist-date">${dateLbl}</span></div>
         <div class="weekhist-icon">${icon}</div>
         <div class="weekhist-fillwrap">
@@ -3022,7 +3041,6 @@ async function renderAdminOwnWeek(){
   const baseMonday = getMonday(nowLogical());
   const monday = addDays(baseMonday, adminWeekOffset*7);
   const dates = weekDates(monday);
-  document.getElementById('aWeekRangeLabel').textContent = `${fmtShort(dates[0])} — ${fmtShort(dates[6])}` + (adminWeekOffset===0 ? ' (bu hafta)' : '');
   document.getElementById('aWeekNextBtn').disabled = adminWeekOffset>=0;
   const table = document.getElementById('aOwnWeekGrid');
   showCachedOrPlaceholder(table, `<div class="empty-state">Yükleniyor…</div>`);
@@ -3080,39 +3098,41 @@ async function renderEditPastTab(){
 /* ============ ADMIN: BU HAFTA (ve genel olarak: seçilen herhangi bir hafta) ============ */
 async function renderWeekReportTable(monday, tableId){
   const table = document.getElementById(tableId);
-  showCachedOrPlaceholder(table, `<tr><td class="empty-state">Yükleniyor…</td></tr>`);
+  showCachedOrPlaceholder(table, `<div class="empty-state">Yükleniyor…</div>`);
   const dates = weekDates(monday);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const uids = activeUids();
-  if(uids.length===0){ table.innerHTML = `<tr><td class="empty-state">Henüz üye yok.</td></tr>`; markLoaded(table); return; }
-  let head = `<tr><th style="text-align:left;">Üye</th>` + dates.map((d,i)=>`<th>${DOW[i]}</th>`).join('') + `<th>Durum</th></tr>`;
+  if(uids.length===0){ table.innerHTML = `<div class="empty-state">Henüz üye yok.</div>`; markLoaded(table); return; }
   let rows = uids.map(uid=>{
     const joinDs = joinDateStrOf(uid);
     let miss=0, read=0;
-    const cells = dates.map((d,i)=>{
-      if(joinDs && d < joinDs){
-        return `<td><span class="stamp-mini notmember day-info-cell" data-info="Henüz üye değildi">·</span></td>`;
-      }
+    dates.forEach((d,i)=>{
+      if(joinDs && d < joinDs) return;
       const rec = perDate[i][uid];
-      if(rec && rec.status==='read'){ read++; return `<td><span class="stamp-mini read day-info-cell" data-info="Okudu">✓</span></td>`; }
-      if(rec && rec.status==='skip'){ miss++; return `<td><span class="stamp-mini skip ${rec.auto?'auto':''} day-info-cell" data-info="${rec.auto?'Okumadı (otomatik işaretlendi)':'Okumadı'}">✕</span></td>`; }
-      return `<td><span class="stamp-mini empty day-info-cell" data-info="Pas geçti / işaretleme yapılmadı">·</span></td>`;
-    }).join('');
+      if(rec && rec.status==='read') read++;
+      else if(rec && rec.status==='skip') miss++;
+    });
     let statusChip = `<span class="chip">—</span>`;
     if(miss+read>0){
       if(miss>=2) statusChip = `<span class="chip danger">Cezalı (${miss})</span>`;
       else if(miss===1) statusChip = `<span class="chip warn">Pas (1)</span>`;
       else statusChip = `<span class="chip ok">Kusursuz</span>`;
     }
-    return `<tr><td class="name-cell">${userChipHtml(uid,18)}</td>${cells}<td>${statusChip}</td></tr>`;
+    const strip = buildWeekHistoryHTML(dates, perDate, joinDs, uid, 'small');
+    return `<div class="weekrep-row">
+        <div class="weekrep-name">${userChipHtml(uid,22)}</div>
+        <div class="weekrep-strip">${strip}</div>
+        <div class="weekrep-status">${statusChip}</div>
+      </div>`;
   }).join('');
-  table.innerHTML = head + rows;
+  table.innerHTML = `<div class="weekrep-list">${rows}</div>`;
   markLoaded(table);
 }
 async function renderAdminWeek(){
   await renderWeekReportTable(getMonday(nowLogical()), 'weekGrid');
 }
 document.getElementById('refreshWeekBtn').addEventListener('click', renderAdminWeek);
+
 
 let editPastWeekOffset = 0;
 async function renderEditPastWeekReport(){
@@ -3511,7 +3531,6 @@ async function renderMemberOwnWeek(){
   const baseMonday = getMonday(nowLogical());
   const monday = addDays(baseMonday, memberWeekOffset*7);
   const dates = weekDates(monday);
-  document.getElementById('mWeekRangeLabel').textContent = `${fmtShort(dates[0])} — ${fmtShort(dates[6])}` + (memberWeekOffset===0 ? ' (bu hafta)' : '');
   document.getElementById('mWeekNextBtn').disabled = memberWeekOffset>=0;
   const table = document.getElementById('mOwnWeekGrid');
   showCachedOrPlaceholder(table, `<div class="empty-state">Yükleniyor…</div>`);
