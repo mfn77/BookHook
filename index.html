@@ -2617,7 +2617,7 @@ function renderTab(id){
   else if(id==='members') renderAdminMembers();
   else if(id==='worms') renderAdminWorms();
   else if(id==='msurvey') renderMemberSurvey();
-  else if(id==='mtoday'){ renderMemberWeekAll(); memberWeekOffset=0; renderMemberOwnWeek(); }
+  else if(id==='mtoday'){ renderWeekReportTable(getMonday(nowLogical()), 'mWeekGridAll'); memberWeekOffset=0; renderMemberOwnWeek(); }
   else if(id==='settings'){ renderSettingsTab(); if(myProfile.role==='admin') renderAdminDraws(); }
   else if(id==='mworms') renderMemberWorms();
   else if(id==='rules') renderRulesTab();
@@ -3576,38 +3576,7 @@ document.getElementById('mWeekPrevBtn').addEventListener('click', ()=>{ memberWe
 document.getElementById('mWeekNextBtn').addEventListener('click', ()=>{ if(memberWeekOffset<0){ memberWeekOffset += 1; renderMemberOwnWeek(); } });
 
 /* ============ ÜYE: BU HAFTA (HERKES) ============ */
-async function renderMemberWeekAll(){
-  const table = document.getElementById('mWeekGridAll');
-  showCachedOrPlaceholder(table, `<div class="empty-state">Yükleniyor…</div>`);
-  const monday = getMonday(nowLogical());
-  const dates = weekDates(monday);
-  const perDate = await Promise.all(dates.map(fetchDayAnswers));
-  const uids = activeUids();
-  if(uids.length===0){ table.innerHTML = `<div class="empty-state">Henüz üye yok.</div>`; markLoaded(table); return; }
-  let rows = uids.map(uid=>{
-    const joinDs = joinDateStrOf(uid);
-    let miss=0, read=0;
-    dates.forEach((d,i)=>{
-      if(joinDs && d < joinDs) return;
-      const rec = perDate[i][uid];
-      if(rec && rec.status==='read') read++;
-      else if(rec && rec.status==='skip') miss++;
-    });
-    let nameCls = '';
-    if(miss+read>0){
-      if(miss>=2) nameCls = 'wh-name-danger';
-      else if(miss===1) nameCls = 'wh-name-pas';
-      else nameCls = 'wh-name-ok';
-    }
-    const strip = buildWeekHistoryHTML(dates, perDate, joinDs, uid, 'small');
-    return `<div class="weekrep-row">
-        <div class="weekrep-name ${nameCls}">${userChipHtml(uid,22)}</div>
-        <div class="weekrep-strip">${strip}</div>
-      </div>`;
-  }).join('');
-  table.innerHTML = `<div class="weekrep-list">${rows}</div>`;
-  markLoaded(table);
-}
+
 
 /* ============ ÜYE: GEÇEN HAFTA ============ */
 async function renderMemberLastWeek(){
