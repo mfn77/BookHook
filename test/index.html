@@ -372,6 +372,35 @@
   .stamp-mini.empty{background:none; color:transparent; border:1.6px solid var(--line);}
   .stamp-mini.clickable{cursor:pointer;}
   .day-info-cell{cursor:pointer;}
+  /* ============ HAFTALIK GEÇMİŞ: GNOME Hava Durumu tarzı şerit ============ */
+  .weekhist-card{ border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--card); }
+  .weekhist-strip{ display:flex; align-items:stretch; min-width:392px; }
+  .weekhist-col{ flex:1 1 0; min-width:52px; display:flex; flex-direction:column; align-items:center; padding-top:12px; position:relative; }
+  .weekhist-daylabel{ font-family:'Inter',sans-serif; font-weight:700; font-size:12.5px; color:var(--ink); text-align:center; line-height:1.25; white-space:nowrap; }
+  .weekhist-date{ display:block; font-family:'Inter',sans-serif; font-weight:500; font-size:10px; color:var(--ink-70); margin-top:1px; }
+  .weekhist-icon{ font-size:17px; font-weight:800; height:24px; display:flex; align-items:center; justify-content:center; margin:9px 0 0; color:var(--ink-70); }
+  .weekhist-fillwrap{ width:100%; height:72px; margin-top:6px; }
+  .weekhist-hill{ display:block; width:100%; height:100%; }
+  .weekhist-hill path{ fill:rgba(127,127,127,0.10); transition:fill .2s var(--ease); }
+  .weekhist-col.wh-read .weekhist-icon{ color:var(--forest-dark); }
+  .weekhist-col.wh-read .weekhist-hill path{ fill:rgba(38,162,105,0.24); }
+  .weekhist-col.wh-penalty .weekhist-icon{ color:var(--cloth-dark); }
+  .weekhist-col.wh-penalty .weekhist-hill path{ fill:rgba(224,27,36,0.22); }
+  .weekhist-col.wh-pas .weekhist-icon{ color:#9A6B00; }
+  .weekhist-col.wh-pas .weekhist-hill path{ fill:rgba(255,193,7,0.32); }
+  html[data-theme="dark"] .weekhist-col.wh-pas .weekhist-icon{ color:#FFC107; }
+  html[data-theme="dark"] .weekhist-col.wh-read .weekhist-hill path{ fill:rgba(87,227,137,0.20); }
+  html[data-theme="dark"] .weekhist-col.wh-penalty .weekhist-hill path{ fill:rgba(255,140,130,0.20); }
+  html[data-theme="dark"] .weekhist-col.wh-pas .weekhist-hill path{ fill:rgba(255,193,7,0.26); }
+  html[data-theme="dark"] .weekhist-hill path{ fill:rgba(255,255,255,0.06); }
+  @media (max-width:700px){
+    .weekhist-strip{ min-width:0; }
+    .weekhist-col{ min-width:0; padding-top:9px; }
+    .weekhist-date{ display:none; }
+    .weekhist-daylabel{ font-size:10.5px; }
+    .weekhist-icon{ font-size:14px; height:18px; margin-top:6px; }
+    .weekhist-fillwrap{ height:52px; margin-top:4px; }
+  }
   /* ============ SOSYAL SEKMESİ ============ */
   .social-subtab{ padding-bottom:100px; }
   #pinnedPostBar{
@@ -717,7 +746,7 @@
           <div class="mono" id="aWeekRangeLabel" style="text-align:center; flex:1;"></div>
           <button class="secondary tiny" id="aWeekNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
         </div>
-        <div class="libcard"><table class="weekgrid" id="aOwnWeekGrid"></table></div>
+        <div class="libcard"><div class="weekhist-card"><div class="weekhist-strip" id="aOwnWeekGrid"></div></div></div>
       </div>
     </section>
 
@@ -806,7 +835,7 @@
           <div class="mono" id="mWeekRangeLabel" style="text-align:center; flex:1;"></div>
           <button class="secondary tiny" id="mWeekNextBtn" style="flex:0 0 auto;">Sonraki Hafta ▶</button>
         </div>
-        <div class="libcard"><table class="weekgrid" id="mOwnWeekGrid"></table></div>
+        <div class="libcard"><div class="weekhist-card"><div class="weekhist-strip" id="mOwnWeekGrid"></div></div></div>
       </div>
     </section>
 
@@ -2961,6 +2990,34 @@ function renderAdminToday(){
   }
   renderTotalPagesCard('totalPagesNumber');
 }
+// Bir haftanın kendi geçmişini GNOME Hava Durumu tarzı şerit olarak üretir. Haftalık pas hakkı
+// kuralına göre: haftanın ilk "okumadı"sı ücretsiz pastır (sarı), ikinci ve sonrakiler cezadır (kırmızı).
+function buildWeekHistoryHTML(dates, perDate, joinDs){
+  let passUsed = false;
+  return dates.map((d,i)=>{
+    const dow = DOW[i];
+    const dateLbl = fmtShort(d);
+    let cls='wh-empty', icon='', title='';
+    if(joinDs && d < joinDs){
+      title = 'Henüz üye değildin';
+    } else {
+      const rec = perDate[i][currentUid];
+      if(rec && rec.status==='read'){ cls='wh-read'; icon='✓'; title='Okudu'; }
+      else if(rec && rec.status==='skip'){
+        if(!passUsed){ passUsed = true; cls='wh-pas'; icon='–'; title = rec.auto?'Otomatik okumadı (haftalık pas hakkı)':'Okumadı (haftalık pas hakkı)'; }
+        else { cls='wh-penalty'; icon='✕'; title = rec.auto?'Otomatik okumadı (ceza)':'Okumadı (ceza)'; }
+      }
+    }
+    return `
+      <div class="weekhist-col ${cls}" title="${title}">
+        <div class="weekhist-daylabel">${dow}<span class="weekhist-date">${dateLbl}</span></div>
+        <div class="weekhist-icon">${icon}</div>
+        <div class="weekhist-fillwrap">
+          <svg class="weekhist-hill" viewBox="0 0 100 60" preserveAspectRatio="none"><path d="M0,60 L0,34 Q50,4 100,34 L100,60 Z"/></svg>
+        </div>
+      </div>`;
+  }).join('');
+}
 async function renderAdminOwnWeek(){
   const baseMonday = getMonday(nowLogical());
   const monday = addDays(baseMonday, adminWeekOffset*7);
@@ -2968,18 +3025,10 @@ async function renderAdminOwnWeek(){
   document.getElementById('aWeekRangeLabel').textContent = `${fmtShort(dates[0])} — ${fmtShort(dates[6])}` + (adminWeekOffset===0 ? ' (bu hafta)' : '');
   document.getElementById('aWeekNextBtn').disabled = adminWeekOffset>=0;
   const table = document.getElementById('aOwnWeekGrid');
-  showCachedOrPlaceholder(table, `<tr><td class="empty-state">Yükleniyor…</td></tr>`);
+  showCachedOrPlaceholder(table, `<div class="empty-state">Yükleniyor…</div>`);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const joinDs = joinDateStrOf(currentUid);
-  let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span class="th-date" style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
-  let cells = dates.map((d,i)=>{
-    if(joinDs && d < joinDs) return `<td><span class="stamp-mini notmember" title="Henüz üye değildin">·</span></td>`;
-    const rec = perDate[i][currentUid];
-    if(rec && rec.status==='read') return `<td><span class="stamp-mini read">✓</span></td>`;
-    if(rec && rec.status==='skip') return `<td><span class="stamp-mini skip ${rec.auto?'auto':''}" title="${rec.auto?'Otomatik okumadı':''}">✕</span></td>`;
-    return `<td><span class="stamp-mini empty">·</span></td>`;
-  }).join('');
-  table.innerHTML = head + `<tr>${cells}</tr>`;
+  table.innerHTML = buildWeekHistoryHTML(dates, perDate, joinDs);
   markLoaded(table);
 }
 document.getElementById('aWeekPrevBtn').addEventListener('click', ()=>{ adminWeekOffset -= 1; renderAdminOwnWeek(); });
@@ -3465,18 +3514,10 @@ async function renderMemberOwnWeek(){
   document.getElementById('mWeekRangeLabel').textContent = `${fmtShort(dates[0])} — ${fmtShort(dates[6])}` + (memberWeekOffset===0 ? ' (bu hafta)' : '');
   document.getElementById('mWeekNextBtn').disabled = memberWeekOffset>=0;
   const table = document.getElementById('mOwnWeekGrid');
-  showCachedOrPlaceholder(table, `<tr><td class="empty-state">Yükleniyor…</td></tr>`);
+  showCachedOrPlaceholder(table, `<div class="empty-state">Yükleniyor…</div>`);
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   const joinDs = joinDateStrOf(currentUid);
-  let head = `<tr>` + dates.map((d,i)=>`<th>${DOW[i]}<br/><span class="th-date" style="font-weight:400;">${fmtShort(d)}</span></th>`).join('') + `</tr>`;
-  let cells = dates.map((d,i)=>{
-    if(joinDs && d < joinDs) return `<td><span class="stamp-mini notmember" title="Henüz üye değildin">·</span></td>`;
-    const rec = perDate[i][currentUid];
-    if(rec && rec.status==='read') return `<td><span class="stamp-mini read">✓</span></td>`;
-    if(rec && rec.status==='skip') return `<td><span class="stamp-mini skip ${rec.auto?'auto':''}" title="${rec.auto?'Otomatik okumadı':''}">✕</span></td>`;
-    return `<td><span class="stamp-mini empty">·</span></td>`;
-  }).join('');
-  table.innerHTML = head + `<tr>${cells}</tr>`;
+  table.innerHTML = buildWeekHistoryHTML(dates, perDate, joinDs);
   markLoaded(table);
 }
 document.getElementById('mWeekPrevBtn').addEventListener('click', ()=>{ memberWeekOffset -= 1; renderMemberOwnWeek(); });
