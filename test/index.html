@@ -1410,18 +1410,22 @@ function avatarHtmlFromProfile(profile, size){
   const tierKey = profile && profile.currentTier;
   const tierDef = tierKey ? BADGE_DEFS.find(d=>d.key===tierKey) : null;
   const ringStyle = tierDef ? `box-shadow:0 0 0 2.5px ${tierDef.color};` : '';
+  // Fotoğraf <img> yerine arka plan resmi (background-image + background-size:cover) olarak
+  // basılıyor: bu, kaynağın en-boy oranı ne olursa olsun her zaman tam bir daire içinde ortalanmış/
+  // kırpılmış görünmesini garanti eder ve <img> ile bazen görülen "kırık resim ikonu" veya
+  // yüklenmeden önceki an için köşeli görünme sorununu da ortadan kaldırır.
   const inner = (profile && profile.photoURL)
-    ? `<img src="${profile.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />`
+    ? `<div role="img" aria-label="" style="width:100%;height:100%;background-image:url('${profile.photoURL.replace(/'/g,"%27")}');background-size:cover;background-position:center;background-repeat:no-repeat;background-color:var(--paper-2);"></div>`
     : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--gold);color:#fff;font-size:${Math.round(size*0.5)}px;font-family:'Roboto',sans-serif;font-weight:700;">${escapeHtml(initial)}</span>`;
   const iconSize = Math.max(10, Math.round(size*0.44));
   const badgeOverlay = tierDef
     ? `<span class="tier-badge-icon" title="${escapeHtml(tierDef.label)}" style="position:absolute; right:-2px; bottom:-2px; width:${iconSize}px; height:${iconSize}px; border-radius:50%; background:${tierDef.color}; display:flex; align-items:center; justify-content:center; font-size:${Math.round(iconSize*0.62)}px; box-shadow:0 0 0 1.5px var(--card);">${tierDef.icon}</span>`
     : '';
-  // Yuvarlak kırpma ayrı, sabit boyutlu bir "overflow:hidden" katmanında yapılıyor; rozet ikonu ise
-  // bunun dışında konumlanıyor. Böylece hem fotoğraf her zaman tam bir daire olarak kırpılıyor
-  // (kaynağın en-boy oranı ne olursa olsun), hem de rozet, dairenin dışına taşan kısmı kesilmiyor.
-  return `<span style="position:relative; display:inline-flex; width:${size}px; height:${size}px; margin-right:6px; vertical-align:middle; line-height:0; flex:0 0 auto;">
-    <span style="display:block; width:100%; height:100%; border-radius:50%; overflow:hidden; ${ringStyle}">${inner}</span>
+  // Dıştaki katman sabit boyutlu (size×size) ve rozet halkasını (box-shadow) taşıyor; overflow burada
+  // KESİNLİKLE hidden değil, aksi halde halka kırpılırdı. Yuvarlak kırpma tamamen içteki, kendi
+  // overflow:hidden'ına sahip ayrı katmanda yapılıyor; bu yüzden halka asla köşeli görünmez.
+  return `<span style="position:relative; display:inline-flex; width:${size}px; height:${size}px; margin-right:6px; vertical-align:middle; line-height:0; flex:0 0 auto; border-radius:50%; ${ringStyle}">
+    <span style="display:block; width:100%; height:100%; border-radius:50%; overflow:hidden;">${inner}</span>
     ${badgeOverlay}
   </span>`;
 }
