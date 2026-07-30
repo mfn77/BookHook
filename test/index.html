@@ -413,13 +413,16 @@
   .weekrep-row{ display:flex; align-items:center; gap:10px; padding:10px 2px; border-bottom:1px solid var(--line); }
   .weekrep-row:last-child{ border-bottom:none; }
   .weekrep-name{ flex:0 0 auto; width:126px; min-width:74px; overflow:hidden; }
+  .weekrep-name .uc-name{ display:inline-block; max-width:78px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; }
   .weekrep-strip{ flex:1 1 auto; min-width:0; display:flex; align-items:stretch; }
-  .weekrep-status{ flex:0 0 auto; min-width:64px; text-align:right; }
+  /* Durum artık ayrı bir etiket yerine ismin renginde: kusursuz yeşil, pas sarı, cezalı kırmızı. */
+  .weekrep-name.wh-name-ok .uc-name{ color:var(--forest-dark); font-weight:700; }
+  .weekrep-name.wh-name-pas .uc-name{ color:#9A6B00; font-weight:700; }
+  html[data-theme="dark"] .weekrep-name.wh-name-pas .uc-name{ color:#FFC107; }
+  .weekrep-name.wh-name-danger .uc-name{ color:var(--cloth-dark); font-weight:700; }
   @media (max-width:700px){
-    .weekrep-name{ width:40px; min-width:40px; }
-    .weekrep-name .uc-name{ display:none; }
-    .weekrep-status{ min-width:0; }
-    .weekrep-status .chip{ font-size:9.5px; padding:3px 6px; }
+    .weekrep-name{ width:52px; min-width:52px; }
+    .weekrep-name .uc-name{ max-width:44px; font-size:10.5px; }
   }
   /* ============ SOSYAL SEKMESİ ============ */
   .social-subtab{ padding-bottom:100px; }
@@ -3132,17 +3135,16 @@ async function renderWeekReportTable(monday, tableId){
       if(rec && rec.status==='read') read++;
       else if(rec && rec.status==='skip') miss++;
     });
-    let statusChip = `<span class="chip">—</span>`;
+    let nameCls = '';
     if(miss+read>0){
-      if(miss>=2) statusChip = `<span class="chip danger">Cezalı (${miss})</span>`;
-      else if(miss===1) statusChip = `<span class="chip warn">Pas (1)</span>`;
-      else statusChip = `<span class="chip ok">Kusursuz</span>`;
+      if(miss>=2) nameCls = 'wh-name-danger';
+      else if(miss===1) nameCls = 'wh-name-pas';
+      else nameCls = 'wh-name-ok';
     }
     const strip = buildWeekHistoryHTML(dates, perDate, joinDs, uid, 'small');
     return `<div class="weekrep-row">
-        <div class="weekrep-name">${userChipHtml(uid,22)}</div>
+        <div class="weekrep-name ${nameCls}">${userChipHtml(uid,22)}</div>
         <div class="weekrep-strip">${strip}</div>
-        <div class="weekrep-status">${statusChip}</div>
       </div>`;
   }).join('');
   table.innerHTML = `<div class="weekrep-list">${rows}</div>`;
