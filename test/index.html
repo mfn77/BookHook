@@ -3011,14 +3011,15 @@ function renderAdminToday(){
 // kuralına göre: haftanın ilk "okumadı"sı ücretsiz pastır (sarı), ikinci ve sonrakiler cezadır (kırmızı).
 // uid verilmezse currentUid kullanılır; extraColClass küçük (satır içi) varyant için 'small' gibi bir sınıf eklemeye yarar.
 const WEEKHIST_HILL_PATHS = {
-  // Okudu: normal başlar, ortada yükselir, tekrar normale döner.
-  'wh-read':    'M0,60 L0,40 Q50,6 100,40 L100,60 Z',
-  // Cezalı okumadı: normal başlar, ortada alçalır, tekrar normale döner.
-  'wh-penalty': 'M0,60 L0,40 Q50,54 100,40 L100,60 Z',
-  // Pas hakkı: normal başlar ve normal devam eder (düz).
-  'wh-pas':     'M0,60 L0,40 L100,40 L100,60 Z',
+  // Okudu: normal seviyede (yarı yükseklik) başlar, ortada yumuşakça yükselir, tekrar normale döner.
+  // Kenarlarda yatay teğet olduğu için yan yana aynı türden sütunlar kesintisiz devam ediyormuş gibi birleşir.
+  'wh-read':    'M0,60 L0,30 C25,30 25,20 50,20 C75,20 75,30 100,30 L100,60 Z',
+  // Cezalı okumadı: normal seviyede başlar, ortada yumuşakça alçalır, tekrar normale döner.
+  'wh-penalty': 'M0,60 L0,30 C25,30 25,40 50,40 C75,40 75,30 100,30 L100,60 Z',
+  // Pas hakkı: normal seviyede başlar ve düz devam eder (kavis yok).
+  'wh-pas':     'M0,60 L0,30 L100,30 L100,60 Z',
   // Henüz üye değil / işaretleme yok: düz, çok ince bir şerit.
-  'wh-empty':   'M0,60 L0,48 L100,48 L100,60 Z'
+  'wh-empty':   'M0,60 L0,46 L100,46 L100,60 Z'
 };
 function buildWeekHistoryHTML(dates, perDate, joinDs, uid, extraColClass){
   uid = uid || currentUid;
