@@ -479,7 +479,14 @@
   .post-book-cover{ width:44px; height:66px; object-fit:cover; border-radius:6px; box-shadow:var(--shadow); flex:0 0 auto; }
   .discover-cat{ margin-bottom:22px; }
   .discover-cat-title{ font-family:'Roboto',sans-serif; font-weight:700; font-size:16px; margin-bottom:10px; }
-  .discover-filters{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px; }
+  .discover-filters-wrap{ margin-bottom:16px; }
+  .discover-filters{ display:flex; flex-wrap:wrap; gap:7px; overflow:hidden; transition:max-height .35s var(--ease); }
+  .discover-filters-toggle{
+    display:flex; align-items:center; justify-content:center; width:100%; margin-top:4px;
+    border:none; background:none; color:var(--ink-70); cursor:pointer; padding:5px 0;
+  }
+  .discover-filters-toggle-icon{ display:inline-block; font-size:17px; line-height:1; transition:transform .3s var(--ease); }
+  .discover-filters-toggle.expanded .discover-filters-toggle-icon{ transform:rotate(180deg); }
   .discover-filter-chip{
     border:1.5px solid var(--line); background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3); color:var(--ink); font-family:'Inter',sans-serif;
     font-weight:600; font-size:13px; padding:7px 14px; border-radius:8px; cursor:pointer; transition:background .15s, color .15s, border-color .15s;
@@ -1060,7 +1067,12 @@
     </section>
 
     <section class="tab" id="tab-bookhistory">
-      <div id="discoverFilters" class="discover-filters"></div>
+      <div class="discover-filters-wrap" id="discoverFiltersWrap">
+        <div id="discoverFilters" class="discover-filters"></div>
+        <button type="button" id="discoverFiltersToggle" class="discover-filters-toggle">
+          <span class="discover-filters-toggle-icon">⌄</span>
+        </button>
+      </div>
       <div id="discoverFeed" style="padding-bottom:90px;"></div>
       <button type="button" id="discoverFabPrev">◀</button>
       <button type="button" id="discoverFabNext">▶</button>
@@ -7195,6 +7207,7 @@ function renderDiscoverTab(){
   renderDiscoverFilters();
   renderDiscoverContent();
 }
+let discoverFiltersExpanded = false;
 async function renderDiscoverFilters(){
   const bar = document.getElementById('discoverFilters');
   bar.innerHTML = DISCOVER_CATEGORIES.map(c=>`<button type="button" class="discover-filter-chip${discoverActiveCategory===c.slug?' active':''}" data-slug="${c.slug}">${escapeHtml(c.label)}</button>`).join('');
@@ -7206,7 +7219,32 @@ async function renderDiscoverFilters(){
       renderDiscoverContent();
     });
   });
+  applyDiscoverFiltersHeight();
 }
+// Filtre çubuğu varsayılan olarak tek satıra sıkıştırılır; altındaki ok tuşuna basınca
+// animasyonla açılıp kapanır. Yükseklik, satır sarma genişliğine göre değiştiği için
+// hem ilk render'da hem pencere yeniden boyutlandığında yeniden hesaplanır.
+function applyDiscoverFiltersHeight(){
+  const bar = document.getElementById('discoverFilters');
+  const toggle = document.getElementById('discoverFiltersToggle');
+  if(!bar || !toggle) return;
+  const firstChip = bar.querySelector('.discover-filter-chip');
+  const collapsedHeight = firstChip ? firstChip.offsetHeight : 34;
+  if(discoverFiltersExpanded){
+    bar.style.maxHeight = bar.scrollHeight + 'px';
+    toggle.classList.add('expanded');
+  } else {
+    bar.style.maxHeight = collapsedHeight + 'px';
+    toggle.classList.remove('expanded');
+  }
+}
+document.getElementById('discoverFiltersToggle').addEventListener('click', ()=>{
+  discoverFiltersExpanded = !discoverFiltersExpanded;
+  applyDiscoverFiltersHeight();
+});
+window.addEventListener('resize', ()=>{
+  if(document.getElementById('tab-bookhistory').classList.contains('active')) applyDiscoverFiltersHeight();
+});
 function renderDiscoverContent(){
   renderDiscoverCategoryGrid(discoverActiveCategory);
 }
