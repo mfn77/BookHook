@@ -379,35 +379,36 @@
   .weekhist-col + .weekhist-col{ border-left:1px solid var(--line); }
   .weekhist-daylabel{ font-family:'Inter',sans-serif; font-weight:700; font-size:12.5px; color:var(--ink); text-align:center; line-height:1.25; white-space:nowrap; }
   .weekhist-date{ display:block; font-family:'Inter',sans-serif; font-weight:500; font-size:10px; color:var(--ink-70); margin-top:1px; }
-  .weekhist-icon{ font-size:17px; font-weight:800; height:24px; display:flex; align-items:center; justify-content:center; margin:9px 0 0; color:var(--ink-70); }
-  .weekhist-fillwrap{ width:100%; height:92px; margin-top:2px; }
+  /* Dolgu alanı; ikon artık bunun İÇİNDE, üstüne bindirilmiş şekilde duruyor (position:absolute). */
+  .weekhist-fillwrap{ position:relative; width:100%; height:118px; margin-top:4px; }
   .weekhist-hill{ display:block; width:100%; height:100%; }
   .weekhist-hill path{ fill:rgba(127,127,127,0.10); transition:fill .2s var(--ease); }
+  .weekhist-icon{ position:absolute; left:0; right:0; top:62%; transform:translateY(-50%); font-size:17px; font-weight:800; text-align:center; line-height:1; color:var(--ink-70); z-index:2; }
   .weekhist-col.wh-read .weekhist-icon{ color:var(--forest-dark); }
-  .weekhist-col.wh-read .weekhist-hill path{ fill:rgba(38,162,105,0.24); }
+  .weekhist-col.wh-read .weekhist-hill path{ fill:rgba(38,162,105,0.26); }
   .weekhist-col.wh-penalty .weekhist-icon{ color:var(--cloth-dark); }
-  .weekhist-col.wh-penalty .weekhist-hill path{ fill:rgba(224,27,36,0.22); }
+  .weekhist-col.wh-penalty .weekhist-hill path{ fill:rgba(224,27,36,0.24); }
   .weekhist-col.wh-pas .weekhist-icon{ color:#9A6B00; }
-  .weekhist-col.wh-pas .weekhist-hill path{ fill:rgba(255,193,7,0.32); }
+  .weekhist-col.wh-pas .weekhist-hill path{ fill:rgba(255,193,7,0.34); }
   html[data-theme="dark"] .weekhist-col.wh-pas .weekhist-icon{ color:#FFC107; }
-  html[data-theme="dark"] .weekhist-col.wh-read .weekhist-hill path{ fill:rgba(87,227,137,0.20); }
-  html[data-theme="dark"] .weekhist-col.wh-penalty .weekhist-hill path{ fill:rgba(255,140,130,0.20); }
-  html[data-theme="dark"] .weekhist-col.wh-pas .weekhist-hill path{ fill:rgba(255,193,7,0.26); }
-  html[data-theme="dark"] .weekhist-hill path{ fill:rgba(255,255,255,0.06); }
+  html[data-theme="dark"] .weekhist-col.wh-read .weekhist-hill path{ fill:rgba(87,227,137,0.22); }
+  html[data-theme="dark"] .weekhist-col.wh-penalty .weekhist-hill path{ fill:rgba(255,140,130,0.22); }
+  html[data-theme="dark"] .weekhist-col.wh-pas .weekhist-hill path{ fill:rgba(255,193,7,0.28); }
+  html[data-theme="dark"] .weekhist-hill path{ fill:rgba(255,255,255,0.07); }
   @media (max-width:700px){
     .weekhist-strip{ min-width:0; }
     .weekhist-col{ min-width:0; padding-top:9px; }
     .weekhist-date{ display:none; }
     .weekhist-daylabel{ font-size:10.5px; }
-    .weekhist-icon{ font-size:14px; height:18px; margin-top:6px; }
-    .weekhist-fillwrap{ height:66px; margin-top:2px; }
+    .weekhist-icon{ font-size:14px; }
+    .weekhist-fillwrap{ height:84px; margin-top:3px; }
   }
   /* Küçük (satır içi) varyant: birden çok üyeyi listeleyen haftalık karne için */
   .weekhist-col.small{ min-width:0; padding-top:5px; }
   .weekhist-col.small .weekhist-daylabel{ font-size:9.5px; }
   .weekhist-col.small .weekhist-date{ display:none; }
-  .weekhist-col.small .weekhist-icon{ font-size:11px; height:15px; margin:3px 0 0; }
-  .weekhist-col.small .weekhist-fillwrap{ height:36px; margin-top:1px; }
+  .weekhist-col.small .weekhist-icon{ font-size:11px; }
+  .weekhist-col.small .weekhist-fillwrap{ height:60px; margin-top:2px; }
   .weekrep-list{ display:flex; flex-direction:column; }
   .weekrep-row{ display:flex; align-items:center; gap:10px; padding:10px 2px; border-bottom:1px solid var(--line); }
   .weekrep-row:last-child{ border-bottom:none; }
@@ -1407,13 +1408,19 @@ function avatarHtmlFromProfile(profile, size){
   const tierDef = tierKey ? BADGE_DEFS.find(d=>d.key===tierKey) : null;
   const ringStyle = tierDef ? `box-shadow:0 0 0 2.5px ${tierDef.color};` : '';
   const inner = (profile && profile.photoURL)
-    ? `<img src="${profile.photoURL}" alt="" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;display:block;" />`
-    : `<span style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:var(--gold);color:#fff;font-size:${Math.round(size*0.5)}px;font-family:'Roboto',sans-serif;font-weight:700;">${escapeHtml(initial)}</span>`;
+    ? `<img src="${profile.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />`
+    : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--gold);color:#fff;font-size:${Math.round(size*0.5)}px;font-family:'Roboto',sans-serif;font-weight:700;">${escapeHtml(initial)}</span>`;
   const iconSize = Math.max(10, Math.round(size*0.44));
   const badgeOverlay = tierDef
     ? `<span class="tier-badge-icon" title="${escapeHtml(tierDef.label)}" style="position:absolute; right:-2px; bottom:-2px; width:${iconSize}px; height:${iconSize}px; border-radius:50%; background:${tierDef.color}; display:flex; align-items:center; justify-content:center; font-size:${Math.round(iconSize*0.62)}px; box-shadow:0 0 0 1.5px var(--card);">${tierDef.icon}</span>`
     : '';
-  return `<span style="position:relative; display:inline-flex; border-radius:50%; ${ringStyle} margin-right:6px; vertical-align:middle; line-height:0;">${inner}${badgeOverlay}</span>`;
+  // Yuvarlak kırpma ayrı, sabit boyutlu bir "overflow:hidden" katmanında yapılıyor; rozet ikonu ise
+  // bunun dışında konumlanıyor. Böylece hem fotoğraf her zaman tam bir daire olarak kırpılıyor
+  // (kaynağın en-boy oranı ne olursa olsun), hem de rozet, dairenin dışına taşan kısmı kesilmiyor.
+  return `<span style="position:relative; display:inline-flex; width:${size}px; height:${size}px; margin-right:6px; vertical-align:middle; line-height:0; flex:0 0 auto;">
+    <span style="display:block; width:100%; height:100%; border-radius:50%; overflow:hidden; ${ringStyle}">${inner}</span>
+    ${badgeOverlay}
+  </span>`;
 }
 function userChipHtml(uid, size){
   const u = usersCache[uid];
@@ -3011,14 +3018,14 @@ function renderAdminToday(){
 // kuralına göre: haftanın ilk "okumadı"sı ücretsiz pastır (sarı), ikinci ve sonrakiler cezadır (kırmızı).
 // uid verilmezse currentUid kullanılır; extraColClass küçük (satır içi) varyant için 'small' gibi bir sınıf eklemeye yarar.
 const WEEKHIST_HILL_PATHS = {
-  // Okudu: normal seviyede (yarı yükseklik) başlar, ortada yumuşakça yükselir, tekrar normale döner.
+  // Okudu: normal seviyede (çok yüksek dolgu) başlar, ortada yumuşakça yükselir, tekrar normale döner.
   // Kenarlarda yatay teğet olduğu için yan yana aynı türden sütunlar kesintisiz devam ediyormuş gibi birleşir.
-  'wh-read':    'M0,60 L0,30 C25,30 25,20 50,20 C75,20 75,30 100,30 L100,60 Z',
+  'wh-read':    'M0,60 L0,16 C25,16 25,6 50,6 C75,6 75,16 100,16 L100,60 Z',
   // Cezalı okumadı: normal seviyede başlar, ortada yumuşakça alçalır, tekrar normale döner.
-  'wh-penalty': 'M0,60 L0,30 C25,30 25,40 50,40 C75,40 75,30 100,30 L100,60 Z',
+  'wh-penalty': 'M0,60 L0,16 C25,16 25,26 50,26 C75,26 75,16 100,16 L100,60 Z',
   // Pas hakkı: normal seviyede başlar ve düz devam eder (kavis yok).
-  'wh-pas':     'M0,60 L0,30 L100,30 L100,60 Z',
-  // Henüz üye değil / işaretleme yok: düz, çok ince bir şerit.
+  'wh-pas':     'M0,60 L0,16 L100,16 L100,60 Z',
+  // Henüz üye değil / işaretleme yok: düz, çok ince bir şerit (ikon yok, bu yüzden küçük kalabilir).
   'wh-empty':   'M0,60 L0,46 L100,46 L100,60 Z'
 };
 function buildWeekHistoryHTML(dates, perDate, joinDs, uid, extraColClass){
@@ -3043,9 +3050,9 @@ function buildWeekHistoryHTML(dates, perDate, joinDs, uid, extraColClass){
     return `
       <div class="weekhist-col${extraColClass} ${cls}" title="${title}">
         <div class="weekhist-daylabel">${dow}<span class="weekhist-date">${dateLbl}</span></div>
-        <div class="weekhist-icon">${icon}</div>
         <div class="weekhist-fillwrap">
           <svg class="weekhist-hill" viewBox="0 0 100 60" preserveAspectRatio="none"><path d="${hillPath}"/></svg>
+          <div class="weekhist-icon">${icon}</div>
         </div>
       </div>`;
   }).join('');
