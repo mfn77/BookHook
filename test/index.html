@@ -15,30 +15,30 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Pirata+One&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#FAFAFB; --paper-2:#F0F0F2; --card:#FFFFFF;
-    --ink:#1E1E1E; --ink-70:#6E6E6E;
-    --cloth:#E01B24; --cloth-dark:#C01C28;
-    --gold:#3584E4; --gold-dark:#1C71D8; --forest:#26A269; --forest-dark:#1B8553;
-    --rust:#E66100; --rust-dark:#C64600;
+    --paper:#F2F2F5; --paper-2:#E9E9ED; --card:#FFFFFF;
+    --ink:#1C1C1E; --ink-70:#6B6B70;
+    --cloth:#E01B24; --cloth-dark:#A51D2D;
+    --gold:#2190A4; --gold-dark:#176D7D; --forest:#26A269; --forest-dark:#1B7A4C;
+    --rust:#E66100; --rust-dark:#AB4800;
     --line: rgba(0,0,0,0.09);
-    --card-bg: 255,255,255; --paper-bg: 250,250,251;
-    --shadow: 0 1px 0 rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.07);
-    --shadow-lg: 0 1px 2px rgba(0,0,0,.08), 0 8px 22px rgba(0,0,0,.12);
-    --ease: cubic-bezier(.25,.8,.25,1);
-    --radius-lg: 15px;
-    --radius-md: 10px;
+    --card-bg: 255,255,255; --paper-bg: 242,242,245;
+    --shadow: 0 1px 2px rgba(0,0,0,.10), 0 1px 4px rgba(0,0,0,.08);
+    --shadow-lg: 0 2px 6px rgba(0,0,0,.14), 0 6px 18px rgba(0,0,0,.10);
+    --ease: cubic-bezier(.4,0,.2,1);
+    --radius-lg: 20px;
+    --radius-md: 14px;
     color-scheme: light;
   }
   html[data-theme="dark"]{
-    --paper:#242424; --paper-2:#1E1E1E; --card:#303030;
-    --ink:#F6F5F4; --ink-70:#A0A0A0;
-    --cloth:#FF7B63; --cloth-dark:#FFA396;
-    --gold:#78AEED; --gold-dark:#A0C8F5; --forest:#8FF0B5; --forest-dark:#B3F5CC;
+    --paper:#1E1E1E; --paper-2:#2A2A2D; --card:#363636;
+    --ink:#F6F5F4; --ink-70:#9A9996;
+    --cloth:#FF8C82; --cloth-dark:#FFB4A8;
+    --gold:#4FD2E8; --gold-dark:#7EE0EF; --forest:#57E389; --forest-dark:#8FF0B5;
     --rust:#FFA348; --rust-dark:#FFC28A;
-    --line: rgba(255,255,255,0.09);
-    --card-bg: 48,48,48; --paper-bg: 36,36,36;
-    --shadow: 0 1px 0 rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.4);
-    --shadow-lg: 0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.5);
+    --line: rgba(255,255,255,0.10);
+    --card-bg: 54,54,54; --paper-bg: 30,30,30;
+    --shadow: 0 1px 2px rgba(0,0,0,.45), 0 1px 4px rgba(0,0,0,.35);
+    --shadow-lg: 0 2px 6px rgba(0,0,0,.5), 0 6px 18px rgba(0,0,0,.4);
     color-scheme: dark;
   }
   html, body{ transition: background-color .25s var(--ease); }
@@ -47,39 +47,52 @@
   button:focus, a:focus, [tabindex]:focus{ outline:none; }
   html,body{margin:0;padding:0; width:100%; overflow-x:hidden;}
   body{
-    background: var(--paper);
     color:var(--ink); font-family:'Inter', Arial, sans-serif;
     min-height:100vh; -webkit-font-smoothing:antialiased;
   }
-  html[data-theme="dark"] body{
-    background: var(--paper);
+  #bgLayer{
+    position:fixed; inset:0; z-index:-1;
+    background:
+      radial-gradient(circle at 12% 6%, rgba(33,144,164,0.16), transparent 42%),
+      radial-gradient(circle at 88% 12%, rgba(214,144,224,0.14), transparent 46%),
+      radial-gradient(circle at 25% 95%, rgba(38,162,105,0.14), transparent 46%),
+      radial-gradient(circle at 95% 90%, rgba(230,97,0,0.10), transparent 40%),
+      var(--paper);
+  }
+  html[data-theme="dark"] #bgLayer{
+    background:
+      radial-gradient(circle at 12% 6%, rgba(79,210,232,0.14), transparent 42%),
+      radial-gradient(circle at 88% 12%, rgba(214,144,224,0.12), transparent 46%),
+      radial-gradient(circle at 25% 95%, rgba(87,227,137,0.12), transparent 46%),
+      radial-gradient(circle at 95% 90%, rgba(255,163,72,0.10), transparent 40%),
+      var(--paper);
   }
   h1,h2,h3,.display{font-family:'Inter', Arial, sans-serif; font-weight:700;}
   .mono{font-family:'Roboto Mono', monospace;}
   button, input, select, textarea{ font-family:'Inter', Arial, sans-serif; }
-  button{ transition: transform .1s var(--ease), background-color .15s var(--ease), box-shadow .15s var(--ease), border-color .15s var(--ease), opacity .1s var(--ease); }
-  button:not(:disabled):active{ transform: scale(0.98); opacity:0.82; }
+  button{ transition: transform .12s var(--ease), background-color .15s var(--ease), box-shadow .15s var(--ease), border-color .15s var(--ease); }
+  button:not(:disabled):active{ transform: scale(0.96); }
   input, select, textarea{ transition: border-color .15s var(--ease), box-shadow .15s var(--ease); }
 
   .app-shell{ display:flex; min-height:100vh; align-items:stretch; max-width:100vw; overflow-x:hidden; }
   .sidebar{
     position:fixed; top:0; left:0; height:100vh; height:100dvh; overflow-y:auto;
     width:78px; flex:0 0 auto; display:flex; flex-direction:column; align-items:center;
-    background:var(--paper-2);
+    background:rgba(var(--card-bg),0.55); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
     border-right:1px solid var(--line);
     padding:env(safe-area-inset-top, 0px) 0 16px; z-index:20;
-    transition: transform 0.28s var(--ease);
+    transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
   }
   .sidebar.collapsed{ transform:translateX(-100%); }
   .content-col{ margin-left:78px; }
   .content-col.expanded{ margin-left:0; }
   .sidebar-collapse-btn{
-    margin-top:auto; flex:0 0 auto; width:34px; height:34px; border-radius:50%; border:1.5px solid var(--line);
+    margin-top:auto; flex:0 0 auto; width:34px; height:34px; border-radius:10px; border:1.5px solid var(--line);
     background:var(--card); color:var(--ink-70); font-size:13px; cursor:pointer;
   }
   .sidebar-expand-fab{
     position:fixed; left:16px; bottom:18px; z-index:150; display:none;
-    width:40px; height:40px; border-radius:50%; background:var(--gold); color:#fff; font-size:16px; border:none;
+    width:40px; height:40px; border-radius:12px; background:var(--gold); color:#fff; font-size:16px; border:none;
     box-shadow:0 6px 18px rgba(0,0,0,0.28); cursor:pointer; align-items:center; justify-content:center; line-height:1;
     transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s; opacity:1;
   }
@@ -87,7 +100,7 @@
   .sidebar-header{ height:62px; display:flex; align-items:center; justify-content:center; margin-bottom:0; flex:0 0 auto; position:sticky; top:env(safe-area-inset-top, 0px); }
   .sidebar-tabs.tabs{ position:sticky; top:calc(62px + env(safe-area-inset-top, 0px)); }
   .sidebar-logo{ width:38px; height:auto; display:block; }
-  .content-col{ flex:1; min-width:0; max-width:100%; display:flex; flex-direction:column; overflow-x:hidden; }
+  .content-col{ flex:1; min-width:0; max-width:100%; display:flex; flex-direction:column; overflow-x:hidden; touch-action:pan-y; }
   @media (max-width:380px){
     .sidebar{ width:62px; }
     .content-col{ margin-left:62px; }
@@ -98,7 +111,7 @@
     .sidebar-tabs.tabs{ top:calc(54px + env(safe-area-inset-top, 0px)); }
     #pinnedPostBar{ top:62px; }
     .header-pill{ padding:0 9px; font-size:11.5px; height:34px; }
-    .header-pill.icon-pill{ width:34px; }
+    .header-pill.icon-pill{ width:40px; }
     .whoami{ gap:5px; }
     .whoami .rolechip{ display:none; }
     #whoamiName{ max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle; }
@@ -119,42 +132,39 @@
   }
 
   header.top{
-    padding:calc(12px + env(safe-area-inset-top, 0px)) 16px 12px; background:var(--paper);
-    border-bottom:1px solid var(--line);
+    padding:calc(12px + env(safe-area-inset-top, 0px)) 16px 12px; background:transparent; box-shadow:none;
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+    border-bottom:none;
     display:flex; justify-content:flex-start; align-items:center; gap:10px;
     position:sticky; top:0; z-index:9;
   }
-  .header-title-area{ font-family:'Inter',sans-serif; font-weight:700; font-size:22px; color:var(--ink); flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .header-title-area{ font-family:'Inter',sans-serif; font-weight:700; font-size:28px; color:var(--ink); flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .whoami{ display:flex; align-items:center; gap:7px; font-family:'Inter', sans-serif; font-size:12px; color:var(--ink-70); flex:0 0 auto; min-width:0; position:relative; font-weight:600; text-align:left; margin-left:auto; }
   .header-pill{
     display:inline-flex; align-items:center; gap:6px; height:38px; padding:0 14px;
-    background:none; border:1px solid var(--line); border-radius:999px;
+    background:var(--paper-2); border:1px solid var(--line); border-radius:16px;
     color:var(--ink); font-weight:600; font-size:13px; cursor:default; min-width:0;
-    transition: background-color .12s var(--ease);
   }
-  .header-pill.icon-pill{ padding:0; width:38px; flex:0 0 auto; justify-content:center; font-size:16px; cursor:pointer; position:relative; border:none; }
+  .header-pill.icon-pill{ padding:0; width:46px; flex:0 0 auto; justify-content:center; font-size:16px; cursor:pointer; position:relative; }
   #whoamiClickable{ min-width:0; overflow:hidden; }
   #whoamiName{ max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle; }
-  @media (hover: hover){
-    #whoamiClickable:hover, .icon-pill:hover{ background:rgba(0,0,0,0.06); }
-    html[data-theme="dark"] #whoamiClickable:hover, html[data-theme="dark"] .icon-pill:hover{ background:rgba(255,255,255,0.08); }
-  }
-  #logoutBtn.header-pill{ cursor:pointer; background:none; border:1px solid var(--cloth); color:var(--cloth-dark); }
+  #whoamiClickable:hover, .icon-pill:hover{ background:var(--line); }
+  #logoutBtn.header-pill{ cursor:pointer; background:none; border:1.5px solid var(--cloth); color:var(--cloth-dark); }
   #logoutBtn.header-pill:hover{ background:rgba(224,27,36,0.08); }
-  .whoami .rolechip{display:inline-block; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; letter-spacing:.03em; border:none; color:var(--gold); background:rgba(53,132,228,0.14);}
+  .whoami .rolechip{display:inline-block; padding:2px 9px; border-radius:8px; font-size:9.5px; font-weight:700; letter-spacing:.03em; border:none; color:var(--gold); background:rgba(33,144,164,0.14);}
   .mono-icon{ filter:grayscale(1) brightness(0.55) contrast(1.4); display:inline-block; }
   html[data-theme="dark"] .mono-icon{ filter:grayscale(1) brightness(1.8) contrast(1.1); }
   #hamburgerMenu{
-    position:absolute; top:calc(100% + 8px); right:0; background:var(--card);
-    border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-lg);
-    z-index:60; min-width:210px; overflow:hidden; text-align:left; padding:6px;
+    position:absolute; top:calc(100% + 8px); right:0; background:rgba(var(--card-bg),0.62);
+    backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3);
+    border:1px solid var(--line); border-radius:var(--radius-md); box-shadow:var(--shadow-lg);
+    z-index:60; min-width:210px; overflow:hidden; text-align:left;
   }
   #hamburgerMenu button{
-    display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:10px 12px; border:none; background:none;
-    font-family:'Inter', sans-serif; font-size:14px; font-weight:500; color:var(--ink); cursor:pointer; border-radius:8px;
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:12px 16px; border:none; background:none;
+    font-family:'Inter', sans-serif; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer;
   }
-  #hamburgerMenu button:hover{background:rgba(0,0,0,0.06);}
-  html[data-theme="dark"] #hamburgerMenu button:hover{background:rgba(255,255,255,0.08);}
+  #hamburgerMenu button:hover{background:rgba(33,144,164,0.10);}
   .hb-menu-icon{ display:inline-flex; align-items:center; justify-content:center; width:20px; flex:0 0 auto; }
   .theme-switch{ position:relative; display:inline-block; width:40px; height:22px; flex:0 0 auto; }
   .theme-switch input{ opacity:0; width:0; height:0; }
@@ -171,23 +181,20 @@
   }
   .sidebar-tabs.tabs button{
     flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
-    width:100%; height:56px; border-radius:12px;
-    font-family:'Inter', sans-serif; font-size:9.5px; font-weight:600; line-height:1.15;
+    width:100%; height:56px; border-radius:14px;
+    font-family:'Inter', sans-serif; font-size:9.5px; font-weight:700; line-height:1.15;
     background:none; border:none; padding:6px 2px; color:var(--ink-70); cursor:pointer; text-align:center;
   }
   .sidebar-tabs.tabs button .tab-icon{ font-size:18px; line-height:1; }
-  .sidebar-tabs.tabs button.active{ background:rgba(53,132,228,0.13); color:var(--gold-dark); }
-  html[data-theme="dark"] .sidebar-tabs.tabs button.active{ background:rgba(120,174,237,0.18); color:var(--gold); }
-  .sidebar-tabs.tabs button.active .tab-icon{ filter:none; color:var(--gold-dark); }
-  html[data-theme="dark"] .sidebar-tabs.tabs button.active .tab-icon{ color:var(--gold); }
+  .sidebar-tabs.tabs button.active{ background:var(--gold); color:#fff; }
+  .sidebar-tabs.tabs button.active .tab-icon{ filter:brightness(0) invert(1); }
   @media (hover: hover){
-    .sidebar-tabs.tabs button:hover:not(.active){ background:rgba(0,0,0,0.05); color:var(--ink); }
-    html[data-theme="dark"] .sidebar-tabs.tabs button:hover:not(.active){ background:rgba(255,255,255,0.06); }
+    .sidebar-tabs.tabs button:hover:not(.active){ background:var(--paper-2); color:var(--ink); }
   }
   .card{ position:relative; max-width:100%; overflow-x:hidden; }
   .card h2{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .card-info-btn{
-    width:22px; height:22px; border-radius:50%; border:1.5px solid var(--ink-70); background:none;
+    width:22px; height:22px; border-radius:6px; border:1.5px solid var(--ink-70); background:none;
     color:var(--ink-70); font-family:'Inter',serif; font-style:italic; font-weight:700; font-size:11.5px;
     display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto;
   }
@@ -198,7 +205,7 @@
   }
   .book-suggest-item{ display:flex; align-items:center; padding:8px 10px; cursor:pointer; border-bottom:1px solid var(--line); }
   .book-suggest-item:last-child{ border-bottom:none; }
-  .book-suggest-item:hover{ background:rgba(53,132,228,0.10); }
+  .book-suggest-item:hover{ background:rgba(33,144,164,0.10); }
   .book-suggest-thumb{ width:24px; height:36px; object-fit:cover; border-radius:3px; margin-right:8px; flex:0 0 auto; box-shadow:var(--shadow); }
   @keyframes modalFadeIn{ from{ opacity:0; } to{ opacity:1; } }
   @keyframes modalFadeOut{ from{ opacity:1; } to{ opacity:0; } }
@@ -231,11 +238,11 @@
     100%{ transform:scale(1) rotate(0deg); }
   }
   .stamp-btn.pop-read::after{
-    content:''; position:absolute; inset:-0.2em; border-radius:50%; border:0.16em solid var(--forest);
+    content:''; position:absolute; inset:-0.2em; border-radius:16px; border:0.16em solid var(--forest);
     animation: ringExpand 0.55s ease-out forwards; pointer-events:none;
   }
   .stamp-btn.pop-skip::after{
-    content:''; position:absolute; inset:-0.2em; border-radius:50%; border:0.16em solid var(--cloth);
+    content:''; position:absolute; inset:-0.2em; border-radius:16px; border:0.16em solid var(--cloth);
     animation: ringExpand 0.5s ease-out forwards; pointer-events:none;
   }
   @keyframes ringExpand{
@@ -266,12 +273,12 @@
   .bh-author{ font-size:10px; color:var(--ink-70); line-height:1.25; }
   .bh-title{ font-size:11.5px; font-weight:700; line-height:1.25; margin-top:1px; }
   .bh-delete{
-    position:absolute; top:-6px; right:6px; width:20px; height:20px; border-radius:50%; border:none;
+    position:absolute; top:-6px; right:6px; width:20px; height:20px; border-radius:6px; border:none;
     background:rgba(0,0,0,0.62); color:#fff; font-size:11px; cursor:pointer; line-height:1;
   }
   .card-add-btn{
     display:flex; align-items:center; justify-content:center; width:38px; height:38px;
-    border-radius:50%; border:none; background:var(--gold); color:#fff; font-size:20px;
+    border-radius:10px; border:none; background:var(--gold); color:#fff; font-size:20px;
     font-weight:700; cursor:pointer; margin:14px auto 0; box-shadow:var(--shadow);
     transition: transform .15s var(--ease);
   }
@@ -286,13 +293,13 @@
   .post-menu-btn{ border:none; background:none; color:var(--ink-70); cursor:pointer; font-size:16px; flex:0 0 auto; padding:2px 8px; line-height:1; border-radius:8px; }
   .post-menu-btn:hover{ background:rgba(0,0,0,0.06); }
   .post-menu-item{ display:block; width:100%; text-align:left; border:none; background:none; padding:8px 10px; font-size:13.5px; cursor:pointer; border-radius:8px; color:var(--ink); white-space:nowrap; }
-  .post-menu-item:hover{ background:rgba(53,132,228,0.10); }
+  .post-menu-item:hover{ background:rgba(33,144,164,0.10); }
   .post-menu-item.danger{ color:var(--cloth-dark); }
   .rec-comments-label{ font-size:11px; font-weight:700; color:var(--ink-70); text-transform:uppercase; letter-spacing:0.4px; margin:12px 0 6px; }
   .rec-comments-toggle{ display:block; width:100%; text-align:left; border:none; background:none; padding:0; margin:12px 0 6px; font-size:11px; font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:0.4px; cursor:pointer; }
   .reaction-bar{ display:flex; gap:5px; margin-top:8px; flex-wrap:wrap; }
   .reaction-pill{ border:1.5px solid var(--line); background:var(--card); border-radius:14px; padding:2px 8px; font-size:13.5px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; line-height:1.6; }
-  .reaction-pill.mine{ background:rgba(53,132,228,0.14); border-color:var(--gold); }
+  .reaction-pill.mine{ background:rgba(33,144,164,0.14); border-color:var(--gold); }
   .reaction-pill .rcount{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
   #reactionDrawer{
     display:none; position:fixed; z-index:260; background:var(--card); border:1px solid var(--line); border-radius:20px;
@@ -303,13 +310,13 @@
   #reactionDrawer.open{ opacity:1; transform:translateY(-50%) scaleX(1); }
   #reactionDrawer.flip-left{ transform-origin:right center; }
   #reactionDrawer .emoji-pick-btn{ font-size:19px; padding:4px 5px; border:none; background:none; cursor:pointer; border-radius:8px; }
-  #reactionDrawer .emoji-pick-btn:hover{ background:rgba(53,132,228,0.10); }
+  #reactionDrawer .emoji-pick-btn:hover{ background:rgba(33,144,164,0.10); }
   #reactionDrawer .emoji-pick-btn-toggle{ font-size:15px; padding:4px 6px; color:var(--ink-70); border:none; background:none; cursor:pointer; }
   #reactionDrawer .drawer-custom-input{ width:52px; font-size:20px; text-align:center; padding:4px; border:1.5px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); }
   .reaction-add-btn.expanded{ transform:scale(1.22); background:var(--gold); color:#fff; border-color:var(--gold); }
-  .reaction-add-btn{ border:1.5px solid var(--line); background:var(--card); border-radius:50%; width:26px; height:26px; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; line-height:1; }
+  .reaction-add-btn{ border:1.5px solid var(--line); background:var(--card); border-radius:8px; width:26px; height:26px; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; line-height:1; }
   .emoji-pick-btn{ font-size:26px; border:none; background:none; cursor:pointer; padding:6px; border-radius:10px; }
-  .emoji-pick-btn:hover{ background:rgba(53,132,228,0.10); }
+  .emoji-pick-btn:hover{ background:rgba(33,144,164,0.10); }
   main{padding:16px 14px 40px; max-width:1200px; width:100%; margin:0 auto; position:relative; overflow-x:hidden;}
   section.tab{display:none;}
   section.tab.active{display:block;}
@@ -320,9 +327,9 @@
   section.tab.anim-from-left{ animation: slideFromLeft .32s var(--ease); }
   section.tab.anim-fade{ animation: fadeInUp .28s var(--ease); }
   .card{
-    background:var(--card);
+    background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3);
     border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow);
-    padding:20px; margin-bottom:14px; animation: fadeInUp .25s var(--ease);
+    padding:20px; margin-bottom:14px; animation: fadeInUp .3s var(--ease);
   }
   .card h2{margin:0 0 12px; font-size:16px; font-weight:700; color:var(--ink);}
   .muted{color:var(--ink-70); font-size:13px; line-height:1.55;}
@@ -331,9 +338,13 @@
   .member-row > div:first-child{ min-width:0; flex:1 1 auto; overflow-wrap:anywhere; }
   .member-name{font-weight:600; font-size:15px; overflow-wrap:anywhere;}
   .member-meta{font-family:'Roboto Mono', monospace; font-size:10.5px; color:var(--ink-70); margin-top:2px;}
-  .stamp-btns{display:flex; gap:8px; flex:0 0 auto;}
+  .stamp-btns{display:flex; gap:0; flex:0 0 auto; border-radius:12px; box-shadow:0 0 0 1.6px var(--line); background:var(--card);}
+  .stamp-btns .stamp-btn{ border-radius:0; box-shadow:none !important; border:none; }
+  .stamp-btns .stamp-btn:first-child{ border-radius:12px 0 0 12px; border-right:1.6px solid var(--line); }
+  .stamp-btns .stamp-btn:last-child{ border-radius:0 12px 12px 0; }
+  .stamp-btns .stamp-btn.selected{ transform:none !important; }
   .stamp-btn{
-    width:50px; height:50px; border-radius:50%; border:2px solid var(--line); background:var(--card);
+    width:64px; height:50px; border-radius:16px; border:2px solid var(--line); background:var(--card);
     display:flex; align-items:center; justify-content:center; font-size:19px; cursor:pointer;
     transition:transform .15s var(--ease), background-color .15s var(--ease), border-color .15s var(--ease), box-shadow .15s var(--ease);
     color:var(--ink-70); position:relative;
@@ -341,8 +352,8 @@
   .stamp-btn:active{transform:scale(0.92);}
   .stamp-btn.read.selected{ border-color:var(--forest); background:var(--forest); color:#fff; transform:scale(1.06); box-shadow:var(--shadow);}
   .stamp-btn.skip.selected{ border-color:var(--cloth); background:var(--cloth); color:#fff; transform:scale(1.06); box-shadow:var(--shadow);}
-  .stamp-btn.big{width:76px; height:76px; font-size:28px;}
-  .chip{ display:inline-block; font-family:'Inter', sans-serif; font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; border:none; color:var(--ink-70); background:var(--paper-2); margin-top:3px;}
+  .stamp-btn.big{width:96px; height:76px; font-size:28px;}
+  .chip{ display:inline-block; font-family:'Inter', sans-serif; font-size:11px; font-weight:600; padding:3px 10px; border-radius:8px; border:none; color:var(--ink-70); background:var(--paper-2); margin-top:3px;}
   .chip.warn{color:var(--rust-dark); background:rgba(230,97,0,0.14);}
   .chip.danger{color:var(--cloth-dark); background:rgba(224,27,36,0.12); font-weight:700;}
   .chip.ok{color:var(--forest-dark); background:rgba(38,162,105,0.14);}
@@ -352,12 +363,13 @@
   .libcard{overflow-x:auto;}
   table.weekgrid{ width:100%; border-collapse:collapse; font-family:'Roboto Mono', monospace; font-size:12px; min-width:520px;}
   table.weekgrid th, table.weekgrid td{ border:none; border-bottom:1px solid var(--line); padding:10px 6px; text-align:center;}
-  table.weekgrid th{ background:var(--paper-2); font-weight:600; color:var(--ink-70); font-size:11px; text-transform:uppercase; letter-spacing:.02em;}
+  table.weekgrid th{ background:var(--paper-2); font-weight:600; color:var(--ink-70); font-size:11px; border-bottom:1.5px solid var(--line);}
+  table.weekgrid tbody tr:nth-child(even) td{ background:rgba(127,127,127,0.05); }
   table.weekgrid td.name-cell{ text-align:left; font-family:'Inter', sans-serif; font-weight:600; font-size:13.5px; white-space:nowrap;}
-  .stamp-mini{display:inline-block; width:22px; height:22px; border-radius:50%; line-height:22px; font-size:12px; cursor:default;}
-  .stamp-mini.read{background:var(--forest); color:#fff;}
-  .stamp-mini.skip{background:var(--cloth); color:#fff;}
-  .stamp-mini.empty{background:transparent; color:var(--line); border:1px dashed var(--line);}
+  .stamp-mini{display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:5px; font-size:12px; cursor:default; border:1.6px solid var(--line); background:none; color:transparent;}
+  .stamp-mini.read{background:var(--gold); border-color:var(--gold); color:#fff;}
+  .stamp-mini.skip{background:none; border-color:var(--cloth); color:var(--cloth);}
+  .stamp-mini.empty{background:none; color:transparent; border:1.6px solid var(--line);}
   .stamp-mini.clickable{cursor:pointer;}
   .day-info-cell{cursor:pointer;}
   /* ============ SOSYAL SEKMESİ ============ */
@@ -374,13 +386,13 @@
   #pinnedPostBar .pin-preview{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; font-size:12.5px; color:var(--ink-70); }
   #socialPillBar{
     position:fixed; bottom:18px; left:50%; transform:translateX(-50%) translateY(0);
-    display:flex; align-items:center; height:40px; gap:6px; padding:0 5px; background:var(--card); border:1px solid var(--line);
-    border-radius:20px; z-index:150; box-shadow:var(--shadow-lg);
-    transition: transform 0.28s var(--ease), opacity 0.28s; opacity:1;
+    display:flex; align-items:center; height:40px; gap:6px; padding:0 5px; background:rgba(24,24,30,0.6); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-radius:20px; z-index:150; box-shadow:0 6px 22px rgba(0,0,0,0.28);
+    transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s; opacity:1;
   }
   #socialPillBar.hidden{ transform:translateX(-50%) translateY(100px); opacity:0; pointer-events:none; }
   .social-pill{
-    border:none; background:transparent; color:var(--ink-70); font-family:'Inter',sans-serif;
+    border:none; background:transparent; color:rgba(255,255,255,0.72); font-family:'Inter',sans-serif;
     height:32px; display:flex; align-items:center;
     font-weight:600; font-size:13px; padding:0 16px; border-radius:16px; cursor:pointer; transition: background 0.2s, color 0.2s;
   }
@@ -388,28 +400,29 @@
   .social-pill-group{ display:flex; align-items:center; height:32px; border-radius:16px; overflow:hidden; }
   .social-pill-group.active{ background:var(--gold); }
   .social-pill-group.active .social-pill-half{ color:#fff; }
-  .social-pill-half{ height:32px; padding:0 14px; border-radius:0; color:var(--ink-70); }
+  .social-pill-half{ height:32px; padding:0 14px; border-radius:0; }
   .social-pill-half#socialPillCloseBtn{ padding:0 12px; }
-  .social-pill-divider{ width:1px; height:16px; background:var(--line); flex:0 0 auto; }
+  .social-pill-divider{ width:1px; height:16px; background:rgba(255,255,255,0.3); flex:0 0 auto; }
   .social-floating-action{
     position:fixed; bottom:18px; right:16px; z-index:150; display:flex; align-items:center; height:40px;
     transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s; opacity:1;
   }
   .social-floating-action.hidden{ transform:translateY(100px); opacity:0; pointer-events:none; }
   .social-fab{
-    width:40px; height:40px; border-radius:50%; background:var(--gold); color:#fff; font-size:20px; font-weight:400; border:none;
+    width:40px; height:40px; border-radius:12px; background:var(--gold); color:#fff; font-size:20px; font-weight:400; border:none;
     box-shadow:0 6px 18px rgba(0,0,0,0.28); cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;
   }
   #discoverFabPrev, #discoverFabNext{
     position:fixed; bottom:18px; transform:translate(-50%, 0); z-index:150; opacity:0; pointer-events:none;
-    width:44px; height:44px; border-radius:50%; border:none; background:var(--gold); color:#fff; font-size:16px; cursor:pointer;
+    width:44px; height:44px; border-radius:14px; border:none; background:var(--gold); color:#fff; font-size:16px; cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,0.28);
     transition: left 0.2s, transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.28s;
   }
   #discoverFabPrev.visible, #discoverFabNext.visible{ opacity:1; pointer-events:auto; }
   .compose-textarea{ width:100%; min-height:90px; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:14.5px; background:var(--card); color:var(--ink); resize:vertical; }
   .post-card{
-    background:var(--card); border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer;
+    background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3);
+    border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer;
   }
   .post-card-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
   .post-card-time{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
@@ -421,15 +434,10 @@
   .discover-cat-title{ font-family:'Roboto',sans-serif; font-weight:700; font-size:16px; margin-bottom:10px; }
   .discover-filters{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px; }
   .discover-filter-chip{
-    border:1px solid var(--line); background:var(--card); color:var(--ink-70); font-family:'Inter',sans-serif;
-    font-weight:600; font-size:13px; padding:7px 14px; border-radius:10px; cursor:pointer; transition:background .12s, color .12s, border-color .12s;
+    border:1.5px solid var(--line); background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3); color:var(--ink); font-family:'Inter',sans-serif;
+    font-weight:600; font-size:13px; padding:7px 14px; border-radius:8px; cursor:pointer; transition:background .15s, color .15s, border-color .15s;
   }
-  .discover-filter-chip.active{ background:rgba(53,132,228,0.13); border-color:transparent; color:var(--gold-dark); }
-  html[data-theme="dark"] .discover-filter-chip.active{ background:rgba(120,174,237,0.18); color:var(--gold); }
-  @media (hover: hover){
-    .discover-filter-chip:hover:not(.active){ background:rgba(0,0,0,0.04); }
-    html[data-theme="dark"] .discover-filter-chip:hover:not(.active){ background:rgba(255,255,255,0.06); }
-  }
+  .discover-filter-chip.active{ background:var(--gold); border-color:var(--gold); color:#fff; }
   .discover-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(84px,1fr)); gap:16px 10px; }
   .discover-book-card{ cursor:pointer; }
   .discover-book-cover-wrap{ width:100%; aspect-ratio:2/3; border-radius:10px; overflow:hidden; box-shadow:var(--shadow); background:var(--paper-2); position:relative; }
@@ -459,49 +467,50 @@
   .stamp-mini.notmember{background:transparent; color:var(--line); opacity:0.35; border:none;}
   button:disabled{opacity:0.4; cursor:default;}
   .user-chip{cursor:pointer; border-radius:8px; padding:1px 4px; margin:-1px -4px;}
-  .user-chip:hover{background:rgba(53,132,228,0.12);}
+  .user-chip:hover{background:rgba(33,144,164,0.12);}
   button.primary{
     font-family:'Inter', sans-serif; font-weight:700; font-size:14px; background:var(--gold); color:#fff;
-    border:none; border-radius:999px; padding:11px 20px; cursor:pointer; box-shadow:none;
+    border:none; border-radius:10px; padding:11px 20px; cursor:pointer; box-shadow:none;
   }
   button.primary:hover:not(:disabled){box-shadow:var(--shadow);}
   button.primary:active{transform:scale(0.97);}
   button.primary:disabled{opacity:0.4; cursor:default;}
   button.secondary{
-    font-family:'Inter', sans-serif; font-weight:700; font-size:13.5px; background:rgba(53,132,228,0.08); color:var(--gold);
-    border:1.5px solid var(--gold); border-radius:999px; padding:9px 16px; cursor:pointer;
+    font-family:'Inter', sans-serif; font-weight:700; font-size:13.5px; background:rgba(33,144,164,0.08); color:var(--gold);
+    border:1.5px solid var(--gold); border-radius:10px; padding:9px 16px; cursor:pointer;
   }
-  button.secondary:hover:not(:disabled){background:rgba(53,132,228,0.14);}
-  button.tiny{font-size:11.5px; padding:6px 12px; border-radius:999px;}
+  button.secondary:hover:not(:disabled){background:rgba(33,144,164,0.14);}
+  button.tiny{font-size:11.5px; padding:6px 12px; border-radius:8px;}
+  @keyframes libBtnPulse{ 0%{ transform:scale(1); } 40%{ transform:scale(0.93); opacity:0.7; } 100%{ transform:scale(1); opacity:0.55; } }
+  .lib-btn-pulse{ animation: libBtnPulse 0.28s ease-out forwards; pointer-events:none; }
   input[type=text], input[type=email], input[type=password], input[type=date]{
     font-family:'Inter', sans-serif; font-size:15px; padding:10px 12px; border:1.5px solid var(--line);
     border-radius:12px; width:100%; background:rgba(var(--card-bg),0.6); color:var(--ink);
   }
   input:focus, select:focus, textarea:focus{
-    outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(53,132,228,0.16);
+    outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(33,144,164,0.16);
   }
   .row{display:flex; gap:8px; flex-wrap:wrap;}
   .row > *{flex:1;}
   .receipt{ background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius-md); padding:16px; margin-bottom:14px; position:relative;}
   .receipt .rweek{ font-family:'Roboto Mono', monospace; font-size:11px; color:var(--ink-70); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;}
-  .pair-line{ display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); font-size:14.5px;}
+  .pair-line{ display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); font-size:14.5px;}
   .pair-line:last-child{border-bottom:none;}
-  .pair-line .giver{font-weight:700; color:var(--cloth-dark);}
-  .pair-line .receiver{font-weight:700; color:var(--forest-dark);}
-  .pair-line .arrow{color:var(--gold); font-size:16px;}
+  .pair-line .giver{font-weight:700; color:var(--cloth-dark); display:flex; justify-content:flex-start; align-items:center; min-width:0; overflow-wrap:anywhere;}
+  .pair-line .receiver{font-weight:700; color:var(--forest-dark); display:flex; justify-content:flex-end; align-items:center; min-width:0; overflow-wrap:anywhere; text-align:right;}
+  .pair-line .arrow{ justify-self:center; display:flex; align-items:center; color:var(--gold);}
   .empty-note{font-family:'Roboto Mono', monospace; font-size:12px; color:var(--ink-70); font-style:normal;}
   .worm-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line);}
   .worm-row:last-child{border-bottom:none;}
   .worm-streak{font-family:'Roboto Mono', monospace; font-weight:700;}
   .toast{
-    position:fixed; left:50%; transform:translateX(-50%); bottom:calc(20px + env(safe-area-inset-bottom, 0px)); background:rgba(36,36,36,0.95); color:#fff;
-    max-width:calc(100vw - 32px); width:max-content;
-    padding:11px 18px; border-radius:999px; font-family:'Inter', sans-serif; font-size:13.5px;
-    box-shadow:var(--shadow-lg); z-index:50; display:flex; justify-content:center; align-items:center; gap:10px;
-    animation: toastPopIn .2s cubic-bezier(0.16,1,0.3,1);
+    position:fixed; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); background:rgba(28,28,30,0.92); color:#fff;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    padding:14px 18px; border-radius:16px; font-family:'Inter', sans-serif; font-size:14px;
+    box-shadow:var(--shadow-lg); z-index:50; display:flex; justify-content:space-between; align-items:center; gap:10px;
+    animation: fadeInUp .25s var(--ease);
   }
-  @keyframes toastPopIn{ from{ opacity:0; transform:translateX(-50%) translateY(8px); } to{ opacity:1; transform:translateX(-50%) translateY(0); } }
-  .toast button{background:none; border:none; color:var(--gold); font-weight:700; cursor:pointer; font-size:13px; font-family:'Inter', sans-serif;}
+  .toast button{background:none; border:none; color:#7EE0EF; font-weight:700; cursor:pointer; font-size:13px; font-family:'Inter', sans-serif;}
   .empty-state{text-align:center; padding:30px 10px; color:var(--ink-70);}
   .empty-state .big{font-size:34px; display:block; margin-bottom:8px;}
   ul.plain{margin:6px 0; padding-left:18px;}
@@ -517,10 +526,10 @@
   .guide-section ul.plain{ padding-bottom:12px; }
   .guide-section ul.plain li{ margin-bottom:8px; }
   ul.plain li{margin-bottom:4px; font-size:13.5px; color:var(--ink-70);}
-  .role-chip{font-family:'Inter', sans-serif; font-size:10px; font-weight:700; letter-spacing:.03em; padding:3px 10px; border-radius:20px; border:none; color:var(--gold); background:rgba(53,132,228,0.14);}
+  .role-chip{font-family:'Inter', sans-serif; font-size:10px; font-weight:700; letter-spacing:.03em; padding:3px 10px; border-radius:8px; border:none; color:var(--gold); background:rgba(33,144,164,0.14);}
   .auth-wrap{ max-width:400px; margin:40px auto; padding:0 16px;}
-  .auth-toggle{display:flex; gap:6px; margin-bottom:14px; background:var(--paper-2); border-radius:999px; padding:4px; border:1px solid var(--line);}
-  .auth-toggle button{flex:1; padding:9px; border-radius:999px; border:none; background:none; font-family:'Inter',sans-serif; font-weight:700; cursor:pointer; color:var(--ink-70);}
+  .auth-toggle{display:flex; gap:6px; margin-bottom:14px; background:var(--paper-2); border-radius:12px; padding:4px; border:1px solid var(--line);}
+  .auth-toggle button{flex:1; padding:9px; border-radius:8px; border:none; background:none; font-family:'Inter',sans-serif; font-weight:700; cursor:pointer; color:var(--ink-70);}
   .auth-toggle button.active{background:var(--card); color:var(--gold); box-shadow:var(--shadow);}
   .field{margin-bottom:14px;}
   @keyframes fieldFlashError{ 0%,100%{ box-shadow:0 0 0 0 rgba(224,27,36,0); } 50%{ box-shadow:0 0 0 4px rgba(224,27,36,0.35); } }
@@ -559,6 +568,7 @@
 </style>
 </head>
 <body>
+<div id="bgLayer"></div>
 
 <div id="loadingScreen" class="loading-note">Yükleniyor…</div>
 
@@ -740,7 +750,7 @@
 
     <section class="tab" id="tab-worms">
       <div class="card">
-        <h2>🐺 Kitap Kurtları</h2>
+        <h2>Kitap Kurtları</h2>
         <p class="muted">Profil resmindeki renkli çerçeve ve köşe simgesi, o kişinin o anki aktif serisini gösterir; seri bozulunca kaybolur.</p>
         <button class="secondary" id="calcStreaksBtn">Serileri Hesapla</button>
         <div id="wormsList" style="margin-top:12px;"></div>
@@ -802,7 +812,7 @@
 
     <section class="tab" id="tab-mworms">
       <div class="card">
-        <h2>🐺 Kitap Kurtları</h2>
+        <h2>Kitap Kurtları</h2>
         <p class="muted">Profil resmindeki renkli çerçeve ve köşe simgesi, o kişinin o anki aktif serisini gösterir; seri bozulunca kaybolur.</p>
         <div id="mWormsList"></div>
       </div>
@@ -816,7 +826,7 @@
     <!-- ORTAK: HEDİYE KİTAP -->
     <section class="tab" id="tab-gifts">
       <div class="card">
-        <h2>🎁 Hediye Kitap</h2>
+        <h2>Hediye Kitap</h2>
         <div class="card-desc-wrap">
           <p class="muted" id="giftsIntro"></p>
         </div>
@@ -847,7 +857,7 @@
         </div>
       </div>
       <div class="card">
-        <h2>📚 Bugüne Kadar Hediye Edilen Kitaplar</h2>
+        <h2>Bugüne Kadar Hediye Edilen Kitaplar</h2>
         <div id="giftBooksGrid"></div>
       </div>
     </section>
@@ -1013,6 +1023,21 @@
 
     <!-- ORTAK: KİTAP GEÇMİŞİM (hamburger menüden erişilir) -->
     <section class="tab" id="tab-mybooks">
+      <div class="card">
+        <h2>Okumak İstediklerim</h2>
+        <div class="card-desc-wrap">
+          <p class="muted">İleride okumak istediğin kitapları buraya ekleyip bir liste oluşturabilirsin. Bu, kitap geçmişinden ayrı, sadece senin görebileceğin bir liste.</p>
+        </div>
+        <div id="wantToReadGrid" class="bh-grid"></div>
+        <button type="button" class="card-add-btn" id="wantToReadAddBtn" aria-label="Kitap ekle">+</button>
+        <div id="wantToReadFormWrap" style="display:none; margin-top:14px;">
+          <div class="field"><label>Kitap Ara</label><input type="text" id="wtrSearchInput" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div id="wtrSearchSuggest" class="book-suggest-box"></div></div>
+          <div class="field"><label>Yazar</label><input type="text" id="wtrAuthorInput" placeholder="listeden seçince otomatik dolar" /></div>
+          <div class="field"><label>Kitap Adı</label><input type="text" id="wtrTitleInput" /></div>
+          <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" id="wtrCoverInput" placeholder="internetten bulduğun kapak görselinin linki" /></div>
+          <button class="primary" id="wtrSaveBtn">Ekle</button>
+        </div>
+      </div>
       <div class="card">
         <h2>Kitap Geçmişim</h2>
         <div class="card-desc-wrap">
@@ -1554,14 +1579,87 @@ document.getElementById('bookHistoryViewModal').addEventListener('click', (e)=>{
 /* ============ ORTAK: KİTAP BİLGİSİ (kapağa tıklayınca) ============ */
 document.getElementById('bookInfoModalClose').addEventListener('click', ()=>{ closeModal('bookInfoModal'); });
 document.getElementById('bookInfoModal').addEventListener('click', (e)=>{ if(e.target.id==='bookInfoModal') closeModal('bookInfoModal'); });
-async function addBookToMyLibrary(title, author, cover){
+async function addBookToMyLibrary(title, author, cover, listType){
+  const collectionName = listType==='want' ? 'wantToRead' : 'bookHistory';
   try{
-    await addDoc(collection(db,'users',currentUid,'bookHistory'), { author: author||'', title, cover: cover||'', addedAt: new Date().toISOString() });
-    createOrBatchPost('book_added', { bookTitle: title, bookAuthor: author||'', bookCover: cover||'' });
-    showToast('Kitaplığına eklendi!');
+    await addDoc(collection(db,'users',currentUid,collectionName), { author: author||'', title, cover: cover||'', addedAt: new Date().toISOString() });
+    if(listType!=='want'){
+      createOrBatchPost('book_added', { bookTitle: title, bookAuthor: author||'', bookCover: cover||'' });
+    }
+    showToast(listType==='want' ? 'Okumak istediklerine eklendi!' : 'Kitaplığına eklendi!');
   }catch(err){ alert('Eklenemedi: '+(err.message||err)); }
 }
-async function showBookInfo(rawTitle, cover, prependHtml){
+async function checkBookListStatus(title){
+  let inHistory = false, inWant = false, historyId = null, wantId = null;
+  try{
+    const snap1 = await getDocs(query(collection(db,'users',currentUid,'bookHistory'), where('title','==',title)));
+    snap1.forEach(d=>{ inHistory = true; historyId = d.id; });
+  }catch(e){}
+  try{
+    const snap2 = await getDocs(query(collection(db,'users',currentUid,'wantToRead'), where('title','==',title)));
+    snap2.forEach(d=>{ inWant = true; wantId = d.id; });
+  }catch(e){}
+  return { inHistory, inWant, historyId, wantId };
+}
+async function removeFromMyLibraryById(docId, listType){
+  const collectionName = listType==='want' ? 'wantToRead' : 'bookHistory';
+  try{
+    await deleteDoc(doc(db,'users',currentUid,collectionName,docId));
+    showToast(listType==='want' ? 'Okumak istediklerinden kaldırıldı.' : 'Kitaplığından kaldırıldı.');
+  }catch(err){ alert('Kaldırılamadı: '+(err.message||err)); }
+}
+function libraryButtonsHtml(status, widthStyle, idSuffix){
+  idSuffix = idSuffix || '';
+  if(status.inHistory){
+    return `<button type="button" class="secondary tiny" id="removeFromLibBtn${idSuffix}" data-id="${status.historyId}" data-list="history" style="${widthStyle}">Listeden Kaldır</button>`;
+  }
+  if(status.inWant){
+    return `<div style="display:flex; gap:8px; margin-top:10px;">
+      <button type="button" class="secondary tiny" id="addToMyLibraryBtn${idSuffix}" style="flex:1;">Okudum</button>
+      <button type="button" class="secondary tiny" id="removeFromLibBtn${idSuffix}" data-id="${status.wantId}" data-list="want" style="flex:1;">Listeden Kaldır</button>
+    </div>`;
+  }
+  return `<div style="display:flex; gap:8px; margin-top:10px;">
+    <button type="button" class="secondary tiny" id="addToMyLibraryBtn${idSuffix}" style="flex:1;">Okudum</button>
+    <button type="button" class="secondary tiny" id="addToWantToReadBtn${idSuffix}" style="flex:1;">Okumak İstiyorum</button>
+  </div>`;
+}
+async function refreshLibraryButtons(wrapId, title, author, cover, idSuffix){
+  const wrap = document.getElementById(wrapId);
+  if(!wrap) return;
+  wrap.style.transition = 'opacity .16s ease, transform .16s ease';
+  wrap.style.opacity = '0';
+  wrap.style.transform = 'scale(0.97)';
+  await new Promise(r=> setTimeout(r, 160));
+  const status = await checkBookListStatus(title);
+  wrap.innerHTML = libraryButtonsHtml(status, 'width:100%;', idSuffix);
+  wrap.style.transform = 'scale(0.97)';
+  requestAnimationFrame(()=>{
+    wrap.style.opacity = '1';
+    wrap.style.transform = 'scale(1)';
+  });
+  wireLibraryButtons(wrapId, title, author, cover, idSuffix);
+}
+function wireLibraryButtons(wrapId, title, author, cover, idSuffix){
+  idSuffix = idSuffix || '';
+  const wrap = document.getElementById(wrapId);
+  if(!wrap) return;
+  const refresh = ()=> refreshLibraryButtons(wrapId, title, author, cover, idSuffix);
+  const pulseAndRun = async (btn, action)=>{
+    if(btn.disabled) return;
+    btn.disabled = true;
+    btn.classList.add('lib-btn-pulse');
+    await action();
+    refresh();
+  };
+  const myLibBtn = wrap.querySelector('#addToMyLibraryBtn'+idSuffix);
+  if(myLibBtn) myLibBtn.addEventListener('click', ()=> pulseAndRun(myLibBtn, ()=> addBookToMyLibrary(title, author, cover)));
+  const wantBtn = wrap.querySelector('#addToWantToReadBtn'+idSuffix);
+  if(wantBtn) wantBtn.addEventListener('click', ()=> pulseAndRun(wantBtn, ()=> addBookToMyLibrary(title, author, cover, 'want')));
+  const removeBtn = wrap.querySelector('#removeFromLibBtn'+idSuffix);
+  if(removeBtn) removeBtn.addEventListener('click', ()=> pulseAndRun(removeBtn, ()=> removeFromMyLibraryById(removeBtn.dataset.id, removeBtn.dataset.list)));
+}
+async function showBookInfo(rawTitle, cover, prependHtml, sourceContext){
   if(!rawTitle) return;
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
@@ -1615,13 +1713,17 @@ async function showBookInfo(rawTitle, cover, prependHtml){
     ${descShort?`<p style="text-align:left; font-size:13.5px; line-height:1.5;">${descShort}</p>`:''}
     ${info.isbn?`<div class="muted" style="font-size:11px; margin-top:8px;">ISBN: ${escapeHtml(info.isbn)}</div>`:''}
     ${info.link?`<a href="${info.link}" target="_blank" rel="noopener" style="display:inline-block; margin-top:10px; font-size:13px; color:var(--gold);">Daha fazla bilgi →</a>`:''}
-    <button type="button" class="secondary tiny" id="addToMyLibraryBtn" style="margin-top:10px; width:100%;">📚 Kitaplığıma Ekle</button>
+    ${sourceContext==='history' ? '' : `<div id="libraryBtnsWrap" style="margin-top:10px;"><span class="muted" style="font-size:12px;">…</span></div>`}
   `;
-  document.getElementById('addToMyLibraryBtn').addEventListener('click', ()=> addBookToMyLibrary(info.title, info.author, info.cover));
+  if(sourceContext!=='history') await refreshLibraryButtons('libraryBtnsWrap', info.title, info.author, info.cover);
 }
 document.body.addEventListener('click', (e)=>{
   const cover = e.target.closest('.book-cover-clickable');
-  if(cover && cover.dataset.bookTitle) showBookInfo(cover.dataset.bookTitle, cover.dataset.bookCover||cover.src||'');
+  if(cover && cover.dataset.bookTitle){
+    let sourceContext;
+    if(cover.closest('#bookHistoryGrid')) sourceContext = 'history';
+    showBookInfo(cover.dataset.bookTitle, cover.dataset.bookCover||cover.src||'', undefined, sourceContext);
+  }
 });
 document.getElementById('profileModalClose').addEventListener('click', ()=>{ closeModal('profileModal'); });
 document.getElementById('profileModal').addEventListener('click', (e)=>{ if(e.target.id==='profileModal') closeModal('profileModal'); });
@@ -2065,14 +2167,14 @@ function buildHamburgerMenu(){
   const isAuto = getAutoThemeEnabled();
   menu.innerHTML = items.map(it=>`<button data-tab="${it.id}"><span class="hb-menu-icon mono-icon">${it.icon}</span>${it.label}</button>`).join('')
     + `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--line); ${isAuto?'opacity:0.5;':''}">
-        <span style="font-family:'Roboto',sans-serif; font-size:14px; color:var(--ink);">🌙 Karanlık Tema</span>
+        <span style="display:flex; align-items:center; gap:10px; font-family:'Inter', sans-serif; font-size:14px; font-weight:600; color:var(--ink);"><span class="hb-menu-icon">🌙</span>Karanlık Tema</span>
         <label class="theme-switch">
           <input type="checkbox" id="themeToggleCheckbox" ${isDark?'checked':''} ${isAuto?'disabled':''}>
           <span class="slider"></span>
         </label>
       </div>
       <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--line);">
-        <span style="font-family:'Roboto',sans-serif; font-size:13px; color:var(--ink); max-width:150px;">🕗 Otomatik Tema</span>
+        <span style="display:flex; align-items:center; gap:10px; font-family:'Inter', sans-serif; font-size:14px; font-weight:600; color:var(--ink);"><span class="hb-menu-icon">🕗</span>Otomatik Tema</span>
         <label class="theme-switch">
           <input type="checkbox" id="autoThemeCheckbox" ${isAuto?'checked':''}>
           <span class="slider"></span>
@@ -2168,7 +2270,9 @@ function flashRequiredFields(){
   });
   return anyEmpty;
 }
+let lastTabSwitchTime = 0;
 function switchTab(id){
+  lastTabSwitchTime = Date.now();
   if(typeof closeReactionDrawer==='function') closeReactionDrawer();
   if(profileGateActive && id!=='profile'){
     flashRequiredFields();
@@ -2197,10 +2301,128 @@ function switchTab(id){
   renderTab(id);
 }
 
-/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) ============ */
+/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) — parmakla birlikte anlık kayar, boşta kalan
+   tarafta kenardan belirip kısa sürede ortalanan ve orada sabit kalan bir kitap simgesi
+   gösterir, animasyon sürerken dikey kaydırmayı kilitler, iOS/Android'deki gibi mesafe + hız
+   kombinasyonuyla karar verir ============ */
 (function setupSwipeNav(){
-  let touchStartX=null, touchStartY=0, touchStartTime=0;
+  let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, contentLeft=0, pendingSettleTimeout=null;
+  let lastMoveX=0, lastMoveTime=0, lastMoveWallTime=0, velocity=0, bookIcon=null, watchdogInterval=null;
+  const contentCol = document.querySelector('.content-col');
+  const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
+  const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
+
+  function buildBookIcon(){
+    const wrap = document.createElement('div');
+    wrap.id = 'swipeBookIcon';
+    wrap.style.cssText = 'position:fixed; top:50%; transform:translateY(-50%); width:88px; height:76px; z-index:5; pointer-events:none; opacity:0; transition:opacity 0.15s;';
+    wrap.innerHTML = `
+      <svg viewBox="0 0 100 84" width="88" height="74" style="position:absolute; top:0; left:0; overflow:visible; filter:drop-shadow(0 3px 4px rgba(0,0,0,0.18));">
+        <defs>
+          <linearGradient id="swipeBookCoverL" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8a5a34"/>
+            <stop offset="100%" stop-color="#6b4423"/>
+          </linearGradient>
+          <linearGradient id="swipeBookCoverR" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#7c4f2d"/>
+            <stop offset="100%" stop-color="#5e3a1e"/>
+          </linearGradient>
+          <linearGradient id="swipeBookPage" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fdf6e9"/>
+            <stop offset="100%" stop-color="#f2e6cf"/>
+          </linearGradient>
+        </defs>
+        <path d="M50 12 C40 6,18 6,8 13 L8 72 C18 65,40 65,50 71 Z" fill="url(#swipeBookCoverL)"></path>
+        <path d="M50 12 C60 6,82 6,92 13 L92 72 C82 65,60 65,50 71 Z" fill="url(#swipeBookCoverR)"></path>
+        <path d="M50 16 C41 11,21 11,12 17 L12 69 C21 63,41 63,50 68 Z" fill="url(#swipeBookPage)"></path>
+        <path d="M50 16 C59 11,79 11,88 17 L88 69 C79 63,59 63,50 68 Z" fill="url(#swipeBookPage)"></path>
+        <path d="M50 16 L50 68" stroke="#d8c7a6" stroke-width="1" opacity="0.6"></path>
+        <path d="M56 4 L66 4 L66 30 L61 24 L56 30 Z" fill="#b5382e"></path>
+      </svg>
+      <div id="swipeBookFlipPage" style="position:absolute; top:14px; left:44px; width:37px; height:47px; overflow:hidden; transform-origin:left center;">
+        <svg viewBox="0 0 100 84" width="88" height="74" style="position:absolute; top:-14px; left:-44px; filter:drop-shadow(1px 0 1px rgba(0,0,0,0.15));">
+          <path d="M50 16 C59 11,79 11,88 17 L88 69 C79 63,59 63,50 68 Z" fill="url(#swipeBookPage)"></path>
+        </svg>
+      </div>
+    `;
+    return wrap;
+  }
+  function startPreview(){
+    bookIcon = buildBookIcon();
+    document.body.appendChild(bookIcon);
+  }
+  function updatePreview(dx){
+    if(!bookIcon) return;
+    const iconW = 88, iconHalfW = 44;
+    const gapWidth = Math.abs(dx);
+    const goingNext = dx < 0;
+    // İkon HİÇBİR ZAMAN gerçek içeriğe binmesin: boşluk ikon genişliğinden dar olduğunda
+    // ikonu boşluğun iç kenarına yasla (taşan kısmı ekranın dışında/görünmez kalsın),
+    // boşluk yeterince büyüyünce normal şekilde ortalanmaya devam etsin.
+    let iconLeft;
+    if(goingNext){
+      const rightEdge = contentLeft + containerWidth;
+      const desiredLeft = (rightEdge - gapWidth/2) - iconHalfW;
+      iconLeft = Math.max(desiredLeft, rightEdge - gapWidth);
+    } else {
+      const leftEdge = contentLeft;
+      const desiredRight = (leftEdge + gapWidth/2) + iconHalfW;
+      const iconRight = Math.min(desiredRight, leftEdge + gapWidth);
+      iconLeft = iconRight - iconW;
+    }
+    bookIcon.style.left = iconLeft + 'px';
+    // İkon, boşluk küçükken görünmesin; belli bir eşiği geçince belirsin (kenardan girmiş hissi verir).
+    bookIcon.style.opacity = gapWidth > 26 ? '0.92' : '0';
+    const flipPage = document.getElementById('swipeBookFlipPage');
+    if(flipPage){
+      // Sayfa çevirme, sürüklemenin tamamlanma eşiğine (yaklaşık %80'ine) yakın bir hızda ilerlesin.
+      const flipProgress = Math.max(-1, Math.min(1, dx / (containerWidth * 0.8)));
+      flipPage.style.transform = `scaleX(${Math.cos(flipProgress*Math.PI)})`;
+    }
+  }
+  function settlePreview(finalProgress){
+    const flipPage = document.getElementById('swipeBookFlipPage');
+    if(flipPage) flipPage.style.transform = `scaleX(${Math.cos(finalProgress*Math.PI)})`;
+  }
+  function endPreview(){
+    if(bookIcon && bookIcon.parentNode) bookIcon.parentNode.removeChild(bookIcon);
+    bookIcon = null;
+  }
+  function unlockPageScroll(){
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+  }
+  function stopWatchdog(){
+    if(watchdogInterval){ clearInterval(watchdogInterval); watchdogInterval=null; }
+  }
+  function startWatchdog(){
+    stopWatchdog();
+    watchdogInterval = setInterval(()=>{
+      if(dragging && Date.now()-lastMoveWallTime > 450){
+        // Dokunuş (touchend/touchcancel hiç gelmeden) sessizce kaybolmuş olmalı — kendimizi
+        // güvenli şekilde, sekme değiştirmeden, olduğu yere geri dönerek sıfırlıyoruz.
+        dragging = false;
+        touchStartX = null;
+        unlockPageScroll();
+        contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
+        contentCol.style.transform = 'translateX(0)';
+        settlePreview(0);
+        if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
+        pendingSettleTimeout = setTimeout(()=>{ endPreview(); pendingSettleTimeout=null; }, 240);
+        stopWatchdog();
+      }
+    }, 200);
+  }
+
   document.addEventListener('touchstart', (e)=>{
+    endPreview(); // hızlı art arda kaydırmalarda önceki katman takılı kalmasın diye önce her ihtimale karşı temizle
+    stopWatchdog();
+    if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
+    // Önceki kaydırmadan yarım kalmış bir dönüşüm varsa (hızlı art arda kaydırmada olabiliyor),
+    // yeni jestin her zaman temiz bir konumdan başlaması için burada kesin olarak sıfırlıyoruz.
+    contentCol.style.transition = 'none';
+    contentCol.style.transform = 'translateX(0)';
+    unlockPageScroll();
     if(e.touches.length!==1){ touchStartX=null; return; }
     const t = e.target;
     if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal')){
@@ -2208,22 +2430,109 @@ function switchTab(id){
     }
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
-    touchStartTime = Date.now();
+    dragging = false;
+    velocity = 0;
+    lastMoveX = touchStartX;
+    lastMoveTime = e.timeStamp;
+    lastMoveWallTime = Date.now();
+    containerWidth = contentCol.offsetWidth || window.innerWidth;
+    contentLeft = contentCol.getBoundingClientRect().left;
   }, {passive:true});
-  document.addEventListener('touchend', (e)=>{
+
+  document.addEventListener('touchmove', (e)=>{
     if(touchStartX===null || !myProfile) return;
-    const touch = e.changedTouches[0];
+    const touch = e.touches[0];
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
-    const dt = Date.now() - touchStartTime;
-    touchStartX = null;
-    if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)*1.5 && dt < 600){
+    if(!dragging){
+      // Dikey kaydırmayı gereksiz yere kilitlememek için yön belirsizken bekliyoruz. Eşik önceden
+      // gevşekti — bu, hafifçe dikey başlayıp sonra yataya dönen jestlerde tarayıcının önce
+      // scroll'a karar verip sonra bizimle çakışmasına (jitter/takılmaya) sebep oluyordu. Şimdi
+      // çok daha net bir yatay üstünlük istiyoruz.
+      if(Math.abs(dx) < 5 || Math.abs(dx) <= Math.abs(dy)*2.2) return;
       const order = getTabOrder();
       const idx = order.indexOf(activeTab);
-      if(idx===-1) return;
-      if(dx < 0 && idx < order.length-1) switchTab(order[idx+1]);
-      else if(dx > 0 && idx > 0) switchTab(order[idx-1]);
+      if(idx===-1 || profileGateActive || (dx<0 && idx>=order.length-1) || (dx>0 && idx<=0)){ touchStartX=null; return; }
+      dragging = true;
+      contentCol.style.transition = 'none';
+      startPreview();
+      // Dokunuş olaylarının zamanlamasıyla uğraşmak yerine, sayfayı burada doğrudan ve kesin
+      // olarak kaydırılamaz hale getiriyoruz — bu, tarayıcının erken scroll kararı verip
+      // vermediğinden bağımsız, garantili bir kilit.
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      startWatchdog();
     }
+    if(dragging && e.cancelable) e.preventDefault();
+    if(dragging && e.cancelable) e.preventDefault();
+    const dt = e.timeStamp - lastMoveTime;
+    if(dt > 0) velocity = (touch.clientX - lastMoveX) / dt;
+    lastMoveX = touch.clientX;
+    lastMoveTime = e.timeStamp;
+    lastMoveWallTime = Date.now();
+    contentCol.style.transform = `translateX(${dx}px)`;
+    updatePreview(dx);
+  }, {passive:false});
+
+  document.addEventListener('touchend', (e)=>{
+    if(touchStartX===null) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartX;
+    touchStartX = null;
+    if(!dragging){ return; }
+    dragging = false;
+    unlockPageScroll();
+    stopWatchdog();
+    const order = getTabOrder();
+    const idx = order.indexOf(activeTab);
+    const distanceOk = Math.abs(dx) > containerWidth * DISTANCE_THRESHOLD_RATIO;
+    const flickOk = Math.abs(velocity) > VELOCITY_THRESHOLD && Math.sign(velocity)===Math.sign(dx);
+    const goingNext = dx < 0;
+    const targetIdx = goingNext ? idx+1 : idx-1;
+    // Parmağını sürüklerken yön değiştirip (vazgeçip tam tersine gidip) en baştaki/sondaki
+    // sekmede olmayan bir yöne geçmeye çalışmış olabilirsin — burada hedefin gerçekten var
+    // olduğunu doğruluyoruz, yoksa var olmayan bir sekmeye geçip boş sayfada kalırdı.
+    const targetExists = targetIdx>=0 && targetIdx<order.length;
+    const shouldComplete = (distanceOk || flickOk) && idx!==-1 && targetExists;
+    contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
+    const flipPage = document.getElementById('swipeBookFlipPage');
+    if(flipPage) flipPage.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
+    if(shouldComplete){
+      const flyDist = goingNext ? -containerWidth : containerWidth;
+      contentCol.style.transform = `translateX(${flyDist}px)`;
+      settlePreview(goingNext ? -1 : 1);
+      if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
+      pendingSettleTimeout = setTimeout(()=>{
+        contentCol.style.transition = 'none';
+        contentCol.style.transform = 'translateX(0)';
+        endPreview();
+        switchTab(order[targetIdx]);
+        pendingSettleTimeout = null;
+      }, 240);
+    } else {
+      contentCol.style.transform = 'translateX(0)';
+      settlePreview(0);
+      if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
+      pendingSettleTimeout = setTimeout(()=>{ endPreview(); pendingSettleTimeout=null; }, 240);
+    }
+  }, {passive:true});
+
+  // Tarayıcı bazen (özellikle yavaş/uzun dokunuşlarda) dokunuş dizisini touchend yerine
+  // touchcancel ile kesiyor. Bunu dinlemezsek her şey yarım kalmış halde donup kalıyor ve
+  // tarayıcı kontrolü sessizce native kaydırmaya bırakıyor. Burada da güvenli şekilde
+  // sıfırlıyoruz (asla sekme değiştirmeyi tamamlamaya çalışmadan, sadece eski haline dönerek).
+  document.addEventListener('touchcancel', ()=>{
+    touchStartX = null;
+    if(!dragging) return;
+    dragging = false;
+    unlockPageScroll();
+    stopWatchdog();
+    if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
+    contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
+    contentCol.style.transform = 'translateX(0)';
+    settlePreview(0);
+    if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
+    pendingSettleTimeout = setTimeout(()=>{ endPreview(); pendingSettleTimeout=null; }, 240);
   }, {passive:true});
 })();
 
@@ -2633,7 +2942,7 @@ function renderAdminToday(){
         if(wasNew) createPost(btn.dataset.status, {variantText: await pickVariantMessage(btn.dataset.status)});
         if(isSettingMark){
           const markedName = (usersCache[btn.dataset.uid] && usersCache[btn.dataset.uid].name) || '';
-          notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week');
+          notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week', currentUid);
         }
       } finally {
         setTimeout(()=> stampBtnInFlight.delete(key), 1200);
@@ -2780,13 +3089,13 @@ async function renderAdminDraws(){
     const rangeLabel = `${fmtShort(d.weekStart)} — ${fmtShort(d.weekEnd)}`;
     let body;
     if(!d.pairs || d.pairs.length===0){
-      body = `<div class="empty-note">Bu hafta cezalı çıkan olmadı — herkese kolay gelsin! 🎉</div>`;
+      body = `<div class="empty-note">Bu hafta cezalı çıkmadığı için kura çekilmedi.</div>`;
     } else {
       body = d.pairs.map(p=>{
         const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
         const receiverHtml = `<span class="receiver">${p.receiverUid ? userChipHtml(p.receiverUid) : escapeHtml(p.receiverName)}</span>`;
-        if(!p.receiverUid) return `<div class="pair-line">${giverHtml} — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
-        return `<div class="pair-line">${giverHtml}<span class="arrow">🎁→</span>${receiverHtml}</div>`;
+        if(!p.receiverUid) return `<div class="pair-line">${giverHtml}<span class="arrow">—</span><span class="empty-note" style="text-align:right;">uygun alıcı bulunamadı</span></div>`;
+        return `<div class="pair-line">${giverHtml}<span class="arrow"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>${receiverHtml}</div>`;
       }).join('');
     }
     return `<div class="receipt">
@@ -2885,8 +3194,8 @@ document.getElementById('manualDrawBtn').addEventListener('click', async ()=>{
     body = `<div class="empty-note">Bu tabloya göre cezalı çıkan yok.</div>`;
   } else {
     body = pairs.map(p=>{
-      if(!p.receiverUid && !p.receiverName) return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span> — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
-      return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow">🎁→</span><span class="receiver">${escapeHtml(p.receiverName)}</span>'e kitap hediye edecek</div>`;
+      if(!p.receiverUid && !p.receiverName) return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow">—</span><span class="empty-note" style="text-align:right;">uygun alıcı bulunamadı</span></div>`;
+      return `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><span class="receiver">${escapeHtml(p.receiverName)}</span>'e kitap hediye edecek</div>`;
     }).join('');
   }
   resultBox.innerHTML = `<div class="receipt"><div class="rweek">${escapeHtml(label)} &middot; Cezalı: ${giverCount} &middot; Temiz/Pas: ${safeCount}</div>${body}</div>`;
@@ -2910,7 +3219,7 @@ async function renderManualHistory(){
       ? `<div class="empty-note">Cezalı çıkan olmadı.</div>`
       : d.pairs.map(p=> !p.receiverName
           ? `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span> — <span class="empty-note">alıcı yok</span></div>`
-          : `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow">🎁→</span><span class="receiver">${escapeHtml(p.receiverName)}</span></div>`
+          : `<div class="pair-line"><span class="giver">${escapeHtml(p.giverName)}</span><span class="arrow"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><span class="receiver">${escapeHtml(p.receiverName)}</span></div>`
         ).join('');
     return `<div class="receipt"><div class="rweek">${escapeHtml(d.label)}</div>${body}</div>`;
   }).join('');
@@ -3133,7 +3442,7 @@ document.getElementById('mReadBtn').addEventListener('click', async ()=>{
   try{ playMarkFx(document.getElementById('mReadBtn'), 'read'); }catch(e){}
   await markStatus(currentUid,'read');
   renderMemberSurvey();
-  if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week');
+  if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', currentUid);
   if(wasNew) createPost('read', {variantText: await pickVariantMessage('read')});
   const s = await computeStreak(currentUid);
   await checkAndAwardBadges(currentUid, s);
@@ -3144,7 +3453,7 @@ document.getElementById('mSkipBtn').addEventListener('click', async ()=>{
   stampBtnInFlight.add('m|skip');
   const wasNew = todayAnswers[currentUid] !== 'skip';
   try{ playMarkFx(document.getElementById('mSkipBtn'), 'skip'); }catch(e){}
-  await markStatus(currentUid,'skip'); renderMemberSurvey(); if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week');
+  await markStatus(currentUid,'skip'); renderMemberSurvey(); if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week', currentUid);
   if(wasNew) createPost('skip', {variantText: await pickVariantMessage('skip')});
   setTimeout(()=> stampBtnInFlight.delete('m|skip'), 1200);
 });
@@ -3216,13 +3525,13 @@ async function renderMemberLastWeek(){
   const rangeLabel = `${fmtShort(d.weekStart)} — ${fmtShort(d.weekEnd)}`;
   let body;
   if(!d.pairs || d.pairs.length===0){
-    body = `<div class="empty-note">O hafta cezalı çıkan olmadı — herkese kolay gelsin! 🎉</div>`;
+    body = `<div class="empty-note">Bu hafta cezalı çıkmadığı için kura çekilmedi.</div>`;
   } else {
     body = d.pairs.map(p=>{
       const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
       const receiverHtml = `<span class="receiver">${p.receiverUid ? userChipHtml(p.receiverUid) : escapeHtml(p.receiverName)}</span>`;
-      if(!p.receiverUid) return `<div class="pair-line">${giverHtml} — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
-      return `<div class="pair-line">${giverHtml}<span class="arrow">🎁→</span>${receiverHtml}</div>`;
+      if(!p.receiverUid) return `<div class="pair-line">${giverHtml}<span class="arrow">—</span><span class="empty-note" style="text-align:right;">uygun alıcı bulunamadı</span></div>`;
+      return `<div class="pair-line">${giverHtml}<span class="arrow"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>${receiverHtml}</div>`;
     }).join('');
   }
   box.innerHTML = `<div class="receipt"><div class="rweek">Hafta: ${rangeLabel}</div>${body}</div>`;
@@ -3253,13 +3562,13 @@ async function renderDrawHistoryCard(prefix){
   nextBtn.disabled = drawHistIndex[prefix] <= 0;
   let body;
   if(!d.pairs || d.pairs.length===0){
-    body = `<div class="empty-note">O hafta cezalı çıkan olmadı — herkese kolay gelsin! 🎉</div>`;
+    body = `<div class="empty-note">Bu hafta cezalı çıkmadığı için kura çekilmedi.</div>`;
   } else {
     body = d.pairs.map(p=>{
       const giverHtml = `<span class="giver">${p.giverUid ? userChipHtml(p.giverUid) : escapeHtml(p.giverName)}</span>`;
       const receiverHtml = `<span class="receiver">${p.receiverUid ? userChipHtml(p.receiverUid) : escapeHtml(p.receiverName)}</span>`;
-      if(!p.receiverUid) return `<div class="pair-line">${giverHtml} — <span class="empty-note">uygun alıcı bulunamadı</span></div>`;
-      return `<div class="pair-line">${giverHtml}<span class="arrow">🎁→</span>${receiverHtml}</div>`;
+      if(!p.receiverUid) return `<div class="pair-line">${giverHtml}<span class="arrow">—</span><span class="empty-note" style="text-align:right;">uygun alıcı bulunamadı</span></div>`;
+      return `<div class="pair-line">${giverHtml}<span class="arrow"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>${receiverHtml}</div>`;
     }).join('');
   }
   box.innerHTML = `<div class="receipt"><div class="rweek">Hafta: ${rangeLabel} &middot; Cezalı: ${d.giverCount} &middot; Temiz/Pas: ${d.safeCount}</div>${body}</div>`;
@@ -3977,7 +4286,8 @@ function renderBookHistoryTab(){
   setupDiscoverNavObserver();
 }
 async function renderMyBooksTab(){
-  await renderBookHistoryGrid(currentUid, 'bookHistoryGrid', true);
+  await renderBookHistoryGrid(currentUid, 'wantToReadGrid', true, 'wantToRead');
+  await renderBookHistoryGrid(currentUid, 'bookHistoryGrid', true, 'bookHistory');
 }
 function positionDiscoverFabs(){
   const contentCol = document.getElementById('contentCol');
@@ -4007,11 +4317,12 @@ function setupDiscoverNavObserver(){
 }
 const BH_PAGE_SIZE = 8;
 const bhPageState = {};
-async function renderBookHistoryGrid(uid, gridId, editable){
+async function renderBookHistoryGrid(uid, gridId, editable, collectionName){
+  collectionName = collectionName || 'bookHistory';
   const grid = keepOrLoading(gridId);
   let items = [];
   try{
-    const snap = await getDocs(query(collection(db,'users',uid,'bookHistory'), orderBy('addedAt','desc')));
+    const snap = await getDocs(query(collection(db,'users',uid,collectionName), orderBy('addedAt','desc')));
     snap.forEach(d=> items.push({ id:d.id, ...d.data() }));
   }catch(e){}
   if(!items.length){
@@ -4047,15 +4358,15 @@ async function renderBookHistoryGrid(uid, gridId, editable){
 
   grid.innerHTML = pagerHtml + `<div class="bh-grid-inner">${cardsHtml}</div>`;
   if(totalPages>1){
-    grid.querySelector('.bh-prev-btn')?.addEventListener('click', ()=>{ bhPageState[gridId]--; renderBookHistoryGrid(uid, gridId, editable); });
-    grid.querySelector('.bh-next-btn')?.addEventListener('click', ()=>{ bhPageState[gridId]++; renderBookHistoryGrid(uid, gridId, editable); });
+    grid.querySelector('.bh-prev-btn')?.addEventListener('click', ()=>{ bhPageState[gridId]--; renderBookHistoryGrid(uid, gridId, editable, collectionName); });
+    grid.querySelector('.bh-next-btn')?.addEventListener('click', ()=>{ bhPageState[gridId]++; renderBookHistoryGrid(uid, gridId, editable, collectionName); });
   }
   if(editable){
     grid.querySelectorAll('.bh-delete').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         try{
-          await deleteDoc(doc(db,'users',currentUid,'bookHistory',btn.dataset.id));
-          renderBookHistoryGrid(currentUid, gridId, true);
+          await deleteDoc(doc(db,'users',currentUid,collectionName,btn.dataset.id));
+          renderBookHistoryGrid(currentUid, gridId, true, collectionName);
         }catch(e){ alert('Silinemedi: '+(e.message||e)); }
       });
     });
@@ -4063,6 +4374,28 @@ async function renderBookHistoryGrid(uid, gridId, editable){
   markLoaded(grid);
 }
 setupAddToggle('bookHistoryAddBtn', 'bookHistoryFormWrap');
+setupAddToggle('wantToReadAddBtn', 'wantToReadFormWrap');
+attachBookAutocomplete('wtrSearchInput', null, 'wtrSearchSuggest', (sel)=>{
+  document.getElementById('wtrAuthorInput').value = sel.author;
+  document.getElementById('wtrTitleInput').value = sel.title;
+  document.getElementById('wtrCoverInput').value = sel.cover || '';
+  document.getElementById('wtrSearchInput').value = '';
+});
+document.getElementById('wtrSaveBtn').addEventListener('click', async ()=>{
+  const author = document.getElementById('wtrAuthorInput').value.trim();
+  const title = document.getElementById('wtrTitleInput').value.trim();
+  const cover = document.getElementById('wtrCoverInput').value.trim();
+  if(!title){ alert('Kitap adı yaz.'); return; }
+  try{
+    await addDoc(collection(db,'users',currentUid,'wantToRead'), { author, title, cover, addedAt: new Date().toISOString() });
+    document.getElementById('wtrSearchInput').value='';
+    document.getElementById('wtrAuthorInput').value='';
+    document.getElementById('wtrTitleInput').value='';
+    document.getElementById('wtrCoverInput').value='';
+    closeAddForm('wantToReadAddBtn','wantToReadFormWrap');
+    renderBookHistoryGrid(currentUid, 'wantToReadGrid', true, 'wantToRead');
+  }catch(err){ alert('Eklenemedi: '+(err.message||err)); }
+});
 attachBookAutocomplete('bhSearchInput', null, 'bhSearchSuggest', (sel)=>{
   document.getElementById('bhAuthorInput').value = sel.author;
   document.getElementById('bhTitleInput').value = sel.title;
@@ -4205,19 +4538,31 @@ async function setReaction(target, emoji){
 }
 
 /* ============ SOSYAL: TIMELINE + KEŞFET ============ */
-const READ_MESSAGES = {
-  midnight: ["🌙 Gece yarısı okumasını yaptı.", "🕛 Günü kitapla kapattı, gece yarısı oldu.", "😌 Gece yarısında sayfa çevirdi.", "🌃 Yeni güne kitapla girdi."],
-  deepNight: ["🌌 Herkes uyurken o okudu.", "⭐ Gecenin bir yarısı kitabına daldı.", "🕯️ Gecenin sessizliğinde sayfa çevirdi.", "😴 Uyumadan kitabını bitirdi."],
-  preDawn: ["🌠 Sabaha karşı kitabını bitirdi.", "🌅 Şafak sökerken hâlâ okuyordu.", "🐦 Sabaha karşı sayfa çevirdi.", "🌌 Gün doğmadan okumasını tamamladı."],
-  dawn: ["🌅 Gün ağarırken okudu.", "🐦 Sabahın ilk ışıklarıyla kitabını açtı.", "🌤️ Güne kitapla merhaba dedi.", "🌇 Gün doğarken sayfa çevirdi."],
-  morning: ["☀️ Sabah okumasını yaptı.", "📖 Kahvesini yudumlarken kitabını da bitirdi.", "🌞 Güne kitapla başladı.", "🐣 Sabah erkenden görevini tamamladı.", "☕ Kahvaltıdan önce okumasını halletti."],
-  lateMorning: ["📗 Kuşluk vaktinde okumasını yaptı.", "🌤️ Öğleye doğru kitabına döndü.", "📘 Sabahın son saatlerinde sayfa çevirdi.", "🍵 Bir çay eşliğinde okudu."],
-  midday: ["📚 Öğle vakti okumasını yaptı.", "🌤️ Öğlen arasını kitabına ayırdı.", "📗 Günün ortasında sayfalarını çevirdi.", "☕ Kısa bir öğle molasında okudu."],
-  afternoon: ["📖 Öğleden sonra kitabına döndü.", "📙 Öğleden sonra görevini bitirdi.", "🌻 Öğleden sonra biraz kitaba daldı.", "📚 Gün ortasında sayfa çevirdi."],
-  lateAfternoon: ["🍃 İkindi vakti okumasını tamamladı.", "🌤️ İkindi arasında kitabına döndü.", "📖 İkindi vakti sayfalarını çevirdi.", "🍵 İkindi çayıyla kitabına daldı."],
-  evening: ["🌆 Akşamüstü okumasını yaptı.", "🛋️ Günün yorgunluğunu kitapla attı.", "📖 Akşamüstü sayfalarını çevirdi.", "🌇 Akşama girerken okumasını tamamladı."],
-  dusk: ["✨ Akşam saatlerinde okudu.", "🍵 Akşam çayıyla birlikte kitabını da bitirdi.", "🕯️ Akşam sessizliğinde okudu.", "🌆 Günün son ışıklarında kitabına daldı."],
-  night: ["🌙 Gece okumasını yaptı.", "😴 Uyumadan önce kitabını bitirdi.", "🌃 Geceye kitapla girdi.", "🦉 Baykuş gibi geceleri okuyor."]
+const READ_MESSAGES_BY_HOUR = {
+  0: ['Yeni günün ilk dakikaları, raflarda sessizce bekleyen bir hikâyeye "merhaba" demek için güzel bir bahaneydi.', 'Külkedisi balodan ayrılmış olabilir; ama en güzel masallar bazen tam gece yarısında başlar.', 'Şehrin gürültüsü sustuğunda kelimelerin sesi daha belirgin duyulur.', 'Takvim yeni bir güne geçti; o ise çoktan başka bir evrenin sınırlarını aşmıştı.', 'Gece yarısı, kitapların en cömert olduğu vakittir; okura hiç ummadığı dünyalar sunarlar.', 'Bazı kapılar anahtarla açılır, bazılarıysa gece yarısı çevrilen ilk sayfayla.', 'Uykunun daveti nazikti; merakın daveti ise karşı konulamayacak kadar güçlüydü.', 'Bir kütüphanenin rafları, tam bu saatte fısıldaşmaya başlıyor olmalı.', 'Saat sıfırı gösterirken gerçek dünya kısa bir mola verdi; hayal gücü nöbeti devraldı.', 'Yeni günün ilk izi, çevrilen bir sayfanın çıkardığı o tanıdık ses oldu.'],
+  1: ['Sherlock Holmes bile böylesine sessiz bir gecede satırların arasındaki ipuçlarını takdir ederdi.', 'Gece ilerledikçe odadaki tek hareket, usulca çevrilen sayfalardı.', 'Merakın saate ihtiyacı yoktur; yalnızca anlatılmayı bekleyen iyi bir hikâyeye ihtiyacı vardır.', 'Bazı yolculuklar tren garından değil, ilk paragraftan başlar.', 'Ay gökyüzünü aydınlatırken kitap da düşünceleri aydınlatıyordu.', 'Bu saatte kelimeler, gündüz olduğundan biraz daha derin görünür.', 'Sessizlik, iyi yazılmış bir romanın en sadık okuma arkadaşıdır.', 'Gecenin en güzel yanı, kimsenin hayal kurmaya acele ettirmemesidir.', 'Saat ilerledikçe zaman değil, yalnızca okunacak sayfa sayısı önemini korudu.', 'Dışarıda gece vardı; içeride ise bambaşka bir mevsim yaşanıyordu.'],
+  2: ['Morpheus sabırla bekledi; çünkü hikâye henüz son sözünü söylememişti.', 'Gecenin bu saatinde açılan kitaplar, okuruyla sessiz bir anlaşma yapar.', 'Uzak diyarlara gitmek bazen yalnızca bir sayfa çevirmek kadar kolaydır.', 'Ay ışığı pencereye vururken satırlar zihinde yeni yollar açıyordu.', 'Bazı cümleler, gündüzün telaşında değil gecenin dinginliğinde gerçek anlamını bulur.', 'Dünya yavaşlamıştı; ama hikâye tam aksine hız kazanıyordu.', 'En güzel keşiflerin bir pusulaya değil, iyi yazılmış bir romana ihtiyacı vardır.', 'Saat iki olduğunda kahramanlar çoktan hafızanın bir köşesine yerleşmişti.', 'Gözler yorulabilir; ama iyi bir hikâyeye duyulan merak kolay kolay yorulmaz.', 'Gece, satırların arasındaki boşlukları bile anlamla doldurur.'],
+  3: ['Victor Frankenstein\'ın laboratuvarı kadar sessiz bir gecede, yeni fikirler sayfaların arasından doğuyordu.', 'Bu saat, yalnızca uykusuzların değil, hayal kurmaktan vazgeçmeyen okurların da zamanıdır.', 'Gecenin en derin sessizliği, en güçlü anlatıcılardan biridir.', 'Raflarda yıllarca bekleyen bir kitap, sonunda hak ettiği okurla buluştu.', 'Bazı hikâyeler güneş ışığını değil, yıldızların tanıklığını sever.', 'Saat üçte zaman ağır akar; ama iyi yazılmış bir roman bunu unutturur.', 'Her çevrilen sayfa, bilinmeyene doğru atılmış küçük bir adımdır.', 'Dışarıda herkes dinlenirken zihin yeni karakterlerle tanışıyordu.', 'En uzun geceler bile iyi bir kitabın içinde kısa gelir.', 'Sessizlik bazen en etkileyici ön sözdür.'],
+  4: ['Şafak henüz görünmemişti; ama satırlar çoktan ufuk çizgisini aşmıştı.', 'Odysseus eve dönmek için denizleri aştı; o ise birkaç bölümle sayısız dünyayı dolaştı.', 'Gün doğmadan önce okunan sayfaların kendine özgü bir huzuru vardır.', 'Gökyüzü yavaş yavaş renk değiştirirken hikâye de yeni bir yöne evriliyordu.', 'Uyanan ilk şey bazen güneş değil, meraktır.', 'Sabahın serinliğiyle birlikte kelimeler de tazelenmiş gibiydi.', 'Günün ilk ışıkları yaklaşırken kitabın atmosferi odanın havasını değiştirmişti.', 'Şafaktan önce kazanılan sessizlik, okumanın en değerli armağanlarından biridir.', 'Her yeni gün, okunmayı bekleyen yeni bir hikâye demektir.', 'Gecenin son perdesi kapanırken kitabın sahnesi hâlâ açıktı.'],
+  5: ['İlk kuş sesleri duyulurken roman son hız yoluna devam ediyordu.', 'Don Kişot değirmenlere doğru yola çıkmıştı; o ise yeni bir bölümün peşine.', 'Sabahın ilk ışıklarıyla birlikte zihinde onlarca yeni düşünce filizlenmişti.', 'Güne başlamak için bazılarının alarma, bazılarının ise yalnızca iyi bir kitaba ihtiyacı vardır.', 'Şafak, sayfalar arasında geçirilen saatleri usulca selamladı.', 'Gün doğarken raflardaki yüzlerce hikâyeden biri artık tanıdık bir dosta dönüşmüştü.', 'Erken saatlerin en güzel ayrıcalığı, dünyanın henüz sessiz olmasıdır.', 'Yeni gün, yeni hedefler getirdi; ama ilk durak yine kitap oldu.', 'Sabahın serin havası, hikâyenin bıraktığı sıcak duyguyla dengeleniyordu.', 'Güneş ufukta görünürken bir kitap daha unutulmaz anılar arasındaki yerini aldı.'],
+  6: ['Güneş doğdu; ama bugünün ilk keşfi gökyüzünde değil, satırların arasındaydı.', 'Her sabah yeni bir başlangıçtır; en güzellerinden bazıları kitap kapağı açılarak yapılır.', 'Sabahın ilk ışıkları, okunan her cümlenin üzerine ayrı bir umut bırakır.', 'Gün henüz telaşa kapılmamışken birkaç sayfa okumak, zamana verilmiş küçük bir meydan okumadır.', 'Kuşlar şarkılarını söylerken kelimeler de kendi melodisini kuruyordu.', 'Yeni bir günün en güzel kahvaltısı bazen birkaç iyi paragraftır.', 'Sabahın sessizliği, yazarların en görünmez ortağıdır.', 'Güne erkenden başlayanların bildiği bir sır vardır: Hikâyeler de sabahları daha canlıdır.', 'Güneş pencereyi aydınlattı; kitap ise zihni.', 'İlk ışıklarla birlikte yeni bir dünyanın kapısı aralandı.'],
+  7: ['Alice tavşanı izledi; o ise merakını.', 'Çayın buharı yükselirken hikâye de yavaş yavaş şekilleniyordu.', 'Gün planları bekleyebilir; iyi yazılmış bir bölüm her zaman önceliklidir.', 'Sabah telaşı başlamadan önce birkaç sayfa okumak, güne yapılan sessiz bir yatırımdır.', 'Raflardan seçilen o kitap, bugünün en doğru kararı oldu.', 'Bazı sabahlar haberlerle başlar; bazıları ise romanlarla güzelleşir.', 'Sabah güneşi perdeyi açtı, kitap ise hayal gücünü.', 'Yeni gün, yeni karakterlerle tanışmak için güzel bir fırsattı.', 'En sakin sabahlar, en unutulmaz hikâyeleri ağırlayabilir.', 'Takvim bugünü gösteriyordu; kitap ise bambaşka zamanları.'],
+  8: ['Bilbo Baggins\'in kapısını bir büyücü çalmıştı; bugün ise macera kitabın ilk sayfasından geldi.', 'Günün koşuşturması başlamadan önce yapılan en değerli yolculuk, satırlar arasındaki yolculuktur.', 'Masadaki fincan boşalabilir; ama iyi bir hikâye kolay kolay tükenmez.', 'Her çevrilen sayfa güne yeni bir renk kattı.', 'Dünyanın en sessiz sohbetlerinden biri, okur ile kitap arasında gerçekleşir.', 'Bazı sabahlar yalnızca okunarak güzelleşir.', 'Güne umutla başlamanın pek çok yolu vardır; bunlardan biri de kitap açmaktır.', 'Kelimeler bazen kahveden daha güçlü uyandırır.', 'Yeni bir bölüm, yeni bir bakış açısı getirdi.', 'Gün başlamış olabilir; ama hayal gücü çok daha erken uyanmıştı.'],
+  9: ['Jean Valjean\'ın ikinci bir şans bulduğu gibi, her kitap da okuruna yeni bir başlangıç sunar.', 'Üretken bir günün en sağlam temeli bazen tek bir sayfadır.', 'Okunan her bölüm, düşüncelere yeni bir pencere açtı.', 'Bilginin en sessiz öğretmeni çoğu zaman kitaplardır.', 'Sabahın enerjisiyle birleşen iyi bir hikâye uzun süre akılda kalır.', 'Zaman ilerledi; merak yerinde durmadı.', 'Kitaplar acele etmez; ama okuru mutlaka bir yere ulaştırır.', 'En güzel keşiflerden bazıları haritalarda bulunmaz.', 'Satırların arasında kaybolmak bazen kendini bulmanın başka bir yoludur.', 'Bugün öğrenilecek ilk şey, kitabın anlattıkları oldu.'],
+  10: ['Hercule Poirot ayrıntıları incelerdi; iyi bir okur da satır aralarını.', 'Güneş yükseldikçe hikâye de derinleşmeye başladı.', 'Kitaplar konuşmaz; ama anlatacakları hiç bitmez.', 'Her bölüm yeni bir soru, her sayfa yeni bir cevap olabilir.', 'Okuma, zamana karşı değil, unutmaya karşı kazanılan bir mücadeledir.', 'Bazen en büyük keşif, yeni bir düşünceyle karşılaşmaktır.', 'Bugün de birkaç sayfa, yüzlerce düşünce doğurdu.', 'İyi yazılmış cümleler yıllar geçse de ilk günkü etkisini korur.', 'Hayal gücü için en verimli toprak, iyi kitapların sayfalarıdır.', 'Öğlene yaklaşırken hikâye tam anlamıyla hayat buldu.'],
+  11: ['Edmond Dantès sabrı öğrendi; kitaplar da okura aynı erdemi fısıldar.', 'Gün yükseldikçe hikâye de kendi doruğunu arıyordu.', 'Öğleye yaklaşırken sayfalar zamanın nasıl geçtiğini unutturdu.', 'İyi bir kitap, saate bakmayı gereksiz kılar.', 'Bazı cümleler yalnızca okunmaz; uzun süre zihinde yaşamaya devam eder.', 'Her bölüm tamamlandığında yeni bir merak doğar.', 'Hikâyeler yalnızca anlatılmaz; yaşanır da.', 'Kitaplar raflarda bekler; doğru zamanı geldiğinde okurunu bulur.', 'Günün en güzel molası, birkaç satırlık bir yolculuktu.', 'Öğle güneşi yaklaşırken hikâye hâlâ bütün canlılığıyla devam ediyordu.'],
+  12: ['Öğle güneşi yükselirken hikâye de tam anlamıyla ritmini buldu.', 'Günün ortasında yapılan kısa bir okuma, zihne uzun bir mola armağan eder.', 'Öğle saatleri bazen bir kitabın en güzel bölümüne denk gelir.', 'Masadaki tabak boşalabilir; ama merak kolay kolay doymaz.', 'Her çevrilen sayfa, günün telaşını biraz daha geride bıraktı.', 'Kütüphaneler sessizdir; ama içlerinde sayısız hayat aynı anda yaşar.', 'Güne kısa bir ara vermenin en güzel yollarından biri, iyi bir kitaptır.', 'Satırlar arasında geçirilen dakikalar, saatin gösterdiğinden daha değerlidir.', 'Bugünün en güzel sohbeti, yazar ile okur arasında gerçekleşti.', 'Öğle vakti, yeni düşüncelerin filizlenmesi için en verimli saatlerden biridir.'],
+  13: ['Atticus Finch\'in öğrettiği gibi, anlamak bazen yalnızca dikkatle dinlemekle başlar; kitaplar da bunu sabırla öğretir.', 'Gün ilerledikçe karakterler de daha tanıdık gelmeye başladı.', 'Bazı yolculuklar bavul istemez; yalnızca açık bir kitap yeterlidir.', 'Her bölüm, zihne yeni bir pencere açtı.', 'Satırlar arasında dolaşırken zaman usulca akıp gitti.', 'Hikâyeler, onları paylaşan okurlarla yaşamaya devam eder.', 'Bir kitabın en güzel yanı, her okurun onu farklı okumasıdır.', 'Sessizce çevrilen sayfalar bile bazen uzun konuşmalardan daha çok şey anlatır.', 'Öğleden sonra yaklaşırken merak hâlâ ilk sayfadaki kadar canlıydı.', 'İyi yazılmış bir paragraf, günün bütün temposunu değiştirebilir.'],
+  14: ['Kaptan Nemo okyanusun derinliklerini keşfetti; bugün ise keşfedilen yer, satırların derinliğiydi.', 'Günün en parlak ışığında bile kitaplar kendi gölgelerini oluşturur.', 'Her yeni bölüm, daha önce hiç gidilmemiş bir sokağa benzer.', 'Okunan her cümle, düşüncelere sessizce yerleşti.', 'En büyük keşiflerden bazıları masadan kalkmadan yapılır.', 'Gün ortasında birkaç sayfa okumak, zamana verilmiş küçük bir hediyedir.', 'Hayal gücü güneş saatine göre çalışmaz.', 'Her kitap, okurunun zihninde ikinci kez yazılır.', 'Bugün de yeni bir hikâye hafızada yerini aldı.', 'Bazen tek bir cümle, uzun bir yolculuğun başlangıcı olabilir.'],
+  15: ['Raskolnikov\'un sorguladığı vicdan gibi, bazı kitaplar da okuru kendisiyle konuşmaya davet eder.', 'Gün yavaş yavaş akşama yaklaşırken hikâye hız kesmedi.', 'Her karakter, başka bir insanı anlamanın yeni bir yoludur.', 'Sayfalar arasında dolaşırken dışarıdaki zaman önemini yitirdi.', 'İyi kitaplar yalnızca okunmaz; uzun süre düşünülür.', 'Okuma, zihnin yaptığı en sessiz keşif yolculuğudur.', 'Her bölüm bittiğinde, geriye yeni sorular kaldı.', 'Bugünün en uzun yolculuğu birkaç santimetrelik sayfaların içinde gerçekleşti.', 'Bazı cümleler, ilk okunduğu andan itibaren unutulmayı reddeder.', 'Güneş batıya yönelirken hikâye de en güçlü anlarına ulaşıyordu.'],
+  16: ['Dorian Gray zamana meydan okumaya çalıştı; kitaplar ise bunu her nesilde yeniden başarır.', 'Akşam yaklaşırken satırlar daha da derinleşti.', 'Her kitabın kendi mevsimi vardır; bazıları dört mevsimi aynı anda yaşatır.', 'Günün yorgunluğu, iyi yazılmış birkaç paragrafla hafifledi.', 'Sayfalar çevrildikçe düşünceler de yön değiştirdi.', 'Kitapların en güzel yanı, her dönüşte yeni bir ayrıntı göstermeleridir.', 'Bazen en sessiz anlar, en büyük farkındalıkları getirir.', 'İyi bir hikâye, günü bölmez; güzelleştirir.', 'Gözler satırları takip ederken zihin çoktan başka diyarlara ulaşmıştı.', 'Gün batımına doğru ilerlerken kitap hâlâ yeni sürprizler sunuyordu.'],
+  17: ['Küçük Prens\'in tilkisi gibi, bazı kitaplarla da zaman geçirdikçe aranda görünmez bağlar oluşur.', 'Günün son mesaisi, hayal gücüne devredildi.', 'Gün boyunca biriken düşünceler, satırlar arasında yerini buldu.', 'Hikâyeler bazen yorgunluğu değil, yalnızca sessizliği ister.', 'Her kitap, okuruna küçük de olsa bir iz bırakır.', 'Akşam yaklaşırken merak hâlâ ilk bölümdeki kadar güçlüydü.', 'Okumak, günü daha uzun yaşamanın en güzel yollarından biridir.', 'Gün biterken hafızaya yeni isimler, yeni yerler ve yeni duygular eklendi.', 'Bazı karakterler kitabın içinde kalmaz; okurun zihnine taşınır.', 'Günün son ışıklarıyla birlikte hikâye de okurunun bir parçası hâline geldi.'],
+  18: ['Gandalf\'ın dediği gibi, bize verilen zamanı nasıl değerlendireceğimiz önemlidir; bugün bunun cevabı birkaç güzel sayfada saklıydı.', 'Gün batımı gökyüzünü boyarken satırlar da hayal gücünü renklendiriyordu.', 'Günün yorgunluğu, iyi yazılmış bir hikâyenin omzuna bırakıldı.', 'Bazı akşamlar uzun sohbet ister, bazılarıysa yalnızca iyi bir kitap.', 'Güneş ufka çekilirken karakterler daha da canlı görünmeye başladı.', 'Akşamın serinliği, sayfalardaki sıcak hikâyelerle dengelendi.', 'Her günün sonunda anlatılacak yeni bir hikâye bulunabilir.', 'Gün kapanırken kitap yeni kapılar açmaya devam etti.', 'Günlük telaş yerini satırların dinginliğine bıraktı.', 'Akşamın ilk dakikaları, hayal gücü için en güzel davetiyelerden biridir.'],
+  19: ['Harry Potter\'ın peron dokuz üç çeyreği vardı; bugün ise yolculuk yalnızca açılan bir kitapla başladı.', 'Çayın buharı yükselirken hikâye de usulca derinleşti.', 'Akşam, kitap raflarının en çok sevdiği misafirdir.', 'Günün en güzel kaçamağı bazen yalnızca birkaç bölüm sürer.', 'Dışarıda lambalar yanarken satırlar da zihinde ışık yakıyordu.', 'Her akşam yeni bir dünyanın kapısını çalmak mümkündür.', 'Koltuğa yerleşmek bazen uzun bir yolculuğun ilk adımıdır.', 'Günün temposu geride kaldı; sıra meraka geldi.', 'Akşam saatleri, kitapların sesi biraz daha güçlü çıkar.', 'Hikâyeler, gün batımını beklemeyi iyi bilir.'],
+  20: ['Aslan\'ın cesareti gibi bazı hikâyeler de okurun içinde uzun süre yaşamaya devam eder.', 'Gecenin ilk perdesi açılırken roman da en etkileyici sahnelerini göstermeye başladı.', 'Düşünceler yavaşladı; merak hızlandı.', 'Her çevrilen sayfa günü biraz daha güzelleştirdi.', 'En iyi yol arkadaşlarından biri, kapağı açılmış bir kitaptır.', 'Zaman ilerledi; hikâye geride kalmayı reddetti.', 'Kitaplar, akşamın en sessiz misafiridir.', 'Günün son saatleri, yeni fikirler için her zaman bereketlidir.', 'Bazı karakterlerle vedalaşmak kolay değildir.', 'İyi bir roman, akşamı olduğundan daha kısa hissettirir.'],
+  21: ['Arsène Lupin\'in çaldığı şey mücevherlerdi; iyi kitaplar ise fark ettirmeden kalpleri çalar.', 'Gün geride kaldı; anlatılacak hikâyeler ise hâlâ masadaydı.', 'Her bölüm, günü biraz daha unutulmaz kıldı.', 'Gecenin başlamasıyla birlikte hayal gücü de mesaisine başladı.', 'Kitaplar bazen en iyi dostluğu tek kelime etmeden kurar.', 'Sayfalar ilerledikçe düşünceler de derinleşti.', 'Hikâyeler, okurun zihninde ikinci bir ömür yaşar.', 'Bazı akşamlar yalnızca okumak yeterlidir.', 'Günün bütün gürültüsü dışarıda kaldı.', 'Kelimeler, geceyi usulca doldurmaya devam etti.'],
+  22: ['Winston Smith gerçeği arıyordu; bugün ise cevaplar satırların arasında saklıydı.', 'Gecenin ilerleyen saatleri, düşüncelerin en berrak olduğu anlardır.', 'Kitabın sonlarına yaklaşmak bazen sevilen bir şehirden ayrılmak gibidir.', 'Her sayfa, zihinde yeni bir iz bıraktı.', 'Hikâyenin ritmi gecenin ritmiyle uyum içindeydi.', 'Gün biterken öğrenilecek yeni şeyler hâlâ vardı.', 'İyi kitaplar, kapakları kapandıktan sonra da konuşmaya devam eder.', 'Gece büyüdükçe hayal gücü de sınırlarını genişletti.', 'Bazı cümleler yalnızca okunmaz; insanın içinde yankılanır.', 'Saat ilerledi, ama hikâye acele etmiyordu.'],
+  23: ['Gregor Samsa\'nın sabahı sıra dışı başlamıştı; bu gün ise sıra dışı bir hikâyeyle sona erdi.', 'Günün son saatleri, en güzel vedaların yaşandığı sayfalara ayrıldı.', 'Kapanan yalnızca gün oldu; hikâye zihinde yaşamaya devam etti.', 'Kitabın kapağı kapandı, ama bıraktığı iz kapanmadı.', 'Günün sonunda kazanılan en değerli şey, yeni bir bakış açısıydı.', 'Her hikâye biter; iyi olanlar ise okurun içinde yaşamayı sürdürür.', 'Yıldızlar gökyüzünü süslerken satırlar hafızayı süslüyordu.', 'Bugün okunan sayfalar, yarının düşüncelerine sessizce karışacak.', 'Gün sona erdi; ama keşfedilecek dünyaların sayısı hiç azalmadı.', 'Yarın yeni bir gün, rafta ise yeni bir macera bekliyor.'],
 };
 const SKIP_MESSAGES = {
   midnight: ["🌙 Gece yarısı oldu, kitap hâlâ kapalı.", "😴 Gün kitapsız bitmek üzere."],
@@ -4256,8 +4601,8 @@ async function getLastPostMessageOfType(type){
   }catch(e){ return null; }
 }
 async function pickVariantMessage(type){
-  const bucket = timeBucket(new Date().getHours());
-  const pool = (type==='read' ? READ_MESSAGES : SKIP_MESSAGES)[bucket];
+  const hour = new Date().getHours();
+  const pool = type==='read' ? READ_MESSAGES_BY_HOUR[hour] : SKIP_MESSAGES[timeBucket(hour)];
   const lastText = await getLastPostMessageOfType(type);
   const candidates = lastText ? pool.filter(m=>m!==lastText) : pool;
   const finalPool = candidates.length ? candidates : pool;
@@ -4368,7 +4713,7 @@ function timeAgoLabel(iso){
 function postBodyHtml(p){
   const name = escapeHtml(p.name||'');
   switch(p.type){
-    case 'read': return p.variantText ? escapeHtml(p.variantText) : `📖 Bugün okudu.`;
+    case 'read': return `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:5px; flex:0 0 auto;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>${p.variantText ? escapeHtml(p.variantText) : 'Bugün okudu.'}`;
     case 'skip': return p.variantText ? escapeHtml(p.variantText) : `😴 Bugün okuyamadı.`;
     case 'badge_gained': return p.variantText ? escapeHtml(p.variantText) : `${p.badgeIcon||'🏅'} <b>${escapeHtml(p.badgeLabel||'')}</b> rozetini kazandı!`;
     case 'badge_lost': return p.variantText ? escapeHtml(p.variantText) : `💔 <b>${escapeHtml(p.badgeLabel||'')}</b> rozetini kaybetti.`;
@@ -5876,7 +6221,7 @@ const CURATED_CATALOG = [
     {t:'Seçme Şiirler', a:'Paul Celan', w:'Holokost sonrası şiirin en güçlü ve en etkileyici seslerinden biri olarak dilin sınırlarını zorlayan eserler vermiştir.', lv:'ileri'},
   ]},
 ];
-const DISCOVER_CATEGORIES = CURATED_CATALOG.map(c=>({label:c.label+' '+c.emoji, slug:c.slug}));
+const DISCOVER_CATEGORIES = CURATED_CATALOG.map(c=>({label:c.label, slug:c.slug}));
 function bookKeyFor(book){
   if(book.workKey) return book.workKey.replace(/^\/works\//,'').replace(/[^a-zA-Z0-9_-]/g,'_');
   return ((book.title||book.t||'')+'_'+(book.author||book.a||'')).toLowerCase().replace(/[^a-z0-9]+/g,'_').slice(0,80);
@@ -7149,9 +7494,9 @@ async function openBookDiscoverModal(book){
     <div class="rating-star-row" id="ratingStarRow">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="rating-star" data-n="${n}">★</span>`).join('')}</div>
     <textarea id="ratingCommentInput" placeholder="Yorumun (opsiyonel)" style="width:100%; margin-top:10px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; min-height:60px; background:var(--card); color:var(--ink);">${myRating?escapeHtml(myRating.comment||''):''}</textarea>
     <button class="primary" id="ratingSubmitBtn" style="width:100%; margin-top:8px;">Gönder</button>
-    <button type="button" class="secondary tiny" id="addToMyLibraryBtnDiscover" style="width:100%; margin-top:8px;">📚 Kitaplığıma Ekle</button>
+    <div id="libraryBtnsWrapDiscover" style="margin-top:8px;"><span class="muted" style="font-size:12px;">…</span></div>
   `;
-  document.getElementById('addToMyLibraryBtnDiscover').addEventListener('click', ()=> addBookToMyLibrary(book.title, book.author, (coverInfo&&coverInfo.cover)||''));
+  await refreshLibraryButtons('libraryBtnsWrapDiscover', book.title, book.author, (coverInfo&&coverInfo.cover)||'', 'Discover');
   if(isAdminView){
     const coverTarget = document.getElementById('coverFixTarget');
     coverTarget.addEventListener('click', (e)=>{
@@ -7438,13 +7783,15 @@ onAuthStateChanged(auth, async (user)=>{
   buildNav();
   setupCardInfoButtons();
 
-  // Bildirime tıklanarak açılmışsa (?tab=xxx&post=yyy), ilgili sekmeye/gönderiye geç ve URL'yi temizle.
+  // Bildirime tıklanarak açılmışsa (?tab=xxx&post=yyy&notif=zzz), ilgili sekmeye/gönderiye geç ve URL'yi temizle.
   const notifUrlParams = new URLSearchParams(location.search);
   const notifTabParam = notifUrlParams.get('tab');
   const notifPostParam = notifUrlParams.get('post');
+  const notifIdParam = notifUrlParams.get('notif');
   if(notifTabParam && document.getElementById('tab-'+notifTabParam)){
     switchTab(notifTabParam);
     if(notifPostParam) setTimeout(()=> openPostModal(notifPostParam), 250);
+    if(notifIdParam) markNotifReadById(notifIdParam);
     history.replaceState(null, '', location.pathname);
   }
 
@@ -7489,9 +7836,13 @@ if('serviceWorker' in navigator){
       if(e.data && e.data.type==='notifClick' && e.data.linkTab && document.getElementById('tab-'+e.data.linkTab)){
         switchTab(e.data.linkTab);
         if(e.data.postId) setTimeout(()=> openPostModal(e.data.postId), 250);
+        if(e.data.notifId) markNotifReadById(e.data.notifId);
       }
     });
   }
+}
+async function markNotifReadById(id){
+  try{ await updateDoc(doc(db,'notifications',currentUid,'items',id), {read:true}); }catch(e){}
 }
 </script>
 </body>
