@@ -485,7 +485,7 @@
     display:flex; align-items:center; justify-content:center; width:100%; margin-top:4px;
     border:none; background:none; color:var(--ink-70); cursor:pointer; padding:5px 0;
   }
-  .discover-filters-toggle-icon{ display:inline-block; font-size:17px; line-height:1; transition:transform .3s var(--ease); }
+  .discover-filters-toggle-icon{ display:inline-flex; align-items:center; justify-content:center; transition:transform .3s var(--ease); }
   .discover-filters-toggle.expanded .discover-filters-toggle-icon{ transform:rotate(180deg); }
   .discover-filter-chip{
     border:1.5px solid var(--line); background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3); color:var(--ink); font-family:'Inter',sans-serif;
@@ -1070,7 +1070,7 @@
       <div class="discover-filters-wrap" id="discoverFiltersWrap">
         <div id="discoverFilters" class="discover-filters"></div>
         <button type="button" id="discoverFiltersToggle" class="discover-filters-toggle">
-          <span class="discover-filters-toggle-icon">⌄</span>
+          <span class="discover-filters-toggle-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="18"></line><polyline points="6 12 12 18 18 12"></polyline></svg></span>
         </button>
       </div>
       <div id="discoverFeed" style="padding-bottom:90px;"></div>
