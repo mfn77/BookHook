@@ -559,7 +559,7 @@
   .streak-badge{ position:relative; width:100%; aspect-ratio:1/1; filter:grayscale(1) opacity(.45); transition:filter .25s var(--ease); }
   .streak-badge.has-streak{ filter:none; }
   .streak-badge-svg{ position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
-  .streak-badge-avatar-chip{ position:absolute; left:50%; top:25.5%; width:19.5%; aspect-ratio:1; transform:translate(-50%,-50%); display:block; cursor:pointer; padding:0; margin:0; border-radius:50%; }
+  .streak-badge-avatar-chip{ position:absolute; left:50%; top:25.5%; width:22%; aspect-ratio:1; transform:translate(-50%,-50%); display:block; cursor:pointer; padding:0; margin:0; border-radius:50%; }
   .streak-badge-name{ position:absolute; left:50%; top:50%; width:82%; transform:translate(-50%,-50%); text-align:center; font-family:'Inter',sans-serif; font-weight:700; font-size:8.5px; color:#5c3900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; padding:0; margin:0; border-radius:4px; display:block; }
   .streak-badge-num{ position:absolute; left:50%; top:67%; transform:translate(-50%,-50%); font-family:'Roboto Mono',monospace; font-weight:800; font-size:21px; letter-spacing:-0.5px; color:#5c3900; pointer-events:none; }
   .toast{
@@ -1415,14 +1415,16 @@ let manualGrid = {}; // uid -> ['', 'read', 'skip', ...] length 7
 let manualHistoryCache = [];
 
 function activeUids(){ return Object.keys(usersCache).filter(uid=>!usersCache[uid].banned && !usersCache[uid].deleted); }
-function avatarHtmlFromProfile(profile, size){
+function avatarHtmlFromProfile(profile, size, proportionHint){
   size = size || 22;
   // size normalde piksel sayısıdır; bir CSS ölçüsü/yüzdesi ("100%" gibi) de verilebilir — bu durumda
-  // halka/rozet oranları için 34px varsayılan bir taban kullanılır (kendi kapsayıcısına göre orantı
-  // hesaplayamayacağımız için), asıl daire boyutu yine verilen CSS değerine göre esner.
+  // halka/rozet oranları için proportionHint (verilmediyse 34px) varsayılan bir taban kullanılır
+  // (kendi kapsayıcısına göre orantı hesaplayamayacağımız için), asıl daire boyutu yine verilen CSS
+  // değerine göre esner. Avatarın gerçekte çok küçük render edileceği yerlerde (ör. rozet crest'i)
+  // köşe simgesinin fotoğrafı kapatmaması için proportionHint ile gerçekçi bir taban verilmeli.
   const isNumeric = typeof size === 'number';
   const sizeCss = isNumeric ? `${size}px` : size;
-  const proportionBase = isNumeric ? size : 34;
+  const proportionBase = isNumeric ? size : (proportionHint || 34);
   const name = (profile && profile.name) || '?';
   const initial = name.trim().charAt(0).toUpperCase() || '?';
   const tierKey = profile && profile.currentTier;
@@ -3490,7 +3492,7 @@ async function renderWormsShared(containerId, historyContainerId){
       const name = (u && u.name) || '?';
       return `<div class="streak-badge ${r.streak>0?'has-streak':''}">
         ${EARTAG_CREST_SVG}
-        <span class="user-chip streak-badge-avatar-chip" data-uid="${r.uid}">${avatarHtmlFromProfile(u,'100%')}</span>
+        <span class="user-chip streak-badge-avatar-chip" data-uid="${r.uid}">${avatarHtmlFromProfile(u,'100%',18)}</span>
         <span class="user-chip streak-badge-name" data-uid="${r.uid}">${escapeHtml(name)}</span>
         <div class="streak-badge-num">${r.streak}</div>
       </div>`;
