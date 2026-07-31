@@ -2099,7 +2099,7 @@ async function renderNotifsTab(){
   }).join('');
   box.querySelectorAll('.notif-row[data-notif-tab]').forEach(row=>{
     row.addEventListener('click', async ()=>{
-      const tab = row.dataset.notifTab;
+      const tab = resolveNotifTab(row.dataset.notifTab);
       const id = row.dataset.notifId;
       const postId = row.dataset.notifPost;
       try{ await updateDoc(doc(db,'notifications',currentUid,'items',id), {read:true}); }catch(e){}
@@ -2380,6 +2380,24 @@ function flashRequiredFields(){
   return anyEmpty;
 }
 let lastTabSwitchTime = 0;
+// Bazı bildirimler (ör. hatırlatma push'u, "X bugün okudum işaretledi") tek bir sekme id'siyle hem
+// üyelere hem yöneticilere gönderiliyor. Üye ve yönetici arayüzlerinde aynı işi gören ama farklı
+// id'li sekmeler olduğu için (Bugün: msurvey/today, Kayıtlar: mtoday/week, Rozet: mworms/worms),
+// bildirime tıklanınca kullanıcının KENDİ rolündeki karşılığa gitmesi lazım — yoksa örneğin bir
+// yönetici üyelerin "Bugün" sekmesine düşer ve orada sağa/sola kaydırarak diğer sekmelerine
+// geçemez (çünkü o sekme kendi sekme setinin bir parçası değildir).
+const TAB_ROLE_EQUIVALENTS = { msurvey:'today', today:'msurvey', mtoday:'week', week:'mtoday', mworms:'worms', worms:'mworms' };
+const MEMBER_SIDE_TAB_IDS = ['msurvey','mtoday','mworms'];
+function resolveNotifTab(tabId){
+  if(!tabId) return tabId;
+  const equiv = TAB_ROLE_EQUIVALENTS[tabId];
+  if(!equiv) return tabId; // ortak sekme (ör. gifts, mybooks, settings) — dönüşüm gerekmez
+  const isAdmin = myProfile && myProfile.role==='admin';
+  const tabIsMemberSide = MEMBER_SIDE_TAB_IDS.includes(tabId);
+  if(isAdmin && tabIsMemberSide) return equiv;
+  if(!isAdmin && !tabIsMemberSide) return equiv;
+  return tabId;
+}
 function switchTab(id){
   lastTabSwitchTime = Date.now();
   if(typeof closeReactionDrawer==='function') closeReactionDrawer();
@@ -7984,7 +8002,7 @@ onAuthStateChanged(auth, async (user)=>{
 
   // Bildirime tıklanarak açılmışsa (?tab=xxx&post=yyy&notif=zzz), ilgili sekmeye/gönderiye geç ve URL'yi temizle.
   const notifUrlParams = new URLSearchParams(location.search);
-  const notifTabParam = notifUrlParams.get('tab');
+  const notifTabParam = resolveNotifTab(notifUrlParams.get('tab'));
   const notifPostParam = notifUrlParams.get('post');
   const notifIdParam = notifUrlParams.get('notif');
   if(notifTabParam && document.getElementById('tab-'+notifTabParam)){
@@ -8032,8 +8050,9 @@ if('serviceWorker' in navigator){
   });
   if('serviceWorker' in navigator){
     navigator.serviceWorker.addEventListener('message', (e)=>{
-      if(e.data && e.data.type==='notifClick' && e.data.linkTab && document.getElementById('tab-'+e.data.linkTab)){
-        switchTab(e.data.linkTab);
+      const resolvedTab = e.data && resolveNotifTab(e.data.linkTab);
+      if(e.data && e.data.type==='notifClick' && resolvedTab && document.getElementById('tab-'+resolvedTab)){
+        switchTab(resolvedTab);
         if(e.data.postId) setTimeout(()=> openPostModal(e.data.postId), 250);
         if(e.data.notifId) markNotifReadById(e.data.notifId);
       }
