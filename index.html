@@ -554,9 +554,15 @@
   .pair-line .receiver{font-weight:700; color:var(--forest-dark); display:flex; justify-content:flex-end; align-items:center; min-width:0; overflow-wrap:anywhere; text-align:right;}
   .pair-line .arrow{ justify-self:center; display:flex; align-items:center; color:var(--gold);}
   .empty-note{font-family:'Roboto Mono', monospace; font-size:12px; color:var(--ink-70); font-style:normal;}
-  .worm-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line);}
-  .worm-row:last-child{border-bottom:none;}
-  .worm-streak{font-family:'Roboto Mono', monospace; font-weight:700;}
+  /* ============ KİTAP KURTLARI: GNOME uygulama simgesi tarzı rozet ============ */
+  .streak-badge-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(80px,1fr)); gap:16px 10px; margin-top:6px; }
+  .streak-badge{ position:relative; width:100%; aspect-ratio:5/6; }
+  .streak-badge-svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .streak-badge-svg path{ fill:var(--card); stroke:var(--line); stroke-width:3; transition:stroke .2s var(--ease); }
+  .streak-badge.has-streak .streak-badge-svg path{ stroke:var(--gold); }
+  .streak-badge-num{ position:absolute; left:50%; top:24%; transform:translate(-50%,-50%); font-family:'Roboto Mono',monospace; font-weight:800; font-size:15px; letter-spacing:-0.5px; color:var(--ink); pointer-events:none; }
+  .streak-badge-avatar{ position:absolute; left:50%; top:57%; transform:translate(-50%,-50%); width:40%; aspect-ratio:1; border-radius:50%; overflow:hidden; background:var(--paper-2); box-shadow:0 0 0 2px var(--card); }
+  .streak-badge-name{ position:absolute; left:50%; top:86%; transform:translate(-50%,-50%); width:84%; text-align:center; font-family:'Inter',sans-serif; font-weight:700; font-size:9.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
   .toast{
     position:fixed; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); background:rgba(28,28,30,0.92); color:#fff;
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
@@ -3444,9 +3450,22 @@ async function renderWormsShared(containerId, historyContainerId){
   if(results.length===0){
     list.innerHTML = `<div class="empty-state">Henüz üye yok.</div>`;
   } else {
-    list.innerHTML = results.map(r=>{
-      return `<div class="worm-row"><div>${userChipHtml(r.uid)}</div><div class="worm-streak">${r.streak} gün</div></div>`;
-    }).join('');
+    // GNOME uygulama simgesi tarzı bir "rozet": üstte serinin gün sayısını gösteren fes/bant şekli,
+    // altında dairesel profil fotoğrafı ve isim bulunan kalkan biçimli bir çerçeve. Kaç üye varsa
+    // o kadar rozet, sığdığı kadarıyla yan yana (grid otomatik satır sarıyor).
+    list.innerHTML = `<div class="streak-badge-grid">${results.map(r=>{
+      const u = usersCache[r.uid] || {};
+      const name = (u.name || '?');
+      const avatarInner = (u.photoURL)
+        ? `<div style="width:100%;height:100%;background-image:url('${u.photoURL.replace(/'/g,"%27")}');background-size:cover;background-position:center;background-repeat:no-repeat;"></div>`
+        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--gold);color:#fff;font-family:'Roboto',sans-serif;font-weight:700;font-size:15px;">${escapeHtml(name.trim().charAt(0).toUpperCase()||'?')}</div>`;
+      return `<div class="streak-badge ${r.streak>0?'has-streak':''}" title="${escapeHtml(name)} — ${r.streak} gün">
+        <svg class="streak-badge-svg" viewBox="0 0 200 240" preserveAspectRatio="none"><path d="M40,100 L20,58 Q100,8 180,58 L160,100 L150,138 Q150,224 100,230 Q50,224 50,138 Z"/></svg>
+        <div class="streak-badge-num">${r.streak}</div>
+        <div class="streak-badge-avatar">${avatarInner}</div>
+        <div class="streak-badge-name">${escapeHtml(name)}</div>
+      </div>`;
+    }).join('')}</div>`;
   }
   markLoaded(list);
 
