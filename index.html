@@ -554,17 +554,14 @@
   .pair-line .receiver{font-weight:700; color:var(--forest-dark); display:flex; justify-content:flex-end; align-items:center; min-width:0; overflow-wrap:anywhere; text-align:right;}
   .pair-line .arrow{ justify-self:center; display:flex; align-items:center; color:var(--gold);}
   .empty-note{font-family:'Roboto Mono', monospace; font-size:12px; color:var(--ink-70); font-style:normal;}
-  /* ============ KİTAP KURTLARI: GNOME uygulama simgesi tarzı rozet ============ */
-  .streak-badge-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(80px,1fr)); gap:16px 10px; margin-top:6px; }
-  .streak-badge{ position:relative; width:100%; aspect-ratio:5/6; }
-  .streak-badge-svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
-  .streak-badge-svg path{ fill:var(--card); stroke:var(--line); stroke-width:3; transition:stroke .2s var(--ease); }
-  .streak-badge.has-streak .streak-badge-svg path{ stroke:var(--gold); }
-  .streak-badge-num{ position:absolute; left:50%; top:24%; transform:translate(-50%,-50%); font-family:'Roboto Mono',monospace; font-weight:800; font-size:15px; letter-spacing:-0.5px; color:var(--ink); pointer-events:none; }
-  .streak-badge-chip-wrap{ position:absolute; left:50%; top:62%; transform:translate(-50%,-50%); width:84%; display:flex; justify-content:center; }
-  .streak-badge-chip-wrap .user-chip{ display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; max-width:100%; }
-  .streak-badge-chip-wrap .user-chip > span:first-child{ margin-right:0 !important; }
-  .streak-badge-chip-wrap .uc-name{ display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; font-family:'Inter',sans-serif; font-weight:700; font-size:9.5px; color:var(--ink); }
+  /* ============ KİTAP KURTLARI: GNOME "EarTag" uygulama simgesi tarzı rozet ============ */
+  .streak-badge-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(78px,1fr)); gap:14px 8px; margin-top:6px; }
+  .streak-badge{ position:relative; width:100%; aspect-ratio:1/1; filter:grayscale(1) opacity(.45); transition:filter .25s var(--ease); }
+  .streak-badge.has-streak{ filter:none; }
+  .streak-badge-svg{ position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
+  .streak-badge-avatar-chip{ position:absolute; left:50%; top:25.5%; width:19.5%; aspect-ratio:1; transform:translate(-50%,-50%); display:block; cursor:pointer; padding:0; margin:0; border-radius:50%; }
+  .streak-badge-name{ position:absolute; left:50%; top:44%; width:82%; transform:translate(-50%,-50%); text-align:center; font-family:'Inter',sans-serif; font-weight:700; font-size:8.5px; color:#5c3900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; padding:0; margin:0; border-radius:4px; display:block; }
+  .streak-badge-num{ position:absolute; left:50%; top:67%; transform:translate(-50%,-50%); font-family:'Roboto Mono',monospace; font-weight:800; font-size:21px; letter-spacing:-0.5px; color:#5c3900; pointer-events:none; }
   .toast{
     position:fixed; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); background:rgba(28,28,30,0.92); color:#fff;
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
@@ -1420,6 +1417,12 @@ let manualHistoryCache = [];
 function activeUids(){ return Object.keys(usersCache).filter(uid=>!usersCache[uid].banned && !usersCache[uid].deleted); }
 function avatarHtmlFromProfile(profile, size){
   size = size || 22;
+  // size normalde piksel sayısıdır; bir CSS ölçüsü/yüzdesi ("100%" gibi) de verilebilir — bu durumda
+  // halka/rozet oranları için 34px varsayılan bir taban kullanılır (kendi kapsayıcısına göre orantı
+  // hesaplayamayacağımız için), asıl daire boyutu yine verilen CSS değerine göre esner.
+  const isNumeric = typeof size === 'number';
+  const sizeCss = isNumeric ? `${size}px` : size;
+  const proportionBase = isNumeric ? size : 34;
   const name = (profile && profile.name) || '?';
   const initial = name.trim().charAt(0).toUpperCase() || '?';
   const tierKey = profile && profile.currentTier;
@@ -1431,15 +1434,15 @@ function avatarHtmlFromProfile(profile, size){
   // yüklenmeden önceki an için köşeli görünme sorununu da ortadan kaldırır.
   const inner = (profile && profile.photoURL)
     ? `<div role="img" aria-label="" style="width:100%;height:100%;background-image:url('${profile.photoURL.replace(/'/g,"%27")}');background-size:cover;background-position:center;background-repeat:no-repeat;background-color:var(--paper-2);"></div>`
-    : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--gold);color:#fff;font-size:${Math.round(size*0.5)}px;font-family:'Roboto',sans-serif;font-weight:700;">${escapeHtml(initial)}</span>`;
-  const iconSize = Math.max(10, Math.round(size*0.44));
+    : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--gold);color:#fff;font-size:${Math.round(proportionBase*0.5)}px;font-family:'Roboto',sans-serif;font-weight:700;">${escapeHtml(initial)}</span>`;
+  const iconSize = Math.max(10, Math.round(proportionBase*0.44));
   const badgeOverlay = tierDef
     ? `<span class="tier-badge-icon" title="${escapeHtml(tierDef.label)}" style="position:absolute; right:-2px; bottom:-2px; width:${iconSize}px; height:${iconSize}px; border-radius:50%; background:${tierDef.color}; display:flex; align-items:center; justify-content:center; font-size:${Math.round(iconSize*0.62)}px; box-shadow:0 0 0 1.5px var(--card);">${tierDef.icon}</span>`
     : '';
   // Dıştaki katman sabit boyutlu (size×size) ve rozet halkasını (box-shadow) taşıyor; overflow burada
   // KESİNLİKLE hidden değil, aksi halde halka kırpılırdı. Yuvarlak kırpma tamamen içteki, kendi
   // overflow:hidden'ına sahip ayrı katmanda yapılıyor; bu yüzden halka asla köşeli görünmez.
-  return `<span style="position:relative; display:inline-flex; width:${size}px; height:${size}px; margin-right:6px; vertical-align:middle; line-height:0; flex:0 0 auto; border-radius:50%; ${ringStyle}">
+  return `<span style="position:relative; display:inline-flex; width:${sizeCss}; height:${sizeCss}; margin-right:${isNumeric?'6px':'0'}; vertical-align:middle; line-height:0; flex:0 0 auto; border-radius:50%; ${ringStyle}">
     <span style="display:block; width:100%; height:100%; border-radius:50%; overflow:hidden;">${inner}</span>
     ${badgeOverlay}
   </span>`;
@@ -3039,6 +3042,31 @@ function renderAdminToday(){
 // Bir haftanın kendi geçmişini GNOME Hava Durumu tarzı şerit olarak üretir. Haftalık pas hakkı
 // kuralına göre: haftanın ilk "okumadı"sı ücretsiz pastır (sarı), ikinci ve sonrakiler cezadır (kırmızı).
 // uid verilmezse currentUid kullanılır; extraColClass küçük (satır içi) varyant için 'small' gibi bir sınıf eklemeye yarar.
+// GNOME "EarTag" (app.drey.EarTag) uygulama simgesinin küpe/etiket şekli — rozet arka planı olarak
+// kullanılıyor. Orijinal simgedeki nota şekli çıkarıldı (yerine seri gün sayısı yazılıyor); üstteki
+// boş halkanın içi ise profil fotoğrafıyla dolduruluyor. Kaynak: GNOME uygulama kataloğu.
+const EARTAG_CREST_SVG = `<svg class="streak-badge-svg" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="eartagA" gradientUnits="userSpaceOnUse" x1="13.456008" x2="118.326286" y1="110.070801" y2="110.070801">
+      <stop offset="0" stop-color="#f5c211"/><stop offset="0.0355267" stop-color="#f9f06b"/><stop offset="0.0834366" stop-color="#e5a50a"/>
+      <stop offset="0.857903" stop-color="#f5c211"/><stop offset="0.941897" stop-color="#f9f06b"/><stop offset="1" stop-color="#f5c211"/>
+    </linearGradient>
+    <linearGradient id="eartagB" gradientUnits="userSpaceOnUse" x1="56.910191" x2="71.174553" y1="35" y2="35">
+      <stop offset="0" stop-color="#b8910c"/><stop offset="0.262276" stop-color="#dfd761"/><stop offset="0.628525" stop-color="#e5a50a"/>
+      <stop offset="0.857903" stop-color="#f5c211"/><stop offset="0.941897" stop-color="#f9f06b"/><stop offset="1" stop-color="#f5c211"/>
+    </linearGradient>
+    <linearGradient id="eartagC" gradientUnits="userSpaceOnUse" x1="91.27047" x2="91.27047" y1="49.755768" y2="64.784882">
+      <stop offset="0" stop-color="#e4d255"/><stop offset="1" stop-color="#f8e45c"/>
+    </linearGradient>
+  </defs>
+  <g fill-rule="evenodd">
+    <path d="m 62.992188 11.980469 c -13.808594 0 -25.003907 11.195312 -25.007813 25.007812 c 0.011719 2.386719 0.367187 4.757813 1.046875 7.03125 c 0.734375 2.464844 0.417969 5.945313 -1.414062 7.753907 c -8.082032 7.972656 -25.46875 22.113281 -25.617188 30.207031 v 30.039062 c 0 4.433594 3.566406 8 8 8 h 88 c 4.433594 0 8 -3.566406 8 -8 v -30.039062 c -2.140625 -9.0625 -17.289062 -23.355469 -26.773438 -31.433594 c -1.960937 -1.671875 -2.652343 -4.878906 -2.011718 -7.371094 c 0.515625 -2.015625 0.78125 -4.09375 0.785156 -6.1875 c 0 -13.8125 -11.195312 -25.007812 -25.007812 -25.007812 z m 0 16.980469 c 4.433593 0 8.023437 3.59375 8.023437 8.027343 c 0.003906 4.429688 -3.589844 8.023438 -8.023437 8.023438 c -4.433594 0 -8.023438 -3.59375 -8.023438 -8.023438 c 0 -4.433593 3.59375 -8.023437 8.023438 -8.027343 z m 0 0" fill="url(#eartagA)"/>
+    <path d="m 62.992188 11.980469 c -13.808594 0 -25.003907 11.195312 -25.007813 25.007812 c 0.011719 2.386719 0.367187 4.757813 1.046875 7.03125 c 0.734375 2.464844 0.417969 5.945313 -1.414062 7.753907 c -2.011719 1.988281 -4.605469 4.355468 -7.363282 6.917968 h 67.992188 c -3.179688 -3.03125 -6.328125 -5.851562 -9.019532 -8.144531 c -1.960937 -1.671875 -2.652343 -4.878906 -2.011718 -7.371094 c 0.515625 -2.015625 0.78125 -4.09375 0.785156 -6.1875 c 0 -13.8125 -11.195312 -25.007812 -25.007812 -25.007812 z m 0 16.980469 c 4.433593 0 8.023437 3.59375 8.023437 8.027343 c 0.003906 4.429688 -3.589844 8.023438 -8.023437 8.023438 c -4.433594 0 -8.023438 -3.59375 -8.023438 -8.023438 c 0 -4.433593 3.59375 -8.023437 8.023438 -8.027343 z m 0 0" fill="url(#eartagB)"/>
+    <path d="m 62.992188 8 c -13.808594 0 -25.003907 11.195312 -25.007813 25.007812 c 0.007813 0.90625 0.058594 1.8125 0.164063 2.710938 c 0.5625 4.957031 0.011718 11.765625 -3.542969 15.300781 c -4.625 4.597657 -10.660157 10.179688 -15.328125 14.429688 c -4 3.640625 -7.277344 10.933593 -7.277344 16.339843 v 26.25 c 0 4.433594 3.566406 8 8 8 h 88 c 4.433594 0 8 -3.566406 8 -8 v -26.25 c 0 -5.40625 -3.125 -12.863281 -7.011719 -16.625 c -4.769531 -4.617187 -11.167969 -10.734374 -16.511719 -15.605468 c -3.707031 -3.378906 -4.917968 -9.738282 -4.546874 -14.714844 c 0.046874 -0.609375 0.070312 -1.222656 0.070312 -1.835938 c 0 -13.8125 -11.195312 -25.007812 -25.007812 -25.007812 z m 0 16.980469 c 4.433593 0 8.023437 3.59375 8.023437 8.027343 c 0.003906 4.429688 -3.589844 8.023438 -8.023437 8.023438 c -4.433594 0 -8.023438 -3.59375 -8.023438 -8.023438 c 0 -4.433593 3.59375 -8.023437 8.023438 -8.027343 z m 0 0" fill="url(#eartagC)"/>
+  </g>
+  <path d="m 63 12 c -11.597656 0 -21 9.402344 -21 21 c 0 13.679688 9.410156 23.160156 21.007812 23.160156 c 11.597657 0 20.992188 -8.738281 20.992188 -23.160156 c 0 -11.597656 -9.402344 -21 -21 -21 z m 0 7.738281 c 7.324219 0 13.261719 5.9375 13.261719 13.261719 s -5.9375 13.261719 -13.261719 13.261719 s -13.261719 -5.9375 -13.261719 -13.261719 s 5.9375 -13.261719 13.261719 -13.261719 z m 0 0" fill="#eab315"/>
+  <path d="m 63 10 c -11.597656 0 -21 9.402344 -21 21 s 9.402344 21 21 21 s 21 -9.402344 21 -21 s -9.402344 -21 -21 -21 z m 0 7.738281 c 7.324219 0 13.261719 5.9375 13.261719 13.261719 s -5.9375 13.261719 -13.261719 13.261719 s -13.261719 -5.9375 -13.261719 -13.261719 s 5.9375 -13.261719 13.261719 -13.261719 z m 0 0" fill="#f8e881"/>
+</svg>`;
 const WEEKHIST_HILL_PATHS = {
   // Okudu: normal seviyede (çok yüksek dolgu) başlar, ortada yumuşakça yükselir, tekrar normale döner.
   // Kenarlarda yatay teğet olduğu için yan yana aynı türden sütunlar kesintisiz devam ediyormuş gibi birleşir.
@@ -3452,15 +3480,19 @@ async function renderWormsShared(containerId, historyContainerId){
   if(results.length===0){
     list.innerHTML = `<div class="empty-state">Henüz üye yok.</div>`;
   } else {
-    // GNOME uygulama simgesi tarzı bir "rozet": üstte serinin gün sayısını gösteren fes/bant şekli,
-    // altında dairesel profil fotoğrafı ve isim bulunan kalkan biçimli bir çerçeve. Avatar, tıklanabilir
-    // olması ve rozet çerçevesi/köşe simgesini de göstermesi için ortak userChipHtml ile üretiliyor.
-    // Kaç üye varsa o kadar rozet, sığdığı kadarıyla yan yana (grid otomatik satır sarıyor).
+    // GNOME "EarTag" uygulama simgesinin küpe/etiket şeklini rozet olarak kullanıyoruz: üstteki boş
+    // halkanın içine profil fotoğrafı (rozet çerçevesi ve köşe simgesiyle birlikte, tıklanabilir),
+    // altına isim, onun altına da (orijinaldeki nota yerine) serinin gün sayısı büyük punto ile geliyor.
+    // Aktif serisi olmayanlarda tüm rozet gri tonlarına dönüyor. Kaç üye varsa o kadar rozet, sığdığı
+    // kadarıyla yan yana (grid otomatik satır sarıyor).
     list.innerHTML = `<div class="streak-badge-grid">${results.map(r=>{
+      const u = usersCache[r.uid] || {};
+      const name = (u && u.name) || '?';
       return `<div class="streak-badge ${r.streak>0?'has-streak':''}">
-        <svg class="streak-badge-svg" viewBox="0 0 200 240" preserveAspectRatio="none"><path d="M40,100 L20,58 Q100,8 180,58 L160,100 L150,138 Q150,224 100,230 Q50,224 50,138 Z"/></svg>
+        ${EARTAG_CREST_SVG}
+        <span class="user-chip streak-badge-avatar-chip" data-uid="${r.uid}">${avatarHtmlFromProfile(u,'100%')}</span>
+        <span class="user-chip streak-badge-name" data-uid="${r.uid}">${escapeHtml(name)}</span>
         <div class="streak-badge-num">${r.streak}</div>
-        <div class="streak-badge-chip-wrap">${userChipHtml(r.uid, 34)}</div>
       </div>`;
     }).join('')}</div>`;
   }
