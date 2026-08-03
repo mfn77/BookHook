@@ -571,6 +571,24 @@
     .badge-shelf-name .uc-name{ display:none; }
     .badge-shelf-icon{ width:26px; height:26px; font-size:13px; }
   }
+  /* ============ ROZET GEÇMİŞİ — FİKİR 2: Lider Tablosu ============ */
+  .badge-lb-list{ display:flex; flex-direction:column; gap:8px; }
+  .badge-lb-row{ border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card); }
+  .badge-lb-summary{ display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; list-style:none; }
+  .badge-lb-summary::-webkit-details-marker{ display:none; }
+  .badge-lb-summary::marker{ content:''; }
+  .badge-lb-rank{ flex:0 0 auto; width:26px; text-align:center; font-size:15px; font-weight:800; font-family:'Roboto Mono',monospace; color:var(--ink-70); }
+  .badge-lb-row.top1 .badge-lb-rank, .badge-lb-row.top2 .badge-lb-rank, .badge-lb-row.top3 .badge-lb-rank{ font-size:19px; }
+  .badge-lb-summary .user-chip{ flex:1 1 auto; min-width:0; display:flex; align-items:center; }
+  .badge-lb-summary .uc-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .badge-lb-total{ flex:0 0 auto; font-family:'Roboto Mono',monospace; font-weight:800; font-size:17px; color:var(--gold); }
+  .badge-lb-detail{ display:flex; gap:8px; flex-wrap:wrap; padding:2px 12px 12px 48px; }
+  .badge-lb-row.top1{ border-color:#FFC107; background:linear-gradient(180deg, rgba(255,193,7,0.14), transparent 60%); }
+  .badge-lb-row.top2{ border-color:#B0BEC5; background:linear-gradient(180deg, rgba(176,190,197,0.16), transparent 60%); }
+  .badge-lb-row.top3{ border-color:#CD7F32; background:linear-gradient(180deg, rgba(205,127,50,0.14), transparent 60%); }
+  @media (max-width:700px){
+    .badge-lb-detail{ padding-left:12px; }
+  }
   .toast{
     position:fixed; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); background:rgba(28,28,30,0.92); color:#fff;
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
@@ -3437,6 +3455,64 @@ async function renderAdminMembers(){
 
 /* ============ ADMIN: KİTAP KURTLARI ============ */
 document.getElementById('calcStreaksBtn').addEventListener('click', renderAdminWorms);
+// FİKİR 1: "Rozet Vitrini" — tablo yerine her üye bir satır, sağında 6 rozetin hepsi küçük ikon
+// olarak duruyor. Hiç kazanılmamış olanlar soluk/gri, kazanılmışlar rozetin kendi rengiyle parlıyor
+// ve köşesinde kaç kere kazanıldığını gösteren küçük bir sayaç var.
+// Şu an aktif değil (kenarda tutuluyor) — FİKİR 2 denenirken referans olarak burada duruyor.
+function renderBadgeHistory_Idea1_Shelf(rows){
+  return `<div class="badge-shelf-list">${rows.map(r=>{
+    const u = usersCache[r.uid] || {};
+    const bc = u.badgeCounts || {};
+    const liveTier = u.currentTier;
+    const icons = BADGE_DEFS.map(def=>{
+      const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
+      const earned = count>0;
+      return `<div class="badge-shelf-icon${earned?' earned':''}" style="background:${def.color}30; color:${def.color};" title="${escapeHtml(def.label)}${earned?` — ${count} kere`:' — henüz kazanılmadı'}">
+        <span>${def.icon}</span>
+        ${earned?`<span class="badge-shelf-count">${count}</span>`:''}
+      </div>`;
+    }).join('');
+    return `<div class="badge-shelf-row">
+      <div class="badge-shelf-name">${userChipHtml(r.uid,22)}</div>
+      <div class="badge-shelf-icons">${icons}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+// FİKİR 2: "Lider Tablosu" — üyeler toplam rozet sayısına göre sıralanır, ilk 3'e madalya
+// (🥇🥈🥉) verilir. Her satır <details> ile açılıp kapanır (JS gerekmeden); açılınca o kişinin
+// 6 rozetteki dökümü (Fikir 1'deki aynı ikon bileşeni yeniden kullanılarak) görünür.
+function renderBadgeHistory_Idea2_Leaderboard(rows){
+  const withTotals = rows.map(r=>{
+    const u = usersCache[r.uid] || {};
+    const bc = u.badgeCounts || {};
+    const liveTier = u.currentTier;
+    let total = 0;
+    const icons = BADGE_DEFS.map(def=>{
+      const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
+      total += count;
+      const earned = count>0;
+      return `<div class="badge-shelf-icon${earned?' earned':''}" style="background:${def.color}30; color:${def.color};" title="${escapeHtml(def.label)}${earned?` — ${count} kere`:' — henüz kazanılmadı'}">
+        <span>${def.icon}</span>
+        ${earned?`<span class="badge-shelf-count">${count}</span>`:''}
+      </div>`;
+    }).join('');
+    return {uid:r.uid, total, icons};
+  });
+  withTotals.sort((a,b)=> b.total-a.total);
+  const medal = ['🥇','🥈','🥉'];
+  return `<div class="badge-lb-list">${withTotals.map((row,i)=>{
+    const topCls = i<3 ? ` top${i+1}` : '';
+    const rankHtml = i<3 ? medal[i] : `${i+1}.`;
+    return `<details class="badge-lb-row${topCls}">
+      <summary class="badge-lb-summary">
+        <span class="badge-lb-rank">${rankHtml}</span>
+        ${userChipHtml(row.uid,28)}
+        <span class="badge-lb-total">${row.total}</span>
+      </summary>
+      <div class="badge-lb-detail">${row.icons}</div>
+    </details>`;
+  }).join('')}</div>`;
+}
 async function renderWormsShared(containerId, historyContainerId){
   const list = keepOrLoading(containerId, 'Hesaplanıyor…');
   const historyBox = historyContainerId ? keepOrLoading(historyContainerId, 'Hesaplanıyor…') : null;
@@ -3464,26 +3540,7 @@ async function renderWormsShared(containerId, historyContainerId){
     if(rows.length===0){
       historyBox.innerHTML = `<p class="muted">Henüz üye yok.</p>`;
     } else {
-      // FİKİR 1: "Rozet vitrini" — tablo yerine her üye bir satır, sağında 6 rozetin hepsi küçük
-      // ikon olarak duruyor. Hiç kazanılmamış olanlar soluk/gri, kazanılmışlar rozetin kendi
-      // rengiyle parlıyor ve köşesinde kaç kere kazanıldığını gösteren küçük bir sayaç var.
-      historyBox.innerHTML = `<div class="badge-shelf-list">${rows.map(r=>{
-        const u = usersCache[r.uid] || {};
-        const bc = u.badgeCounts || {};
-        const liveTier = u.currentTier;
-        const icons = BADGE_DEFS.map(def=>{
-          const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
-          const earned = count>0;
-          return `<div class="badge-shelf-icon${earned?' earned':''}" style="background:${def.color}30; color:${def.color};" title="${escapeHtml(def.label)}${earned?` — ${count} kere`:' — henüz kazanılmadı'}">
-            <span>${def.icon}</span>
-            ${earned?`<span class="badge-shelf-count">${count}</span>`:''}
-          </div>`;
-        }).join('');
-        return `<div class="badge-shelf-row">
-          <div class="badge-shelf-name">${userChipHtml(r.uid,22)}</div>
-          <div class="badge-shelf-icons">${icons}</div>
-        </div>`;
-      }).join('')}</div>`;
+      historyBox.innerHTML = renderBadgeHistory_Idea2_Leaderboard(rows);
     }
     markLoaded(historyBox);
   }
