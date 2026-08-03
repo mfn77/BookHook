@@ -555,6 +555,22 @@
   .worm-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line);}
   .worm-row:last-child{border-bottom:none;}
   .worm-streak{font-family:'Roboto Mono', monospace; font-weight:700;}
+  /* ============ ROZET GEÇMİŞİ — FİKİR 1: Rozet Vitrini ============ */
+  .badge-shelf-list{ display:flex; flex-direction:column; }
+  .badge-shelf-row{ display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line); }
+  .badge-shelf-row:last-child{ border-bottom:none; }
+  .badge-shelf-name{ flex:0 0 auto; width:112px; min-width:70px; display:flex; align-items:center; }
+  .badge-shelf-name .uc-name{ display:inline-block; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; }
+  .badge-shelf-icons{ flex:1 1 auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .badge-shelf-icon{ position:relative; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; filter:grayscale(1) opacity(.32); transition:filter .2s var(--ease), transform .15s var(--ease); cursor:default; }
+  .badge-shelf-icon.earned{ filter:none; box-shadow:0 0 0 2px currentColor; }
+  .badge-shelf-icon:hover{ transform:scale(1.12); }
+  .badge-shelf-count{ position:absolute; right:-3px; bottom:-3px; min-width:14px; height:14px; padding:0 3px; border-radius:8px; background:var(--ink); color:#fff; font-size:8.5px; font-weight:800; display:flex; align-items:center; justify-content:center; line-height:1; box-shadow:0 0 0 1.5px var(--card); }
+  @media (max-width:700px){
+    .badge-shelf-name{ width:48px; min-width:48px; }
+    .badge-shelf-name .uc-name{ display:none; }
+    .badge-shelf-icon{ width:26px; height:26px; font-size:13px; }
+  }
   .toast{
     position:fixed; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); background:rgba(28,28,30,0.92); color:#fff;
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
@@ -3448,18 +3464,26 @@ async function renderWormsShared(containerId, historyContainerId){
     if(rows.length===0){
       historyBox.innerHTML = `<p class="muted">Henüz üye yok.</p>`;
     } else {
-      const head = `<tr><th style="text-align:left;">Üye</th>` + BADGE_DEFS.map(def=>`<th class="badge-info-icon" data-badge-label="${escapeHtml(def.label)}" style="cursor:pointer;">${def.icon}</th>`).join('') + `</tr>`;
-      const body = rows.map(r=>{
+      // FİKİR 1: "Rozet vitrini" — tablo yerine her üye bir satır, sağında 6 rozetin hepsi küçük
+      // ikon olarak duruyor. Hiç kazanılmamış olanlar soluk/gri, kazanılmışlar rozetin kendi
+      // rengiyle parlıyor ve köşesinde kaç kere kazanıldığını gösteren küçük bir sayaç var.
+      historyBox.innerHTML = `<div class="badge-shelf-list">${rows.map(r=>{
         const u = usersCache[r.uid] || {};
         const bc = u.badgeCounts || {};
         const liveTier = u.currentTier;
-        const cells = BADGE_DEFS.map(def=>{
+        const icons = BADGE_DEFS.map(def=>{
           const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
-          return `<td>${count}</td>`;
+          const earned = count>0;
+          return `<div class="badge-shelf-icon${earned?' earned':''}" style="background:${def.color}30; color:${def.color};" title="${escapeHtml(def.label)}${earned?` — ${count} kere`:' — henüz kazanılmadı'}">
+            <span>${def.icon}</span>
+            ${earned?`<span class="badge-shelf-count">${count}</span>`:''}
+          </div>`;
         }).join('');
-        return `<tr><td class="name-cell">${userChipHtml(r.uid,18)}</td>${cells}</tr>`;
-      }).join('');
-      historyBox.innerHTML = `<table class="weekgrid">${head}${body}</table>`;
+        return `<div class="badge-shelf-row">
+          <div class="badge-shelf-name">${userChipHtml(r.uid,22)}</div>
+          <div class="badge-shelf-icons">${icons}</div>
+        </div>`;
+      }).join('')}</div>`;
     }
     markLoaded(historyBox);
   }
