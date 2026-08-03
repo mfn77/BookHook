@@ -589,6 +589,23 @@
   @media (max-width:700px){
     .badge-lb-detail{ padding-left:12px; }
   }
+  /* ============ ROZET GEÇMİŞİ — FİKİR 3: Sticker/Çıkartma Defteri ============ */
+  .sticker-book{ display:flex; flex-direction:column; }
+  .sticker-page{ display:flex; align-items:center; gap:10px; padding:13px 4px; border-bottom:1px dashed var(--line); flex-wrap:wrap; }
+  .sticker-page:last-child{ border-bottom:none; }
+  .sticker-page-head{ flex:0 0 auto; width:112px; min-width:78px; display:flex; align-items:center; }
+  .sticker-page-head .uc-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:82px; display:inline-block; vertical-align:middle; }
+  .sticker-board{ flex:1 1 auto; display:flex; gap:11px; flex-wrap:wrap; align-items:center; }
+  .sticker{ position:relative; width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:17px; box-shadow:0 2px 5px rgba(0,0,0,0.25), 0 0 0 2px rgba(255,255,255,0.85); transition:transform .15s var(--ease); }
+  html[data-theme="dark"] .sticker{ box-shadow:0 2px 5px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.18); }
+  .sticker:hover{ transform:scale(1.15) rotate(0deg) !important; z-index:2; }
+  .sticker-count{ position:absolute; right:-5px; bottom:-5px; min-width:16px; height:16px; padding:0 3px; border-radius:8px; background:var(--ink); color:#fff; font-size:8.5px; font-weight:800; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 1.5px var(--card); }
+  .sticker-empty{ font-family:'Inter',sans-serif; font-size:12px; color:var(--ink-70); font-style:italic; }
+  @media (max-width:700px){
+    .sticker-page-head{ width:52px; min-width:52px; }
+    .sticker-page-head .uc-name{ display:none; }
+    .sticker{ width:30px; height:30px; font-size:15px; }
+  }
   .toast{
     position:fixed; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); background:rgba(28,28,30,0.92); color:#fff;
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
@@ -3513,6 +3530,31 @@ function renderBadgeHistory_Idea2_Leaderboard(rows){
     </details>`;
   }).join('')}</div>`;
 }
+// FİKİR 3: "Sticker/Çıkartma Defteri" — her üye bir "sayfa"; sadece KAZANILMIŞ rozetler gerçek
+// çıkartma gibi hafif gölgeli, hafif eğik (rastgele küçük döndürme) duruyor. Kazanılmamış olanlar
+// hiç yer kaplamıyor — hiç rozeti olmayanlarda tek satır "Henüz rozet yok" notu görünüyor.
+function renderBadgeHistory_Idea3_Stickerbook(rows){
+  return `<div class="sticker-book">${rows.map(r=>{
+    const u = usersCache[r.uid] || {};
+    const bc = u.badgeCounts || {};
+    const liveTier = u.currentTier;
+    const earned = BADGE_DEFS.map(def=>{
+      const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
+      return {def, count};
+    }).filter(x=>x.count>0);
+    const stickersHtml = earned.length ? earned.map(({def,count})=>{
+      const rot = (Math.random()*14-7).toFixed(1);
+      return `<div class="sticker" style="transform:rotate(${rot}deg); background:${def.color};" title="${escapeHtml(def.label)} — ${count} kere">
+        <span>${def.icon}</span>
+        ${count>1?`<span class="sticker-count">×${count}</span>`:''}
+      </div>`;
+    }).join('') : `<div class="sticker-empty">Henüz rozet yok</div>`;
+    return `<div class="sticker-page">
+      <div class="sticker-page-head">${userChipHtml(r.uid,26)}</div>
+      <div class="sticker-board">${stickersHtml}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
 async function renderWormsShared(containerId, historyContainerId){
   const list = keepOrLoading(containerId, 'Hesaplanıyor…');
   const historyBox = historyContainerId ? keepOrLoading(historyContainerId, 'Hesaplanıyor…') : null;
@@ -3540,7 +3582,7 @@ async function renderWormsShared(containerId, historyContainerId){
     if(rows.length===0){
       historyBox.innerHTML = `<p class="muted">Henüz üye yok.</p>`;
     } else {
-      historyBox.innerHTML = renderBadgeHistory_Idea2_Leaderboard(rows);
+      historyBox.innerHTML = renderBadgeHistory_Idea3_Stickerbook(rows);
     }
     markLoaded(historyBox);
   }
