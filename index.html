@@ -3558,7 +3558,7 @@ async function renderWormsShared(containerId, historyContainerId){
       const u = usersCache[r.uid] || {};
       const name = (u && u.name) || '?';
       const tierDef = u.currentTier ? BADGE_DEFS.find(d=>d.key===u.currentTier) : null;
-      const crestColor = tierDef ? tierDef.color : '#f5c211';
+      const crestColor = tierDef ? tierDef.color : '#c2564f';
       return `<div class="streak-badge ${r.streak>0?'has-streak':''}">
         ${earTagCrestSvg(r.uid, crestColor)}
         <span class="user-chip streak-badge-avatar-chip" data-uid="${r.uid}">${avatarHtmlFromProfile(u,'100%',18)}</span>
