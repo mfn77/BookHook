@@ -606,6 +606,18 @@
     .sticker-page-head .uc-name{ display:none; }
     .sticker{ width:30px; height:30px; font-size:15px; }
   }
+  /* ============ ROZET GEÇMİŞİ — FİKİR 4: Rozet Bazlı Galeri ============ */
+  .badge-gal-tabs{ display:flex; gap:8px; overflow-x:auto; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--line); }
+  .badge-gal-tab{ flex:0 0 auto; width:38px; height:38px; border-radius:50%; border:2px solid var(--line); background:var(--paper-2); font-size:17px; display:flex; align-items:center; justify-content:center; cursor:pointer; filter:grayscale(1) opacity(.5); transition:filter .2s var(--ease), border-color .2s var(--ease), transform .15s var(--ease); padding:0; }
+  .badge-gal-tab.active{ filter:none; border-color:var(--tab-color); box-shadow:0 0 0 2px var(--tab-color) inset; transform:scale(1.08); }
+  .badge-gal-panel{ display:none; }
+  .badge-gal-panel.active{ display:block; }
+  .badge-gal-panel-title{ font-family:'Inter',sans-serif; font-weight:800; font-size:13px; margin-bottom:8px; }
+  .badge-gal-row{ display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid var(--line); }
+  .badge-gal-row:last-child{ border-bottom:none; }
+  .badge-gal-row .user-chip{ flex:1 1 auto; display:flex; align-items:center; min-width:0; }
+  .badge-gal-row .uc-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .badge-gal-count{ flex:0 0 auto; font-family:'Roboto Mono',monospace; font-weight:800; font-size:15px; color:var(--gold); }
   .toast{
     position:fixed; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); background:rgba(28,28,30,0.92); color:#fff;
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
@@ -3555,6 +3567,42 @@ function renderBadgeHistory_Idea3_Stickerbook(rows){
     </div>`;
   }).join('')}</div>`;
 }
+// FİKİR 4: "Rozet Bazlı Galeri" — tabloyu ters çeviriyoruz: satırlar üye değil, rozet. Üstte 6 rozet
+// sekme/filtre olarak duruyor; birine tıklayınca o rozeti kazanmış herkes (en çok kazanandan aza
+// sıralı) avatar+sayı olarak listeleniyor. "Kim kaç kere ateş rozeti almış" gibi soruları tek
+// bakışta cevaplıyor, satır×sütun matrisinden çok daha az kalabalık.
+function renderBadgeHistory_Idea4_ByBadge(rows, container){
+  const perBadge = BADGE_DEFS.map(def=>{
+    const entries = rows.map(r=>{
+      const u = usersCache[r.uid] || {};
+      const bc = u.badgeCounts || {};
+      const liveTier = u.currentTier;
+      const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
+      return {uid:r.uid, count};
+    }).filter(x=>x.count>0);
+    entries.sort((a,b)=>b.count-a.count);
+    return {def, entries};
+  });
+  const tabsHtml = BADGE_DEFS.map((def,i)=>`<button type="button" class="badge-gal-tab${i===0?' active':''}" data-idx="${i}" style="--tab-color:${def.color};" title="${escapeHtml(def.label)}">${def.icon}</button>`).join('');
+  const panelsHtml = perBadge.map((pb,i)=>{
+    const listHtml = pb.entries.length
+      ? pb.entries.map(e=>`<div class="badge-gal-row">${userChipHtml(e.uid,26)}<span class="badge-gal-count">${e.count}</span></div>`).join('')
+      : `<div class="empty-state">Henüz kimse bu rozeti kazanmadı.</div>`;
+    return `<div class="badge-gal-panel${i===0?' active':''}" data-idx="${i}">
+      <div class="badge-gal-panel-title" style="color:${pb.def.color};">${pb.def.icon} ${escapeHtml(pb.def.label)}</div>
+      ${listHtml}
+    </div>`;
+  }).join('');
+  container.innerHTML = `<div class="badge-gal"><div class="badge-gal-tabs">${tabsHtml}</div><div class="badge-gal-panels">${panelsHtml}</div></div>`;
+  container.querySelectorAll('.badge-gal-tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      container.querySelectorAll('.badge-gal-tab').forEach(t=>t.classList.remove('active'));
+      container.querySelectorAll('.badge-gal-panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      container.querySelector(`.badge-gal-panel[data-idx="${tab.dataset.idx}"]`).classList.add('active');
+    });
+  });
+}
 async function renderWormsShared(containerId, historyContainerId){
   const list = keepOrLoading(containerId, 'Hesaplanıyor…');
   const historyBox = historyContainerId ? keepOrLoading(historyContainerId, 'Hesaplanıyor…') : null;
@@ -3582,7 +3630,7 @@ async function renderWormsShared(containerId, historyContainerId){
     if(rows.length===0){
       historyBox.innerHTML = `<p class="muted">Henüz üye yok.</p>`;
     } else {
-      historyBox.innerHTML = renderBadgeHistory_Idea3_Stickerbook(rows);
+      renderBadgeHistory_Idea4_ByBadge(rows, historyBox);
     }
     markLoaded(historyBox);
   }
