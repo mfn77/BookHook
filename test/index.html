@@ -556,7 +556,7 @@
   .worm-row:last-child{border-bottom:none;}
   .worm-streak{font-family:'Roboto Mono', monospace; font-weight:700;}
   /* ============ ROZET GEÇMİŞİ — FİKİR 1: Rozet Vitrini ============ */
-  .badge-shelf-list{ display:flex; flex-direction:column; }
+  .badge-shelf-list{ display:grid; grid-template-columns:1fr 1fr; column-gap:22px; }
   .badge-shelf-row{ display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line); }
   .badge-shelf-row:last-child{ border-bottom:none; }
   .badge-shelf-name{ flex:0 0 auto; width:112px; min-width:70px; display:flex; align-items:center; }
@@ -634,6 +634,15 @@
     .coin-row-head{ width:48px; min-width:48px; }
     .coin-row-head .uc-name{ display:none; }
     .coin-row-stacks{ gap:10px; }
+  }
+  /* ============ ROZET GEÇMİŞİ — KOMBİN: Fikir 1 düzeni + Fikir 5 madalyon görünümü ============ */
+  .badge-shelf-icons{ flex:1 1 auto; display:flex; gap:10px; flex-wrap:wrap; }
+  .badge-shelf-item{ display:flex; flex-direction:column; align-items:center; gap:3px; width:34px; }
+  .badge-shelf-coin{ width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; box-shadow:0 0 0 2px var(--card), 0 2px 3px rgba(0,0,0,0.25); }
+  .badge-shelf-coin.ghost{ background:transparent; opacity:.35; filter:grayscale(1); border:1.5px dashed var(--line); box-shadow:none; }
+  .badge-shelf-num{ font-family:'Roboto Mono',monospace; font-weight:800; font-size:11px; color:var(--ink); line-height:1; min-height:11px; }
+  @media (max-width:700px){
+    .badge-shelf-list{ grid-template-columns:1fr; }
   }
   .toast{
     position:fixed; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); background:rgba(28,28,30,0.92); color:#fff;
@@ -3649,6 +3658,32 @@ function renderBadgeHistory_Idea5_CoinStacks(rows){
     </div>`;
   }).join('')}</div>`;
 }
+// KOMBİN (Fikir 1 + Fikir 5): Fikir 1'in düzeni (her üye tek satır, 6 rozet de her zaman yan yana
+// görünür) korunuyor, ama her rozet artık Fikir 5'teki gibi kabartma/madalyon görünümünde bir
+// daire. Kazanılmamışlar kesikli çizgili soluk "hayalet" madalyon. Sayı, Kitap Kurtları
+// sekmesindeki büyük seri rakamıyla aynı kalın mono fontun küçük hali.
+function renderBadgeHistory_Combo1and5(rows){
+  return `<div class="badge-shelf-list">${rows.map(r=>{
+    const u = usersCache[r.uid] || {};
+    const bc = u.badgeCounts || {};
+    const liveTier = u.currentTier;
+    const items = BADGE_DEFS.map(def=>{
+      const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
+      const earned = count>0;
+      const coinHtml = earned
+        ? `<div class="badge-shelf-coin" style="background:${def.color};" title="${escapeHtml(def.label)} — ${count} kere"><span>${def.icon}</span></div>`
+        : `<div class="badge-shelf-coin ghost" title="${escapeHtml(def.label)} — henüz kazanılmadı"><span>${def.icon}</span></div>`;
+      return `<div class="badge-shelf-item">
+        ${coinHtml}
+        <span class="badge-shelf-num">${earned?count:''}</span>
+      </div>`;
+    }).join('');
+    return `<div class="badge-shelf-row">
+      <div class="badge-shelf-name">${userChipHtml(r.uid,22)}</div>
+      <div class="badge-shelf-icons">${items}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
 async function renderWormsShared(containerId, historyContainerId){
   const list = keepOrLoading(containerId, 'Hesaplanıyor…');
   const historyBox = historyContainerId ? keepOrLoading(historyContainerId, 'Hesaplanıyor…') : null;
@@ -3676,7 +3711,7 @@ async function renderWormsShared(containerId, historyContainerId){
     if(rows.length===0){
       historyBox.innerHTML = `<p class="muted">Henüz üye yok.</p>`;
     } else {
-      historyBox.innerHTML = renderBadgeHistory_Idea1_Shelf(rows);
+      historyBox.innerHTML = renderBadgeHistory_Combo1and5(rows);
     }
     markLoaded(historyBox);
   }
