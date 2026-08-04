@@ -619,6 +619,13 @@
     transition:opacity .15s var(--ease), transform .15s var(--ease); pointer-events:none; z-index:20;
   }
   .badge-shelf-info.show{ opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
+  /* İlk satır(lar)da üstte yeterli boşluk olmadığı (kartın üst kenarına çok yakın olduğu) için o
+     satırlardaki bilgi kutuları yukarı değil aşağı doğru açılıyor. İki sütunlu geniş ekranda ilk
+     satırın hem sol hem sağ sütun karşılığı en üstte olduğu için ilk İKİ satır kapsanıyor. */
+  .badge-shelf-list > .badge-shelf-row:nth-child(-n+2) .badge-shelf-info{
+    bottom:auto; top:calc(100% + 7px); transform-origin:top right; transform:translateY(-4px) scale(0.9);
+  }
+  .badge-shelf-list > .badge-shelf-row:nth-child(-n+2) .badge-shelf-info.show{ transform:translateY(0) scale(1); }
   .badge-shelf-info-text{
     font-family:'Roboto Mono',monospace; font-weight:800; font-size:11px;
     color:#e2e2e2;
