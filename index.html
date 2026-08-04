@@ -577,15 +577,20 @@
   .badge-shelf-item{ flex:1 1 0; min-width:0; max-width:32px; display:flex; align-items:center; justify-content:center; }
   .badge-shelf-coin{ position:relative; width:100%; aspect-ratio:1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; box-shadow:0 0 0 2px var(--card), 0 2px 3px rgba(0,0,0,0.25); }
   .badge-shelf-coin.ghost{ background:transparent; opacity:.35; filter:grayscale(1); border:1.5px dashed var(--line); box-shadow:none; }
-  /* Sayı köşedeki madeni/metalik yuvarlak rozette: gümüş-gri gradyan zemin + kabartma (emboss)
-     efektli koyu-açık text-shadow ile gerçek bir metal damga gibi görünmesi hedefleniyor. */
+  /* Çerçeve sade/nötr bir "damga" — asıl metalik görünüm sayının kendisinde: parlak-koyu bir
+     gümüş/çelik gradyanı background-clip:text ile rakamın üstüne uygulanıyor, üstte ince bir
+     text-shadow parlaklığı ekliyor. */
   .badge-shelf-count{
-    position:absolute; right:-3px; bottom:-3px; min-width:13px; height:13px; padding:0 2px; border-radius:8px;
-    background:linear-gradient(145deg, #f2f2f2 0%, #c7c7c7 45%, #8c8c8c 100%);
-    box-shadow:0 0 0 1.5px var(--card), inset 0 1px 0 rgba(255,255,255,0.75), inset 0 -1.5px 1px rgba(0,0,0,0.35), 0 1px 1px rgba(0,0,0,0.25);
+    position:absolute; right:-4px; bottom:-4px; min-width:18px; height:18px; padding:0 3px; border-radius:9px;
+    background:var(--card);
+    box-shadow:0 0 0 1.5px var(--card), 0 1px 2px rgba(0,0,0,0.3);
     display:flex; align-items:center; justify-content:center; line-height:1;
-    font-family:'Roboto Mono',monospace; font-weight:800; font-size:8px; color:#3a3a3a;
-    text-shadow:0 1px 0 rgba(255,255,255,0.65), 0 -0.5px 0 rgba(0,0,0,0.35);
+  }
+  .badge-shelf-count-num{
+    font-family:'Roboto Mono',monospace; font-weight:800; font-size:12px;
+    background-image:linear-gradient(180deg, #ffffff 0%, #e6e6e6 28%, #9c9c9c 52%, #545454 76%, #7d7d7d 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent;
+    text-shadow:0 1px 0 rgba(255,255,255,0.3);
   }
   @media (min-width:641px){
     .badge-shelf-list{ grid-template-columns:1fr 1fr; column-gap:20px; }
@@ -3574,7 +3579,7 @@ function renderBadgeHistoryShelf(rows){
       const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
       const earned = count>0;
       const coinHtml = earned
-        ? `<div class="badge-shelf-coin" style="background:${def.color};" title="${escapeHtml(def.label)} — ${count} kere"><span>${def.icon}</span><span class="badge-shelf-count">${count}</span></div>`
+        ? `<div class="badge-shelf-coin" style="background:${def.color};" title="${escapeHtml(def.label)} — ${count} kere"><span>${def.icon}</span><span class="badge-shelf-count"><span class="badge-shelf-count-num">${count}</span></span></div>`
         : `<div class="badge-shelf-coin ghost" title="${escapeHtml(def.label)} — henüz kazanılmadı"><span>${def.icon}</span></div>`;
       return `<div class="badge-shelf-item">${coinHtml}</div>`;
     }).join('');
