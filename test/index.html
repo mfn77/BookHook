@@ -618,6 +618,23 @@
   .badge-gal-row .user-chip{ flex:1 1 auto; display:flex; align-items:center; min-width:0; }
   .badge-gal-row .uc-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .badge-gal-count{ flex:0 0 auto; font-family:'Roboto Mono',monospace; font-weight:800; font-size:15px; color:var(--gold); }
+  /* ============ ROZET GEÇMİŞİ — FİKİR 5: Madalya Yığını ============ */
+  .coin-list{ display:flex; flex-direction:column; }
+  .coin-row{ display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line); }
+  .coin-row:last-child{ border-bottom:none; }
+  .coin-row-head{ flex:0 0 auto; width:112px; min-width:70px; display:flex; align-items:center; }
+  .coin-row-head .uc-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80px; display:inline-block; vertical-align:middle; }
+  .coin-row-stacks{ flex:1 1 auto; display:flex; gap:14px; flex-wrap:wrap; }
+  .coin-slot{ position:relative; width:40px; height:28px; }
+  .coin-stack{ position:relative; width:100%; height:100%; }
+  .coin{ position:absolute; bottom:0; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; box-shadow:0 0 0 2px var(--card), 0 2px 3px rgba(0,0,0,0.25); }
+  .coin-extra{ position:absolute; right:-2px; bottom:-4px; min-width:15px; height:15px; padding:0 3px; border-radius:8px; background:var(--ink); color:#fff; font-size:8px; font-weight:800; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 1.5px var(--card); z-index:5; }
+  .coin-ghost{ opacity:.35; filter:grayscale(1); font-size:14px; display:flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; border:1.5px dashed var(--line); }
+  @media (max-width:700px){
+    .coin-row-head{ width:48px; min-width:48px; }
+    .coin-row-head .uc-name{ display:none; }
+    .coin-row-stacks{ gap:10px; }
+  }
   .toast{
     position:fixed; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); background:rgba(28,28,30,0.92); color:#fff;
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
@@ -3603,6 +3620,35 @@ function renderBadgeHistory_Idea4_ByBadge(rows, container){
     });
   });
 }
+// FİKİR 5: "Madalya Yığını" — her rozet türü, kazanılma sayısı kadar (en fazla 3 görünür, fazlası
+// "+N" ile) üst üste hafif kaydırılmış madeni para/madalya gibi duruyor. Kazanılmamışlar soluk,
+// kesikli çizgili "boş yuva" olarak duruyor (bir sonraki hedefi de gösterir).
+function renderBadgeHistory_Idea5_CoinStacks(rows){
+  return `<div class="coin-list">${rows.map(r=>{
+    const u = usersCache[r.uid] || {};
+    const bc = u.badgeCounts || {};
+    const liveTier = u.currentTier;
+    const slots = BADGE_DEFS.map(def=>{
+      const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
+      if(count===0){
+        return `<div class="coin-slot" title="${escapeHtml(def.label)} — henüz kazanılmadı"><div class="coin-ghost">${def.icon}</div></div>`;
+      }
+      const visible = Math.min(count,3);
+      const coinsHtml = Array.from({length:visible}).map((_,i)=>{
+        const isFront = i===visible-1;
+        return `<div class="coin" style="left:${i*6}px; z-index:${i+1}; background:${def.color};">${isFront?`<span>${def.icon}</span>`:''}</div>`;
+      }).join('');
+      return `<div class="coin-slot" title="${escapeHtml(def.label)} — ${count} kere">
+        <div class="coin-stack">${coinsHtml}</div>
+        ${count>3?`<span class="coin-extra">+${count-3}</span>`:''}
+      </div>`;
+    }).join('');
+    return `<div class="coin-row">
+      <div class="coin-row-head">${userChipHtml(r.uid,24)}</div>
+      <div class="coin-row-stacks">${slots}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
 async function renderWormsShared(containerId, historyContainerId){
   const list = keepOrLoading(containerId, 'Hesaplanıyor…');
   const historyBox = historyContainerId ? keepOrLoading(historyContainerId, 'Hesaplanıyor…') : null;
@@ -3630,7 +3676,7 @@ async function renderWormsShared(containerId, historyContainerId){
     if(rows.length===0){
       historyBox.innerHTML = `<p class="muted">Henüz üye yok.</p>`;
     } else {
-      renderBadgeHistory_Idea4_ByBadge(rows, historyBox);
+      historyBox.innerHTML = renderBadgeHistory_Idea5_CoinStacks(rows);
     }
     markLoaded(historyBox);
   }
