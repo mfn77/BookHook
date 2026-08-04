@@ -600,6 +600,31 @@
     background-image:linear-gradient(180deg, #ffffff 0%, #d8d8d8 30%, #8a8a8a 50%, #f2f2f2 68%, #a8a8a8 100%);
     -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
   }
+  /* Kazanılmış bir madalyona tıklayınca: hafif sallanma + sağ üstte bilgi kutusu (gerekli seri
+     gün sayısı). Renk/gradyan/font, köşedeki sayaçla aynı — sadece hap (pill) şeklinde. */
+  @keyframes badgeShelfWobble{
+    0%,100%{ transform:rotate(0deg); }
+    20%{ transform:rotate(-10deg); }
+    40%{ transform:rotate(8deg); }
+    60%{ transform:rotate(-6deg); }
+    80%{ transform:rotate(3deg); }
+  }
+  .badge-shelf-coin.wobble{ animation:badgeShelfWobble .4s ease-in-out; }
+  .badge-shelf-coin{ cursor:pointer; }
+  .badge-shelf-coin.ghost{ cursor:default; }
+  .badge-shelf-info{
+    position:absolute; bottom:calc(100% + 7px); right:-6px; white-space:nowrap; padding:5px 11px; border-radius:999px;
+    box-shadow:0 0 0 1.5px var(--card), inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 5px rgba(0,0,0,0.3);
+    opacity:0; transform:translateY(4px) scale(0.9); transform-origin:bottom right;
+    transition:opacity .15s var(--ease), transform .15s var(--ease); pointer-events:none; z-index:20;
+  }
+  .badge-shelf-info.show{ opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
+  .badge-shelf-info-text{
+    font-family:'Roboto Mono',monospace; font-weight:800; font-size:11px;
+    color:#e2e2e2;
+    background-image:linear-gradient(180deg, #ffffff 0%, #d8d8d8 30%, #8a8a8a 50%, #f2f2f2 68%, #a8a8a8 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  }
   @media (min-width:641px){
     .badge-shelf-list{ grid-template-columns:1fr 1fr; column-gap:20px; }
     .badge-shelf-name{ flex-basis:76px; max-width:76px; }
@@ -3582,6 +3607,12 @@ document.getElementById('calcStreaksBtn').addEventListener('click', renderAdminW
 // kadar puan eder; kişinin puanı = Σ (o rozetten kazandığı adet × o rozetin gün değeri). Bu, "Kitap
 // Kurtları" listesindeki güncel seri sıralamasından tamamen bağımsız — orijinal diziyi bozmamak
 // için önce bir kopyası alınıp öyle sıralanıyor.
+// Rozet süre etiketini kısa/okunur biçime çevirir: 3→"3 gün", 7→"1 hafta", 14→"2 hafta", 30→"1 ay".
+function formatStreakDuration(days){
+  if(days % 7 === 0) return (days/7) + ' hafta';
+  if(days % 30 === 0) return (days/30) + ' ay';
+  return days + ' gün';
+}
 function renderBadgeHistoryShelf(rows){
   const sorted = rows.slice().map(r=>{
     const u = usersCache[r.uid] || {};
@@ -3603,8 +3634,14 @@ function renderBadgeHistoryShelf(rows){
       const countBadge = count>1
         ? `<span class="badge-shelf-count" style="background:linear-gradient(145deg, ${shadeHexColor(def.color,-0.28)} 0%, ${shadeHexColor(def.color,-0.62)} 100%);"><span class="badge-shelf-count-num">${count}</span></span>`
         : '';
+      // Tıklanınca (sadece kazanılmış rozetlerde) hafif bir sallanma animasyonu ve sağ üstte,
+      // köşedeki sayaçla aynı metalik gradyan/font'ta ama hap (pill) şeklinde bir bilgi kutusu
+      // açılıyor; içinde o rozet için gereken seri gün sayısı yazıyor.
+      const infoPop = earned
+        ? `<div class="badge-shelf-info" style="background:linear-gradient(145deg, ${shadeHexColor(def.color,-0.28)} 0%, ${shadeHexColor(def.color,-0.62)} 100%);"><span class="badge-shelf-info-text">${escapeHtml(formatStreakDuration(def.days))}</span></div>`
+        : '';
       const coinHtml = earned
-        ? `<div class="badge-shelf-coin" style="background:${def.color};" title="${escapeHtml(def.label)} — ${count} kere"><span>${def.icon}</span>${countBadge}</div>`
+        ? `<div class="badge-shelf-coin" title="${escapeHtml(def.label)} — ${count} kere" style="background:${def.color};"><span>${def.icon}</span>${countBadge}${infoPop}</div>`
         : `<div class="badge-shelf-coin ghost" title="${escapeHtml(def.label)} — henüz kazanılmadı"><span>${def.icon}</span></div>`;
       return `<div class="badge-shelf-item">${coinHtml}</div>`;
     }).join('');
@@ -3614,6 +3651,32 @@ function renderBadgeHistoryShelf(rows){
     </div>`;
   }).join('')}</div>`;
 }
+// Rozet madalyonuna tıklayınca sallanma animasyonu oynatır ve o madalyonun bilgi kutusunu açar/
+// kapatır; başka bir madalyon açılınca öncekini kapatır. Konteynere bir kez bağlanır (yeniden
+// render'da tekrar tekrar dinleyici eklenmesin diye).
+function bindBadgeShelfClicks(container){
+  if(!container || container.dataset.shelfClicksBound) return;
+  container.dataset.shelfClicksBound = '1';
+  container.addEventListener('click', (e)=>{
+    const coin = e.target.closest('.badge-shelf-coin');
+    if(!coin || coin.classList.contains('ghost') || !container.contains(coin)) return;
+    const info = coin.querySelector('.badge-shelf-info');
+    if(!info) return;
+    const wasOpen = info.classList.contains('show');
+    container.querySelectorAll('.badge-shelf-info.show').forEach(p=> p.classList.remove('show'));
+    if(!wasOpen){
+      info.classList.add('show');
+      coin.classList.remove('wobble');
+      void coin.offsetWidth;
+      coin.classList.add('wobble');
+      setTimeout(()=> coin.classList.remove('wobble'), 420);
+    }
+  });
+}
+document.addEventListener('click', (e)=>{
+  if(e.target.closest('.badge-shelf-coin')) return;
+  document.querySelectorAll('.badge-shelf-info.show').forEach(p=> p.classList.remove('show'));
+});
 async function renderWormsShared(containerId, historyContainerId){
   const list = keepOrLoading(containerId, 'Hesaplanıyor…');
   const historyBox = historyContainerId ? keepOrLoading(historyContainerId, 'Hesaplanıyor…') : null;
@@ -3656,6 +3719,7 @@ async function renderWormsShared(containerId, historyContainerId){
       historyBox.innerHTML = `<p class="muted">Henüz üye yok.</p>`;
     } else {
       historyBox.innerHTML = renderBadgeHistoryShelf(rows);
+      bindBadgeShelfClicks(historyBox);
     }
     markLoaded(historyBox);
   }
