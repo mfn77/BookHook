@@ -564,12 +564,15 @@
   .streak-badge-name{ position:absolute; left:50%; top:50%; width:82%; transform:translate(-50%,-50%); text-align:center; font-family:'Inter',sans-serif; font-weight:700; font-size:8.5px; color:#2a2a2a; text-shadow:0 1px 1px rgba(255,255,255,.4); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; padding:0; margin:0; border-radius:4px; display:block; }
   .streak-badge-num{ position:absolute; left:50%; top:67%; transform:translate(-50%,-50%); font-family:'Roboto Mono',monospace; font-weight:800; font-size:21px; letter-spacing:-0.5px; color:#2a2a2a; text-shadow:0 1px 1px rgba(255,255,255,.4); pointer-events:none; }
   /* ============ ROZET GEÇMİŞİ: Vitrin (madalyon) tasarımı ============ */
-  .badge-shelf-list{ display:grid; grid-template-columns:1fr 1fr; column-gap:22px; }
+  /* Mobil öncelikli: varsayılan tek sütun, geniş ekranda (≥641px, katlanabilirler dahil) iki
+     sütuna geçiyor. Tek sütunda tüm kart genişliği tek satıra ait olduğu için madalyonlar ve isim
+     rahatça büyük kalabiliyor; iki sütuna geçince her sütun daralacağı için madalyonlar biraz küçülüyor. */
+  .badge-shelf-list{ display:grid; grid-template-columns:1fr; }
   .badge-shelf-row{ display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line); }
   .badge-shelf-row:last-child{ border-bottom:none; }
-  .badge-shelf-name{ flex:0 0 auto; width:112px; min-width:70px; display:flex; align-items:center; }
-  .badge-shelf-name .uc-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80px; display:inline-block; vertical-align:middle; }
-  .badge-shelf-icons{ flex:1 1 auto; display:flex; gap:10px; flex-wrap:wrap; }
+  .badge-shelf-name{ flex:0 0 auto; width:96px; min-width:60px; display:flex; align-items:center; }
+  .badge-shelf-name .uc-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:68px; display:inline-block; vertical-align:middle; }
+  .badge-shelf-icons{ flex:1 1 auto; display:flex; gap:8px; flex-wrap:wrap; justify-content:space-between; }
   .badge-shelf-item{ display:flex; align-items:center; width:32px; }
   .badge-shelf-coin{ position:relative; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; box-shadow:0 0 0 2px var(--card), 0 2px 3px rgba(0,0,0,0.25); }
   .badge-shelf-coin.ghost{ background:transparent; opacity:.35; filter:grayscale(1); border:1.5px dashed var(--line); box-shadow:none; }
@@ -583,13 +586,13 @@
     font-family:'Roboto Mono',monospace; font-weight:800; font-size:9px; color:#3a3a3a;
     text-shadow:0 1px 0 rgba(255,255,255,0.65), 0 -0.5px 0 rgba(0,0,0,0.35);
   }
-  @media (max-width:640px){
-    .badge-shelf-list{ grid-template-columns:1fr; }
-    .badge-shelf-name{ width:32px; min-width:32px; }
-    .badge-shelf-name .uc-name{ display:none; }
-    .badge-shelf-icons{ gap:5px; }
-    .badge-shelf-item{ width:24px; }
-    .badge-shelf-coin{ width:23px; height:23px; font-size:11px; }
+  @media (min-width:641px){
+    .badge-shelf-list{ grid-template-columns:1fr 1fr; column-gap:22px; }
+    .badge-shelf-name{ width:104px; min-width:70px; }
+    .badge-shelf-name .uc-name{ max-width:76px; }
+    .badge-shelf-icons{ gap:7px; }
+    .badge-shelf-item{ width:27px; }
+    .badge-shelf-coin{ width:27px; height:27px; font-size:13px; }
     .badge-shelf-count{ font-size:8px; min-width:13px; height:13px; right:-3px; bottom:-3px; }
   }
   .toast{
