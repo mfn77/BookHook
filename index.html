@@ -577,14 +577,15 @@
   .badge-shelf-item{ flex:1 1 0; min-width:0; max-width:32px; display:flex; align-items:center; justify-content:center; }
   .badge-shelf-coin{ position:relative; width:100%; aspect-ratio:1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; box-shadow:0 0 0 2px var(--card), 0 2px 3px rgba(0,0,0,0.25); }
   .badge-shelf-coin.ghost{ background:transparent; opacity:.35; filter:grayscale(1); border:1.5px dashed var(--line); box-shadow:none; }
-  /* Çerçeve artık sayının etrafında minimum boşlukla, sıkı bir "damga" — asıl metalik görünüm
-     sayının kendisinde: koyu bir zemin üstünde parlak gümüş/çelik gradyanı background-clip:text
-     ile rakama uygulanıyor. Zemin koyu olduğu için parlaklık her zaman net görünür; bu teknik
-     desteklenmezse bile rakam açık gri (metalik hissi veren) bir renkte kalır, siyah/düz görünmez. */
+  /* Çerçeve artık sayının etrafında minimum boşlukla, sıkı bir "damga" — rengi düz siyah değil,
+     o rozetin kendi renginin koyu ("gunmetal") tonundan bir gradyan (satır içi style ile,
+     shadeHexColor kullanılarak veriliyor), böylece her rozetin madalyonuyla uyumlu duruyor.
+     Asıl metalik görünüm sayının kendisinde: parlak gümüş/çelik gradyanı background-clip:text ile
+     rakama uygulanıyor. Bu teknik desteklenmezse bile rakam açık gri bir renkte kalır, siyah/düz
+     görünmez. */
   .badge-shelf-count{
     position:absolute; right:-2px; bottom:-2px; min-width:13px; height:13px; padding:0 2px; border-radius:7px;
-    background:#292b2e;
-    box-shadow:0 0 0 1.5px var(--card), 0 1px 2px rgba(0,0,0,0.35);
+    box-shadow:0 0 0 1.5px var(--card), inset 0 1px 0 rgba(255,255,255,0.12), 0 1px 2px rgba(0,0,0,0.35);
     display:flex; align-items:center; justify-content:center; line-height:1;
   }
   .badge-shelf-count-num{
@@ -3581,7 +3582,7 @@ function renderBadgeHistoryShelf(rows){
       const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
       const earned = count>0;
       const coinHtml = earned
-        ? `<div class="badge-shelf-coin" style="background:${def.color};" title="${escapeHtml(def.label)} — ${count} kere"><span>${def.icon}</span><span class="badge-shelf-count"><span class="badge-shelf-count-num">${count}</span></span></div>`
+        ? `<div class="badge-shelf-coin" style="background:${def.color};" title="${escapeHtml(def.label)} — ${count} kere"><span>${def.icon}</span><span class="badge-shelf-count" style="background:linear-gradient(145deg, ${shadeHexColor(def.color,-0.28)} 0%, ${shadeHexColor(def.color,-0.62)} 100%);"><span class="badge-shelf-count-num">${count}</span></span></div>`
         : `<div class="badge-shelf-coin ghost" title="${escapeHtml(def.label)} — henüz kazanılmadı"><span>${def.icon}</span></div>`;
       return `<div class="badge-shelf-item">${coinHtml}</div>`;
     }).join('');
