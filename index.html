@@ -571,8 +571,12 @@
   .badge-shelf-list{ display:grid; grid-template-columns:1fr; }
   .badge-shelf-row{ display:flex; align-items:center; gap:8px; padding:11px 2px; border-bottom:1px solid var(--line); min-width:0; }
   .badge-shelf-row:last-child{ border-bottom:none; }
-  .badge-shelf-name{ flex:0 1 76px; min-width:0; max-width:76px; display:flex; align-items:center; }
-  .badge-shelf-name .uc-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; display:inline-block; vertical-align:middle; }
+  /* Bu bileşene özgü: avatar üstte, isim onun altında ortalanmış — isim uzunluğu ne olursa olsun
+     (avatarın yanına mı taşıyor diye) satır düzeni bozulmuyor, hepsi aynı hizada duruyor. */
+  .badge-shelf-name{ flex:0 1 64px; min-width:0; max-width:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .badge-shelf-name .user-chip{ display:flex; flex-direction:column; align-items:center; max-width:100%; }
+  .badge-shelf-name .user-chip > span:first-child{ margin-right:0 !important; }
+  .badge-shelf-name .uc-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; margin-top:3px; text-align:center; font-size:10.5px; }
   .badge-shelf-icons{ flex:1 1 auto; display:flex; gap:5px; min-width:0; }
   .badge-shelf-item{ flex:1 1 0; min-width:0; max-width:32px; display:flex; align-items:center; justify-content:center; }
   .badge-shelf-coin{ position:relative; width:100%; aspect-ratio:1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; box-shadow:0 0 0 2px var(--card), 0 2px 3px rgba(0,0,0,0.25); }
@@ -582,22 +586,23 @@
      shadeHexColor kullanılarak veriliyor), böylece her rozetin madalyonuyla uyumlu duruyor.
      Asıl metalik görünüm sayının kendisinde: parlak gümüş/çelik gradyanı background-clip:text ile
      rakama uygulanıyor. Bu teknik desteklenmezse bile rakam açık gri bir renkte kalır, siyah/düz
-     görünmez. */
+     görünmez. Sadece 1'den fazla kazanılan rozetlerde gösteriliyor (1 tanesi zaten madalyonun
+     canlı rengiyle anlaşılıyor). */
   .badge-shelf-count{
-    position:absolute; right:-2px; bottom:-2px; min-width:13px; height:13px; padding:0 2px; border-radius:7px;
+    position:absolute; right:-3px; bottom:-3px; min-width:18px; height:18px; padding:0 3px; border-radius:9px;
     box-shadow:0 0 0 1.5px var(--card), inset 0 1px 0 rgba(255,255,255,0.12), 0 1px 2px rgba(0,0,0,0.35);
     display:flex; align-items:center; justify-content:center; line-height:1;
   }
   .badge-shelf-count-num{
     display:inline-block;
-    font-family:'Roboto Mono',monospace; font-weight:800; font-size:10px;
+    font-family:'Roboto Mono',monospace; font-weight:800; font-size:14px;
     color:#e2e2e2;
     background-image:linear-gradient(180deg, #ffffff 0%, #d8d8d8 30%, #8a8a8a 50%, #f2f2f2 68%, #a8a8a8 100%);
     -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
   }
   @media (min-width:641px){
     .badge-shelf-list{ grid-template-columns:1fr 1fr; column-gap:20px; }
-    .badge-shelf-name{ flex-basis:92px; max-width:92px; }
+    .badge-shelf-name{ flex-basis:76px; max-width:76px; }
     .badge-shelf-item{ max-width:30px; }
   }
   .toast{
@@ -3581,13 +3586,16 @@ function renderBadgeHistoryShelf(rows){
     const items = BADGE_DEFS.map(def=>{
       const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
       const earned = count>0;
+      const countBadge = count>1
+        ? `<span class="badge-shelf-count" style="background:linear-gradient(145deg, ${shadeHexColor(def.color,-0.28)} 0%, ${shadeHexColor(def.color,-0.62)} 100%);"><span class="badge-shelf-count-num">${count}</span></span>`
+        : '';
       const coinHtml = earned
-        ? `<div class="badge-shelf-coin" style="background:${def.color};" title="${escapeHtml(def.label)} — ${count} kere"><span>${def.icon}</span><span class="badge-shelf-count" style="background:linear-gradient(145deg, ${shadeHexColor(def.color,-0.28)} 0%, ${shadeHexColor(def.color,-0.62)} 100%);"><span class="badge-shelf-count-num">${count}</span></span></div>`
+        ? `<div class="badge-shelf-coin" style="background:${def.color};" title="${escapeHtml(def.label)} — ${count} kere"><span>${def.icon}</span>${countBadge}</div>`
         : `<div class="badge-shelf-coin ghost" title="${escapeHtml(def.label)} — henüz kazanılmadı"><span>${def.icon}</span></div>`;
       return `<div class="badge-shelf-item">${coinHtml}</div>`;
     }).join('');
     return `<div class="badge-shelf-row">
-      <div class="badge-shelf-name">${userChipHtml(r.uid,22)}</div>
+      <div class="badge-shelf-name">${userChipHtml(r.uid,26)}</div>
       <div class="badge-shelf-icons">${items}</div>
     </div>`;
   }).join('')}</div>`;
