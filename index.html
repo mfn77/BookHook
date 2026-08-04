@@ -3687,6 +3687,10 @@ document.addEventListener('click', (e)=>{
 async function renderWormsShared(containerId, historyContainerId){
   const list = keepOrLoading(containerId, 'Hesaplanıyor…');
   const historyBox = historyContainerId ? keepOrLoading(historyContainerId, 'Hesaplanıyor…') : null;
+  // Sekme açıldığında önce önbellekteki (eski) HTML anında gösteriliyor, gerçek veri henüz
+  // gelmeden — tıklama dinleyicisi de bu yüzden en başta bağlanıyor, yoksa sayfa ilk açıldığında
+  // önbellek gösterilirken tıklamalar hiçbir şey yapmıyordu (asıl render bitene kadar).
+  if(historyBox) bindBadgeShelfClicks(historyBox);
   const uids = activeUids();
   const results = await Promise.all(uids.map(async uid=>{
     try{
@@ -3726,7 +3730,6 @@ async function renderWormsShared(containerId, historyContainerId){
       historyBox.innerHTML = `<p class="muted">Henüz üye yok.</p>`;
     } else {
       historyBox.innerHTML = renderBadgeHistoryShelf(rows);
-      bindBadgeShelfClicks(historyBox);
     }
     markLoaded(historyBox);
   }
