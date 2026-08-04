@@ -3578,8 +3578,22 @@ document.getElementById('calcStreaksBtn').addEventListener('click', renderAdminW
 // Rozet Geçmişi: her üye tek satır, 6 rozet de her zaman yan yana madalyon şeklinde duruyor.
 // Kazanılmamışlar kesikli çizgili soluk "hayalet" madalyon. Sayı, madalyonun köşesindeki metalik
 // (gümüş gradyan + kabartma efektli) yuvarlak rozette duruyor.
+// Sıralama SADECE bu listeye özgü: her rozet, o rozeti kazanmak için gereken gün sayısı (def.days)
+// kadar puan eder; kişinin puanı = Σ (o rozetten kazandığı adet × o rozetin gün değeri). Bu, "Kitap
+// Kurtları" listesindeki güncel seri sıralamasından tamamen bağımsız — orijinal diziyi bozmamak
+// için önce bir kopyası alınıp öyle sıralanıyor.
 function renderBadgeHistoryShelf(rows){
-  return `<div class="badge-shelf-list">${rows.map(r=>{
+  const sorted = rows.slice().map(r=>{
+    const u = usersCache[r.uid] || {};
+    const bc = u.badgeCounts || {};
+    const liveTier = u.currentTier;
+    const score = BADGE_DEFS.reduce((sum,def)=>{
+      const count = (bc[def.key]||0) + (liveTier===def.key ? 1 : 0);
+      return sum + count*def.days;
+    }, 0);
+    return {...r, score};
+  }).sort((a,b)=> b.score-a.score);
+  return `<div class="badge-shelf-list">${sorted.map(r=>{
     const u = usersCache[r.uid] || {};
     const bc = u.badgeCounts || {};
     const liveTier = u.currentTier;
