@@ -467,6 +467,23 @@
   }
   #discoverFabPrev.visible, #discoverFabNext.visible{ opacity:1; pointer-events:auto; }
   .compose-textarea{ width:100%; min-height:90px; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:14.5px; background:var(--card); color:var(--ink); resize:vertical; }
+  .compose-mode-btn.active{ background:var(--gold); color:#fff; border-color:var(--gold); }
+  .compose-poll-input{ width:100%; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:14.5px; background:var(--card); color:var(--ink); }
+  .compose-poll-option-row{ display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+  .compose-poll-option-row input{ flex:1 1 auto; min-width:0; }
+  .compose-poll-option-remove{ flex:0 0 auto; background:none; border:none; color:var(--ink-70); font-size:16px; cursor:pointer; padding:4px 8px; }
+  /* ============ AKIŞTA ANKET (WhatsApp tarzı) ============ */
+  .poll-question{ font-family:'Inter',sans-serif; font-weight:700; font-size:15px; margin-bottom:10px; }
+  .poll-option-row{ position:relative; border:1.5px solid var(--line); border-radius:10px; padding:9px 12px; margin-bottom:7px; cursor:pointer; overflow:hidden; background:var(--paper-2); transition:border-color .15s var(--ease); }
+  .poll-option-row:hover{ border-color:var(--gold); }
+  .poll-option-row.voted{ border-color:var(--gold); }
+  .poll-option-fill{ position:absolute; inset:0; background:rgba(33,144,164,0.14); width:0%; transition:width .3s var(--ease); z-index:0; }
+  .poll-option-row.voted .poll-option-fill{ background:rgba(212,163,42,0.22); }
+  .poll-option-content{ position:relative; z-index:1; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .poll-option-text{ font-family:'Inter',sans-serif; font-size:14px; color:var(--ink); min-width:0; }
+  .poll-option-row.voted .poll-option-text{ font-weight:700; }
+  .poll-option-pct{ font-family:'Roboto Mono',monospace; font-weight:700; font-size:13px; color:var(--ink-70); flex:0 0 auto; }
+  .poll-total-votes{ font-family:'Inter',sans-serif; font-size:11.5px; color:var(--ink-70); margin-top:2px; }
   .post-card{
     background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3);
     border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer;
@@ -2964,7 +2981,9 @@ async function finalizeWeek(monday, force){
     await Promise.all(pairs.map(async p=>{
       if(p.giverUid) await notifyUser(p.giverUid, `Kura çekildi (${rangeLabel}): cezalısın, ${p.receiverName||'—'} için kitap hediyesi vereceksin. "Hediye Kitap" sekmesine bak.`, 'gifts');
       if(p.receiverUid) await notifyUser(p.receiverUid, `Kura çekildi (${rangeLabel}): tebrikler, ${p.giverName} sana kitap hediye edecek! "Hediye Kitap" sekmesinden isteğini gönderebilirsin.`, 'gifts');
-      if(p.receiverUid) createPost('gift_won', { variantText: pickGiftMessage('won') }, p.receiverUid, p.receiverName);
+      if(p.receiverUid){
+        createPost('gift_won', { variantText: pickGiftMessage('won') }, p.receiverUid, p.receiverName);
+      }
     }));
   }
   return {already:!didWrite, data};
@@ -3092,7 +3111,9 @@ async function checkAndAwardBadges(uid, streak){
     }
     if(historyIncremented && prevTier){
       const lostDef = BADGE_DEFS.find(d=>d.key===prevTier);
-      if(lostDef) createPost('badge_lost', { badgeKey:lostDef.key, badgeLabel:lostDef.label, badgeIcon:lostDef.icon, variantText: pickBadgeLostMessage(lostDef.key, badgeCounts[lostDef.key]||1) }, uid, u.name);
+      if(lostDef){
+        createPost('badge_lost', { badgeKey:lostDef.key, badgeLabel:lostDef.label, badgeIcon:lostDef.icon, variantText: pickBadgeLostMessage(lostDef.key, badgeCounts[lostDef.key]||1) }, uid, u.name);
+      }
       if(lostDef) checkAndPostDethrone(uid, badgeCounts[lostDef.key]||1, (ouid)=>(usersCache[ouid].badgeCounts||{})[lostDef.key], `${lostDef.label} rozeti`, lostDef.icon);
     }
   }catch(e){ /* rozet kaydedilemezse sessizce geç */ }
@@ -5058,7 +5079,10 @@ async function createOrBatchPost(singleType, itemData){
       return;
     }
     await createPost(singleType, itemData);
-  }catch(e){ console.error('Gönderi birleştirilemedi, tekli oluşturuluyor:', e); await createPost(singleType, itemData); }
+  }catch(e){
+    console.error('Gönderi birleştirilemedi, tekli oluşturuluyor:', e);
+    await createPost(singleType, itemData);
+  }
 }
 function exactTimeLabel(iso){
   const d = new Date(iso);
@@ -5112,8 +5136,50 @@ function postBodyHtml(p){
       const recSuffix = turkishAccusativeName(p.bookTitle||'').split("'").pop();
       return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div>✎ Gruba <b>${escapeHtml(p.bookTitle||'')}</b>'${recSuffix} önerdi.</div></div>`;
     }
+    case 'poll': return pollBodyHtml(p);
     default: return escapeHtml(p.text||'');
   }
+}
+// Anket gövdesi: WhatsApp tarzı — her seçenek tıklanabilir bir satır, oy sayısına göre arkada bir
+// dolgu çubuğu var, kullanıcının kendi oyu vurgulanıyor. Toplam oy sayısı altta gösteriliyor.
+function pollBodyHtml(p){
+  const options = p.options || [];
+  const totalVotes = options.reduce((sum,o)=> sum + (o.voters||[]).length, 0);
+  const myVoteIdx = options.findIndex(o=> (o.voters||[]).includes(currentUid));
+  const rows = options.map((o,i)=>{
+    const count = (o.voters||[]).length;
+    const pct = totalVotes>0 ? Math.round(count/totalVotes*100) : 0;
+    const voted = i===myVoteIdx;
+    return `<div class="poll-option-row${voted?' voted':''}" data-poll-post="${p.id}" data-poll-option="${i}">
+      <div class="poll-option-fill" style="width:${pct}%;"></div>
+      <div class="poll-option-content">
+        <span class="poll-option-text">${voted?'✓ ':''}${escapeHtml(o.text)}</span>
+        <span class="poll-option-pct">${totalVotes>0?pct+'%':''}</span>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="poll-question">📊 ${escapeHtml(p.question||'')}</div>${rows}<div class="poll-total-votes">${totalVotes} oy</div>`;
+}
+async function voteOnPoll(postId, optionIdx){
+  if(!postId || Number.isNaN(optionIdx)) return;
+  try{
+    await runTransaction(db, async (tx)=>{
+      const ref = doc(db,'posts',postId);
+      const snap = await tx.get(ref);
+      if(!snap.exists()) return;
+      const data = snap.data();
+      const options = (data.options||[]).map(o=> ({...o, voters:[...(o.voters||[])]}));
+      const alreadyVotedIdx = options.findIndex(o=> o.voters.includes(currentUid));
+      if(alreadyVotedIdx===optionIdx){
+        // Aynı seçeneğe tekrar basıldı: oyu geri çeker.
+        options[optionIdx].voters = options[optionIdx].voters.filter(u=>u!==currentUid);
+      } else {
+        if(alreadyVotedIdx!==-1) options[alreadyVotedIdx].voters = options[alreadyVotedIdx].voters.filter(u=>u!==currentUid);
+        options[optionIdx].voters.push(currentUid);
+      }
+      tx.update(ref, {options});
+    });
+  }catch(e){ console.error('Oy verilemedi:', e); alert('Oy verilemedi: '+(e.message||e)); }
 }
 function isPostPinned(p){
   return !!(p.pinnedUntil && new Date(p.pinnedUntil).getTime() > Date.now());
@@ -5314,20 +5380,59 @@ function resizeImageToDataUrl(file, maxDim, quality){
 let composeImageDataUrl = null;
 document.getElementById('composePostBtn').addEventListener('click', ()=>{
   composeImageDataUrl = null;
+  let composeMode = 'text';
   showSimpleInfoModal(`
     <h2 style="margin-bottom:10px;">Yeni Gönderi</h2>
-    <textarea id="composeText" class="compose-textarea" maxlength="280" placeholder="Ne düşünüyorsun?"></textarea>
-    <div class="muted" id="composeCharCount" style="text-align:right; font-size:11px; margin-top:2px;"></div>
-    <div id="composeImagePreviewWrap" style="display:none; margin-top:10px; text-align:center;">
-      <img id="composeImagePreview" src="" style="max-width:100%; border-radius:10px;" />
-      <button type="button" class="secondary tiny" id="composeImageRemoveBtn" style="margin-top:6px;">Görseli Kaldır</button>
+    <div style="display:flex; gap:6px; margin-bottom:12px;">
+      <button type="button" class="secondary tiny compose-mode-btn active" data-mode="text" style="flex:1;">📝 Metin</button>
+      <button type="button" class="secondary tiny compose-mode-btn" data-mode="poll" style="flex:1;">📊 Anket</button>
     </div>
-    <input type="file" id="composeImageInput" accept="image/*" style="display:none;" />
-    <div class="row" style="margin-top:10px;">
-      <button type="button" class="secondary tiny" id="composeImageBtn">📷 Görsel Ekle</button>
+    <div id="composeTextMode">
+      <textarea id="composeText" class="compose-textarea" maxlength="280" placeholder="Ne düşünüyorsun?"></textarea>
+      <div class="muted" id="composeCharCount" style="text-align:right; font-size:11px; margin-top:2px;"></div>
+      <div id="composeImagePreviewWrap" style="display:none; margin-top:10px; text-align:center;">
+        <img id="composeImagePreview" src="" style="max-width:100%; border-radius:10px;" />
+        <button type="button" class="secondary tiny" id="composeImageRemoveBtn" style="margin-top:6px;">Görseli Kaldır</button>
+      </div>
+      <input type="file" id="composeImageInput" accept="image/*" style="display:none;" />
+      <button type="button" class="secondary tiny" id="composeImageBtn" style="margin-top:10px;">📷 Görsel Ekle</button>
+    </div>
+    <div id="composePollMode" style="display:none;">
+      <input type="text" id="composePollQuestion" maxlength="140" placeholder="Anket sorusu" class="compose-poll-input" />
+      <div id="composePollOptions" style="margin-top:8px;"></div>
+      <button type="button" class="secondary tiny" id="composePollAddOptionBtn" style="margin-top:4px;">+ Seçenek Ekle</button>
+    </div>
+    <div class="row" style="margin-top:12px;">
       <button type="button" class="primary" id="composeSendBtn" style="flex:1;">Paylaş</button>
     </div>
   `);
+  document.querySelectorAll('.compose-mode-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      composeMode = btn.dataset.mode;
+      document.querySelectorAll('.compose-mode-btn').forEach(b=> b.classList.toggle('active', b===btn));
+      document.getElementById('composeTextMode').style.display = composeMode==='text' ? 'block' : 'none';
+      document.getElementById('composePollMode').style.display = composeMode==='poll' ? 'block' : 'none';
+    });
+  });
+  function addPollOptionRow(placeholder){
+    const container = document.getElementById('composePollOptions');
+    const row = document.createElement('div');
+    row.className = 'compose-poll-option-row';
+    row.innerHTML = `<input type="text" class="compose-poll-input compose-poll-option" maxlength="80" placeholder="${placeholder}" />
+      <button type="button" class="compose-poll-option-remove" title="Kaldır">✕</button>`;
+    container.appendChild(row);
+    row.querySelector('.compose-poll-option-remove').addEventListener('click', ()=>{
+      if(container.querySelectorAll('.compose-poll-option-row').length<=2){ showToast('En az 2 seçenek olmalı.'); return; }
+      row.remove();
+    });
+  }
+  addPollOptionRow('Seçenek 1');
+  addPollOptionRow('Seçenek 2');
+  document.getElementById('composePollAddOptionBtn').addEventListener('click', ()=>{
+    const count = document.querySelectorAll('.compose-poll-option-row').length;
+    if(count>=8){ showToast('En fazla 8 seçenek eklenebilir.'); return; }
+    addPollOptionRow(`Seçenek ${count+1}`);
+  });
   const textarea = document.getElementById('composeText');
   const counter = document.getElementById('composeCharCount');
   function updateLimit(){
@@ -5356,6 +5461,20 @@ document.getElementById('composePostBtn').addEventListener('click', ()=>{
     updateLimit();
   });
   document.getElementById('composeSendBtn').addEventListener('click', async ()=>{
+    if(composeMode==='poll'){
+      const question = document.getElementById('composePollQuestion').value.trim();
+      const options = [...document.querySelectorAll('.compose-poll-option')].map(inp=>inp.value.trim()).filter(Boolean);
+      if(!question){ alert('Anket sorusu yazmalısın.'); return; }
+      if(options.length<2){ alert('En az 2 seçenek yazmalısın.'); return; }
+      try{
+        await createPost('poll', { question, options: options.map(text=>({text, voters:[]})) });
+        await notifyAllMembers(`${myProfile.name} bir anket paylaştı: "${question}"`, 'social', currentUid);
+        closeModal('bookInfoModal');
+        showToast('Anket paylaşıldı!');
+        renderTimelineTab();
+      }catch(err){ alert('Paylaşılamadı: '+(err.message||err)); }
+      return;
+    }
     const text = textarea.value.trim();
     if(!text && !composeImageDataUrl){ alert('Bir şey yazmalısın veya görsel eklemelisin.'); return; }
     try{
@@ -5438,9 +5557,16 @@ function wirePostCards(container, refreshFn){
   container.querySelectorAll('.reaction-add-btn').forEach(btn=>{
     btn.addEventListener('click', (e)=>{ e.stopPropagation(); pendingReactionRefresh = refresh; toggleReactionDrawer(btn, btn.dataset.target); });
   });
+  container.querySelectorAll('[data-poll-option]').forEach(row=>{
+    row.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      await voteOnPoll(row.dataset.pollPost, parseInt(row.dataset.pollOption,10));
+      refresh();
+    });
+  });
   container.querySelectorAll('.post-card').forEach(card=>{
     card.addEventListener('click', (e)=>{
-      if(e.target.closest('.user-chip') || e.target.closest('.book-cover-clickable')) return;
+      if(e.target.closest('.user-chip') || e.target.closest('.book-cover-clickable') || e.target.closest('[data-poll-option]')) return;
       openPostModal(card.dataset.postId);
     });
   });
@@ -5495,6 +5621,13 @@ async function openPostModal(postId){
   });
   body.querySelectorAll('.reaction-add-btn').forEach(btn=>{
     btn.addEventListener('click', (e)=>{ e.stopPropagation(); pendingReactionRefresh = ()=>openPostModal(postId); toggleReactionDrawer(btn, btn.dataset.target); });
+  });
+  body.querySelectorAll('[data-poll-option]').forEach(row=>{
+    row.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      await voteOnPoll(row.dataset.pollPost, parseInt(row.dataset.pollOption,10));
+      openPostModal(postId);
+    });
   });
   body.querySelectorAll('[data-del-postcomment]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
