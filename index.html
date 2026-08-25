@@ -1310,7 +1310,7 @@
       <summary>📱 Sosyal: Akış ve Keşfet</summary>
       <ul class="plain">
         <li>Menüdeki en üst sekme <b>Sosyal</b> — burada iki alt sekme var, aşağıda yüzen "Akış / Keşfet" tuşlarıyla geçiliyor (aşağı kaydırınca bu tuşlar gizlenir, yukarı kaydırınca geri gelir).</li>
-        <li><b>Akış</b>: tüm kulübün ortak zaman tüneli. Okudum/okumadım işaretlemeleri, kazanılan/kaybedilen rozetler, hediye kitap kazanma/teslim alma, yeni üye katılımları ve kitap puanlamaları otomatik olarak burada gönderi olarak belirir.</li>
+        <li><b>Akış</b>: tüm kulübün ortak zaman tüneli. "Okumadım" işaretlemeleri (zaten uygulama içi bildirim gelen "okudum" işaretlemeleri burada gönderi olarak belirmez), kazanılan/kaybedilen rozetler, hediye kitap kazanma/teslim alma, yeni üye katılımları ve kitap puanlamaları otomatik olarak burada gönderi olarak belirir.</li>
         <li>Akış'ta sağ altta yüzen <b>+</b> tuşuyla kendi gönderini de oluşturabilirsin: sadece metin (280 karakter) veya görselli (140 karakter, görsel otomatik küçültülür).</li>
         <li>Bir gönderiye dokununca büyük bir pencerede açılır, altında tüm yorumları görüp yorum yazabilirsin. Yorumların yanında ne kadar önce yazıldığı da görünür. Kendi gönderini (adminse herkesinkini) "Kaldır" ile silebilirsin.</li>
         <li>Aynı kişi kısa süre içinde üst üste birkaç kitap puanlarsa veya kitaplığına eklerse, bunlar tek bir gönderide toplanır ("3 kitap puanlaması yaptı" gibi); dokununca hangi kitaba ne zaman ne yapıldığını sırayla görürsün.</li>
@@ -3141,7 +3141,7 @@ function renderAdminToday(){
         const wasNew = isSelf && isSettingMark;
         playMarkFx(btn, btn.dataset.status);
         await markStatus(btn.dataset.uid, btn.dataset.status);
-        if(wasNew) createPost(btn.dataset.status, {variantText: await pickVariantMessage(btn.dataset.status)});
+        if(wasNew && btn.dataset.status==='skip') createPost('skip', {variantText: await pickVariantMessage('skip')});
         if(isSettingMark){
           const markedName = (usersCache[btn.dataset.uid] && usersCache[btn.dataset.uid].name) || '';
           notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week', currentUid);
@@ -3792,7 +3792,6 @@ function wireSelfMarkCard(ids){
     await markStatus(currentUid,'read');
     render();
     if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', currentUid);
-    if(wasNew) createPost('read', {variantText: await pickVariantMessage('read')});
     const s = await computeStreak(currentUid);
     await checkAndAwardBadges(currentUid, s);
     setTimeout(()=> stampBtnInFlight.delete(key), 1200);
