@@ -452,7 +452,7 @@
   .social-pill-divider{ width:1px; height:16px; background:rgba(255,255,255,0.3); flex:0 0 auto; }
   .social-floating-action{
     position:fixed; bottom:18px; right:16px; z-index:150; display:flex; align-items:center; height:40px;
-    transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s; opacity:1;
+    transition: transform 0.16s cubic-bezier(0.4,0,0.2,1), opacity 0.16s; opacity:1;
   }
   .social-floating-action.hidden{ transform:translateY(100px); opacity:0; pointer-events:none; }
   .social-fab{
@@ -2529,6 +2529,7 @@ function switchTab(id){
   if(titleEl) titleEl.textContent = def ? def.label : '';
   const socialFab = document.getElementById('socialFloatingAction');
   if(socialFab) socialFab.classList.toggle('hidden', id!=='social');
+  if(typeof updateDiscoverFabVisibility==='function') updateDiscoverFabVisibility();
   renderTab(id);
 }
 
