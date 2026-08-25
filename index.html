@@ -791,9 +791,6 @@
           <button type="button" class="social-pill social-pill-half" id="socialPillCloseBtn" title="Profili kapat">✕</button>
         </div>
       </div>
-      <div id="socialFloatingAction" class="social-floating-action">
-        <button type="button" id="composePostBtn" class="social-fab">+</button>
-      </div>
     </section>
     <section class="tab" id="tab-today">
       <div class="card">
@@ -1185,8 +1182,6 @@
         </button>
       </div>
       <div id="discoverFeed" style="padding-bottom:90px;"></div>
-      <button type="button" id="discoverFabPrev">◀</button>
-      <button type="button" id="discoverFabNext">▶</button>
     </section>
 
     <!-- ORTAK: KİTAP GEÇMİŞİM (hamburger menüden erişilir) -->
@@ -1226,6 +1221,18 @@
     </div>
   </div>
 </div>
+
+<!-- Bu iki buton grubu bilerek sekme içeriğinin (section.tab) DIŞINDA, body seviyesinde duruyor:
+     section.tab öğeleri sekme geçişinde bir CSS animasyonu (transform) alıyor, ve bir üst öğede
+     transform aktifken position:fixed alt öğeler artık ekrana değil o üst öğeye göre sabitleniyor
+     (CSS'in "containing block" kuralı) — bu da butonun kaydırınca kaybolup tıklamaların
+     altındaki içeriğe geçmesine yol açıyordu. Body seviyesinde olduğu için bu sorunu yaşamıyor,
+     görünürlüğü artık switchTab() içinde aktif sekmeye göre elle kontrol ediliyor. -->
+<div id="socialFloatingAction" class="social-floating-action">
+  <button type="button" id="composePostBtn" class="social-fab">+</button>
+</div>
+<button type="button" id="discoverFabPrev">◀</button>
+<button type="button" id="discoverFabNext">▶</button>
 
 <div id="toastHost"></div>
 
@@ -2503,6 +2510,8 @@ function switchTab(id){
   const def = allTabDefs.find(t=>t.id===id);
   const titleEl = document.getElementById('currentTabTitle');
   if(titleEl) titleEl.textContent = def ? def.label : '';
+  const socialFab = document.getElementById('socialFloatingAction');
+  if(socialFab) socialFab.classList.toggle('hidden', id!=='social');
   renderTab(id);
 }
 
