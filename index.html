@@ -821,8 +821,8 @@
             <div class="muted" style="margin-top:6px;">Okudum</div>
           </div>
           <div style="text-align:center;">
-            <button class="stamp-btn big skip" id="aSelfSkipBtn" title="Okumadım">✕</button>
-            <div class="muted" style="margin-top:6px;">Okumadım</div>
+            <button class="stamp-btn big skip" id="aSelfSkipBtn" title="Okuyamam">✕</button>
+            <div class="muted" style="margin-top:6px;">Okuyamam</div>
           </div>
         </div>
         <div id="aSelfStatusNote" class="muted" style="text-align:center;"></div>
@@ -941,8 +941,8 @@
             <div class="muted" style="margin-top:6px;">Okudum</div>
           </div>
           <div style="text-align:center;">
-            <button class="stamp-btn big skip" id="mSkipBtn" title="Okumadım">✕</button>
-            <div class="muted" style="margin-top:6px;">Okumadım</div>
+            <button class="stamp-btn big skip" id="mSkipBtn" title="Okuyamam">✕</button>
+            <div class="muted" style="margin-top:6px;">Okuyamam</div>
           </div>
         </div>
         <div id="mMyStatusNote" class="muted" style="text-align:center;"></div>
@@ -960,7 +960,7 @@
     <section class="tab" id="tab-mtoday">
       <div class="card">
         <h2>Herkesin Bu Haftası</h2>
-        <p class="muted">Cevap verilmeyen geçmiş günler, yönetici bir sonraki girişinde otomatik "okumadı" olarak işaretler.</p>
+        <p class="muted">Cevap verilmeyen günler her gece saat 06:00'da otomatik "okumadı" olarak işaretlenir.</p>
         <div class="libcard"><div id="mWeekGridAll"></div></div>
       </div>
 
@@ -3811,7 +3811,7 @@ function wireSelfMarkCard(ids){
     setupCardInfoButtons();
     document.getElementById(ids.statusNote).textContent =
       st==='read' ? 'Bugün için "Okudum" işaretledin. Harika!' :
-      st==='skip' ? 'Bugün için "Okumadım" işaretledin.' :
+      st==='skip' ? 'Bugün için "Okuyamam" dedin.' :
       'Bugün için henüz işaretleme yapmadın.';
     computeStreak(currentUid).then(s=>{
       document.getElementById(ids.streakNote).textContent = s>0 ? `🔥 ${s} gündür aralıksız okuyorsun.` : '';
