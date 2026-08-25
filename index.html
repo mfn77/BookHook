@@ -452,9 +452,9 @@
   .social-pill-divider{ width:1px; height:16px; background:rgba(255,255,255,0.3); flex:0 0 auto; }
   .social-floating-action{
     position:fixed; bottom:18px; right:16px; z-index:150; display:flex; align-items:center; height:40px;
-    transition: transform 0.16s cubic-bezier(0.4,0,0.2,1), opacity 0.16s; opacity:1;
+    transition: opacity 0.05s linear; opacity:1;
   }
-  .social-floating-action.hidden{ transform:translateY(100px); opacity:0; pointer-events:none; }
+  .social-floating-action.hidden{ opacity:0; pointer-events:none; }
   .social-fab{
     width:40px; height:40px; border-radius:12px; background:var(--gold); color:#fff; font-size:20px; font-weight:400; border:none;
     box-shadow:0 6px 18px rgba(0,0,0,0.28); cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;
@@ -463,7 +463,7 @@
     position:fixed; bottom:18px; transform:translate(-50%, 0); z-index:150; opacity:0; pointer-events:none;
     width:44px; height:44px; border-radius:14px; border:none; background:var(--gold); color:#fff; font-size:16px; cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,0.28);
-    transition: left 0.2s, transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.28s;
+    transition: left 0.2s, opacity 0.05s linear;
   }
   #discoverFabPrev.visible, #discoverFabNext.visible{ opacity:1; pointer-events:auto; }
   .compose-textarea{ width:100%; min-height:90px; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:14.5px; background:var(--card); color:var(--ink); resize:vertical; }
@@ -1245,7 +1245,7 @@
      (CSS'in "containing block" kuralı) — bu da butonun kaydırınca kaybolup tıklamaların
      altındaki içeriğe geçmesine yol açıyordu. Body seviyesinde olduğu için bu sorunu yaşamıyor,
      görünürlüğü artık switchTab() içinde aktif sekmeye göre elle kontrol ediliyor. -->
-<div id="socialFloatingAction" class="social-floating-action">
+<div id="socialFloatingAction" class="social-floating-action hidden">
   <button type="button" id="composePostBtn" class="social-fab">+</button>
 </div>
 <button type="button" id="discoverFabPrev">◀</button>
@@ -5159,7 +5159,8 @@ function pollBodyHtml(p){
       </div>
     </div>`;
   }).join('');
-  return `<div class="poll-question">📊 ${escapeHtml(p.question||'')}</div>${rows}<div class="poll-total-votes">${totalVotes} oy</div>`;
+  const img = p.image ? `<img src="${p.image}" alt="" style="max-width:100%; border-radius:10px; margin-bottom:8px; display:block;" />` : '';
+  return `${img}<div class="poll-question">📊 ${escapeHtml(p.question||'')}</div>${rows}<div class="poll-total-votes">${totalVotes} oy</div>`;
 }
 async function voteOnPoll(postId, optionIdx){
   if(!postId || Number.isNaN(optionIdx)) return;
@@ -5391,18 +5392,18 @@ document.getElementById('composePostBtn').addEventListener('click', ()=>{
     <div id="composeTextMode">
       <textarea id="composeText" class="compose-textarea" maxlength="280" placeholder="Ne düşünüyorsun?"></textarea>
       <div class="muted" id="composeCharCount" style="text-align:right; font-size:11px; margin-top:2px;"></div>
-      <div id="composeImagePreviewWrap" style="display:none; margin-top:10px; text-align:center;">
-        <img id="composeImagePreview" src="" style="max-width:100%; border-radius:10px;" />
-        <button type="button" class="secondary tiny" id="composeImageRemoveBtn" style="margin-top:6px;">Görseli Kaldır</button>
-      </div>
-      <input type="file" id="composeImageInput" accept="image/*" style="display:none;" />
-      <button type="button" class="secondary tiny" id="composeImageBtn" style="margin-top:10px;">📷 Görsel Ekle</button>
     </div>
     <div id="composePollMode" style="display:none;">
-      <input type="text" id="composePollQuestion" maxlength="140" placeholder="Anket sorusu" class="compose-poll-input" />
+      <input type="text" id="composePollQuestion" placeholder="Anket sorusu" class="compose-poll-input" />
       <div id="composePollOptions" style="margin-top:8px;"></div>
       <button type="button" class="secondary tiny" id="composePollAddOptionBtn" style="margin-top:4px;">+ Seçenek Ekle</button>
     </div>
+    <div id="composeImagePreviewWrap" style="display:none; margin-top:10px; text-align:center;">
+      <img id="composeImagePreview" src="" style="max-width:100%; border-radius:10px;" />
+      <button type="button" class="secondary tiny" id="composeImageRemoveBtn" style="margin-top:6px;">Görseli Kaldır</button>
+    </div>
+    <input type="file" id="composeImageInput" accept="image/*" style="display:none;" />
+    <button type="button" class="secondary tiny" id="composeImageBtn" style="margin-top:10px;">📷 Görsel Ekle</button>
     <div class="row" style="margin-top:12px;">
       <button type="button" class="primary" id="composeSendBtn" style="flex:1;">Paylaş</button>
     </div>
@@ -5419,7 +5420,7 @@ document.getElementById('composePostBtn').addEventListener('click', ()=>{
     const container = document.getElementById('composePollOptions');
     const row = document.createElement('div');
     row.className = 'compose-poll-option-row';
-    row.innerHTML = `<input type="text" class="compose-poll-input compose-poll-option" maxlength="80" placeholder="${placeholder}" />
+    row.innerHTML = `<input type="text" class="compose-poll-input compose-poll-option" placeholder="${placeholder}" />
       <button type="button" class="compose-poll-option-remove" title="Kaldır">✕</button>`;
     container.appendChild(row);
     row.querySelector('.compose-poll-option-remove').addEventListener('click', ()=>{
@@ -5468,7 +5469,7 @@ document.getElementById('composePostBtn').addEventListener('click', ()=>{
       if(!question){ alert('Anket sorusu yazmalısın.'); return; }
       if(options.length<2){ alert('En az 2 seçenek yazmalısın.'); return; }
       try{
-        await createPost('poll', { question, options: options.map(text=>({text, voters:[]})) });
+        await createPost('poll', { question, options: options.map(text=>({text, voters:[]})), image: composeImageDataUrl||'' });
         await notifyAllMembers(`${myProfile.name} bir anket paylaştı: "${question}"`, 'social', currentUid);
         closeModal('bookInfoModal');
         showToast('Anket paylaşıldı!');
