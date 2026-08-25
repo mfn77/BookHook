@@ -1077,6 +1077,10 @@
         <div class="rec-comments-label" style="margin-top:18px;">📚 Geçmiş Gönderileri Grupla</div>
         <p class="muted" style="font-size:12.5px; margin-bottom:8px;">Geçmişteki tekli kitap puanlama/ekleme gönderilerinden aynı kişiye ait, birbirine bir saatten yakın olanları geriye dönük olarak birleştirir. Tek seferlik ve geri alınamaz.</p>
         <button type="button" class="secondary" id="settingsMigrateBatchBtn" style="width:100%;">📚 Geçmiş Gönderileri Şimdi Grupla</button>
+        <div class="rec-comments-label" style="margin-top:18px;">🗑️ Geçmiş "Okudum" Gönderilerini Sil</div>
+        <p class="muted" style="font-size:12.5px; margin-bottom:8px;">Akış'ta artık "okudum" işaretlemeleri gönderi olarak düşmüyor (uygulama içi bildirim yeterli). Bu, geçmişte oluşmuş tüm "okudum" gönderilerini akıştan topluca siler. Tek seferlik ve geri alınamaz.</p>
+        <button type="button" class="secondary" id="settingsDeleteReadPostsBtn" style="width:100%;">🗑️ Geçmiş "Okudum" Gönderilerini Şimdi Sil</button>
+        <p class="muted" id="settingsDeleteReadPostsResult" style="margin-top:8px;"></p>
       </div>
       <div class="card">
         <h2>Bakım</h2>
@@ -4955,6 +4959,26 @@ const BATCHABLE_TYPES = {
   book_review: { batchType:'book_review_batch', extract:(p)=>({ bookTitle:p.bookTitle, bookAuthor:p.bookAuthor, bookCover:p.bookCover, rating:p.rating, reviewText:p.reviewText, at:p.createdAt }) },
   book_added: { batchType:'book_added_batch', extract:(p)=>({ bookTitle:p.bookTitle, bookAuthor:p.bookAuthor, bookCover:p.bookCover, at:p.createdAt }) }
 };
+async function deleteReadPostsRetroactively(){
+  if(!confirm('Akıştaki tüm geçmiş "okudum" gönderileri silinecek. Bu geri alınamaz. Devam edilsin mi?')) return;
+  const resultEl = document.getElementById('settingsDeleteReadPostsResult');
+  if(resultEl) resultEl.textContent = 'Taranıyor…';
+  showToast('Geçmiş "okudum" gönderileri taranıyor…');
+  try{
+    const snap = await getDocs(query(collection(db,'posts'), where('type','==','read')));
+    const ids = [];
+    snap.forEach(d=> ids.push(d.id));
+    await Promise.all(ids.map(id=> deleteDoc(doc(db,'posts',id))));
+    if(resultEl) resultEl.textContent = `${ids.length} "okudum" gönderisi silindi.`;
+    showToast(`${ids.length} "okudum" gönderisi silindi.`);
+    renderTimelineTab();
+    renderPinnedPostBar();
+  }catch(e){
+    console.error('Okudum gönderileri silinemedi:', e);
+    if(resultEl) resultEl.textContent = 'Silinirken bir hata oluştu.';
+    showToast('Silinirken bir hata oluştu.');
+  }
+}
 async function migrateBatchPostsRetroactively(){
   if(!confirm('Bu işlem, geçmişteki tekli kitap puanlama/ekleme gönderilerinden aynı kişiye ait ve birbirine 1 saatten yakın olanları birleştirecek. Bu geri alınamaz (birleşenler silinip tek gönderiye dönüşür). Devam edilsin mi?')) return;
   showToast('Geçmiş gönderiler taranıyor…');
@@ -5510,12 +5534,11 @@ document.getElementById('discoverFabNext').addEventListener('click', ()=> discov
 window.addEventListener('scroll', ()=>{
   const socialTab = document.getElementById('tab-social');
   if(!socialTab || !socialTab.classList.contains('active')) return;
-  const fab = document.getElementById('socialFloatingAction');
   const pinBar = document.getElementById('pinnedPostBar');
   const pillBar = document.getElementById('socialPillBar');
   const cur = window.scrollY;
-  if(cur > lastSocialScrollY + 4){ if(fab) fab.classList.add('hidden'); if(pinBar) pinBar.classList.add('hidden'); if(pillBar && pillBar.style.display!=='none') pillBar.classList.add('hidden'); }
-  else if(cur < lastSocialScrollY - 4){ if(fab) fab.classList.remove('hidden'); if(pinBar) pinBar.classList.remove('hidden'); if(pillBar) pillBar.classList.remove('hidden'); }
+  if(cur > lastSocialScrollY + 4){ if(pinBar) pinBar.classList.add('hidden'); if(pillBar && pillBar.style.display!=='none') pillBar.classList.add('hidden'); }
+  else if(cur < lastSocialScrollY - 4){ if(pinBar) pinBar.classList.remove('hidden'); if(pillBar) pillBar.classList.remove('hidden'); }
   lastSocialScrollY = cur;
 }, {passive:true});
 
@@ -7582,6 +7605,8 @@ async function renderSettingsTab(){
     if(btn) btn.onclick = seedDiscoverCovers;
     const migrateBtn = document.getElementById('settingsMigrateBatchBtn');
     if(migrateBtn) migrateBtn.onclick = migrateBatchPostsRetroactively;
+    const deleteReadPostsBtn = document.getElementById('settingsDeleteReadPostsBtn');
+    if(deleteReadPostsBtn) deleteReadPostsBtn.onclick = deleteReadPostsRetroactively;
     await ensureDiscoverPageSizeLoaded();
     const row = document.getElementById('settingsPageSizeRow');
     const options = [100, 50, 20];
