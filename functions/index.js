@@ -297,23 +297,45 @@ function shuffleBackend(arr) {
   }
   return a;
 }
-// İstemcideki runLottery ile birebir aynı eşleştirme mantığı.
-function runLotteryBackend(statsArr) {
+// Ağırlıklı havuzdan (birisinin şansını tamamen elemeden azaltarak) rastgele birini seçip
+// havuzdan çıkarır. İstemcideki weightedPickWithoutReplacement ile birebir aynı.
+function weightedPickWithoutReplacementBackend(pool) {
+  const totalWeight = pool.reduce((sum, r) => sum + r.weight, 0);
+  let rnd = Math.random() * totalWeight;
+  for (let i = 0; i < pool.length; i++) {
+    rnd -= pool[i].weight;
+    if (rnd <= 1e-9) return pool.splice(i, 1)[0];
+  }
+  return pool.splice(pool.length - 1, 1)[0];
+}
+function buildWeightedPoolBackend(list, previousWinners) {
+  return list.map((s) => ({ ...s, weight: previousWinners && previousWinners.has(s.uid) ? 0.8 : 1 }));
+}
+// İstemcideki runLottery ile birebir aynı eşleştirme mantığı: tier1 (kusursuz) tamamen
+// tükenmeden tier2'ye (1 pas) geçilmez; bir önceki haftanın kazananlarının bu haftaki alıcı
+// olma şansı %20 azaltılır (elenmez, sadece ağırlığı düşer).
+function runLotteryBackend(statsArr, previousWinners) {
   const eligible = statsArr.filter((s) => s.marked > 0);
   const givers = shuffleBackend(eligible.filter((s) => s.miss >= 2));
-  const tier1 = shuffleBackend(eligible.filter((s) => s.miss === 0));
-  const tier2 = shuffleBackend(eligible.filter((s) => s.miss === 1));
-  const receiverQueue = [...tier1, ...tier2];
+  const tier1Base = shuffleBackend(eligible.filter((s) => s.miss === 0));
+  const tier2Base = shuffleBackend(eligible.filter((s) => s.miss === 1));
+  const safeCount = tier1Base.length + tier2Base.length;
+  let tier1Pool = buildWeightedPoolBackend(tier1Base, previousWinners);
+  let tier2Pool = buildWeightedPoolBackend(tier2Base, previousWinners);
   const pairs = [];
-  givers.forEach((g, i) => {
-    if (receiverQueue.length === 0) {
+  givers.forEach((g) => {
+    if (safeCount === 0) {
       pairs.push({ giverUid: g.uid || null, giverName: g.name, receiverUid: null, receiverName: null });
       return;
     }
-    const r = receiverQueue[i % receiverQueue.length];
+    if (tier1Pool.length === 0 && tier2Pool.length === 0) {
+      tier1Pool = buildWeightedPoolBackend(tier1Base, previousWinners);
+      tier2Pool = buildWeightedPoolBackend(tier2Base, previousWinners);
+    }
+    const r = tier1Pool.length > 0 ? weightedPickWithoutReplacementBackend(tier1Pool) : weightedPickWithoutReplacementBackend(tier2Pool);
     pairs.push({ giverUid: g.uid || null, giverName: g.name, receiverUid: r.uid || null, receiverName: r.name });
   });
-  return { giverCount: givers.length, safeCount: tier1.length + tier2.length, pairs };
+  return { giverCount: givers.length, safeCount, pairs };
 }
 // İstemcideki computeWeekStats'ın sunucu karşılığı.
 async function computeWeekStatsBackend(mondayStr) {
@@ -387,8 +409,16 @@ async function finalizeWeekBackend(mondayStr) {
     console.log(`[kura] ${mondayStr} haftası için kura zaten çekilmiş, atlanıyor.`);
     return;
   }
+  // Bir önceki haftanın kazananlarını (alıcılarını) çek — bu haftaki alıcı seçiminde onların
+  // şansını %20 azaltmak için.
+  const prevMondayStr = addDaysToDateStr(mondayStr, -7);
+  const prevDrawSnap = await db.collection("draws").doc(prevMondayStr).get();
+  const previousWinners = new Set();
+  if (prevDrawSnap.exists) {
+    (prevDrawSnap.data().pairs || []).forEach((p) => { if (p.receiverUid) previousWinners.add(p.receiverUid); });
+  }
   const stats = await computeWeekStatsBackend(mondayStr);
-  const { giverCount, safeCount, pairs } = runLotteryBackend(stats);
+  const { giverCount, safeCount, pairs } = runLotteryBackend(stats, previousWinners);
   const weekEnd = addDaysToDateStr(mondayStr, 6);
   const data = { weekStart: mondayStr, weekEnd, giverCount, safeCount, pairs, generatedAt: new Date().toISOString() };
   let didWrite = false;
