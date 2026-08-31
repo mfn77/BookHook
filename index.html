@@ -1517,26 +1517,52 @@ function turkishAccusativeName(name){
 
 /* ============ ORTAK KURA ALGORİTMASI ============ */
 // statsArr: [{uid,name,miss,read,marked}]
-function runLottery(statsArr){
+// Ağırlıklı havuzdan (birisinin şansını azaltmadan tamamen elemeden) rastgele birini seçip
+// havuzdan çıkarır. Ağırlığı düşük olan biri de, havuzda TEK kişi kaldığında yine seçilir
+// (payı toplam ağırlığın %100'ü olur) — yani "başka biri yoksa mecbur çıkar" kuralı doğal olarak sağlanır.
+function weightedPickWithoutReplacement(pool){
+  const totalWeight = pool.reduce((sum,r)=>sum+r.weight,0);
+  let rnd = Math.random()*totalWeight;
+  for(let i=0;i<pool.length;i++){
+    rnd -= pool[i].weight;
+    if(rnd<=1e-9) return pool.splice(i,1)[0];
+  }
+  return pool.splice(pool.length-1,1)[0]; // yuvarlama hatasına karşı güvenlik ağı
+}
+function buildWeightedPool(list, previousWinners){
+  return list.map(s=>({...s, weight: (previousWinners && previousWinners.has(s.uid)) ? 0.8 : 1}));
+}
+// previousWinners: bir önceki haftanın kura sonucunda hediye kazanmış kişilerin uid'lerinden
+// oluşan bir Set. Bu kişilerin bu haftaki alıcı olma şansı %20 azaltılır (elenmez, sadece
+// ağırlığı düşer) — böylece üst üste aynı kişiye çıkma olasılığı azalır ama imkansız olmaz.
+function runLottery(statsArr, previousWinners){
   const eligible = statsArr.filter(s=>s.marked>0);
   const givers = shuffle(eligible.filter(s=>s.miss>=2));
-  const tier1 = shuffle(eligible.filter(s=>s.miss===0));
-  const tier2 = shuffle(eligible.filter(s=>s.miss===1));
-  // Alıcı kuyruğu: önce tüm "temiz" (tier1), sonra tüm "1 pas geçmiş" (tier2) kişiler.
-  // Her cezalı bu kuyruktan SIRAYLA bir kişi alır (aynı alıcı, kuyruk bitmeden ikinci kez verilmez).
-  // Cezalı sayısı, kuyruktaki kişi sayısından fazlaysa kuyruğun başına dönülür — bu yüzden
-  // ekstra hediyeler de önce "temiz" kişilere, ancak herkes en az bir kez aldıktan sonra dağılır.
-  const receiverQueue = [...tier1, ...tier2];
+  const tier1Base = shuffle(eligible.filter(s=>s.miss===0));
+  const tier2Base = shuffle(eligible.filter(s=>s.miss===1));
+  const safeCount = tier1Base.length + tier2Base.length;
+  // Alıcı havuzu: önce tüm "temiz" (tier1), sonra tüm "1 pas geçmiş" (tier2) kişiler — tier1
+  // tamamen tükenmeden tier2'ye geçilmez. Her cezalı bu havuzdan ağırlıklı rastgele bir kişi
+  // alır (aynı alıcı, o tur bitmeden ikinci kez verilmez). Cezalı sayısı, havuzdaki kişi
+  // sayısından fazlaysa yeni bir tur başlar (havuzlar aynı ağırlıklarla yeniden doldurulur) —
+  // bu yüzden ekstra hediyeler de önce "temiz" kişilere, ancak herkes en az bir kez aldıktan
+  // sonra dağılır.
+  let tier1Pool = buildWeightedPool(tier1Base, previousWinners);
+  let tier2Pool = buildWeightedPool(tier2Base, previousWinners);
   const pairs = [];
-  givers.forEach((g,i)=>{
-    if(receiverQueue.length===0){
+  givers.forEach((g)=>{
+    if(safeCount===0){
       pairs.push({giverUid:g.uid||null, giverName:g.name, receiverUid:null, receiverName:null});
       return;
     }
-    const r = receiverQueue[i % receiverQueue.length];
+    if(tier1Pool.length===0 && tier2Pool.length===0){
+      tier1Pool = buildWeightedPool(tier1Base, previousWinners);
+      tier2Pool = buildWeightedPool(tier2Base, previousWinners);
+    }
+    const r = tier1Pool.length>0 ? weightedPickWithoutReplacement(tier1Pool) : weightedPickWithoutReplacement(tier2Pool);
     pairs.push({giverUid:g.uid||null, giverName:g.name, receiverUid:r.uid||null, receiverName:r.name});
   });
-  return { giverCount: givers.length, safeCount: tier1.length+tier2.length, pairs };
+  return { giverCount: givers.length, safeCount, pairs };
 }
 
 /* ============ DURUM ============ */
@@ -2971,8 +2997,16 @@ async function finalizeWeek(monday, force){
     const existing = await getDoc(ref);
     if(existing.exists()) return {already:true, data:existing.data()};
   }
+  // Bir önceki haftanın kazananlarını (alıcılarını) çek — bu haftaki alıcı seçiminde onların
+  // şansını %20 azaltmak için.
+  const prevWeekStr = toStr(addDays(monday,-7));
+  const prevDrawSnap = await getDoc(doc(db,'draws',prevWeekStr));
+  const previousWinners = new Set();
+  if(prevDrawSnap.exists()){
+    (prevDrawSnap.data().pairs||[]).forEach(p=>{ if(p.receiverUid) previousWinners.add(p.receiverUid); });
+  }
   const stats = await computeWeekStats(monday);
-  const {giverCount, safeCount, pairs} = runLottery(stats);
+  const {giverCount, safeCount, pairs} = runLottery(stats, previousWinners);
   const data = { weekStart:wk, weekEnd: toStr(addDays(monday,6)), giverCount, safeCount, pairs, generatedAt: new Date().toISOString() };
   let didWrite = false;
   await runTransaction(db, async (tx)=>{
@@ -4182,14 +4216,22 @@ async function renderGiftsTab(){
   await loadDraws();
 
   let personalHtml = '';
-  if(drawsCache.length>0){
-    const latest = drawsCache[0];
-    let myPairAsReceiver = null, myPairAsGiver = null;
-    (latest.pairs||[]).forEach(p=>{
-      if(p.receiverUid===currentUid) myPairAsReceiver = p;
-      if(p.giverUid===currentUid) myPairAsGiver = p;
-    });
-    personalHtml = await buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver);
+  // Sadece EN SON haftaya değil, geçmişteki TÜM haftalara bakılıyor: bir önceki haftadan kalan
+  // henüz tamamlanmamış (teslim onaylanmamış) bir hediye, yeni bir kura çekilse bile buradan
+  // kaybolmasın — kişi işini bitirene kadar (alıcı "Kitabı Aldım" deyip onaylayana kadar) o
+  // haftanın kartı gösterilmeye devam ediyor.
+  for(const d of drawsCache){
+    if(!d.pairs) continue;
+    for(const p of d.pairs){
+      const isReceiver = p.receiverUid===currentUid;
+      const isGiver = p.giverUid===currentUid && p.receiverUid;
+      if(!isReceiver && !isGiver) continue;
+      const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
+      let req = null;
+      try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+      if(req && req.received) continue; // tamamlanmış, geçmişte görünür, burada tekrar gösterilmez
+      personalHtml += await buildPersonalGiftHtml(d, isReceiver?p:null, isGiver?p:null);
+    }
   }
 
   let adminHtml = '';
@@ -4218,7 +4260,8 @@ async function renderGiftsTab(){
   wireGiftFormHandlers(content);
 }
 
-async function buildPersonalGiftHtml(latest, myPairAsReceiver, myPairAsGiver){
+async function buildPersonalGiftHtml(draw, myPairAsReceiver, myPairAsGiver){
+  const latest = draw;
   let html = '';
   if(myPairAsReceiver){
     const p = myPairAsReceiver;
