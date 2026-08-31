@@ -28,6 +28,14 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
       }
+      match /readBooks/{itemId} {
+        allow read: if isSignedIn();
+        allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
+      }
+      match /wantToRead/{itemId} {
+        allow read: if isSignedIn();
+        allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
+      }
     }
 
     match /days/{dateId}/answers/{uid} {
