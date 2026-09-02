@@ -2068,21 +2068,27 @@ document.body.addEventListener('click', (e)=>{
 // hafızasına (localStorage) kaydediyoruz — böylece uygulama tamamen kapatılıp yeniden
 // açıldığında da "yükleniyor" boşluğu görülmez, son bilinen hal anında gösterilir ve
 // arka planda gerçek veriyle sessizce güncellenir.
-// ÖNEMLİ: bu önbelleğin normalde HİÇBİR son kullanma tarihi yok — bir konteynerin taze
-// render'ı herhangi bir sebeple (ağ hatası, sayfa render bitmeden kapatılması vb.) hiç
-// tamamlanamazsa, o eski/yanlış içerik cihazda haftalarca (kod kaç kere güncellense de)
-// olduğu gibi kalabilir, çünkü kod güncellemesi kimsenin kendi localStorage'ını silmez.
-// Bunu önlemek için önbellek anahtarına bir SÜRÜM numarası gömülü: her önemli değişiklikte
-// bu sürüm ileri alınır, böylece o sürümden önceki TÜM eski önbellek kayıtları (farklı
-// anahtar öneki altında kaldıkları için) bir kerede, otomatik olarak geçersiz sayılır —
-// tüm cihazlarda, hiçbir manuel "önbelleği temizle" işlemine gerek kalmadan.
+// Her kayıtla birlikte bir zaman damgası da tutuluyor: bir kayıt CACHE_TTL_MS'ten (1 hafta)
+// daha eskiyse artık hiç gösterilmiyor (sanki önbellek boşmuş gibi davranılıyor, yerine
+// "Yükleniyor…" çıkıyor) — böylece normal günlük kullanımda önbellek her zaman anında
+// gösterilmeye devam ediyor, ama bir konteynerin taze render'ı haftalarca hiç
+// tamamlanamazsa o eski içerik sonsuza kadar takılı kalmıyor, kendiliğinden düşüyor.
 const APP_CACHE_VERSION = 'v3';
 const CACHE_PREFIX = 'bh_cache_'+APP_CACHE_VERSION+'_';
+const CACHE_TTL_MS = 7*24*60*60*1000; // 1 hafta
 function getPersistedHTML(key){
-  try{ return localStorage.getItem(CACHE_PREFIX+currentUid+'_'+key); }catch(e){ return null; }
+  try{
+    const raw = localStorage.getItem(CACHE_PREFIX+currentUid+'_'+key);
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed.html!=='string' || typeof parsed.ts!=='number') return null;
+    if(Date.now() - parsed.ts > CACHE_TTL_MS) return null; // 1 haftadan eski — geçersiz say
+    return parsed.html;
+  }catch(e){ return null; }
 }
 function setPersistedHTML(key, html){
-  try{ localStorage.setItem(CACHE_PREFIX+currentUid+'_'+key, html); }
+  const payload = JSON.stringify({html, ts: Date.now()});
+  try{ localStorage.setItem(CACHE_PREFIX+currentUid+'_'+key, payload); }
   catch(e){
     // Depolama dolu olabilir: bu uygulamaya ait birkaç eski önbellek kaydını silip tekrar dene
     // (yeni gösterilecek içerik, eski/kullanılmayan bir önbellekten daha değerli).
@@ -2093,7 +2099,7 @@ function setPersistedHTML(key, html){
         if(k && k.startsWith(CACHE_PREFIX)) ownKeys.push(k);
       }
       ownKeys.slice(0, 8).forEach(k=>{ try{ localStorage.removeItem(k); }catch(e2){} });
-      localStorage.setItem(CACHE_PREFIX+currentUid+'_'+key, html);
+      localStorage.setItem(CACHE_PREFIX+currentUid+'_'+key, payload);
     }catch(e3){ /* hâlâ olmuyorsa sessizce geç */ }
   }
 }
