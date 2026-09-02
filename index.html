@@ -2927,24 +2927,29 @@ async function autoFillPastDays(daysBack){
   daysBack = daysBack || 30;
   const uids = activeUids();
   if(uids.length===0) return 0;
-  let filled = 0;
+  // Önceden 30 gün birbirini bekleyerek (her gün kendi içinde üyeler arası paralel olsa da,
+  // günler arası SIRALI) işleniyordu — bu, yönetici uygulamayı her açtığında saniyelerce
+  // sürebiliyordu. Artık gün×üye kombinasyonlarının HEPSİ tek seferde, aynı anda çekiliyor.
+  const tasks = [];
   for(let i=1;i<=daysBack;i++){
     const ds = toStr(addDays(nowLogical(), -i));
     if(ds < CLUB_START_DATE) continue; // kulüp başlamadan önceki günler asla doldurulmaz
-    const results = await Promise.all(uids.map(async uid=>{
+    uids.forEach(uid=>{
       const joinDs = joinDateStrOf(uid);
-      if(joinDs && ds < joinDs) return 0; // üye olmadan önceki günler doldurulmaz, boş kalır
-      const ref = doc(db,'days',ds,'answers',uid);
-      const snap = await getDoc(ref);
-      if(!snap.exists()){
-        await setDoc(ref, { status:'skip', name: usersCache[uid]?.name || '', updatedAt: new Date().toISOString(), auto:true });
-        return 1;
-      }
-      return 0;
-    }));
-    filled += results.reduce((a,b)=>a+b,0);
+      if(joinDs && ds < joinDs) return; // üye olmadan önceki günler doldurulmaz, boş kalır
+      tasks.push({ds, uid});
+    });
   }
-  return filled;
+  const results = await Promise.all(tasks.map(async ({ds,uid})=>{
+    const ref = doc(db,'days',ds,'answers',uid);
+    const snap = await getDoc(ref);
+    if(!snap.exists()){
+      await setDoc(ref, { status:'skip', name: usersCache[uid]?.name || '', updatedAt: new Date().toISOString(), auto:true });
+      return 1;
+    }
+    return 0;
+  }));
+  return results.reduce((a,b)=>a+b,0);
 }
 // Daha önce (bu düzeltmeden önce) yanlışlıkla, kulüp başlamadan veya kişi üye olmadan önceki
 // günler için otomatik "okumadı" yazılmış olabilir. Bu, o hatalı otomatik kayıtları temizler.
@@ -2982,17 +2987,18 @@ async function recomputeUserBadgeHistory(uid){
   const joinDs = joinDateStrOf(uid);
   const startDs = (joinDs && joinDs > CLUB_START_DATE) ? joinDs : CLUB_START_DATE;
   const yesterday = addDays(nowLogical(), -1);
+  const dateStrs = [];
+  let cursor = fromStr(startDs);
+  while(toStr(cursor) <= toStr(yesterday)){ dateStrs.push(toStr(cursor)); cursor = addDays(cursor,1); }
+  // Günleri tek tek sırayla değil, hepsini aynı anda (paralel) çekiyoruz; sıralı olan artık
+  // sadece hesaplama (seri/rozet sayımı) — o hâlâ sırayla ama ağ beklemeden, hafızada yapılıyor.
+  const snaps = await Promise.all(dateStrs.map(ds=> getDoc(doc(db,'days',ds,'answers',uid)).catch(()=>null)));
   const badgeCounts = {};
   let streak = 0;
   let prevTier = null;
-  let cursor = fromStr(startDs);
-  while(toStr(cursor) <= toStr(yesterday)){
-    const ds = toStr(cursor);
-    let status = null;
-    try{
-      const snap = await getDoc(doc(db,'days',ds,'answers',uid));
-      if(snap.exists()) status = snap.data().status;
-    }catch(e){}
+  for(let i=0;i<dateStrs.length;i++){
+    const snap = snaps[i];
+    const status = (snap && snap.exists()) ? snap.data().status : null;
     if(status==='read'){
       streak++;
     } else {
@@ -3002,7 +3008,6 @@ async function recomputeUserBadgeHistory(uid){
     }
     const tierNow = currentTierForStreak(streak);
     if(tierNow !== prevTier) prevTier = tierNow;
-    cursor = addDays(cursor, 1);
   }
   const updates = { badgeCounts, lastStreak: streak, currentTier: prevTier, currentStreak: streak };
   try{
@@ -3066,16 +3071,22 @@ async function loadDraws(){
   drawsCache = [];
   snap.forEach(d=> drawsCache.push({id:d.id, ...d.data()}));
 }
+// Önceden gün gün, birbirini bekleyerek (sequential await) geriye gidiliyordu — uzun bir serisi
+// olan biri için bu, o kişiyi hesaplarken onlarca ardışık ağ gidiş-dönüşü demekti (bu fonksiyon
+// HER aktif üye için çağrıldığından, uygulamanın birçok yerinde genel bir yavaşlığa yol
+// açıyordu). Artık ihtiyaç olabilecek TÜM günler tek seferde, aynı anda (Promise.all) çekiliyor;
+// sonuç ve mantık birebir aynı, sadece ağ beklemesi artık ardışık değil paralel.
 async function computeStreak(uid, maxDays){
   maxDays = maxDays || 60;
-  let cursor;
-  const tSnap = await getDoc(doc(db,'days',todayStr(),'answers',uid));
-  cursor = (tSnap.exists() && tSnap.data().status==='read') ? nowLogical() : addDays(nowLogical(),-1);
+  const dates = [];
+  let c = nowLogical();
+  for(let i=0;i<=maxDays;i++){ dates.push(toStr(c)); c = addDays(c,-1); }
+  const snaps = await Promise.all(dates.map(ds=> getDoc(doc(db,'days',ds,'answers',uid)).catch(()=>null)));
+  const isRead = (snap)=> !!(snap && snap.exists() && snap.data().status==='read');
+  let startIdx = isRead(snaps[0]) ? 0 : 1; // bugün okunduysa bugünden başla, yoksa dünden
   let streak = 0;
-  for(let i=0;i<maxDays;i++){
-    const ds = toStr(cursor);
-    const snap = await getDoc(doc(db,'days',ds,'answers',uid));
-    if(snap.exists() && snap.data().status==='read'){ streak++; cursor = addDays(cursor,-1); }
+  for(let i=startIdx;i<snaps.length;i++){
+    if(isRead(snaps[i])) streak++;
     else break;
   }
   return streak;
@@ -4242,6 +4253,27 @@ async function renderRuleRequestsList(){
 }
 
 /* ============ ORTAK: HEDİYE KİTAP ============ */
+// Tüm çekilişlerdeki (draws) her çift için tek bir "giftRequests/{id}" belgesi var. Eskiden bu
+// belgeler TEK TEK, birbirini bekleyerek (sequential await) çekiliyordu — hafta sayısı arttıkça
+// (kulüp ne kadar eskiyse o kadar çok hafta) bu, onlarca ardışık ağ gidiş-dönüşü demekti ve
+// "Hediye Kitap" sekmesi saniyelerce (bazı durumlarda 15-20 sn) donmuş gibi kalıyordu. Artık
+// hepsi TEK SEFERDE, aynı anda (Promise.all) çekiliyor — süre, en yavaş tek istek kadar oluyor,
+// hepsinin toplamı kadar değil.
+async function fetchAllGiftRequests(){
+  const reqIds = [];
+  drawsCache.forEach(d=>{
+    (d.pairs||[]).forEach(p=>{
+      if(p.receiverUid) reqIds.push(`${d.weekStart}_${p.giverUid}_${p.receiverUid}`);
+    });
+  });
+  const snaps = await Promise.all(reqIds.map(id=> getDoc(doc(db,'giftRequests',id)).catch(()=>null)));
+  const map = {};
+  reqIds.forEach((id,i)=>{
+    const s = snaps[i];
+    map[id] = (s && s.exists()) ? s.data() : null;
+  });
+  return map;
+}
 async function renderGiftsTab(){
   document.getElementById('giftsMemberLastWeekWrap').style.display = myProfile.role==='admin' ? 'none' : 'block';
   document.getElementById('giftsDrawHistAdminWrap').style.display = myProfile.role==='admin' ? 'block' : 'none';
@@ -4249,6 +4281,7 @@ async function renderGiftsTab(){
   const intro = document.getElementById('giftsIntro');
   const content = keepOrLoading('giftsContent');
   await loadDraws();
+  const reqMap = await fetchAllGiftRequests();
 
   let personalHtml = '';
   // Sadece EN SON haftaya değil, geçmişteki TÜM haftalara bakılıyor: bir önceki haftadan kalan
@@ -4262,16 +4295,15 @@ async function renderGiftsTab(){
       const isGiver = p.giverUid===currentUid && p.receiverUid;
       if(!isReceiver && !isGiver) continue;
       const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
-      let req = null;
-      try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+      const req = reqMap[reqId];
       if(req && req.received) continue; // tamamlanmış, geçmişte görünür, burada tekrar gösterilmez
-      personalHtml += await buildPersonalGiftHtml(d, isReceiver?p:null, isGiver?p:null);
+      personalHtml += buildPersonalGiftHtml(d, isReceiver?p:null, isGiver?p:null, req);
     }
   }
 
   let adminHtml = '';
   if(myProfile.role==='admin'){
-    adminHtml = await buildAdminPendingHtml();
+    adminHtml = buildAdminPendingHtml(reqMap);
   }
 
   intro.textContent = myProfile.role==='admin'
@@ -4295,14 +4327,13 @@ async function renderGiftsTab(){
   wireGiftFormHandlers(content);
 }
 
-async function buildPersonalGiftHtml(draw, myPairAsReceiver, myPairAsGiver){
+function buildPersonalGiftHtml(draw, myPairAsReceiver, myPairAsGiver, reqForReceiver, reqForGiver){
   const latest = draw;
   let html = '';
   if(myPairAsReceiver){
     const p = myPairAsReceiver;
     const reqId = `${latest.weekStart}_${p.giverUid}_${p.receiverUid}`;
-    let req = null;
-    try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+    const req = reqForReceiver!==undefined ? reqForReceiver : null;
     if(req && req.received){
       // tamamlandı, geçmişte görünür
     } else if(req && req.shipped){
@@ -4349,8 +4380,7 @@ async function buildPersonalGiftHtml(draw, myPairAsReceiver, myPairAsGiver){
   if(myPairAsGiver && myPairAsGiver.receiverUid){
     const p = myPairAsGiver;
     const reqId = `${latest.weekStart}_${p.giverUid}_${p.receiverUid}`;
-    let req = null;
-    try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+    const req = reqForGiver!==undefined ? reqForGiver : reqForReceiver;
     if(req && req.received){
       // tamamlandı, geçmişte görünür
     } else if(req && req.shipped){
@@ -4367,7 +4397,7 @@ async function buildPersonalGiftHtml(draw, myPairAsReceiver, myPairAsGiver){
   return html;
 }
 
-async function buildAdminPendingHtml(){
+function buildAdminPendingHtml(reqMap){
   if(drawsCache.length===0) return '';
   let html = '';
   for(const d of drawsCache){
@@ -4375,8 +4405,7 @@ async function buildAdminPendingHtml(){
     for(const p of d.pairs){
       if(!p.receiverUid) continue;
       const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
-      let req = null;
-      try{ const s = await getDoc(doc(db,'giftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+      const req = reqMap[reqId];
       if(req && req.received) continue; // tamamlanan geçmişte gösterilir
       html += `<div class="receipt"><div class="rweek"><span>${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: <span class="giver">${userChipHtml(p.giverUid)}</span> → <span class="receiver">${userChipHtml(p.receiverUid)}</span></span></div>`;
       if(req && req.shipped){
@@ -4414,7 +4443,7 @@ function wireGiftFormHandlers(content){
       formEl.querySelector('.gf-cover'),
       formEl.querySelector('.gf-book-suggest')
     );
-    formEl.querySelector('.gf-submit').addEventListener('click', async ()=>{
+    formEl.querySelector('.gf-submit').addEventListener('click', async (e)=>{
       const weekStart = formEl.dataset.week, giverUid = formEl.dataset.giver, receiverUid = formEl.dataset.receiver;
       const reqId = `${weekStart}_${giverUid}_${receiverUid}`;
       const recipientName = formEl.querySelector('.gf-name').value.trim();
@@ -4424,46 +4453,60 @@ function wireGiftFormHandlers(content){
       const address = formEl.querySelector('.gf-address').value.trim();
       const phone = formEl.querySelector('.gf-phone').value.trim();
       if(!recipientName || !bookTitle || !address || !phone){ alert('Ad soyad, kitap adı, adres ve telefon alanları zorunlu.'); return; }
+      const submitBtn = e.currentTarget;
+      submitBtn.disabled = true;
+      const originalLabel = submitBtn.textContent;
+      submitBtn.textContent = 'Gönderiliyor…';
       try{
         await setDoc(doc(db,'giftRequests',reqId), {
           weekStart, giverUid, receiverUid,
           giverName: usersCache[giverUid]?.name||'', receiverName: usersCache[receiverUid]?.name||'',
           recipientName, bookTitle, bookCover, site, address, phone, shipped:false, received:false, updatedAt: new Date().toISOString()
         });
-        await notifyUser(giverUid, `${myProfile.name} hediye kitap isteğini gönderdi: "${bookTitle}". "Hediye Kitap" sekmesinden bak.`, 'gifts');
+        // Bildirim ve akış gönderisi, ana işlemin sonucunu ETKİLEMEDİĞİ için (ikisi de "yan
+        // etki") bekletmiyoruz — kullanıcı arka planda tamamlanırken hemen sonucu görüyor.
+        notifyUser(giverUid, `${myProfile.name} hediye kitap isteğini gönderdi: "${bookTitle}". "Hediye Kitap" sekmesinden bak.`, 'gifts');
         createPost('gift_requested', { giverUid, giverName: usersCache[giverUid]?.name||'', bookTitle, bookCover });
         showToast('İstek gönderildi.');
         renderGiftsTab();
-      }catch(err){ alert('Gönderilemedi: '+(err.message||err)); }
+      }catch(err){
+        alert('Gönderilemedi: '+(err.message||err));
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalLabel;
+      }
     });
   });
   content.querySelectorAll('.gf-shipped').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       if(!confirm('Kitabı gönderdiğini onaylıyor musun? Alıcı, aldığını onayladığında bu hediye geçmişe taşınacak.')) return;
+      btn.disabled = true;
       try{
         await updateDoc(doc(db,'giftRequests',btn.dataset.reqid), {shipped:true, shippedAt:new Date().toISOString()});
-        await notifyUser(btn.dataset.receiver, `${myProfile.name} hediye kitabını gönderdi! Aldığında "Hediye Kitap" sekmesinden onaylamayı unutma.`, 'gifts');
+        // Bildirim, sayaç güncellemesi ve rekor kontrolü asıl işlemin sonucunu etkilemiyor —
+        // arka planda tamamlanırken kullanıcı hemen sonucu görüyor.
+        notifyUser(btn.dataset.receiver, `${myProfile.name} hediye kitabını gönderdi! Aldığında "Hediye Kitap" sekmesinden onaylamayı unutma.`, 'gifts');
         const myGivenCount = (myProfile.giftsGivenCount||0) + 1;
-        try{ await updateDoc(doc(db,'users',currentUid), { giftsGivenCount: myGivenCount }); usersCache[currentUid].giftsGivenCount = myGivenCount; }catch(e){}
+        updateDoc(doc(db,'users',currentUid), { giftsGivenCount: myGivenCount }).then(()=>{ usersCache[currentUid].giftsGivenCount = myGivenCount; }).catch(()=>{});
         checkAndPostDethrone(currentUid, myGivenCount, (ouid)=>usersCache[ouid].giftsGivenCount, 'En Çok Hediye Gönderen', '📦');
         showToast('Kitap gönderildi olarak işaretlendi.');
         renderGiftsTab();
-      }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); }
+      }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); btn.disabled = false; }
     });
   });
   content.querySelectorAll('.gf-received').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       if(!confirm('Kitabı aldığını onaylıyor musun? Onayladıktan sonra bu hediye geçmişe taşınacak.')) return;
+      btn.disabled = true;
       try{
         await updateDoc(doc(db,'giftRequests',btn.dataset.reqid), {received:true, receivedAt:new Date().toISOString()});
-        await notifyUser(btn.dataset.giver, `${myProfile.name} hediye kitabını aldığını onayladı. 🎉`, 'gifts');
+        notifyUser(btn.dataset.giver, `${myProfile.name} hediye kitabını aldığını onayladı. 🎉`, 'gifts');
         createPost('gift_completed', { variantText: pickGiftMessage('completed') });
         const myReceivedCount = (myProfile.giftsReceivedCount||0) + 1;
-        try{ await updateDoc(doc(db,'users',currentUid), { giftsReceivedCount: myReceivedCount }); usersCache[currentUid].giftsReceivedCount = myReceivedCount; }catch(e){}
+        updateDoc(doc(db,'users',currentUid), { giftsReceivedCount: myReceivedCount }).then(()=>{ usersCache[currentUid].giftsReceivedCount = myReceivedCount; }).catch(()=>{});
         checkAndPostDethrone(currentUid, myReceivedCount, (ouid)=>usersCache[ouid].giftsReceivedCount, 'En Çok Hediye Alan', '🎁');
         showToast('Alındı olarak işaretlendi, teşekkürler!');
         renderGiftsTab();
-      }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); }
+      }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); btn.disabled = false; }
     });
   });
 }
