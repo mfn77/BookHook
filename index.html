@@ -2064,7 +2064,16 @@ document.body.addEventListener('click', (e)=>{
 // hafızasına (localStorage) kaydediyoruz — böylece uygulama tamamen kapatılıp yeniden
 // açıldığında da "yükleniyor" boşluğu görülmez, son bilinen hal anında gösterilir ve
 // arka planda gerçek veriyle sessizce güncellenir.
-const CACHE_PREFIX = 'bh_cache_';
+// ÖNEMLİ: bu önbelleğin normalde HİÇBİR son kullanma tarihi yok — bir konteynerin taze
+// render'ı herhangi bir sebeple (ağ hatası, sayfa render bitmeden kapatılması vb.) hiç
+// tamamlanamazsa, o eski/yanlış içerik cihazda haftalarca (kod kaç kere güncellense de)
+// olduğu gibi kalabilir, çünkü kod güncellemesi kimsenin kendi localStorage'ını silmez.
+// Bunu önlemek için önbellek anahtarına bir SÜRÜM numarası gömülü: her önemli değişiklikte
+// bu sürüm ileri alınır, böylece o sürümden önceki TÜM eski önbellek kayıtları (farklı
+// anahtar öneki altında kaldıkları için) bir kerede, otomatik olarak geçersiz sayılır —
+// tüm cihazlarda, hiçbir manuel "önbelleği temizle" işlemine gerek kalmadan.
+const APP_CACHE_VERSION = 'v2';
+const CACHE_PREFIX = 'bh_cache_'+APP_CACHE_VERSION+'_';
 function getPersistedHTML(key){
   try{ return localStorage.getItem(CACHE_PREFIX+currentUid+'_'+key); }catch(e){ return null; }
 }
@@ -3612,9 +3621,14 @@ document.getElementById('recomputeBadgesBtn').addEventListener('click', async ()
 });
 async function renderAdminMembers(){
   const list = document.getElementById('membersList');
-  const uids = Object.keys(usersCache);
-  if(uids.length===0){ list.innerHTML = `<p class="muted">Henüz üye yok.</p>`; return; }
-  const adminCount = uids.filter(u=>usersCache[u].role==='admin' && !usersCache[u].banned && !usersCache[u].deleted).length;
+  const allUids = Object.keys(usersCache);
+  if(allUids.length===0){ list.innerHTML = `<p class="muted">Henüz üye yok.</p>`; return; }
+  // Silinen üyeler ana listede hiç gösterilmiyor (sadece banlı olanlar burada kalabiliyor) — ama
+  // geri yükleme imkanı tamamen kaybolmasın diye altta katlanır, kapalı bir "Silinen Üyeler"
+  // bölümünde duruyorlar.
+  const uids = allUids.filter(u=>!usersCache[u].deleted);
+  const deletedUids = allUids.filter(u=>usersCache[u].deleted);
+  const adminCount = allUids.filter(u=>usersCache[u].role==='admin' && !usersCache[u].banned && !usersCache[u].deleted).length;
   list.innerHTML = uids.map(uid=>{
     const u = usersCache[uid];
     const isSelf = uid===currentUid;
@@ -3622,16 +3636,52 @@ async function renderAdminMembers(){
     const joinDs = joinDateStrOf(uid) || '—';
     return `<div class="member-row">
       <div>
-        <div class="member-name">${userChipHtml(uid)} ${u.role==='admin'?`<span class="chip ${u.isOwner?'owner':'ok'}">YÖNETİCİ</span>`:''} ${u.banned && !u.deleted?'<span class="chip banned">BANLI</span>':''} ${u.deleted?'<span class="chip banned">SİLİNDİ</span>':''}</div>
+        <div class="member-name">${userChipHtml(uid)} ${u.role==='admin'?`<span class="chip ${u.isOwner?'owner':'ok'}">YÖNETİCİ</span>`:''} ${u.banned?'<span class="chip banned">BANLI</span>':''}</div>
         <div class="member-meta">${escapeHtml(u.email||'')} &middot; Katılım: ${joinDs} <button data-edit-join="${uid}" style="border:none;background:none;color:var(--gold);cursor:pointer;font-size:10.5px;text-decoration:underline;">düzenle</button></div>
       </div>
       <div class="row" style="flex:0 0 auto; width:auto; flex-wrap:wrap;">
-        <button class="secondary tiny" data-toggle-role="${uid}" ${isSelf||u.deleted||isProtectedOwner?'disabled':''} ${isSelf?'title="Kendi rolünü buradan değiştiremezsin"':(isProtectedOwner?'title="Sahibin rolünü değiştiremezsin"':'')}>${u.role==='admin' ? 'Üye Yap' : 'Yönetici Yap'}</button>
-        <button class="secondary tiny" data-toggle-ban="${uid}" ${isSelf||u.deleted||isProtectedOwner?'disabled':''} ${isSelf?'title="Kendini banlayamazsın"':(isProtectedOwner?'title="Sahibi banlayamazsın"':'')}>${u.banned ? 'Banı Kaldır' : 'Banla'}</button>
-        <button class="secondary tiny" data-toggle-delete="${uid}" ${isSelf||isProtectedOwner?'disabled':''} ${isSelf?'title="Kendi hesabını Profilim sekmesinden silebilirsin"':(isProtectedOwner?'title="Sahibi silemezsin"':'')} style="border-color:var(--cloth-dark); color:var(--cloth-dark);">${u.deleted ? 'Geri Yükle' : 'Sil'}</button>
+        <button class="secondary tiny" data-toggle-role="${uid}" ${isSelf||isProtectedOwner?'disabled':''} ${isSelf?'title="Kendi rolünü buradan değiştiremezsin"':(isProtectedOwner?'title="Sahibin rolünü değiştiremezsin"':'')}>${u.role==='admin' ? 'Üye Yap' : 'Yönetici Yap'}</button>
+        <button class="secondary tiny" data-toggle-ban="${uid}" ${isSelf||isProtectedOwner?'disabled':''} ${isSelf?'title="Kendini banlayamazsın"':(isProtectedOwner?'title="Sahibi banlayamazsın"':'')}>${u.banned ? 'Banı Kaldır' : 'Banla'}</button>
+        <button class="secondary tiny" data-toggle-delete="${uid}" ${isSelf||isProtectedOwner?'disabled':''} ${isSelf?'title="Kendi hesabını Profilim sekmesinden silebilirsin"':(isProtectedOwner?'title="Sahibi silemezsin"':'')} style="border-color:var(--cloth-dark); color:var(--cloth-dark);">Sil</button>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + (deletedUids.length ? `
+    <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--line);">
+      <button type="button" class="secondary tiny" id="showDeletedMembersBtn">Silinen Üyeler (${deletedUids.length})</button>
+      <div id="deletedMembersList" style="display:none; margin-top:10px;"></div>
+    </div>` : '');
+  if(deletedUids.length){
+    document.getElementById('showDeletedMembersBtn').addEventListener('click', (e)=>{
+      const box = document.getElementById('deletedMembersList');
+      const show = box.style.display==='none';
+      box.style.display = show ? 'block' : 'none';
+      e.target.textContent = show ? 'Silinen Üyeleri Gizle' : `Silinen Üyeler (${deletedUids.length})`;
+      if(show && !box.dataset.loaded){
+        box.dataset.loaded = '1';
+        box.innerHTML = deletedUids.map(uid=>{
+          const u = usersCache[uid];
+          return `<div class="member-row">
+            <div>
+              <div class="member-name">${userChipHtml(uid)} <span class="chip banned">SİLİNDİ</span></div>
+              <div class="member-meta">${escapeHtml(u.email||'')}</div>
+            </div>
+            <div class="row" style="flex:0 0 auto; width:auto;">
+              <button class="secondary tiny" data-restore-deleted="${uid}">Geri Yükle</button>
+            </div>
+          </div>`;
+        }).join('');
+        box.querySelectorAll('[data-restore-deleted]').forEach(btn=>{
+          btn.addEventListener('click', async ()=>{
+            const uid = btn.dataset.restoreDeleted;
+            const u = usersCache[uid];
+            if(!confirm(`${u.name} geri yüklensin mi? Tekrar giriş yapabilecek.`)) return;
+            await updateDoc(doc(db,'users',uid), {deleted:false, banned:false});
+            showToast(`${u.name} geri yüklendi.`);
+          });
+        });
+      }
+    });
+  }
   list.querySelectorAll('[data-edit-join]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const uid = btn.dataset.editJoin;
@@ -3679,16 +3729,10 @@ async function renderAdminMembers(){
     btn.addEventListener('click', async ()=>{
       const uid = btn.dataset.toggleDelete;
       const u = usersCache[uid];
-      if(!u.deleted && u.role==='admin' && adminCount<=1){ alert('Tek aktif yönetici sensin, önce başka birini yönetici yapmalısın.'); return; }
-      if(u.deleted){
-        if(!confirm(`${u.name} geri yüklensin mi? Tekrar giriş yapabilecek.`)) return;
-        await updateDoc(doc(db,'users',uid), {deleted:false, banned:false});
-        showToast(`${u.name} geri yüklendi.`);
-      } else {
-        if(!confirm(`${u.name} hesabı silinsin mi?\n\nNot: Firebase'in yapısı yüzünden bir yöneticinin başka birinin giriş kaydını tam silmesi mümkün değil (bunu sadece kişi kendisi yapabilir). Bu işlem erişimini kalıcı olarak kapatır ve profilini gizler; istersen sonra "Geri Yükle" ile açabilirsin.`)) return;
-        await updateDoc(doc(db,'users',uid), {deleted:true, banned:true});
-        showToast(`${u.name} silindi.`);
-      }
+      if(u.role==='admin' && adminCount<=1){ alert('Tek aktif yönetici sensin, önce başka birini yönetici yapmalısın.'); return; }
+      if(!confirm(`${u.name} hesabı silinsin mi?\n\nNot: Firebase'in yapısı yüzünden bir yöneticinin başka birinin giriş kaydını tam silmesi mümkün değil (bunu sadece kişi kendisi yapabilir). Bu işlem erişimini kalıcı olarak kapatır, üye listesinden ve uygulamanın her yerinden gizler; istersen sonra listenin altındaki "Silinen Üyeler" bölümünden "Geri Yükle" ile açabilirsin.`)) return;
+      await updateDoc(doc(db,'users',uid), {deleted:true, banned:true});
+      showToast(`${u.name} silindi.`);
     });
   });
 }
@@ -8360,6 +8404,17 @@ onAuthStateChanged(auth, async (user)=>{
   }
 
   currentUid = user.uid;
+  // Eski sürümlerden kalan (artık hiç okunmayan) önbellek kayıtlarını temizle — sürüm
+  // numarası ilerledikçe bunlar aksi halde localStorage'da sonsuza kadar kullanılmadan
+  // durur.
+  try{
+    const staleKeys = [];
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith('bh_cache_') && !k.startsWith(CACHE_PREFIX)) staleKeys.push(k);
+    }
+    staleKeys.forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} });
+  }catch(e){}
   loadingScreen.style.display='block';
   authScreen.style.display='none';
   appRoot.style.display='none';
