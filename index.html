@@ -493,13 +493,20 @@
   .poll-total-votes{ font-family:'Inter',sans-serif; font-size:11.5px; color:var(--ink-70); margin-top:2px; }
   .post-card{
     background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3);
-    border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer;
+    border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer; position:relative;
   }
+  /* Kullanıcının kendi tepkisi: tepki çubuğundaki "ekle" düğmesiyle (14px) karışmasın diye
+     ondan ~1.3x büyük, çerçevesiz/arka plansız, gönderinin sol üst köşesinde tek başına duruyor. */
+  .my-reaction-badge{ position:absolute; top:8px; left:10px; font-size:18px; line-height:1; z-index:2; pointer-events:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.22)); }
   .post-card-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
   .post-card-time{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
   .post-card-body{ font-size:14.5px; line-height:1.5; }
   .post-card-footer{ display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
   .post-comment-count{ font-size:12.5px; color:var(--ink-70); }
+  .post-comment-inline-btn{ background:none; border:none; color:var(--gold); font-size:12px; font-weight:600; cursor:pointer; padding:0; margin-left:8px; }
+  .post-comment-inline-form{ display:none; align-items:center; gap:8px; margin-top:10px; }
+  .post-comment-inline-form input{ flex:1 1 auto; min-width:0; padding:8px 10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:13.5px; background:var(--card); color:var(--ink); }
+  .post-comment-inline-send{ flex:0 0 auto; }
   .post-book-cover{ width:44px; height:66px; object-fit:cover; border-radius:6px; box-shadow:var(--shadow); flex:0 0 auto; }
   .discover-cat{ margin-bottom:22px; }
   .discover-cat-title{ font-family:'Roboto',sans-serif; font-weight:700; font-size:16px; margin-bottom:10px; }
@@ -2021,6 +2028,17 @@ function hideAnchoredPopover(){
   pop.classList.add('closing');
   setTimeout(()=>{ pop.style.display='none'; pop.classList.remove('closing'); }, 120);
 }
+// Seçenekler penceresi (ve diğer bağlı popover'lar) açıkken dışarıya tıklanınca önce SADECE o
+// pencere kapanmalı — o tıklamanın altındaki başka bir öğenin (örn. başka bir gönderi kartının)
+// kendi tıklama işlevi TETİKLENMEMELİ. Bunu "capture" evresinde (olay hedefine erişmeden önce)
+// yakalayıp durdurarak sağlıyoruz — böylece kart kendi tıklama dinleyicisine hiç ulaşmıyor.
+document.addEventListener('click', (e)=>{
+  const pop = document.getElementById('anchoredPopover');
+  if(pop.style.display==='block' && !pop.contains(e.target) && !e.target.closest('.badge-info-icon') && !e.target.closest('.total-pages-clickable') && !e.target.closest('#coverFixTarget')){
+    hideAnchoredPopover();
+    e.stopPropagation();
+  }
+}, true);
 document.addEventListener('click', (e)=>{
   const pop = document.getElementById('anchoredPopover');
   if(pop.style.display==='block' && !pop.contains(e.target) && !e.target.closest('.badge-info-icon') && !e.target.closest('.total-pages-clickable') && !e.target.closest('#coverFixTarget')){
@@ -5358,11 +5376,20 @@ async function voteOnPoll(postId, optionIdx){
 function isPostPinned(p){
   return !!(p.pinnedUntil && new Date(p.pinnedUntil).getTime() > Date.now());
 }
+function myReactionEmoji(reactions){
+  if(!reactions) return null;
+  for(const em of Object.keys(reactions)){
+    if((reactions[em]||[]).includes(currentUid)) return em;
+  }
+  return null;
+}
 function renderPostCard(p){
   const canDelete = p.uid===currentUid || myProfile.role==='admin';
   const canEdit = p.uid===currentUid && p.type==='user_post';
   const pinned = isPostPinned(p);
+  const myReaction = myReactionEmoji(p.reactions);
   return `<div class="post-card modal-card-anim" data-post-id="${p.id}">
+    ${myReaction?`<span class="my-reaction-badge" title="Tepkin">${myReaction}</span>`:''}
     <div class="post-card-head">
       ${userChipHtml(p.uid)}
       <span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span>
@@ -5372,7 +5399,11 @@ function renderPostCard(p){
     <div class="post-card-body">${postBodyHtml(p)}</div>
     <div class="post-card-footer">
       ${renderReactionBar(p.reactions, `post:${p.id}`)}
-      <span class="post-comment-count">💬 ${p.commentCount||0}</span>
+      <span><span class="post-comment-count">💬 ${p.commentCount||0}</span><button type="button" class="post-comment-inline-btn" data-post-id="${p.id}">Yorum Yaz</button></span>
+    </div>
+    <div class="post-comment-inline-form" data-post-id="${p.id}" data-post-uid="${p.uid||''}" data-comment-count="${p.commentCount||0}">
+      <input type="text" class="post-comment-inline-input" placeholder="Yorum yaz..." />
+      <button type="button" class="secondary tiny post-comment-inline-send">Gönder</button>
     </div>
   </div>`;
 }
@@ -5738,9 +5769,50 @@ function wirePostCards(container, refreshFn){
       refresh();
     });
   });
+  container.querySelectorAll('.post-comment-inline-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const card = btn.closest('.post-card');
+      const form = card && card.querySelector('.post-comment-inline-form');
+      if(!form) return;
+      const showing = form.style.display==='flex';
+      form.style.display = showing ? 'none' : 'flex';
+      if(!showing){
+        const input = form.querySelector('.post-comment-inline-input');
+        input.value = '';
+        input.focus();
+      }
+    });
+  });
+  container.querySelectorAll('.post-comment-inline-form').forEach(form=>{
+    form.addEventListener('click', (e)=> e.stopPropagation());
+    const input = form.querySelector('.post-comment-inline-input');
+    const sendBtn = form.querySelector('.post-comment-inline-send');
+    const submit = async ()=>{
+      const text = input.value.trim();
+      if(!text) return;
+      const postId = form.dataset.postId;
+      const postUid = form.dataset.postUid;
+      const newCount = parseInt(form.dataset.commentCount,10) + 1;
+      sendBtn.disabled = true;
+      try{
+        await addDoc(collection(db,'posts',postId,'comments'), { uid:currentUid, name:myProfile.name, text, createdAt:new Date().toISOString() });
+        await updateDoc(doc(db,'posts',postId), { commentCount: newCount });
+        form.dataset.commentCount = newCount;
+        syncFeedCardCommentCount(postId, newCount);
+        if(postUid && postUid!==currentUid) notifyUser(postUid, `${myProfile.name} gönderine yorum yaptı.`, 'social', postId);
+        input.value = '';
+        form.style.display = 'none';
+        showToast('Yorum eklendi.');
+      }catch(err){ alert('Yorum gönderilemedi: '+(err.message||err)); }
+      finally{ sendBtn.disabled = false; }
+    };
+    sendBtn.addEventListener('click', submit);
+    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); } });
+  });
   container.querySelectorAll('.post-card').forEach(card=>{
     card.addEventListener('click', (e)=>{
-      if(e.target.closest('.user-chip') || e.target.closest('.book-cover-clickable') || e.target.closest('[data-poll-option]')) return;
+      if(e.target.closest('.user-chip') || e.target.closest('.book-cover-clickable') || e.target.closest('[data-poll-option]') || e.target.closest('.post-comment-inline-btn') || e.target.closest('.post-comment-inline-form')) return;
       openPostModal(card.dataset.postId);
     });
   });
