@@ -1,12 +1,15 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
+const { getAuth } = require("firebase-admin/auth");
 
 initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
+const authAdmin = getAuth();
 
 // notifications/{uid}/items/{itemId} altına her yeni uygulama-içi bildirim
 // eklendiğinde, o kişinin kayıtlı cihazlarına gerçek bir push bildirimi gönderir.
@@ -450,3 +453,70 @@ exports.weeklyLotteryDraw = onSchedule(
     await finalizeWeekBackend(prevMonday);
   }
 );
+
+// Bir üyeyi TAMAMEN siler: Firebase Auth hesabı, users/{uid} belgesi ve kişiye özel alt
+// koleksiyonları (Okuduklarım, Okumak İstediklerim, Kitap Geçmişim, bildirimler). Bu, istemci
+// tarafından yapılamıyor çünkü Firebase bir kullanıcının BAŞKA birinin Auth hesabını silmesine
+// izin vermiyor — bunu yalnızca Admin SDK (yani bir Cloud Function) yapabilir. Geri alınamaz;
+// istemci tarafında ekstra bir "geri yükle" mekanizması yok.
+// NOT: paylaşılan geçmiş kayıtlar (days/{tarih}/answers/{uid}, eski gönderiler) BİLEREK
+// silinmiyor — onlar haftalık istatistik/rozet/kura geçmişinin bir parçası, silinirse geçmiş
+// haftaların hesapları bozulur. Sadece kişinin KENDİ profili ve kişisel verileri siliniyor.
+exports.adminDeleteMember = onCall(async (request) => {
+  const callerUid = request.auth && request.auth.uid;
+  if (!callerUid) throw new HttpsError("unauthenticated", "Giriş yapmış olmalısın.");
+
+  const callerSnap = await db.collection("users").doc(callerUid).get();
+  if (!callerSnap.exists || callerSnap.data().role !== "admin") {
+    throw new HttpsError("permission-denied", "Bu işlem için yönetici olman gerekiyor.");
+  }
+
+  const targetUid = request.data && request.data.targetUid;
+  if (!targetUid || typeof targetUid !== "string") {
+    throw new HttpsError("invalid-argument", "targetUid gerekli.");
+  }
+  if (targetUid === callerUid) {
+    throw new HttpsError("invalid-argument", "Kendi hesabını buradan silemezsin.");
+  }
+
+  const targetRef = db.collection("users").doc(targetUid);
+  const targetSnap = await targetRef.get();
+  if (!targetSnap.exists) {
+    throw new HttpsError("not-found", "Kullanıcı bulunamadı (zaten silinmiş olabilir).");
+  }
+  const targetData = targetSnap.data();
+  if (targetData.isOwner) {
+    throw new HttpsError("permission-denied", "Kulübün sahibini silemezsin.");
+  }
+
+  // Kişisel alt koleksiyonları sil.
+  for (const sub of ["readBooks", "wantToRead", "bookHistory"]) {
+    const subSnap = await targetRef.collection(sub).get();
+    if (!subSnap.empty) {
+      const batch = db.batch();
+      subSnap.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+  }
+  // Bildirimlerini sil.
+  const notifSnap = await db.collection("notifications").doc(targetUid).collection("items").get();
+  if (!notifSnap.empty) {
+    const batch = db.batch();
+    notifSnap.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+  // Asıl profil belgesini sil.
+  await targetRef.delete();
+  // Firebase Auth hesabını sil (giriş yapamaz hale gelir).
+  try {
+    await authAdmin.deleteUser(targetUid);
+  } catch (e) {
+    console.error(`[adminDeleteMember] ${targetUid} için Auth hesabı silinemedi:`, e);
+    // Firestore verisi zaten silindi; Auth silinemese de devam ediyoruz — biri bu hesapla
+    // tekrar giriş yaparsa mevcut giriş akışı zaten "profil yoksa yeniden oluştur" mantığına
+    // sahip, yani sıfırdan yeni bir üye gibi başlar.
+  }
+
+  console.log(`[adminDeleteMember] ${targetUid} (${targetData.name || ""}) tamamen silindi. İşlemi yapan: ${callerUid}.`);
+  return { success: true };
+});
