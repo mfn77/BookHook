@@ -276,8 +276,98 @@ exports.autoMarkMissedReading = onSchedule(
     for (let i = 1; i <= 3; i++) {
       await autoMarkMissedDay(dateNDaysAgoInIstanbul(i));
     }
+    await settleDailyBadges();
   }
 );
+
+const BADGE_DEFS_BACKEND = [
+  { key: "b3", days: 3, icon: "🔥", label: "3 gün aralıksız seri" },
+  { key: "b5", days: 5, icon: "⭐", label: "5 gün aralıksız seri" },
+  { key: "b7", days: 7, icon: "🎯", label: "1 hafta aralıksız seri" },
+  { key: "b14", days: 14, icon: "💎", label: "2 hafta aralıksız seri" },
+  { key: "b21", days: 21, icon: "🏆", label: "3 hafta aralıksız seri" },
+  { key: "b30", days: 30, icon: "🐺", label: "Kitap Kurdu (1 ay aralıksız seri)" },
+];
+function currentTierForStreakBackend(streak) {
+  let tier = null;
+  BADGE_DEFS_BACKEND.forEach((def) => { if (streak >= def.days) tier = def.key; });
+  return tier;
+}
+// Bir kullanıcının DÜN akşamı itibariyle (artık kesinleşmiş, değişemeyecek) kaç gündür
+// aralıksız okuduğunu hesaplar — istemcideki computeStreak'in "dünden geriye" sunucu karşılığı.
+async function computeStreakBackend(uid, maxDays) {
+  maxDays = maxDays || 60;
+  const yesterday = dateNDaysAgoInIstanbul(1);
+  const dates = [];
+  for (let i = 0; i <= maxDays; i++) dates.push(addDaysToDateStr(yesterday, -i));
+  const snaps = await Promise.all(dates.map((ds) => db.collection("days").doc(ds).collection("answers").doc(uid).get().catch(() => null)));
+  let streak = 0;
+  for (const snap of snaps) {
+    if (snap && snap.exists && snap.data().status === "read") streak++;
+    else break;
+  }
+  return streak;
+}
+async function backendCheckAndPostDethrone(usersMap, uid, newCount, getOthersCount, label, icon) {
+  let maxUid = null, maxCount = 0;
+  for (const ouid of Object.keys(usersMap)) {
+    if (ouid === uid || usersMap[ouid].banned) continue;
+    const c = getOthersCount(ouid) || 0;
+    if (c > maxCount) { maxCount = c; maxUid = ouid; }
+  }
+  if (maxUid && newCount > maxCount) {
+    const u = usersMap[uid];
+    await createPostBackend("record_dethrone", { recordLabel: label, recordIcon: icon || "🏆", recordCount: newCount, dethronedName: usersMap[maxUid]?.name || "" }, uid, u.name);
+  }
+}
+// Bir günün kapanmasıyla (06:00) o güne kadarki serinin GERÇEKTEN bozulup bozulmadığı burada
+// kesinleşiyor. İstemci tarafı artık sadece YUKARI (yeni bir eşiğe ulaşma) anlık bildirimi
+// gönderiyor; seri düşüşünü (rozet geçmişine kalıcı ekleme + "seri bozuldu" gönderisi) BİLEREK
+// burada, güne ait tüm işaretlemeler kesinleştikten sonra yapıyoruz — böylece biri aynı gün
+// içinde bir yanlışlığı (örn. yanlışlıkla "okumadım" işaretleyip hemen düzeltmesi) düzeltirse,
+// bu hiçbir zaman kalıcı bir rozet/gönderiye dönüşmez.
+async function settleDailyBadges() {
+  const usersSnap = await db.collection("users").get();
+  const usersMap = {};
+  usersSnap.forEach((d) => { usersMap[d.id] = d.data(); });
+  for (const uid of Object.keys(usersMap)) {
+    const u = usersMap[uid];
+    if (u.banned || u.deleted) continue;
+    const streak = await computeStreakBackend(uid);
+    const lastStreak = typeof u.lastStreak === "number" ? u.lastStreak : 0;
+    const prevTier = u.currentTier || null;
+    const newTier = currentTierForStreakBackend(streak);
+    if (streak === lastStreak && prevTier === newTier) continue;
+
+    if (streak < lastStreak) {
+      const badgeCounts = { ...(u.badgeCounts || {}) };
+      let historyIncremented = false;
+      if (prevTier) {
+        badgeCounts[prevTier] = (badgeCounts[prevTier] || 0) + 1;
+        historyIncremented = true;
+      }
+      await db.collection("users").doc(uid).update({ lastStreak: streak, badgeCounts, currentTier: newTier, currentStreak: streak });
+      usersMap[uid] = { ...u, lastStreak: streak, badgeCounts, currentTier: newTier, currentStreak: streak };
+      if (historyIncremented && prevTier) {
+        const lostDef = BADGE_DEFS_BACKEND.find((d) => d.key === prevTier);
+        if (lostDef) {
+          await createPostBackend("badge_lost", { badgeKey: lostDef.key, badgeLabel: lostDef.label, badgeIcon: lostDef.icon }, uid, u.name);
+          await backendCheckAndPostDethrone(usersMap, uid, badgeCounts[lostDef.key] || 1, (ouid) => (usersMap[ouid].badgeCounts || {})[lostDef.key], `${lostDef.label} rozeti`, lostDef.icon);
+        }
+      }
+    } else if (newTier && newTier !== prevTier) {
+      // İstemci genelde bunu anlık yakalar; burası sadece kullanıcı hiç uygulamayı açmadan
+      // eşiği aştıysa devreye giren bir güvenlik ağı.
+      await db.collection("users").doc(uid).update({ lastStreak: streak, currentTier: newTier, currentStreak: streak });
+      usersMap[uid] = { ...u, lastStreak: streak, currentTier: newTier, currentStreak: streak };
+      const notifyDef = BADGE_DEFS_BACKEND.find((d) => d.key === newTier);
+      if (notifyDef) {
+        await notifyUserBackend(uid, `🎉 Tebrikler! "${notifyDef.label}" rozetini kazandın!`, u.role === "admin" ? "worms" : "mworms");
+        await createPostBackend("badge_gained", { badgeKey: notifyDef.key, badgeLabel: notifyDef.label, badgeIcon: notifyDef.icon }, uid, u.name);
+      }
+    }
+  }
+}
 
 const GIFT_WON_MESSAGES = [
   "🎁 Kura ona güldü, hediye kitap kazandı!",
