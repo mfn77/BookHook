@@ -495,9 +495,10 @@
     background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3);
     border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer; position:relative;
   }
-  /* Kullanıcının kendi tepkisi: tepki çubuğundaki "ekle" düğmesiyle (14px) karışmasın diye
-     ondan ~1.3x büyük, çerçevesiz/arka plansız, gönderinin sol üst köşesinde tek başına duruyor. */
-  .my-reaction-badge{ position:absolute; top:8px; left:10px; font-size:18px; line-height:1; z-index:2; pointer-events:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.22)); }
+  /* Kullanıcının kendi tepkisi: başlık satırında (avatarın solunda), tepki çubuğundaki "ekle"
+     düğmesinin (14px) iki katı büyüklükte, çerçevesiz/arka plansız tek başına duruyor. Tepki
+     verilince/değişince zaten var olan genel .reaction-burst zıplama animasyonuyla oynuyor. */
+  .my-reaction-badge{ font-size:28px; line-height:1; flex:0 0 auto; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.22)); }
   .post-card-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
   .post-card-time{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
   .post-card-body{ font-size:14.5px; line-height:1.5; }
@@ -2063,9 +2064,7 @@ document.body.addEventListener('click', (e)=>{
     setReaction(target, emoji).then(async ()=>{
       closeReactionDrawer();
       if(pendingReactionRefresh) await pendingReactionRefresh();
-      const bar = document.querySelector(`.reaction-bar[data-target="${target}"]`);
-      const pill = bar && Array.from(bar.querySelectorAll('.reaction-pill')).find(p=>p.dataset.emoji===emoji);
-      if(pill){ pill.classList.add('reaction-burst'); setTimeout(()=>pill.classList.remove('reaction-burst'), 300); }
+      burstMyReactionBadge(target);
     });
   }
   const pagesEl = e.target.closest('.total-pages-clickable');
@@ -4968,11 +4967,13 @@ function reactionTargetRef(target){
 function renderReactionBar(reactions, target){
   reactions = reactions || {};
   const allEmojis = [...REACTION_EMOJIS, ...Object.keys(reactions).filter(em => !REACTION_EMOJIS.includes(em))];
-  const activeEmojis = allEmojis.filter(em => (reactions[em]||[]).length>0);
+  // Kullanıcının kendi tepkisi artık başlıkta (avatarın solunda) tek başına gösterildiği için,
+  // burada (alttaki çubukta) SADECE başkalarının tepkileri gösteriliyor — aynı tepki iki kere
+  // (hem burada hem köşede) görünmesin.
+  const activeEmojis = allEmojis.filter(em => (reactions[em]||[]).filter(u=>u!==currentUid).length>0);
   const pills = activeEmojis.map(em=>{
-    const uids = reactions[em] || [];
-    const mine = uids.includes(currentUid);
-    return `<button type="button" class="reaction-pill${mine?' mine':''}" data-target="${target}" data-emoji="${em}" data-uids="${uids.join(',')}">${em}${uids.length>1?`<span class="rcount">${uids.length}</span>`:''}</button>`;
+    const uids = (reactions[em] || []).filter(u=>u!==currentUid);
+    return `<button type="button" class="reaction-pill" data-target="${target}" data-emoji="${em}" data-uids="${uids.join(',')}">${em}${uids.length>1?`<span class="rcount">${uids.length}</span>`:''}</button>`;
   }).join('');
   return `<div class="reaction-bar" data-target="${target}">${pills}<button type="button" class="reaction-add-btn" data-target="${target}">🙂</button></div>`;
 }
@@ -5005,9 +5006,7 @@ function renderDrawerEmojiRow(target, availableWidth){
       if(!val) return;
       await setReaction(target, val);
       if(pendingReactionRefresh) await pendingReactionRefresh();
-      const bar = document.querySelector(`.reaction-bar[data-target="${target}"]`);
-      const pill = bar && Array.from(bar.querySelectorAll('.reaction-pill')).find(p=>p.dataset.emoji===val);
-      if(pill){ pill.classList.add('reaction-burst'); setTimeout(()=>pill.classList.remove('reaction-burst'), 300); }
+      burstMyReactionBadge(target);
       closeReactionDrawer();
     };
     sendBtn.addEventListener('click', (ev)=>{ ev.stopPropagation(); doSend(); });
@@ -5383,14 +5382,20 @@ function myReactionEmoji(reactions){
   }
   return null;
 }
+// Bir tepki verildiğinde/değiştirildiğinde, o gönderinin köşesindeki tepki rozetine kısa bir
+// zıplama animasyonu ekler (zaten var olan genel .reaction-burst sınıfını kullanıyor).
+function burstMyReactionBadge(target){
+  const badge = document.querySelector(`.my-reaction-badge[data-target="${target}"]`);
+  if(badge){ badge.classList.add('reaction-burst'); setTimeout(()=>badge.classList.remove('reaction-burst'), 300); }
+}
 function renderPostCard(p){
   const canDelete = p.uid===currentUid || myProfile.role==='admin';
   const canEdit = p.uid===currentUid && p.type==='user_post';
   const pinned = isPostPinned(p);
   const myReaction = myReactionEmoji(p.reactions);
   return `<div class="post-card modal-card-anim" data-post-id="${p.id}">
-    ${myReaction?`<span class="my-reaction-badge" title="Tepkin">${myReaction}</span>`:''}
     <div class="post-card-head">
+      ${myReaction?`<span class="my-reaction-badge" data-target="post:${p.id}" title="Tepkin">${myReaction}</span>`:''}
       ${userChipHtml(p.uid)}
       <span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span>
       ${pinned?`<span title="Sabitlenmiş" style="margin-left:auto; font-size:13px;">📌</span>`:''}
