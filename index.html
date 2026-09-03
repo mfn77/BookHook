@@ -495,9 +495,9 @@
   .qp-phase-label{ font-family:'Roboto Mono',monospace; font-size:11px; font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
   .qp-deadline{ font-size:12px; color:var(--ink-70); margin-bottom:12px; }
   .qp-nom-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
-  .qp-nom-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; border:1.5px solid var(--line); border-radius:12px; }
+  .qp-nom-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; border:1.5px solid var(--line); border-radius:12px; cursor:pointer; }
   .qp-nom-cover{ width:34px; height:50px; object-fit:cover; border-radius:5px; box-shadow:var(--shadow); flex:0 0 auto; }
-  .qp-nom-cover-ph{ width:34px; height:50px; border-radius:5px; background:var(--line); flex:0 0 auto; }
+  .qp-nom-cover-ph{ width:34px; height:50px; border-radius:5px; overflow:hidden; box-shadow:var(--shadow); flex:0 0 auto; }
   .qp-nom-info{ flex:1 1 auto; min-width:0; }
   .qp-nom-title{ font-size:13.5px; font-weight:600; color:var(--ink); }
   .qp-nom-meta{ font-size:11px; color:var(--ink-70); }
@@ -513,8 +513,6 @@
   .qp-vs-votes{ font-family:'Roboto Mono',monospace; font-size:12px; font-weight:700; color:var(--gold); margin-top:4px; }
   .qp-vs-mid{ display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--ink-70); flex:0 0 auto; font-size:12px; }
   .qp-match-wrap{ margin-bottom:14px; }
-  .qp-winner-card{ display:flex; gap:12px; align-items:center; padding:10px; border:1.5px solid var(--gold); border-radius:14px; background:rgba(212,163,42,0.06); }
-  .qp-winner-cover{ width:56px; height:82px; object-fit:cover; border-radius:6px; box-shadow:var(--shadow); flex:0 0 auto; }
   .post-card{
     background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3);
     border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer; position:relative;
@@ -4653,21 +4651,91 @@ async function renderQuarterlyPickCard(){
   if(qp.phase==='reading') return renderQpReadingSummary(body, qp);
   body.innerHTML = `<p class="muted">Durum bilinmiyor.</p>`;
 }
-function qpNomRowHtml(n){
-  return `<div class="qp-nom-row">
-    ${n.bookCover?`<img src="${n.bookCover}" class="qp-nom-cover" alt="" onerror="this.style.display='none';" />`:`<div class="qp-nom-cover-ph"></div>`}
+let qpNomCache = {};
+function qpNomRowHtml(n, extraHtml){
+  qpNomCache[n.id] = n;
+  return `<div class="qp-nom-row" data-qp-nom-id="${n.id}">
+    <div class="qp-nom-cover-ph">${n.bookCover?`<img src="${n.bookCover}" class="qp-nom-cover" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(n.bookTitle).replace(/'/g,"\\'")}');" />`:placeholderCoverHtml(n.bookTitle)}</div>
     <div class="qp-nom-info">
       <div class="qp-nom-title">${escapeHtml(n.bookTitle)}</div>
       <div class="qp-nom-meta">${escapeHtml(n.bookAuthor||'')} &middot; öneren: ${escapeHtml(n.name||'')}</div>
     </div>
+    ${extraHtml||''}
   </div>`;
+}
+function showQpNominationInfo(nom){
+  if(!nom) return;
+  const body = document.getElementById('bookInfoModalBody');
+  document.getElementById('bookInfoModal').style.display='flex';
+  const coverHtml = nom.bookCover
+    ? `<img src="${nom.bookCover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(nom.bookTitle).replace(/'/g,"\\'")}')+this.parentElement.innerHTML;" />`
+    : `<div style="width:100px; height:150px; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); margin:0 auto 12px;">${placeholderCoverHtml(nom.bookTitle)}</div>`;
+  body.innerHTML = `
+    ${coverHtml}
+    <h2 style="margin:4px 0 2px;">${escapeHtml(nom.bookTitle)}</h2>
+    <div class="muted" style="margin-bottom:10px;">${escapeHtml(nom.bookAuthor||'')}</div>
+    ${nom.note ? `<p style="text-align:left; font-size:13.5px; line-height:1.5;"><b>Kitap hakkında:</b> ${escapeHtml(nom.note)}</p>` : `<p class="muted" style="font-size:12.5px;">Öneren bir açıklama eklememiş.</p>`}
+    <div class="muted" style="font-size:11px; margin-top:10px;">Öneren: ${escapeHtml(nom.name||'')}</div>
+  `;
+}
+function qpWireNomRowClicks(body){
+  body.querySelectorAll('[data-qp-nom-id]').forEach(row=>{
+    row.addEventListener('click', (e)=>{
+      if(e.target.closest('button')) return;
+      showQpNominationInfo(qpNomCache[row.dataset.qpNomId]);
+    });
+  });
+}
+function qpNominationFormHtml(idPrefix, submitLabel){
+  return `
+    <div class="field"><label>Kitap Adı</label><input type="text" id="${idPrefix}Book" autocomplete="off" placeholder="yazmaya başla, aransın — bulamazsan yazmaya devam et" /><div id="${idPrefix}BookSuggest" class="book-suggest-box"></div></div>
+    <div class="field"><label>Yazar Adı</label><input type="text" id="${idPrefix}Author" autocomplete="off" placeholder="yazmaya başla, aransın — bulamazsan yazmaya devam et" /><div id="${idPrefix}AuthorSuggest" class="book-suggest-box"></div></div>
+    <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" id="${idPrefix}Cover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
+    <div class="field"><label>Kitap Hakkında</label><textarea id="${idPrefix}Note" placeholder="neden önerdiğini kısaca yaz" style="width:100%; min-height:70px; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:14px; background:var(--card); color:var(--ink); resize:vertical; box-sizing:border-box;"></textarea></div>
+    <button class="primary" id="${idPrefix}SendBtn">${submitLabel}</button>
+  `;
+}
+// Hem "kitap adı" hem "yazar adı" alanı aynı genel aramayı tetikliyor (OpenLibrary'nin genel
+// arama uç noktası zaten yazar adına göre de eşleşiyor); ikisi de seçim yapılmadan elle yazmaya
+// devam edebiliyor. Gönderirken yazar adı boşsa (database'den seçilmemiş VE elle de
+// yazılmamışsa) engelliyoruz.
+function qpWireNominationForm(idPrefix, onSubmit){
+  const bookInput = document.getElementById(idPrefix+'Book');
+  const authorInput = document.getElementById(idPrefix+'Author');
+  const coverInput = document.getElementById(idPrefix+'Cover');
+  const applySelection = (b)=>{
+    bookInput.value = b.title;
+    authorInput.value = b.author||'';
+    coverInput.value = b.cover||'';
+  };
+  attachBookAutocompleteEl(bookInput, coverInput, document.getElementById(idPrefix+'BookSuggest'), applySelection);
+  attachBookAutocompleteEl(authorInput, coverInput, document.getElementById(idPrefix+'AuthorSuggest'), applySelection);
+  document.getElementById(idPrefix+'SendBtn').addEventListener('click', async (e)=>{
+    const title = bookInput.value.trim();
+    const author = authorInput.value.trim();
+    const cover = coverInput.value.trim();
+    const note = document.getElementById(idPrefix+'Note').value.trim();
+    if(!title){ alert('Kitap adı gerekli.'); return; }
+    if(!author){ alert('Yazar adı gerekli.'); return; }
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try{
+      await onSubmit({title, author, cover, note});
+    }catch(err){ alert('Gönderilemedi: '+(err.message||err)); btn.disabled = false; }
+  });
 }
 async function renderQpNominating(body, qp){
   let noms = [];
   try{ const snap = await getDocs(qpNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){}
   noms.sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
   const myCount = noms.filter(n=>n.uid===currentUid).length;
-  const rows = noms.map(qpNomRowHtml).join('');
+  const rows = noms.map(n=>{
+    const extra = n.uid===currentUid ? `<div class="row" style="flex:0 0 auto; width:auto; gap:6px;">
+      <button type="button" class="secondary tiny" data-qp-edit="${n.id}">Düzenle</button>
+      <button type="button" class="secondary tiny" data-qp-delete="${n.id}" style="border-color:var(--cloth-dark); color:var(--cloth-dark);">Sil</button>
+    </div>` : '';
+    return qpNomRowHtml(n, extra);
+  }).join('');
   body.innerHTML = `
     <div class="qp-phase-label">Öneri Toplama</div>
     <div class="qp-deadline">⏳ ${qpFmtRemaining(qp.phaseEndsAt)}</div>
@@ -4675,38 +4743,48 @@ async function renderQpNominating(body, qp){
     <p class="muted" style="font-size:12px; margin-bottom:8px;">Hakkın: ${myCount}/${QP_MAX_NOMINATIONS} kullanıldı.</p>
     ${myCount<QP_MAX_NOMINATIONS ? `
     <button type="button" class="secondary tiny" id="qpNomAddBtn">+ Kitap Öner</button>
-    <div id="qpNomFormWrap" style="display:none; margin-top:12px;">
-      <div class="field"><label>Kitap Adı</label><input type="text" id="qpNomBook" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div id="qpNomBookSuggest" class="book-suggest-box"></div></div>
-      <input type="hidden" id="qpNomAuthor" />
-      <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" id="qpNomCover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
-      <button class="primary" id="qpNomSendBtn">Öner</button>
-    </div>` : `<p class="muted" style="font-size:12px;">3 öneri hakkını kullandın.</p>`}
+    <div id="qpNomFormWrap" style="display:none; margin-top:12px;">${qpNominationFormHtml('qpNom','Öner')}</div>` : `<p class="muted" style="font-size:12px;">3 öneri hakkını kullandın.</p>`}
   `;
+  qpWireNomRowClicks(body);
+  body.querySelectorAll('[data-qp-delete]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      if(!confirm('Bu öneriyi silmek istediğine emin misin?')) return;
+      try{
+        await deleteDoc(doc(db,'quarterlyPick','current','nominations',btn.dataset.qpDelete));
+        showToast('Öneri silindi.');
+        renderQuarterlyPickCard();
+      }catch(err){ alert('Silinemedi: '+(err.message||err)); }
+    });
+  });
+  body.querySelectorAll('[data-qp-edit]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const nomId = btn.dataset.qpEdit;
+      const nom = qpNomCache[nomId];
+      const row = btn.closest('.qp-nom-row');
+      row.innerHTML = qpNominationFormHtml('qpEdit_'+nomId, 'Güncelle');
+      document.getElementById('qpEdit_'+nomId+'Book').value = nom.bookTitle||'';
+      document.getElementById('qpEdit_'+nomId+'Author').value = nom.bookAuthor||'';
+      document.getElementById('qpEdit_'+nomId+'Cover').value = nom.bookCover||'';
+      document.getElementById('qpEdit_'+nomId+'Note').value = nom.note||'';
+      qpWireNominationForm('qpEdit_'+nomId, async ({title,author,cover,note})=>{
+        await updateDoc(doc(db,'quarterlyPick','current','nominations',nomId), { bookTitle:title, bookAuthor:author, bookCover:cover, note });
+        showToast('Öneri güncellendi!');
+        renderQuarterlyPickCard();
+      });
+    });
+  });
   const addBtn = document.getElementById('qpNomAddBtn');
   if(addBtn){
     addBtn.addEventListener('click', ()=>{
       const wrap = document.getElementById('qpNomFormWrap');
       wrap.style.display = wrap.style.display==='none' ? 'block' : 'none';
     });
-    attachBookAutocompleteEl(
-      document.getElementById('qpNomBook'), document.getElementById('qpNomCover'), document.getElementById('qpNomBookSuggest'),
-      (b)=>{
-        document.getElementById('qpNomBook').value = b.title;
-        document.getElementById('qpNomAuthor').value = b.author||'';
-        document.getElementById('qpNomCover').value = b.cover||'';
-      }
-    );
-    document.getElementById('qpNomSendBtn').addEventListener('click', async (e)=>{
-      const title = document.getElementById('qpNomBook').value.trim();
-      if(!title){ alert('Kitap adı gerekli.'); return; }
-      const author = document.getElementById('qpNomAuthor').value.trim();
-      const cover = document.getElementById('qpNomCover').value.trim();
-      e.currentTarget.disabled = true;
-      try{
-        await submitQuarterlyNomination(title, author, cover, null);
-        showToast('Öneri gönderildi!');
-        renderQuarterlyPickCard();
-      }catch(err){ alert('Gönderilemedi: '+(err.message||err)); e.currentTarget.disabled = false; }
+    qpWireNominationForm('qpNom', async ({title,author,cover,note})=>{
+      await submitQuarterlyNomination(title, author, cover, note, null);
+      showToast('Öneri gönderildi!');
+      renderQuarterlyPickCard();
     });
   }
 }
@@ -4723,14 +4801,7 @@ async function renderQpObjecting(body, qp){
         ${canFill ? `<button type="button" class="qp-slot-fill-btn" data-fill-slot="${n.id}">+</button><span class="muted" style="font-size:12px;">boş yer — bir kitap öner</span>` : `<span class="muted" style="font-size:12px;">boş yer ("${escapeHtml(n.bookTitle)}" itiraz edildi)</span>`}
       </div>`;
     }
-    return `<div class="qp-nom-row">
-      ${n.bookCover?`<img src="${n.bookCover}" class="qp-nom-cover" alt="" onerror="this.style.display='none';" />`:`<div class="qp-nom-cover-ph"></div>`}
-      <div class="qp-nom-info">
-        <div class="qp-nom-title">${escapeHtml(n.bookTitle)}</div>
-        <div class="qp-nom-meta">${escapeHtml(n.bookAuthor||'')} &middot; öneren: ${escapeHtml(n.name||'')}</div>
-      </div>
-      <button type="button" class="secondary tiny" data-qp-object="${n.id}" data-qp-title="${escapeHtml(n.bookTitle)}">Yakın zamanda okudum</button>
-    </div>`;
+    return qpNomRowHtml(n, `<button type="button" class="secondary tiny" data-qp-object="${n.id}" data-qp-title="${escapeHtml(n.bookTitle)}">Yakın zamanda okudum</button>`);
   }).join('');
   body.innerHTML = `
     <div class="qp-phase-label">İtiraz Süresi</div>
@@ -4738,40 +4809,22 @@ async function renderQpObjecting(body, qp){
     <p class="muted" style="font-size:12px; margin-bottom:8px;">Bir kitabı yakın zamanda okuduysan itiraz edebilirsin — düşen kitabın yerine öneren kişi ya da hakkı dolmayan biri (kim önce davranırsa) yeni bir öneri yapabilir.</p>
     <div class="qp-nom-list">${rows}</div>
   `;
+  qpWireNomRowClicks(body);
   body.querySelectorAll('[data-qp-object]').forEach(btn=>{
-    btn.addEventListener('click', ()=> objectToQuarterlyNomination(btn.dataset.qpObject, btn.dataset.qpTitle));
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); objectToQuarterlyNomination(btn.dataset.qpObject, btn.dataset.qpTitle); });
   });
   body.querySelectorAll('[data-fill-slot]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
       const slotId = btn.dataset.fillSlot;
       const row = btn.closest('.qp-nom-row');
       row.classList.remove('ghost');
       row.style.display = 'block';
-      row.innerHTML = `
-        <div class="field"><label>Kitap Adı</label><input type="text" class="qp-fill-book" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div class="qp-fill-suggest book-suggest-box"></div></div>
-        <input type="hidden" class="qp-fill-author" />
-        <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" class="qp-fill-cover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
-        <button type="button" class="primary tiny qp-fill-send">Öner</button>
-      `;
-      attachBookAutocompleteEl(
-        row.querySelector('.qp-fill-book'), row.querySelector('.qp-fill-cover'), row.querySelector('.qp-fill-suggest'),
-        (b)=>{
-          row.querySelector('.qp-fill-book').value = b.title;
-          row.querySelector('.qp-fill-author').value = b.author||'';
-          row.querySelector('.qp-fill-cover').value = b.cover||'';
-        }
-      );
-      row.querySelector('.qp-fill-send').addEventListener('click', async (e)=>{
-        const title = row.querySelector('.qp-fill-book').value.trim();
-        if(!title){ alert('Kitap adı gerekli.'); return; }
-        const author = row.querySelector('.qp-fill-author').value.trim();
-        const cover = row.querySelector('.qp-fill-cover').value.trim();
-        e.currentTarget.disabled = true;
-        try{
-          await submitQuarterlyNomination(title, author, cover, slotId);
-          showToast('Öneri gönderildi!');
-          renderQuarterlyPickCard();
-        }catch(err){ alert('Gönderilemedi: '+(err.message||err)); e.currentTarget.disabled = false; }
+      row.innerHTML = qpNominationFormHtml('qpFill_'+slotId, 'Öner');
+      qpWireNominationForm('qpFill_'+slotId, async ({title,author,cover,note})=>{
+        await submitQuarterlyNomination(title, author, cover, note, slotId);
+        showToast('Öneri gönderildi!');
+        renderQuarterlyPickCard();
       });
     });
   });
@@ -4802,19 +4855,25 @@ async function renderQpVoting(body, qp){
     card.addEventListener('click', ()=> voteQuarterlyMatch(qp.round, card.dataset.qpVote, card.dataset.qpSlot));
   });
 }
+function qpWinnerBigCardHtml(cover, title, author){
+  const coverInner = cover
+    ? `<img src="${cover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(title).replace(/'/g,"\\'")}');" />`
+    : placeholderCoverHtml(title);
+  return `<div class="bh-grid-inner" style="max-width:140px; margin:0 auto 10px;">
+    <div class="bh-card">
+      <div class="bh-cover-wrap">${coverInner}</div>
+      <div class="bh-title">${escapeHtml(title||'')}</div>
+      <div class="bh-author">${escapeHtml(author||'')}</div>
+    </div>
+  </div>`;
+}
 function renderQpReadingSummary(body, qp){
   const daysLeft = Math.max(0, Math.ceil((new Date(qp.readingEndsAt) - Date.now())/(24*60*60*1000)));
   body.innerHTML = `
     <div class="qp-phase-label">Okuma Dönemi</div>
-    <div class="qp-winner-card">
-      ${qp.winnerCover?`<img src="${qp.winnerCover}" class="qp-winner-cover" alt="" onerror="this.style.display='none';" />`:''}
-      <div>
-        <div class="qp-nom-title">${escapeHtml(qp.winnerTitle||'')}</div>
-        <div class="qp-nom-meta">${escapeHtml(qp.winnerAuthor||'')} &middot; öneren: ${escapeHtml(qp.winnerNominatedByName||'')}</div>
-        <div class="muted" style="font-size:12px; margin-top:4px;">${daysLeft} gün kaldı</div>
-      </div>
-    </div>
-    <p class="muted" style="font-size:12px; margin-top:8px;">"Bugün" sekmesinden bu kitabı bitirdiğinde işaretleyebilirsin.</p>
+    ${qpWinnerBigCardHtml(qp.winnerCover, qp.winnerTitle, qp.winnerAuthor)}
+    <p class="muted" style="text-align:center; font-size:12px;">öneren: ${escapeHtml(qp.winnerNominatedByName||'')} &middot; ${daysLeft} gün kaldı</p>
+    <p class="muted" style="text-align:center; font-size:12px; margin-top:4px;">"Bugün" sekmesinden bu kitabı bitirdiğinde işaretleyebilirsin.</p>
   `;
 }
 async function renderQpBookInBugun(containerId){
@@ -4826,14 +4885,11 @@ async function renderQpBookInBugun(containerId){
   const finished = (qp.finishedBy||[]).includes(currentUid);
   const daysLeft = Math.max(0, Math.ceil((new Date(qp.readingEndsAt) - Date.now())/(24*60*60*1000)));
   el.innerHTML = `
-    <div class="qp-winner-card" style="margin-top:14px; text-align:left;">
-      ${qp.winnerCover?`<img src="${qp.winnerCover}" class="qp-winner-cover" alt="" onerror="this.style.display='none';" />`:''}
-      <div style="flex:1;">
-        <div class="muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.4px;">📚 Ortak Kitap</div>
-        <div class="qp-nom-title">${escapeHtml(qp.winnerTitle||'')}</div>
-        <div class="qp-nom-meta">${escapeHtml(qp.winnerAuthor||'')} &middot; ${daysLeft} gün kaldı</div>
-        <button type="button" class="secondary tiny" id="qpFinishBtn_${containerId}" ${finished?'disabled':''} style="margin-top:6px;">${finished?'✓ Bitirdim':'Bu Kitabı Bitirdim'}</button>
-      </div>
+    <div style="margin-top:14px; text-align:center;">
+      <div class="muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">📚 Ortak Kitap</div>
+      ${qpWinnerBigCardHtml(qp.winnerCover, qp.winnerTitle, qp.winnerAuthor)}
+      <div class="muted" style="font-size:12px;">${daysLeft} gün kaldı</div>
+      <button type="button" class="secondary tiny" id="qpFinishBtn_${containerId}" ${finished?'disabled':''} style="margin-top:8px;">${finished?'✓ Bitirdim':'Bu Kitabı Bitirdim'}</button>
     </div>
   `;
   const btn = document.getElementById(`qpFinishBtn_${containerId}`);
@@ -4848,7 +4904,7 @@ async function renderQpBookInBugun(containerId){
     });
   }
 }
-async function submitQuarterlyNomination(bookTitle, bookAuthor, bookCover, replacesNomId){
+async function submitQuarterlyNomination(bookTitle, bookAuthor, bookCover, note, replacesNomId){
   const nomsCol = qpNomsCol();
   const mySnap = await getDocs(query(nomsCol, where('uid','==',currentUid)));
   let myCount = 0;
@@ -4868,12 +4924,12 @@ async function submitQuarterlyNomination(bookTitle, bookAuthor, bookCover, repla
       if(!isOriginalNominator && myCount>=QP_MAX_NOMINATIONS) throw new Error('3 öneri hakkını kullanmışsın.');
       tx.update(origRef, { replacementFilled:true });
       const newRef = doc(nomsCol);
-      tx.set(newRef, { uid:currentUid, name:myProfile.name, bookTitle, bookAuthor:bookAuthor||'', bookCover:bookCover||'', createdAt:new Date().toISOString(), status:'active', isReplacementFor:replacesNomId });
+      tx.set(newRef, { uid:currentUid, name:myProfile.name, bookTitle, bookAuthor:bookAuthor||'', bookCover:bookCover||'', note:note||'', createdAt:new Date().toISOString(), status:'active', isReplacementFor:replacesNomId });
     } else {
       if(qp.phase!=='nominating') throw new Error('Öneri süresi bitmiş.');
       if(myCount>=QP_MAX_NOMINATIONS) throw new Error('En fazla 3 kitap önerebilirsin.');
       const newRef = doc(nomsCol);
-      tx.set(newRef, { uid:currentUid, name:myProfile.name, bookTitle, bookAuthor:bookAuthor||'', bookCover:bookCover||'', createdAt:new Date().toISOString(), status:'active' });
+      tx.set(newRef, { uid:currentUid, name:myProfile.name, bookTitle, bookAuthor:bookAuthor||'', bookCover:bookCover||'', note:note||'', createdAt:new Date().toISOString(), status:'active' });
     }
   });
 }
@@ -4963,42 +5019,54 @@ async function renderQpTestNominating(body, qp){
   let noms = [];
   try{ const snap = await getDocs(qpTestNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){}
   noms.sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
-  const rows = noms.map(qpNomRowHtml).join('');
+  const rows = noms.map(n=>{
+    const extra = n.uid===currentUid ? `<div class="row" style="flex:0 0 auto; width:auto; gap:6px;">
+      <button type="button" class="secondary tiny" data-qp-test-edit="${n.id}">Düzenle</button>
+      <button type="button" class="secondary tiny" data-qp-test-delete="${n.id}" style="border-color:var(--cloth-dark); color:var(--cloth-dark);">Sil</button>
+    </div>` : '';
+    return qpNomRowHtml(n, extra);
+  }).join('');
   body.innerHTML = `
     <div class="qp-phase-label">Öneri Toplama (deneme — sınırsız hak)</div>
     <div class="qp-nom-list">${rows || '<p class="muted">Henüz öneri yok.</p>'}</div>
     <button type="button" class="secondary tiny" id="qpTestNomAddBtn">+ Kitap Öner</button>
-    <div id="qpTestNomFormWrap" style="display:none; margin-top:12px;">
-      <div class="field"><label>Kitap Adı</label><input type="text" id="qpTestNomBook" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div id="qpTestNomBookSuggest" class="book-suggest-box"></div></div>
-      <input type="hidden" id="qpTestNomAuthor" />
-      <div class="field"><label>Kapak Görseli Linki</label><input type="text" id="qpTestNomCover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
-      <button class="primary" id="qpTestNomSendBtn">Öner</button>
-    </div>
+    <div id="qpTestNomFormWrap" style="display:none; margin-top:12px;">${qpNominationFormHtml('qpTestNom','Öner')}</div>
     ${qpTestAdvanceBtnHtml('İtiraz Fazına Geç →')}
   `;
+  qpWireNomRowClicks(body);
   qpTestWireAdvanceBtn();
+  body.querySelectorAll('[data-qp-test-delete]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      if(!confirm('Bu öneriyi silmek istediğine emin misin?')) return;
+      await deleteDoc(doc(db,'quarterlyPickTest','current','nominations',btn.dataset.qpTestDelete));
+      renderQpTestCard();
+    });
+  });
+  body.querySelectorAll('[data-qp-test-edit]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const nomId = btn.dataset.qpTestEdit;
+      const nom = qpNomCache[nomId];
+      const row = btn.closest('.qp-nom-row');
+      row.innerHTML = qpNominationFormHtml('qpTestEdit_'+nomId, 'Güncelle');
+      document.getElementById('qpTestEdit_'+nomId+'Book').value = nom.bookTitle||'';
+      document.getElementById('qpTestEdit_'+nomId+'Author').value = nom.bookAuthor||'';
+      document.getElementById('qpTestEdit_'+nomId+'Cover').value = nom.bookCover||'';
+      document.getElementById('qpTestEdit_'+nomId+'Note').value = nom.note||'';
+      qpWireNominationForm('qpTestEdit_'+nomId, async ({title,author,cover,note})=>{
+        await updateDoc(doc(db,'quarterlyPickTest','current','nominations',nomId), { bookTitle:title, bookAuthor:author, bookCover:cover, note });
+        renderQpTestCard();
+      });
+    });
+  });
   document.getElementById('qpTestNomAddBtn').addEventListener('click', ()=>{
     const wrap = document.getElementById('qpTestNomFormWrap');
     wrap.style.display = wrap.style.display==='none' ? 'block' : 'none';
   });
-  attachBookAutocompleteEl(
-    document.getElementById('qpTestNomBook'), document.getElementById('qpTestNomCover'), document.getElementById('qpTestNomBookSuggest'),
-    (b)=>{
-      document.getElementById('qpTestNomBook').value = b.title;
-      document.getElementById('qpTestNomAuthor').value = b.author||'';
-      document.getElementById('qpTestNomCover').value = b.cover||'';
-    }
-  );
-  document.getElementById('qpTestNomSendBtn').addEventListener('click', async (e)=>{
-    const title = document.getElementById('qpTestNomBook').value.trim();
-    if(!title){ alert('Kitap adı gerekli.'); return; }
-    const author = document.getElementById('qpTestNomAuthor').value.trim();
-    const cover = document.getElementById('qpTestNomCover').value.trim();
-    e.currentTarget.disabled = true;
-    try{
-      await addDoc(qpTestNomsCol(), { uid:currentUid, name:myProfile.name, bookTitle:title, bookAuthor:author, bookCover:cover, createdAt:new Date().toISOString(), status:'active' });
-      renderQpTestCard();
-    }catch(err){ alert('Eklenemedi: '+(err.message||err)); e.currentTarget.disabled=false; }
+  qpWireNominationForm('qpTestNom', async ({title,author,cover,note})=>{
+    await addDoc(qpTestNomsCol(), { uid:currentUid, name:myProfile.name, bookTitle:title, bookAuthor:author, bookCover:cover, note:note||'', createdAt:new Date().toISOString(), status:'active' });
+    renderQpTestCard();
   });
 }
 async function renderQpTestObjecting(body, qp){
@@ -5012,58 +5080,34 @@ async function renderQpTestObjecting(body, qp){
         <button type="button" class="qp-slot-fill-btn" data-fill-slot="${n.id}">+</button><span class="muted" style="font-size:12px;">boş yer — bir kitap öner</span>
       </div>`;
     }
-    return `<div class="qp-nom-row">
-      ${n.bookCover?`<img src="${n.bookCover}" class="qp-nom-cover" alt="" onerror="this.style.display='none';" />`:`<div class="qp-nom-cover-ph"></div>`}
-      <div class="qp-nom-info">
-        <div class="qp-nom-title">${escapeHtml(n.bookTitle)}</div>
-        <div class="qp-nom-meta">${escapeHtml(n.bookAuthor||'')} &middot; öneren: ${escapeHtml(n.name||'')}</div>
-      </div>
-      <button type="button" class="secondary tiny" data-qp-object="${n.id}">İtiraz Et</button>
-    </div>`;
+    return qpNomRowHtml(n, `<button type="button" class="secondary tiny" data-qp-object="${n.id}">İtiraz Et</button>`);
   }).join('');
   body.innerHTML = `
     <div class="qp-phase-label">İtiraz Süresi (deneme — süre yok)</div>
     <div class="qp-nom-list">${rows}</div>
     ${qpTestAdvanceBtnHtml('Turnuvayı Başlat →')}
   `;
+  qpWireNomRowClicks(body);
   qpTestWireAdvanceBtn();
   body.querySelectorAll('[data-qp-object]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
+    btn.addEventListener('click', async (e)=>{
+      e.stopPropagation();
       await updateDoc(doc(db,'quarterlyPickTest','current','nominations',btn.dataset.qpObject), { status:'objected', objectedBy:currentUid, objectedByName:myProfile.name, objectedAt:new Date().toISOString() });
       renderQpTestCard();
     });
   });
   body.querySelectorAll('[data-fill-slot]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
       const slotId = btn.dataset.fillSlot;
       const row = btn.closest('.qp-nom-row');
       row.classList.remove('ghost');
       row.style.display = 'block';
-      row.innerHTML = `
-        <div class="field"><label>Kitap Adı</label><input type="text" class="qp-fill-book" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div class="qp-fill-suggest book-suggest-box"></div></div>
-        <input type="hidden" class="qp-fill-author" />
-        <div class="field"><label>Kapak Görseli Linki</label><input type="text" class="qp-fill-cover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
-        <button type="button" class="primary tiny qp-fill-send">Öner</button>
-      `;
-      attachBookAutocompleteEl(
-        row.querySelector('.qp-fill-book'), row.querySelector('.qp-fill-cover'), row.querySelector('.qp-fill-suggest'),
-        (b)=>{
-          row.querySelector('.qp-fill-book').value = b.title;
-          row.querySelector('.qp-fill-author').value = b.author||'';
-          row.querySelector('.qp-fill-cover').value = b.cover||'';
-        }
-      );
-      row.querySelector('.qp-fill-send').addEventListener('click', async (e)=>{
-        const title = row.querySelector('.qp-fill-book').value.trim();
-        if(!title){ alert('Kitap adı gerekli.'); return; }
-        const author = row.querySelector('.qp-fill-author').value.trim();
-        const cover = row.querySelector('.qp-fill-cover').value.trim();
-        e.currentTarget.disabled = true;
-        try{
-          await updateDoc(doc(db,'quarterlyPickTest','current','nominations',slotId), { replacementFilled:true });
-          await addDoc(qpTestNomsCol(), { uid:currentUid, name:myProfile.name, bookTitle:title, bookAuthor:author, bookCover:cover, createdAt:new Date().toISOString(), status:'active', isReplacementFor:slotId });
-          renderQpTestCard();
-        }catch(err){ alert('Gönderilemedi: '+(err.message||err)); e.currentTarget.disabled=false; }
+      row.innerHTML = qpNominationFormHtml('qpTestFill_'+slotId, 'Öner');
+      qpWireNominationForm('qpTestFill_'+slotId, async ({title,author,cover,note})=>{
+        await updateDoc(doc(db,'quarterlyPickTest','current','nominations',slotId), { replacementFilled:true });
+        await addDoc(qpTestNomsCol(), { uid:currentUid, name:myProfile.name, bookTitle:title, bookAuthor:author, bookCover:cover, note:note||'', createdAt:new Date().toISOString(), status:'active', isReplacementFor:slotId });
+        renderQpTestCard();
       });
     });
   });
@@ -5110,13 +5154,8 @@ async function renderQpTestVoting(body, qp){
 function renderQpTestReading(body, qp){
   body.innerHTML = `
     <div class="qp-phase-label">Okuma Dönemi (deneme sonucu)</div>
-    <div class="qp-winner-card">
-      ${qp.winnerCover?`<img src="${qp.winnerCover}" class="qp-winner-cover" alt="" onerror="this.style.display='none';" />`:''}
-      <div>
-        <div class="qp-nom-title">${escapeHtml(qp.winnerTitle||'')}</div>
-        <div class="qp-nom-meta">${escapeHtml(qp.winnerAuthor||'')} &middot; öneren: ${escapeHtml(qp.winnerNominatedByName||'')}</div>
-      </div>
-    </div>
+    ${qpWinnerBigCardHtml(qp.winnerCover, qp.winnerTitle, qp.winnerAuthor)}
+    <p class="muted" style="text-align:center; font-size:12px;">öneren: ${escapeHtml(qp.winnerNominatedByName||'')}</p>
     <button type="button" class="secondary tiny" id="qpTestAdvanceBtn" style="margin-top:12px;">Denemeyi Baştan Başlat →</button>
   `;
   qpTestWireAdvanceBtn();
