@@ -491,6 +491,30 @@
   .poll-voter-avatar:first-child{ margin-left:0; }
   .poll-voter-extra{ display:flex; align-items:center; justify-content:center; background:var(--ink-70); color:#fff; font-size:8px; font-weight:800; font-family:'Roboto Mono',monospace; }
   .poll-total-votes{ font-family:'Inter',sans-serif; font-size:11.5px; color:var(--ink-70); margin-top:2px; }
+  /* ============ ORTAK KİTAP SEÇİMİ (3 aylık turnuva) ============ */
+  .qp-phase-label{ font-family:'Roboto Mono',monospace; font-size:11px; font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+  .qp-deadline{ font-size:12px; color:var(--ink-70); margin-bottom:12px; }
+  .qp-nom-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+  .qp-nom-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; border:1.5px solid var(--line); border-radius:12px; }
+  .qp-nom-cover{ width:34px; height:50px; object-fit:cover; border-radius:5px; box-shadow:var(--shadow); flex:0 0 auto; }
+  .qp-nom-cover-ph{ width:34px; height:50px; border-radius:5px; background:var(--line); flex:0 0 auto; }
+  .qp-nom-info{ flex:1 1 auto; min-width:0; }
+  .qp-nom-title{ font-size:13.5px; font-weight:600; color:var(--ink); }
+  .qp-nom-meta{ font-size:11px; color:var(--ink-70); }
+  .qp-nom-row.ghost{ border-style:dashed; opacity:.6; justify-content:center; }
+  .qp-slot-fill-btn{ background:none; border:none; color:var(--gold); font-weight:700; cursor:pointer; font-size:20px; padding:4px 10px; }
+  .qp-vs-row{ display:flex; align-items:stretch; gap:10px; margin-bottom:12px; }
+  .qp-vs-card{ flex:1 1 0; min-width:0; border:1.5px solid var(--line); border-radius:14px; padding:10px; text-align:center; cursor:pointer; transition:border-color .15s var(--ease); }
+  .qp-vs-card:hover{ border-color:var(--gold); }
+  .qp-vs-card.voted{ border-color:var(--gold); background:rgba(212,163,42,0.08); }
+  .qp-vs-cover{ width:56px; height:82px; object-fit:cover; border-radius:6px; box-shadow:var(--shadow); margin:0 auto 6px; }
+  .qp-vs-title{ font-size:12.5px; font-weight:700; line-height:1.3; }
+  .qp-vs-author{ font-size:11px; color:var(--ink-70); }
+  .qp-vs-votes{ font-family:'Roboto Mono',monospace; font-size:12px; font-weight:700; color:var(--gold); margin-top:4px; }
+  .qp-vs-mid{ display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--ink-70); flex:0 0 auto; font-size:12px; }
+  .qp-match-wrap{ margin-bottom:14px; }
+  .qp-winner-card{ display:flex; gap:12px; align-items:center; padding:10px; border:1.5px solid var(--gold); border-radius:14px; background:rgba(212,163,42,0.06); }
+  .qp-winner-cover{ width:56px; height:82px; object-fit:cover; border-radius:6px; box-shadow:var(--shadow); flex:0 0 auto; }
   .post-card{
     background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3);
     border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer; position:relative;
@@ -845,6 +869,7 @@
         </div>
         <div id="aSelfStatusNote" class="muted" style="text-align:center;"></div>
         <div id="aSelfStreakNote" class="muted" style="text-align:center; margin-top:8px;"></div>
+        <div id="aSelfQpBook"></div>
       </div>
 
       <div class="card">
@@ -925,6 +950,17 @@
       </div>
     </section>
 
+    <section class="tab" id="tab-qptest">
+      <div class="card">
+        <h2>🧪 Deneme: Ortak Kitap Seçimi</h2>
+        <p class="muted">Burada yaptığın hiçbir şey (öneri, itiraz, oy) gerçek seçimi etkilemez, üyelere hiçbir bildirim/gönderi gitmez — sadece sana özel bir deneme alanı. Öneri hakkı sınırsız, faz süreleri yok; bir sonraki faza kendin, aşağıdaki tuşla geçiyorsun.</p>
+        <div id="qpTestBody"><span class="muted">Yükleniyor…</span></div>
+      </div>
+      <div class="card">
+        <button class="secondary" id="qpTestResetBtn">🧹 Denemeyi Sıfırla</button>
+      </div>
+    </section>
+
     <section class="tab" id="tab-members">
       <div class="card">
         <h2>Üyeler &amp; Roller</h2>
@@ -965,6 +1001,7 @@
         </div>
         <div id="mMyStatusNote" class="muted" style="text-align:center;"></div>
         <div id="mMyStreakNote" class="muted" style="text-align:center; margin-top:8px;"></div>
+        <div id="mMyQpBook"></div>
       </div>
 
       <div class="card">
@@ -1177,6 +1214,11 @@
 
     <!-- ORTAK: KİTAP ÖNERİLERİ -->
     <section class="tab" id="tab-recs">
+      <div class="card" id="quarterlyPickCard">
+        <h2>📚 Ortak Kitap Seçimi</h2>
+        <div id="quarterlyPickBody"><span class="muted">Yükleniyor…</span></div>
+      </div>
+
       <div class="card">
         <h2>Şahsi Öneriler</h2>
         <p class="muted">Bu öneri ve yorumları sadece sen ve ilgili kişi görebilir — yönetici de dahil kimse başkası göremez.</p>
@@ -2407,6 +2449,7 @@ const HAMBURGER_ADMIN_EXTRA = [
   {id:'whoreadtoday', label:'Bugün Kim Okudu', icon:'👁'},
   {id:'editpast', label:'Geçmiş Düzenle', icon:'✎'},
   {id:'manual', label:'Manuel Kura', icon:'⚙'},
+  {id:'qptest', label:'Deneme: Ortak Kitap Seçimi', icon:'🧪'},
   {id:'members', label:'Üyeler', icon:'⚈'},
   {id:'rules', label:'Grup Kuralları', icon:'§'},
   {id:'settings', label:'Ayarlar', icon:'⚒'},
@@ -2861,6 +2904,7 @@ function renderTab(id){
     else { renderMemberLastWeek(); drawHistIndex.m=0; renderDrawHistoryCard('m'); }
   }
   else if(id==='manual') renderManualTab();
+  else if(id==='qptest') renderQpTestTab();
   else if(id==='members') renderAdminMembers();
   else if(id==='worms') renderAdminWorms();
   else if(id==='msurvey') renderMemberSurvey();
@@ -3925,6 +3969,7 @@ function wireSelfMarkCard(ids){
       document.getElementById(ids.streakNote).textContent = s>0 ? `🔥 ${s} gündür aralıksız okuyorsun.` : '';
     });
     renderTotalPagesCard(ids.pagesNumber);
+    if(ids.qpBook) renderQpBookInBugun(ids.qpBook);
   }
   document.getElementById(ids.readBtn).addEventListener('click', async ()=>{
     const key = ids.readBtn+'|read';
@@ -3971,9 +4016,9 @@ function playMarkFx(btn, type){
   ghost.classList.add(cls);
   setTimeout(()=> ghost.remove(), 700);
 }
-const renderMemberSurvey = wireSelfMarkCard({readBtn:'mReadBtn', skipBtn:'mSkipBtn', dateNote:'mDateNote', statusNote:'mMyStatusNote', streakNote:'mMyStreakNote', pagesNumber:'mTotalPagesNumber'});
+const renderMemberSurvey = wireSelfMarkCard({readBtn:'mReadBtn', skipBtn:'mSkipBtn', dateNote:'mDateNote', statusNote:'mMyStatusNote', streakNote:'mMyStreakNote', pagesNumber:'mTotalPagesNumber', qpBook:'mMyQpBook'});
 let memberWeekOffset = 0; // 0 = bu hafta, -1 = önceki hafta, ...
-const renderAdminSelfToday = wireSelfMarkCard({readBtn:'aSelfReadBtn', skipBtn:'aSelfSkipBtn', dateNote:'aSelfDateNote', statusNote:'aSelfStatusNote', streakNote:'aSelfStreakNote', pagesNumber:'totalPagesNumber'});
+const renderAdminSelfToday = wireSelfMarkCard({readBtn:'aSelfReadBtn', skipBtn:'aSelfSkipBtn', dateNote:'aSelfDateNote', statusNote:'aSelfStatusNote', streakNote:'aSelfStreakNote', pagesNumber:'totalPagesNumber', qpBook:'aSelfQpBook'});
 
 async function renderMemberOwnWeek(){
   const baseMonday = getMonday(nowLogical());
@@ -4568,8 +4613,588 @@ async function renderRecsTab(){
     ? others.map(uid=>`<option value="${uid}">${escapeHtml(usersCache[uid].name)}</option>`).join('')
     : '<option value="">(başka üye yok)</option>';
 
+  await renderQuarterlyPickCard();
   await renderPersonalRecs();
   await renderGroupRecs();
+}
+
+/* ============ ORTAK KİTAP SEÇİMİ (3 aylık turnuva usulü oylama) ============
+   Faz geçişleri (öneri → itiraz → oylama turları → okuma) sunucu tarafında otomatik
+   ilerliyor (bkz. functions/index.js: quarterlyPickTick). Burada sadece o anki fazı
+   gösterip, öneri/itiraz/oy verme gibi kullanıcı eylemlerini Firestore transaction'larıyla
+   güvenli şekilde kaydediyoruz. */
+const QP_MAX_NOMINATIONS = 3;
+let qpCache = null;
+function qpDocRef(){ return doc(db,'quarterlyPick','current'); }
+function qpNomsCol(){ return collection(db,'quarterlyPick','current','nominations'); }
+function qpMatchesCol(round){ return collection(db,'quarterlyPick','current','rounds',String(round),'matches'); }
+function qpFmtRemaining(endsAtIso){
+  if(!endsAtIso) return '';
+  const ms = new Date(endsAtIso).getTime() - Date.now();
+  if(ms<=0) return 'süre doldu, güncelleniyor…';
+  const totalMin = Math.floor(ms/60000);
+  const days = Math.floor(totalMin/1440);
+  const hours = Math.floor((totalMin%1440)/60);
+  const mins = totalMin%60;
+  if(days>0) return `${days} gün ${hours} saat kaldı`;
+  if(hours>0) return `${hours} saat ${mins} dakika kaldı`;
+  return `${mins} dakika kaldı`;
+}
+async function renderQuarterlyPickCard(){
+  const body = document.getElementById('quarterlyPickBody');
+  if(!body) return;
+  let qp = null;
+  try{ const snap = await getDoc(qpDocRef()); if(snap.exists()) qp = snap.data(); }catch(e){}
+  qpCache = qp;
+  if(!qp){ body.innerHTML = `<p class="muted">Henüz başlamamış, yakında başlayacak.</p>`; return; }
+  if(qp.phase==='nominating') return renderQpNominating(body, qp);
+  if(qp.phase==='objecting') return renderQpObjecting(body, qp);
+  if(qp.phase==='voting') return renderQpVoting(body, qp);
+  if(qp.phase==='reading') return renderQpReadingSummary(body, qp);
+  body.innerHTML = `<p class="muted">Durum bilinmiyor.</p>`;
+}
+function qpNomRowHtml(n){
+  return `<div class="qp-nom-row">
+    ${n.bookCover?`<img src="${n.bookCover}" class="qp-nom-cover" alt="" onerror="this.style.display='none';" />`:`<div class="qp-nom-cover-ph"></div>`}
+    <div class="qp-nom-info">
+      <div class="qp-nom-title">${escapeHtml(n.bookTitle)}</div>
+      <div class="qp-nom-meta">${escapeHtml(n.bookAuthor||'')} &middot; öneren: ${escapeHtml(n.name||'')}</div>
+    </div>
+  </div>`;
+}
+async function renderQpNominating(body, qp){
+  let noms = [];
+  try{ const snap = await getDocs(qpNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){}
+  noms.sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
+  const myCount = noms.filter(n=>n.uid===currentUid).length;
+  const rows = noms.map(qpNomRowHtml).join('');
+  body.innerHTML = `
+    <div class="qp-phase-label">Öneri Toplama</div>
+    <div class="qp-deadline">⏳ ${qpFmtRemaining(qp.phaseEndsAt)}</div>
+    <div class="qp-nom-list">${rows || '<p class="muted">Henüz öneri yok, ilk öneriyi sen yap!</p>'}</div>
+    <p class="muted" style="font-size:12px; margin-bottom:8px;">Hakkın: ${myCount}/${QP_MAX_NOMINATIONS} kullanıldı.</p>
+    ${myCount<QP_MAX_NOMINATIONS ? `
+    <button type="button" class="secondary tiny" id="qpNomAddBtn">+ Kitap Öner</button>
+    <div id="qpNomFormWrap" style="display:none; margin-top:12px;">
+      <div class="field"><label>Kitap Adı</label><input type="text" id="qpNomBook" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div id="qpNomBookSuggest" class="book-suggest-box"></div></div>
+      <input type="hidden" id="qpNomAuthor" />
+      <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" id="qpNomCover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
+      <button class="primary" id="qpNomSendBtn">Öner</button>
+    </div>` : `<p class="muted" style="font-size:12px;">3 öneri hakkını kullandın.</p>`}
+  `;
+  const addBtn = document.getElementById('qpNomAddBtn');
+  if(addBtn){
+    addBtn.addEventListener('click', ()=>{
+      const wrap = document.getElementById('qpNomFormWrap');
+      wrap.style.display = wrap.style.display==='none' ? 'block' : 'none';
+    });
+    attachBookAutocompleteEl(
+      document.getElementById('qpNomBook'), document.getElementById('qpNomCover'), document.getElementById('qpNomBookSuggest'),
+      (b)=>{
+        document.getElementById('qpNomBook').value = b.title;
+        document.getElementById('qpNomAuthor').value = b.author||'';
+        document.getElementById('qpNomCover').value = b.cover||'';
+      }
+    );
+    document.getElementById('qpNomSendBtn').addEventListener('click', async (e)=>{
+      const title = document.getElementById('qpNomBook').value.trim();
+      if(!title){ alert('Kitap adı gerekli.'); return; }
+      const author = document.getElementById('qpNomAuthor').value.trim();
+      const cover = document.getElementById('qpNomCover').value.trim();
+      e.currentTarget.disabled = true;
+      try{
+        await submitQuarterlyNomination(title, author, cover, null);
+        showToast('Öneri gönderildi!');
+        renderQuarterlyPickCard();
+      }catch(err){ alert('Gönderilemedi: '+(err.message||err)); e.currentTarget.disabled = false; }
+    });
+  }
+}
+async function renderQpObjecting(body, qp){
+  let noms = [];
+  try{ const snap = await getDocs(qpNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){}
+  noms.sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
+  const myCount = noms.filter(n=>n.uid===currentUid && (n.status==='active'||n.status==='objected')).length;
+  const rows = noms.map(n=>{
+    if(n.status==='objected'){
+      if(n.replacementFilled) return '';
+      const canFill = (n.uid===currentUid) || myCount<QP_MAX_NOMINATIONS;
+      return `<div class="qp-nom-row ghost" data-open-slot="${n.id}">
+        ${canFill ? `<button type="button" class="qp-slot-fill-btn" data-fill-slot="${n.id}">+</button><span class="muted" style="font-size:12px;">boş yer — bir kitap öner</span>` : `<span class="muted" style="font-size:12px;">boş yer ("${escapeHtml(n.bookTitle)}" itiraz edildi)</span>`}
+      </div>`;
+    }
+    return `<div class="qp-nom-row">
+      ${n.bookCover?`<img src="${n.bookCover}" class="qp-nom-cover" alt="" onerror="this.style.display='none';" />`:`<div class="qp-nom-cover-ph"></div>`}
+      <div class="qp-nom-info">
+        <div class="qp-nom-title">${escapeHtml(n.bookTitle)}</div>
+        <div class="qp-nom-meta">${escapeHtml(n.bookAuthor||'')} &middot; öneren: ${escapeHtml(n.name||'')}</div>
+      </div>
+      <button type="button" class="secondary tiny" data-qp-object="${n.id}" data-qp-title="${escapeHtml(n.bookTitle)}">Yakın zamanda okudum</button>
+    </div>`;
+  }).join('');
+  body.innerHTML = `
+    <div class="qp-phase-label">İtiraz Süresi</div>
+    <div class="qp-deadline">⏳ ${qpFmtRemaining(qp.phaseEndsAt)}</div>
+    <p class="muted" style="font-size:12px; margin-bottom:8px;">Bir kitabı yakın zamanda okuduysan itiraz edebilirsin — düşen kitabın yerine öneren kişi ya da hakkı dolmayan biri (kim önce davranırsa) yeni bir öneri yapabilir.</p>
+    <div class="qp-nom-list">${rows}</div>
+  `;
+  body.querySelectorAll('[data-qp-object]').forEach(btn=>{
+    btn.addEventListener('click', ()=> objectToQuarterlyNomination(btn.dataset.qpObject, btn.dataset.qpTitle));
+  });
+  body.querySelectorAll('[data-fill-slot]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const slotId = btn.dataset.fillSlot;
+      const row = btn.closest('.qp-nom-row');
+      row.classList.remove('ghost');
+      row.style.display = 'block';
+      row.innerHTML = `
+        <div class="field"><label>Kitap Adı</label><input type="text" class="qp-fill-book" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div class="qp-fill-suggest book-suggest-box"></div></div>
+        <input type="hidden" class="qp-fill-author" />
+        <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" class="qp-fill-cover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
+        <button type="button" class="primary tiny qp-fill-send">Öner</button>
+      `;
+      attachBookAutocompleteEl(
+        row.querySelector('.qp-fill-book'), row.querySelector('.qp-fill-cover'), row.querySelector('.qp-fill-suggest'),
+        (b)=>{
+          row.querySelector('.qp-fill-book').value = b.title;
+          row.querySelector('.qp-fill-author').value = b.author||'';
+          row.querySelector('.qp-fill-cover').value = b.cover||'';
+        }
+      );
+      row.querySelector('.qp-fill-send').addEventListener('click', async (e)=>{
+        const title = row.querySelector('.qp-fill-book').value.trim();
+        if(!title){ alert('Kitap adı gerekli.'); return; }
+        const author = row.querySelector('.qp-fill-author').value.trim();
+        const cover = row.querySelector('.qp-fill-cover').value.trim();
+        e.currentTarget.disabled = true;
+        try{
+          await submitQuarterlyNomination(title, author, cover, slotId);
+          showToast('Öneri gönderildi!');
+          renderQuarterlyPickCard();
+        }catch(err){ alert('Gönderilemedi: '+(err.message||err)); e.currentTarget.disabled = false; }
+      });
+    });
+  });
+}
+async function renderQpVoting(body, qp){
+  let matches = [];
+  try{ const snap = await getDocs(qpMatchesCol(qp.round)); snap.forEach(d=> matches.push({id:d.id, ...d.data()})); }catch(e){}
+  matches.sort((a,b)=> a.id.localeCompare(b.id));
+  const roundLabel = qp.round===qp.totalRounds ? 'Final' : (qp.round===qp.totalRounds-1 ? 'Yarı Final' : `${qp.round}. Tur`);
+  const cardHtml = (matchId, slot, book, votes, voted)=> `
+    <div class="qp-vs-card${voted?' voted':''}" data-qp-vote="${matchId}" data-qp-slot="${slot}">
+      ${book.bookCover?`<img src="${book.bookCover}" class="qp-vs-cover" alt="" onerror="this.style.display='none';" />`:''}
+      <div class="qp-vs-title">${escapeHtml(book.bookTitle)}</div>
+      <div class="qp-vs-author">${escapeHtml(book.bookAuthor||'')}</div>
+      <div class="qp-vs-votes">${votes} oy</div>
+    </div>`;
+  const rows = matches.map(m=>`<div class="qp-match-wrap"><div class="qp-vs-row">
+    ${cardHtml(m.id,'A',m.slotA,(m.votesA||[]).length,(m.votesA||[]).includes(currentUid))}
+    <div class="qp-vs-mid">VS</div>
+    ${cardHtml(m.id,'B',m.slotB,(m.votesB||[]).length,(m.votesB||[]).includes(currentUid))}
+  </div></div>`).join('');
+  body.innerHTML = `
+    <div class="qp-phase-label">${roundLabel} — Oylama</div>
+    <div class="qp-deadline">⏳ ${qpFmtRemaining(qp.phaseEndsAt)}</div>
+    ${rows}
+  `;
+  body.querySelectorAll('[data-qp-vote]').forEach(card=>{
+    card.addEventListener('click', ()=> voteQuarterlyMatch(qp.round, card.dataset.qpVote, card.dataset.qpSlot));
+  });
+}
+function renderQpReadingSummary(body, qp){
+  const daysLeft = Math.max(0, Math.ceil((new Date(qp.readingEndsAt) - Date.now())/(24*60*60*1000)));
+  body.innerHTML = `
+    <div class="qp-phase-label">Okuma Dönemi</div>
+    <div class="qp-winner-card">
+      ${qp.winnerCover?`<img src="${qp.winnerCover}" class="qp-winner-cover" alt="" onerror="this.style.display='none';" />`:''}
+      <div>
+        <div class="qp-nom-title">${escapeHtml(qp.winnerTitle||'')}</div>
+        <div class="qp-nom-meta">${escapeHtml(qp.winnerAuthor||'')} &middot; öneren: ${escapeHtml(qp.winnerNominatedByName||'')}</div>
+        <div class="muted" style="font-size:12px; margin-top:4px;">${daysLeft} gün kaldı</div>
+      </div>
+    </div>
+    <p class="muted" style="font-size:12px; margin-top:8px;">"Bugün" sekmesinden bu kitabı bitirdiğinde işaretleyebilirsin.</p>
+  `;
+}
+async function renderQpBookInBugun(containerId){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  let qp = qpCache;
+  if(!qp){ try{ const snap = await getDoc(qpDocRef()); if(snap.exists()) qp = snap.data(); }catch(e){} }
+  if(!qp || qp.phase!=='reading'){ el.innerHTML = ''; return; }
+  const finished = (qp.finishedBy||[]).includes(currentUid);
+  const daysLeft = Math.max(0, Math.ceil((new Date(qp.readingEndsAt) - Date.now())/(24*60*60*1000)));
+  el.innerHTML = `
+    <div class="qp-winner-card" style="margin-top:14px; text-align:left;">
+      ${qp.winnerCover?`<img src="${qp.winnerCover}" class="qp-winner-cover" alt="" onerror="this.style.display='none';" />`:''}
+      <div style="flex:1;">
+        <div class="muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.4px;">📚 Ortak Kitap</div>
+        <div class="qp-nom-title">${escapeHtml(qp.winnerTitle||'')}</div>
+        <div class="qp-nom-meta">${escapeHtml(qp.winnerAuthor||'')} &middot; ${daysLeft} gün kaldı</div>
+        <button type="button" class="secondary tiny" id="qpFinishBtn_${containerId}" ${finished?'disabled':''} style="margin-top:6px;">${finished?'✓ Bitirdim':'Bu Kitabı Bitirdim'}</button>
+      </div>
+    </div>
+  `;
+  const btn = document.getElementById(`qpFinishBtn_${containerId}`);
+  if(btn && !finished){
+    btn.addEventListener('click', async ()=>{
+      btn.disabled = true;
+      try{
+        await updateDoc(qpDocRef(), { finishedBy: arrayUnion(currentUid) });
+        showToast('Harika, bitirdiğini işaretledik!');
+        btn.textContent = '✓ Bitirdim';
+      }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); btn.disabled = false; }
+    });
+  }
+}
+async function submitQuarterlyNomination(bookTitle, bookAuthor, bookCover, replacesNomId){
+  const nomsCol = qpNomsCol();
+  const mySnap = await getDocs(query(nomsCol, where('uid','==',currentUid)));
+  let myCount = 0;
+  mySnap.forEach(d=>{ const s=d.data().status; if(s==='active'||s==='objected') myCount++; });
+  await runTransaction(db, async (tx)=>{
+    const qpSnap = await tx.get(qpDocRef());
+    if(!qpSnap.exists()) throw new Error('Seçim süreci bulunamadı.');
+    const qp = qpSnap.data();
+    if(replacesNomId){
+      if(qp.phase!=='objecting') throw new Error('İtiraz süresi bitmiş.');
+      const origRef = doc(db,'quarterlyPick','current','nominations',replacesNomId);
+      const origSnap = await tx.get(origRef);
+      if(!origSnap.exists()) throw new Error('Orijinal öneri bulunamadı.');
+      const orig = origSnap.data();
+      if(orig.status!=='objected' || orig.replacementFilled) throw new Error('Bu boşluk artık uygun değil, başka biri doldurmuş olabilir.');
+      const isOriginalNominator = orig.uid===currentUid;
+      if(!isOriginalNominator && myCount>=QP_MAX_NOMINATIONS) throw new Error('3 öneri hakkını kullanmışsın.');
+      tx.update(origRef, { replacementFilled:true });
+      const newRef = doc(nomsCol);
+      tx.set(newRef, { uid:currentUid, name:myProfile.name, bookTitle, bookAuthor:bookAuthor||'', bookCover:bookCover||'', createdAt:new Date().toISOString(), status:'active', isReplacementFor:replacesNomId });
+    } else {
+      if(qp.phase!=='nominating') throw new Error('Öneri süresi bitmiş.');
+      if(myCount>=QP_MAX_NOMINATIONS) throw new Error('En fazla 3 kitap önerebilirsin.');
+      const newRef = doc(nomsCol);
+      tx.set(newRef, { uid:currentUid, name:myProfile.name, bookTitle, bookAuthor:bookAuthor||'', bookCover:bookCover||'', createdAt:new Date().toISOString(), status:'active' });
+    }
+  });
+}
+async function objectToQuarterlyNomination(nomId, bookTitle){
+  if(!confirm(`"${bookTitle}" kitabını yakın zamanda okuduğunu belirtip öneriden düşürmek istediğine emin misin?`)) return;
+  const nomRef = doc(db,'quarterlyPick','current','nominations',nomId);
+  try{
+    await runTransaction(db, async (tx)=>{
+      const snap = await tx.get(nomRef);
+      if(!snap.exists()) throw new Error('Öneri bulunamadı.');
+      const data = snap.data();
+      if(data.status!=='active') throw new Error('Bu öneri zaten itiraz edilmiş.');
+      tx.update(nomRef, { status:'objected', objectedBy:currentUid, objectedByName:myProfile.name, objectedAt:new Date().toISOString() });
+    });
+    createPost('quarterly_pick', { subtype:'objection_made', bookTitle }, currentUid, myProfile.name);
+    showToast('İtiraz kaydedildi.');
+    renderQuarterlyPickCard();
+  }catch(err){ alert('İtiraz edilemedi: '+(err.message||err)); }
+}
+async function voteQuarterlyMatch(round, matchId, slot){
+  const matchRef = doc(db,'quarterlyPick','current','rounds',String(round),'matches',matchId);
+  try{
+    await runTransaction(db, async (tx)=>{
+      const snap = await tx.get(matchRef);
+      if(!snap.exists()) return;
+      const m = snap.data();
+      const votesA = (m.votesA||[]).filter(u=>u!==currentUid);
+      const votesB = (m.votesB||[]).filter(u=>u!==currentUid);
+      const alreadyThisSlot = slot==='A' ? (m.votesA||[]).includes(currentUid) : (m.votesB||[]).includes(currentUid);
+      if(!alreadyThisSlot){
+        if(slot==='A') votesA.push(currentUid); else votesB.push(currentUid);
+      }
+      tx.update(matchRef, { votesA, votesB });
+    });
+    renderQuarterlyPickCard();
+  }catch(err){ alert('Oy verilemedi: '+(err.message||err)); }
+}
+
+/* ============ YÖNETİCİYE ÖZEL DENEME: ORTAK KİTAP SEÇİMİ ============
+   Gerçek sistemle AYNI mantık (öneri→itiraz→turnuva→okuma), ama tamamen ayrı bir Firestore
+   yolunda (quarterlyPickTest), sınırsız öneri hakkıyla, süre sınırı olmadan ve faz geçişleri
+   burada bir tuşla elle tetikleniyor. Hiçbir bildirim/akış gönderisi oluşturmuyor, üyelere hiç
+   görünmüyor — sadece yöneticinin kendi deneme alanı. */
+function qpTestDocRef(){ return doc(db,'quarterlyPickTest','current'); }
+function qpTestNomsCol(){ return collection(db,'quarterlyPickTest','current','nominations'); }
+function qpTestMatchesCol(round){ return collection(db,'quarterlyPickTest','current','rounds',String(round),'matches'); }
+function qpTestBracketSizeFor(n){
+  if(n<2) return n;
+  let size=2;
+  while(size*2<=n) size*=2;
+  return size;
+}
+async function renderQpTestTab(){
+  await renderQpTestCard();
+  const resetBtn = document.getElementById('qpTestResetBtn');
+  if(resetBtn && !resetBtn.dataset.bound){
+    resetBtn.dataset.bound = '1';
+    resetBtn.addEventListener('click', qpTestReset);
+  }
+}
+async function renderQpTestCard(){
+  const body = document.getElementById('qpTestBody');
+  if(!body) return;
+  let qp = null;
+  try{ const snap = await getDoc(qpTestDocRef()); if(snap.exists()) qp = snap.data(); }catch(e){}
+  if(!qp){
+    body.innerHTML = `<p class="muted">Henüz başlatılmadı.</p><button class="primary" id="qpTestStartBtn" style="margin-top:8px;">Denemeyi Başlat</button>`;
+    document.getElementById('qpTestStartBtn').addEventListener('click', async ()=>{
+      await setDoc(qpTestDocRef(), { phase:'nominating', cycleNumber:1, phaseStartedAt:new Date().toISOString() });
+      renderQpTestCard();
+    });
+    return;
+  }
+  if(qp.phase==='nominating') return renderQpTestNominating(body, qp);
+  if(qp.phase==='objecting') return renderQpTestObjecting(body, qp);
+  if(qp.phase==='voting') return renderQpTestVoting(body, qp);
+  if(qp.phase==='reading') return renderQpTestReading(body, qp);
+}
+function qpTestAdvanceBtnHtml(label){
+  return `<button type="button" class="primary tiny" id="qpTestAdvanceBtn" style="margin-top:12px;">${label}</button>`;
+}
+function qpTestWireAdvanceBtn(){
+  const btn = document.getElementById('qpTestAdvanceBtn');
+  if(btn) btn.addEventListener('click', qpTestAdvancePhase);
+}
+async function renderQpTestNominating(body, qp){
+  let noms = [];
+  try{ const snap = await getDocs(qpTestNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){}
+  noms.sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
+  const rows = noms.map(qpNomRowHtml).join('');
+  body.innerHTML = `
+    <div class="qp-phase-label">Öneri Toplama (deneme — sınırsız hak)</div>
+    <div class="qp-nom-list">${rows || '<p class="muted">Henüz öneri yok.</p>'}</div>
+    <button type="button" class="secondary tiny" id="qpTestNomAddBtn">+ Kitap Öner</button>
+    <div id="qpTestNomFormWrap" style="display:none; margin-top:12px;">
+      <div class="field"><label>Kitap Adı</label><input type="text" id="qpTestNomBook" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div id="qpTestNomBookSuggest" class="book-suggest-box"></div></div>
+      <input type="hidden" id="qpTestNomAuthor" />
+      <div class="field"><label>Kapak Görseli Linki</label><input type="text" id="qpTestNomCover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
+      <button class="primary" id="qpTestNomSendBtn">Öner</button>
+    </div>
+    ${qpTestAdvanceBtnHtml('İtiraz Fazına Geç →')}
+  `;
+  qpTestWireAdvanceBtn();
+  document.getElementById('qpTestNomAddBtn').addEventListener('click', ()=>{
+    const wrap = document.getElementById('qpTestNomFormWrap');
+    wrap.style.display = wrap.style.display==='none' ? 'block' : 'none';
+  });
+  attachBookAutocompleteEl(
+    document.getElementById('qpTestNomBook'), document.getElementById('qpTestNomCover'), document.getElementById('qpTestNomBookSuggest'),
+    (b)=>{
+      document.getElementById('qpTestNomBook').value = b.title;
+      document.getElementById('qpTestNomAuthor').value = b.author||'';
+      document.getElementById('qpTestNomCover').value = b.cover||'';
+    }
+  );
+  document.getElementById('qpTestNomSendBtn').addEventListener('click', async (e)=>{
+    const title = document.getElementById('qpTestNomBook').value.trim();
+    if(!title){ alert('Kitap adı gerekli.'); return; }
+    const author = document.getElementById('qpTestNomAuthor').value.trim();
+    const cover = document.getElementById('qpTestNomCover').value.trim();
+    e.currentTarget.disabled = true;
+    try{
+      await addDoc(qpTestNomsCol(), { uid:currentUid, name:myProfile.name, bookTitle:title, bookAuthor:author, bookCover:cover, createdAt:new Date().toISOString(), status:'active' });
+      renderQpTestCard();
+    }catch(err){ alert('Eklenemedi: '+(err.message||err)); e.currentTarget.disabled=false; }
+  });
+}
+async function renderQpTestObjecting(body, qp){
+  let noms = [];
+  try{ const snap = await getDocs(qpTestNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){}
+  noms.sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
+  const rows = noms.map(n=>{
+    if(n.status==='objected'){
+      if(n.replacementFilled) return '';
+      return `<div class="qp-nom-row ghost" data-open-slot="${n.id}">
+        <button type="button" class="qp-slot-fill-btn" data-fill-slot="${n.id}">+</button><span class="muted" style="font-size:12px;">boş yer — bir kitap öner</span>
+      </div>`;
+    }
+    return `<div class="qp-nom-row">
+      ${n.bookCover?`<img src="${n.bookCover}" class="qp-nom-cover" alt="" onerror="this.style.display='none';" />`:`<div class="qp-nom-cover-ph"></div>`}
+      <div class="qp-nom-info">
+        <div class="qp-nom-title">${escapeHtml(n.bookTitle)}</div>
+        <div class="qp-nom-meta">${escapeHtml(n.bookAuthor||'')} &middot; öneren: ${escapeHtml(n.name||'')}</div>
+      </div>
+      <button type="button" class="secondary tiny" data-qp-object="${n.id}">İtiraz Et</button>
+    </div>`;
+  }).join('');
+  body.innerHTML = `
+    <div class="qp-phase-label">İtiraz Süresi (deneme — süre yok)</div>
+    <div class="qp-nom-list">${rows}</div>
+    ${qpTestAdvanceBtnHtml('Turnuvayı Başlat →')}
+  `;
+  qpTestWireAdvanceBtn();
+  body.querySelectorAll('[data-qp-object]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      await updateDoc(doc(db,'quarterlyPickTest','current','nominations',btn.dataset.qpObject), { status:'objected', objectedBy:currentUid, objectedByName:myProfile.name, objectedAt:new Date().toISOString() });
+      renderQpTestCard();
+    });
+  });
+  body.querySelectorAll('[data-fill-slot]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const slotId = btn.dataset.fillSlot;
+      const row = btn.closest('.qp-nom-row');
+      row.classList.remove('ghost');
+      row.style.display = 'block';
+      row.innerHTML = `
+        <div class="field"><label>Kitap Adı</label><input type="text" class="qp-fill-book" autocomplete="off" placeholder="kitap adını yazmaya başla, listeden seç" /><div class="qp-fill-suggest book-suggest-box"></div></div>
+        <input type="hidden" class="qp-fill-author" />
+        <div class="field"><label>Kapak Görseli Linki</label><input type="text" class="qp-fill-cover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
+        <button type="button" class="primary tiny qp-fill-send">Öner</button>
+      `;
+      attachBookAutocompleteEl(
+        row.querySelector('.qp-fill-book'), row.querySelector('.qp-fill-cover'), row.querySelector('.qp-fill-suggest'),
+        (b)=>{
+          row.querySelector('.qp-fill-book').value = b.title;
+          row.querySelector('.qp-fill-author').value = b.author||'';
+          row.querySelector('.qp-fill-cover').value = b.cover||'';
+        }
+      );
+      row.querySelector('.qp-fill-send').addEventListener('click', async (e)=>{
+        const title = row.querySelector('.qp-fill-book').value.trim();
+        if(!title){ alert('Kitap adı gerekli.'); return; }
+        const author = row.querySelector('.qp-fill-author').value.trim();
+        const cover = row.querySelector('.qp-fill-cover').value.trim();
+        e.currentTarget.disabled = true;
+        try{
+          await updateDoc(doc(db,'quarterlyPickTest','current','nominations',slotId), { replacementFilled:true });
+          await addDoc(qpTestNomsCol(), { uid:currentUid, name:myProfile.name, bookTitle:title, bookAuthor:author, bookCover:cover, createdAt:new Date().toISOString(), status:'active', isReplacementFor:slotId });
+          renderQpTestCard();
+        }catch(err){ alert('Gönderilemedi: '+(err.message||err)); e.currentTarget.disabled=false; }
+      });
+    });
+  });
+}
+async function renderQpTestVoting(body, qp){
+  let matches = [];
+  try{ const snap = await getDocs(qpTestMatchesCol(qp.round)); snap.forEach(d=> matches.push({id:d.id, ...d.data()})); }catch(e){}
+  matches.sort((a,b)=> a.id.localeCompare(b.id));
+  const roundLabel = qp.round===qp.totalRounds ? 'Final' : (qp.round===qp.totalRounds-1 ? 'Yarı Final' : `${qp.round}. Tur`);
+  const cardHtml = (matchId, slot, book, votes, voted)=> `
+    <div class="qp-vs-card${voted?' voted':''}" data-qp-vote="${matchId}" data-qp-slot="${slot}">
+      ${book.bookCover?`<img src="${book.bookCover}" class="qp-vs-cover" alt="" onerror="this.style.display='none';" />`:''}
+      <div class="qp-vs-title">${escapeHtml(book.bookTitle)}</div>
+      <div class="qp-vs-author">${escapeHtml(book.bookAuthor||'')}</div>
+      <div class="qp-vs-votes">${votes} oy</div>
+    </div>`;
+  const rows = matches.map(m=>`<div class="qp-match-wrap"><div class="qp-vs-row">
+    ${cardHtml(m.id,'A',m.slotA,(m.votesA||[]).length,(m.votesA||[]).includes(currentUid))}
+    <div class="qp-vs-mid">VS</div>
+    ${cardHtml(m.id,'B',m.slotB,(m.votesB||[]).length,(m.votesB||[]).includes(currentUid))}
+  </div></div>`).join('');
+  body.innerHTML = `
+    <div class="qp-phase-label">${roundLabel} — Oylama (deneme)</div>
+    ${rows}
+    ${qpTestAdvanceBtnHtml(qp.round>=qp.totalRounds ? 'Sonucu Kesinleştir →' : 'Sonraki Tura Geç →')}
+  `;
+  qpTestWireAdvanceBtn();
+  body.querySelectorAll('[data-qp-vote]').forEach(card=>{
+    card.addEventListener('click', async ()=>{
+      const matchRef = doc(db,'quarterlyPickTest','current','rounds',String(qp.round),'matches',card.dataset.qpVote);
+      const snap = await getDoc(matchRef);
+      if(!snap.exists()) return;
+      const m = snap.data();
+      const slot = card.dataset.qpSlot;
+      const votesA = (m.votesA||[]).filter(u=>u!==currentUid);
+      const votesB = (m.votesB||[]).filter(u=>u!==currentUid);
+      const already = slot==='A' ? (m.votesA||[]).includes(currentUid) : (m.votesB||[]).includes(currentUid);
+      if(!already){ if(slot==='A') votesA.push(currentUid); else votesB.push(currentUid); }
+      await updateDoc(matchRef, { votesA, votesB });
+      renderQpTestCard();
+    });
+  });
+}
+function renderQpTestReading(body, qp){
+  body.innerHTML = `
+    <div class="qp-phase-label">Okuma Dönemi (deneme sonucu)</div>
+    <div class="qp-winner-card">
+      ${qp.winnerCover?`<img src="${qp.winnerCover}" class="qp-winner-cover" alt="" onerror="this.style.display='none';" />`:''}
+      <div>
+        <div class="qp-nom-title">${escapeHtml(qp.winnerTitle||'')}</div>
+        <div class="qp-nom-meta">${escapeHtml(qp.winnerAuthor||'')} &middot; öneren: ${escapeHtml(qp.winnerNominatedByName||'')}</div>
+      </div>
+    </div>
+    <button type="button" class="secondary tiny" id="qpTestAdvanceBtn" style="margin-top:12px;">Denemeyi Baştan Başlat →</button>
+  `;
+  qpTestWireAdvanceBtn();
+}
+async function qpTestAdvancePhase(){
+  const snap = await getDoc(qpTestDocRef());
+  if(!snap.exists()) return;
+  const qp = snap.data();
+  if(qp.phase==='nominating'){
+    await updateDoc(qpTestDocRef(), { phase:'objecting', phaseStartedAt:new Date().toISOString() });
+  } else if(qp.phase==='objecting'){
+    const nomSnap = await getDocs(query(qpTestNomsCol(), where('status','==','active')));
+    const activeNoms = []; nomSnap.forEach(d=> activeNoms.push({id:d.id, ...d.data()}));
+    const bracketSize = qpTestBracketSizeFor(activeNoms.length);
+    if(bracketSize<2){
+      if(activeNoms.length===1){
+        const only = activeNoms[0];
+        await updateDoc(qpTestDocRef(), { phase:'reading', winnerTitle:only.bookTitle, winnerAuthor:only.bookAuthor||'', winnerCover:only.bookCover||'', winnerNominatedByName:only.name||'' });
+      } else {
+        alert('Turnuva başlatmak için en az 2 aktif öneri gerekli.');
+        return;
+      }
+    } else {
+      const chosen = shuffle(activeNoms).slice(0, bracketSize);
+      const bracketOrder = shuffle(chosen);
+      const totalRounds = Math.log2(bracketSize);
+      const ops = [];
+      for(let i=0;i<bracketOrder.length;i+=2){
+        const a=bracketOrder[i], b=bracketOrder[i+1];
+        ops.push(setDoc(doc(qpTestMatchesCol(1), `m${i/2}`), {
+          slotA:{uid:a.uid,name:a.name,bookTitle:a.bookTitle,bookAuthor:a.bookAuthor||'',bookCover:a.bookCover||''},
+          slotB:{uid:b.uid,name:b.name,bookTitle:b.bookTitle,bookAuthor:b.bookAuthor||'',bookCover:b.bookCover||''},
+          votesA:[], votesB:[], winnerSlot:null,
+        }));
+      }
+      await Promise.all(ops);
+      await updateDoc(qpTestDocRef(), { phase:'voting', round:1, totalRounds, bracketSize });
+    }
+  } else if(qp.phase==='voting'){
+    const matchesSnap = await getDocs(qpTestMatchesCol(qp.round));
+    const results = [];
+    matchesSnap.forEach(d=>{
+      const m = d.data();
+      const aV=(m.votesA||[]).length, bV=(m.votesB||[]).length;
+      let winner;
+      if(aV>bV) winner=m.slotA; else if(bV>aV) winner=m.slotB; else winner=Math.random()<0.5?m.slotA:m.slotB;
+      results.push(winner);
+    });
+    if(qp.round>=qp.totalRounds){
+      const winner = results[0];
+      await updateDoc(qpTestDocRef(), { phase:'reading', winnerTitle:winner.bookTitle, winnerAuthor:winner.bookAuthor||'', winnerCover:winner.bookCover||'', winnerNominatedByName:winner.name||'' });
+    } else {
+      const nextRound = qp.round+1;
+      const ops = [];
+      for(let i=0;i<results.length;i+=2){
+        ops.push(setDoc(doc(qpTestMatchesCol(nextRound), `m${i/2}`), { slotA:results[i], slotB:results[i+1], votesA:[], votesB:[], winnerSlot:null }));
+      }
+      await Promise.all(ops);
+      await updateDoc(qpTestDocRef(), { round:nextRound });
+    }
+  } else if(qp.phase==='reading'){
+    await qpTestReset();
+    return;
+  }
+  renderQpTestCard();
+}
+async function qpTestReset(){
+  if(!confirm('Deneme sıfırlansın mı? Tüm deneme önerileri/turları silinecek.')) return;
+  const nomSnap = await getDocs(qpTestNomsCol());
+  await Promise.all(nomSnap.docs.map(d=> deleteDoc(d.ref)));
+  const roundNums = ['1','2','3','4','5','6'];
+  for(const rn of roundNums){
+    const mSnap = await getDocs(qpTestMatchesCol(rn));
+    await Promise.all(mSnap.docs.map(d=> deleteDoc(d.ref)));
+  }
+  await setDoc(qpTestDocRef(), { phase:'nominating', cycleNumber:1, phaseStartedAt:new Date().toISOString() });
+  showToast('Deneme sıfırlandı.');
+  renderQpTestCard();
 }
 
 function setupAddToggle(btnId, wrapId){
@@ -5305,6 +5930,25 @@ function postBodyHtml(p, expanded){
       return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div>✎ Gruba <b>${escapeHtml(p.bookTitle||'')}</b>'${recSuffix} önerdi.</div></div>`;
     }
     case 'poll': return pollBodyHtml(p, expanded);
+    case 'quarterly_pick': {
+      const sub = p.subtype;
+      if(sub==='nominations_open') return `📚 Yeni ortak kitap önerileri başladı! ${p.days||2} gün içinde en fazla 3 kitap önerebilirsin. "Öneriler" sekmesinden katılabilirsin.`;
+      if(sub==='nominations_near_end') return `⏰ Ortak kitap önerileri için son 2 saat! Önerecek kitabın varsa şimdi ekle.`;
+      if(sub==='objecting_open') return `🔎 1 günlük itiraz süresi başladı — bir kitabı yakın zamanda okuduysan "Öneriler" sekmesinden itiraz edebilirsin.`;
+      if(sub==='objecting_near_end') return `⏰ İtiraz süresi bitmek üzere (2 saat kaldı).`;
+      if(sub==='objection_made') return `🙅 <b>${escapeHtml(p.name||'')}</b>, "${escapeHtml(p.bookTitle||'')}" kitabına itiraz etti (yakın zamanda okumuş) — öneriden düştü.`;
+      if(sub==='round_start'){
+        const label = p.round===p.totalRounds ? 'Final' : (p.round===(p.totalRounds-1) ? 'Yarı final' : `${p.round}. tur`);
+        return `🗳️ ${label} oylaması başladı! ${p.matchCount||''} eşleşme var, "Öneriler" sekmesinden oy verebilirsin.`;
+      }
+      if(sub==='round_near_end') return `⏰ Bu turun oylaması bitmek üzere (2 saat kaldı).`;
+      if(sub==='round_result'){
+        const winners = (p.results||[]).map(r=>escapeHtml(r.title)).join(', ');
+        return `📊 Tur sona erdi! Bir üst tura geçenler: ${winners}`;
+      }
+      if(sub==='final_winner') return `🏆 Ortak kitap seçildi: <b>"${escapeHtml(p.bookTitle||'')}"</b>! 3 ay boyunca bunu okuyacağız.`;
+      return '📚 Ortak kitap seçimi güncellendi.';
+    }
     default: return escapeHtml(p.text||'');
   }
 }
