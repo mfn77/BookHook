@@ -118,6 +118,41 @@ service cloud.firestore {
       allow write: if isSignedIn() && isAdmin();
     }
 
+    // 3 aylık ortak kitap seçimi (turnuva usulü oylama). Ana durum belgesi (faz, süre, turnuva
+    // sonucu) sadece sunucu tarafından (Cloud Function / Admin SDK) yazılıyor — istemci sadece
+    // okuyor. Öneriler ve tur eşleşmeleri (oy verme dahil) istemciden yazılabiliyor; doğruluk
+    // (3 hak sınırı, "önce davranan kazanır" kilidi, kendi oyunu ekleme/çıkarma) istemci
+    // tarafındaki transaction mantığıyla sağlanıyor — kulübün küçük/güvenilir yapısıyla uyumlu.
+    match /quarterlyPick/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+
+      match /nominations/{nomId} {
+        allow read: if isSignedIn();
+        allow create, update: if isSignedIn();
+      }
+      match /rounds/{roundId}/matches/{matchId} {
+        allow read: if isSignedIn();
+        allow update: if isSignedIn();
+      }
+    }
+    match /quarterlyPickHistory/{id} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Yöneticiye özel deneme alanı (bildirim/gönderi yok, süre yok) — sadece yöneticiler
+    // okuyup yazabiliyor.
+    match /quarterlyPickTest/{docId} {
+      allow read, write: if isAdmin();
+      match /nominations/{nomId} {
+        allow read, write: if isAdmin();
+      }
+      match /rounds/{roundId}/matches/{matchId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
     match /recommendations/{recId} {
       allow read: if isSignedIn() && (
         resource.data.scope == 'group' ||
