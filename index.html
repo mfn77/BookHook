@@ -3215,6 +3215,15 @@ async function checkAndPostDethrone(uid, newCount, getOthersCount, label, icon){
     createPost('record_dethrone', { recordLabel:label, recordIcon:icon||'🏆', recordCount:newCount, dethronedName:usersCache[maxUid]?.name||'' }, uid, u.name);
   }
 }
+// ÖNEMLİ: seri DÜŞTÜĞÜNDE (streak < lastStreak) burada ARTIK hiçbir şey kalıcı olarak
+// kaydedilmiyor — ne rozet geçmişine (badgeCounts) ekleme, ne "seri bozuldu" gönderisi. Bunun
+// sebebi: bugünün işaretlemesi gün bitene (06:00) kadar değişebilir; biri yanlışlıkla
+// "okumadım" işaretleyip hemen "okudum" olarak düzeltirse, o anlık düşüş burada kalıcı bir
+// rozet/gönderiye dönüşmemeli. Bir serinin GERÇEKTEN bitip bitmediği artık sadece gece 06:00'da
+// sunucu tarafında (bkz. functions/index.js: autoMarkMissedReading içindeki günlük rozet
+// kesinleştirmesi) kesinleşiyor — o ana kadar aynı gün içinde düzeltilen bir hata hiç sayılmaz.
+// Sadece YUKARI (yeni bir eşiğe ulaşma) anlık bildirim/gönderi olarak kalıyor, çünkü o zaten
+// geri alınamaz bir zarar oluşturmuyor.
 async function checkAndAwardBadges(uid, streak){
   if(badgeCheckInFlight.has(uid)) return; // aynı kişi için eşzamanlı ikinci bir kontrolü atla (çift sayımı önler)
   badgeCheckInFlight.add(uid);
@@ -3224,40 +3233,20 @@ async function checkAndAwardBadges(uid, streak){
     const lastStreak = typeof u.lastStreak==='number' ? u.lastStreak : 0;
     const prevTier = u.currentTier || null;
     const newTier = currentTierForStreak(streak);
-    const badgeCounts = {...(u.badgeCounts||{})};
-    let historyIncremented = false;
-    let notifyDef = null;
 
-    if(streak < lastStreak){
-      // Seri bozulmuş: bir önceki döngü sona erdi. O döngünün ulaştığı en yüksek rozeti
-      // (sadece onu, aradaki alt rozetleri değil) geçmişe bir kere ekle.
-      if(prevTier){
-        badgeCounts[prevTier] = (badgeCounts[prevTier]||0) + 1;
-        historyIncremented = true;
-      }
-    } else if(newTier && newTier !== prevTier){
-      // Aynı döngü içinde daha yüksek bir eşiğe ulaşıldı: sadece bildirim gönder,
-      // geçmişe (badgeCounts) henüz sayma — seri bitince sayılacak.
-      notifyDef = BADGE_DEFS.find(d=>d.key===newTier);
-    }
+    if(streak < lastStreak) return; // düşüş: kesinleşme geceye bırakılıyor, burada hiçbir şey yapılmaz
+    if(!(newTier && newTier !== prevTier)) return; // değişiklik yok
+    // Aynı döngü içinde daha yüksek bir eşiğe ulaşıldı: sadece bildirim gönder,
+    // geçmişe (badgeCounts) henüz sayma — seri bitince (gece) sayılacak.
+    const notifyDef = BADGE_DEFS.find(d=>d.key===newTier);
 
-    const changed = (streak!==lastStreak) || (prevTier!==newTier) || historyIncremented;
-    if(!changed) return;
-
-    const updates = { lastStreak: streak, badgeCounts, currentTier: newTier, currentStreak: streak };
+    const updates = { lastStreak: streak, currentTier: newTier, currentStreak: streak };
     await updateDoc(doc(db,'users',uid), updates);
     Object.assign(u, updates);
     if(notifyDef){
       const uTab = u.role==='admin' ? 'worms' : 'mworms';
       await notifyUser(uid, `🎉 Tebrikler! "${notifyDef.label}" rozetini kazandın!`, uTab);
       createPost('badge_gained', { badgeKey:notifyDef.key, badgeLabel:notifyDef.label, badgeIcon:notifyDef.icon, variantText: pickBadgeGainedMessage(notifyDef.key) }, uid, u.name);
-    }
-    if(historyIncremented && prevTier){
-      const lostDef = BADGE_DEFS.find(d=>d.key===prevTier);
-      if(lostDef){
-        createPost('badge_lost', { badgeKey:lostDef.key, badgeLabel:lostDef.label, badgeIcon:lostDef.icon, variantText: pickBadgeLostMessage(lostDef.key, badgeCounts[lostDef.key]||1) }, uid, u.name);
-      }
-      if(lostDef) checkAndPostDethrone(uid, badgeCounts[lostDef.key]||1, (ouid)=>(usersCache[ouid].badgeCounts||{})[lostDef.key], `${lostDef.label} rozeti`, lostDef.icon);
     }
   }catch(e){ /* rozet kaydedilemezse sessizce geç */ }
   finally{ badgeCheckInFlight.delete(uid); }
