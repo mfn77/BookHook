@@ -520,3 +520,235 @@ exports.adminDeleteMember = onCall(async (request) => {
   console.log(`[adminDeleteMember] ${targetUid} (${targetData.name || ""}) tamamen silindi. İşlemi yapan: ${callerUid}.`);
   return { success: true };
 });
+
+/* ============================================================================
+   3 AYLIK ORTAK KİTAP SEÇİMİ (turnuva usulü oylama)
+   Tüm faz geçişleri (öneri → itiraz → oylama turları → okuma → yeniden başlama) burada,
+   15 dakikada bir çalışan tek bir "tick" fonksiyonuyla yönetiliyor — kimse uygulamayı
+   açmasa bile zamanı gelince otomatik ilerliyor. Öneri gönderme, itiraz etme ve oy verme
+   istemci tarafında (Firestore transaction ile) yapılıyor; burada sadece SÜREYE bağlı
+   geçişler var.
+   ============================================================================ */
+
+const QP_NOMINATION_DAYS = 2;
+const QP_OBJECTION_DAYS = 1;
+const QP_VOTING_ROUND_DAYS = 1;
+const QP_NEAR_END_HOURS = 2;
+const QP_READING_MONTHS = 3;
+
+function addHoursIso(iso, hours) {
+  return new Date(new Date(iso).getTime() + hours * 60 * 60 * 1000).toISOString();
+}
+function addDaysIso(iso, days) {
+  return addHoursIso(iso, days * 24);
+}
+function addMonthsIso(iso, months) {
+  const d = new Date(iso);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString();
+}
+// 4-7 öneri → 4'lük parantez, 8-15 → 8'lik, 16-31 → 16'lık ... (kullanıcının tarif ettiği kural,
+// 2-3 öneri için de aynı mantıkla 2'lik parantezle genişletilmiş).
+function bracketSizeForCount(n) {
+  if (n < 2) return n;
+  let size = 2;
+  while (size * 2 <= n) size *= 2;
+  return size;
+}
+async function notifyAllBackend(message, linkTab) {
+  const usersSnap = await db.collection("users").get();
+  await Promise.all(usersSnap.docs.map((d) => {
+    const u = d.data();
+    if (u.banned) return null;
+    return notifyUserBackend(d.id, message, linkTab);
+  }));
+}
+async function postQuarterly(subtype, data, forUid, forName) {
+  await createPostBackend("quarterly_pick", { subtype, ...data }, forUid, forName);
+}
+const QP_REF = () => db.collection("quarterlyPick").doc("current");
+
+async function qpStartNominationPhase(prevData) {
+  const now = new Date().toISOString();
+  const cycleNumber = prevData ? (prevData.cycleNumber || 0) + 1 : 1;
+  await QP_REF().set({
+    phase: "nominating",
+    cycleNumber,
+    phaseStartedAt: now,
+    phaseEndsAt: addDaysIso(now, QP_NOMINATION_DAYS),
+    nearEndPosted: false,
+  });
+  await postQuarterly("nominations_open", { days: QP_NOMINATION_DAYS });
+  await notifyAllBackend(`📚 Yeni ortak kitap önerileri başladı! ${QP_NOMINATION_DAYS} gün içinde en fazla 3 kitap önerebilirsin.`, "recs");
+}
+
+async function qpArchiveAndRestart(data) {
+  await db.collection("quarterlyPickHistory").doc(String(data.cycleNumber)).set({
+    cycleNumber: data.cycleNumber,
+    winnerTitle: data.winnerTitle || null,
+    winnerAuthor: data.winnerAuthor || null,
+    winnerCover: data.winnerCover || null,
+    winnerNominatedByName: data.winnerNominatedByName || null,
+    readingStartedAt: data.readingStartedAt || null,
+    readingEndsAt: data.readingEndsAt || null,
+    finishedAt: new Date().toISOString(),
+  });
+  const nomSnap = await QP_REF().collection("nominations").get();
+  if (!nomSnap.empty) {
+    const batch = db.batch();
+    nomSnap.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+  const roundDocs = await QP_REF().collection("rounds").listDocuments();
+  for (const roundDoc of roundDocs) {
+    const matchesSnap = await roundDoc.collection("matches").get();
+    if (!matchesSnap.empty) {
+      const batch = db.batch();
+      matchesSnap.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+  }
+  await qpStartNominationPhase(data);
+}
+
+async function qpFinalizeNominating() {
+  const now = new Date().toISOString();
+  await QP_REF().update({
+    phase: "objecting",
+    phaseStartedAt: now,
+    phaseEndsAt: addDaysIso(now, QP_OBJECTION_DAYS),
+    nearEndPosted: false,
+  });
+  await postQuarterly("objecting_open", { days: QP_OBJECTION_DAYS });
+  await notifyAllBackend(`🔎 1 günlük itiraz süresi başladı! Yakın zamanda okuduğun bir öneri varsa "Öneriler" sekmesinden itiraz edebilirsin.`, "recs");
+}
+
+async function qpFinalizeObjecting(data) {
+  const nomSnap = await QP_REF().collection("nominations").where("status", "==", "active").get();
+  const activeNoms = nomSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const bracketSize = bracketSizeForCount(activeNoms.length);
+
+  if (bracketSize < 2) {
+    if (activeNoms.length === 1) {
+      const only = activeNoms[0];
+      const now = new Date().toISOString();
+      await QP_REF().update({
+        phase: "reading",
+        winnerTitle: only.bookTitle, winnerAuthor: only.bookAuthor || "", winnerCover: only.bookCover || "",
+        winnerNominatedBy: only.uid, winnerNominatedByName: only.name || "",
+        readingStartedAt: now, readingEndsAt: addMonthsIso(now, QP_READING_MONTHS),
+      });
+      await postQuarterly("final_winner", { bookTitle: only.bookTitle, bookAuthor: only.bookAuthor || "", bookCover: only.bookCover || "" });
+      await notifyAllBackend(`🏆 Yeni ortak kitap seçildi: "${only.bookTitle}"! 3 ay boyunca bunu okuyacağız.`, "recs");
+    } else {
+      await qpStartNominationPhase(data);
+    }
+    return;
+  }
+
+  const chosen = shuffleBackend(activeNoms).slice(0, bracketSize);
+  const bracketOrder = shuffleBackend(chosen);
+  const totalRounds = Math.log2(bracketSize);
+  const now = new Date().toISOString();
+
+  const batch = db.batch();
+  for (let i = 0; i < bracketOrder.length; i += 2) {
+    const a = bracketOrder[i], b = bracketOrder[i + 1];
+    const matchRef = QP_REF().collection("rounds").doc("1").collection("matches").doc(`m${i / 2}`);
+    batch.set(matchRef, {
+      slotA: { uid: a.uid, name: a.name, bookTitle: a.bookTitle, bookAuthor: a.bookAuthor || "", bookCover: a.bookCover || "" },
+      slotB: { uid: b.uid, name: b.name, bookTitle: b.bookTitle, bookAuthor: b.bookAuthor || "", bookCover: b.bookCover || "" },
+      votesA: [], votesB: [], winnerSlot: null,
+    });
+  }
+  await batch.commit();
+
+  await QP_REF().update({
+    phase: "voting", round: 1, totalRounds, bracketSize,
+    phaseStartedAt: now, phaseEndsAt: addDaysIso(now, QP_VOTING_ROUND_DAYS), nearEndPosted: false,
+  });
+  await postQuarterly("round_start", { round: 1, totalRounds, bracketSize, matchCount: bracketOrder.length / 2 });
+  await notifyAllBackend(`🗳️ Ortak kitap turnuvası başladı! ${bracketSize} kitap arasından oylamalar açıldı.`, "recs");
+}
+
+async function qpFinalizeRound(data) {
+  const roundRef = QP_REF().collection("rounds").doc(String(data.round));
+  const matchesSnap = await roundRef.collection("matches").get();
+  const results = matchesSnap.docs.map((d) => {
+    const m = d.data();
+    const aVotes = (m.votesA || []).length, bVotes = (m.votesB || []).length;
+    let winner;
+    if (aVotes > bVotes) winner = m.slotA;
+    else if (bVotes > aVotes) winner = m.slotB;
+    else winner = Math.random() < 0.5 ? m.slotA : m.slotB;
+    return { winner, aVotes, bVotes, slotATitle: m.slotA.bookTitle, slotBTitle: m.slotB.bookTitle };
+  });
+
+  if (data.round >= data.totalRounds) {
+    const winner = results[0].winner;
+    const now = new Date().toISOString();
+    await QP_REF().update({
+      phase: "reading",
+      winnerTitle: winner.bookTitle, winnerAuthor: winner.bookAuthor || "", winnerCover: winner.bookCover || "",
+      winnerNominatedBy: winner.uid, winnerNominatedByName: winner.name || "",
+      readingStartedAt: now, readingEndsAt: addMonthsIso(now, QP_READING_MONTHS),
+    });
+    await postQuarterly("final_winner", { bookTitle: winner.bookTitle, bookAuthor: winner.bookAuthor || "", bookCover: winner.bookCover || "" });
+    await notifyAllBackend(`🏆 Yeni ortak kitap seçildi: "${winner.bookTitle}"! 3 ay boyunca bunu okuyacağız.`, "recs");
+    return;
+  }
+
+  const nextRound = data.round + 1;
+  const winners = results.map((r) => r.winner);
+  const nextRoundRef = QP_REF().collection("rounds").doc(String(nextRound));
+  const batch = db.batch();
+  for (let i = 0; i < winners.length; i += 2) {
+    const matchRef = nextRoundRef.collection("matches").doc(`m${i / 2}`);
+    batch.set(matchRef, { slotA: winners[i], slotB: winners[i + 1], votesA: [], votesB: [], winnerSlot: null });
+  }
+  await batch.commit();
+
+  const now = new Date().toISOString();
+  await QP_REF().update({
+    round: nextRound, phaseStartedAt: now, phaseEndsAt: addDaysIso(now, QP_VOTING_ROUND_DAYS), nearEndPosted: false,
+  });
+  await postQuarterly("round_result", { round: data.round, results: results.map((r) => ({ title: r.winner.bookTitle, aTitle: r.slotATitle, bTitle: r.slotBTitle, aVotes: r.aVotes, bVotes: r.bVotes })) });
+  await postQuarterly("round_start", { round: nextRound, totalRounds: data.totalRounds, matchCount: winners.length / 2 });
+  await notifyAllBackend("🗳️ Yeni tur başladı! Oy vermeyi unutma.", "recs");
+}
+
+exports.quarterlyPickTick = onSchedule(
+  { schedule: "*/15 * * * *", timeZone: "Europe/Istanbul" },
+  async () => {
+    const snap = await QP_REF().get();
+    if (!snap.exists) {
+      await qpStartNominationPhase(null);
+      return;
+    }
+    const data = snap.data();
+    const now = new Date();
+
+    if (data.phase === "reading") {
+      if (data.readingEndsAt && now >= new Date(data.readingEndsAt)) {
+        await qpArchiveAndRestart(data);
+      }
+      return;
+    }
+
+    if (!data.phaseEndsAt) return;
+    const endsAt = new Date(data.phaseEndsAt);
+
+    if (!data.nearEndPosted && now >= new Date(endsAt.getTime() - QP_NEAR_END_HOURS * 60 * 60 * 1000)) {
+      await QP_REF().update({ nearEndPosted: true });
+      if (data.phase === "nominating") await postQuarterly("nominations_near_end", {});
+      else if (data.phase === "objecting") await postQuarterly("objecting_near_end", {});
+      else if (data.phase === "voting") await postQuarterly("round_near_end", { round: data.round });
+    }
+
+    if (now >= endsAt) {
+      if (data.phase === "nominating") await qpFinalizeNominating();
+      else if (data.phase === "objecting") await qpFinalizeObjecting(data);
+      else if (data.phase === "voting") await qpFinalizeRound(data);
+    }
+  }
+);
