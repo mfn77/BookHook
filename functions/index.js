@@ -563,8 +563,22 @@ async function notifyAllBackend(message, linkTab) {
     return notifyUserBackend(d.id, message, linkTab);
   }));
 }
-async function postQuarterly(subtype, data, forUid, forName) {
-  await createPostBackend("quarterly_pick", { subtype, ...data }, forUid, forName);
+// Sistem tarafından (kimse tetiklemeden, otomatik) oluşturulan tüm ortak-kitap-seçimi
+// gönderileri, anonim/isimsiz görünmesin diye kulüp sahibinin hesabı üzerinden gönderiliyor.
+const QP_OWNER_UID = "ZqooOlqf0fafVe8HSzmbg2fyCJJ3";
+let qpOwnerNameCache = null;
+async function qpOwnerName() {
+  if (qpOwnerNameCache) return qpOwnerNameCache;
+  try {
+    const snap = await db.collection("users").doc(QP_OWNER_UID).get();
+    qpOwnerNameCache = (snap.exists && snap.data().name) || "Furkan";
+  } catch (e) {
+    qpOwnerNameCache = "Furkan";
+  }
+  return qpOwnerNameCache;
+}
+async function postQuarterly(subtype, data) {
+  await createPostBackend("quarterly_pick", { subtype, ...data }, QP_OWNER_UID, await qpOwnerName());
 }
 const QP_REF = () => db.collection("quarterlyPick").doc("current");
 
