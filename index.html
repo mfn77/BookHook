@@ -4681,7 +4681,7 @@ function showQpNominationInfo(nom){
 function qpWireNomRowClicks(body){
   body.querySelectorAll('[data-qp-nom-id]').forEach(row=>{
     row.addEventListener('click', (e)=>{
-      if(e.target.closest('button')) return;
+      if(e.target.closest('button, input, textarea, .book-suggest-box, .field')) return;
       showQpNominationInfo(qpNomCache[row.dataset.qpNomId]);
     });
   });
@@ -4691,7 +4691,7 @@ function qpNominationFormHtml(idPrefix, submitLabel){
     <div class="field"><label>Kitap Adı</label><input type="text" id="${idPrefix}Book" autocomplete="off" placeholder="yazmaya başla, aransın — bulamazsan yazmaya devam et" /><div id="${idPrefix}BookSuggest" class="book-suggest-box"></div></div>
     <div class="field"><label>Yazar Adı</label><input type="text" id="${idPrefix}Author" autocomplete="off" placeholder="yazmaya başla, aransın — bulamazsan yazmaya devam et" /><div id="${idPrefix}AuthorSuggest" class="book-suggest-box"></div></div>
     <div class="field"><label>Kapak Görseli Linki (seçince otomatik dolar, istersen değiştir)</label><input type="text" id="${idPrefix}Cover" placeholder="internetten bulduğun kapak görselinin linki" /></div>
-    <div class="field"><label>Kitap Hakkında</label><textarea id="${idPrefix}Note" placeholder="neden önerdiğini kısaca yaz" style="width:100%; min-height:70px; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:14px; background:var(--card); color:var(--ink); resize:vertical; box-sizing:border-box;"></textarea></div>
+    <div class="field"><label>Kitap Hakkında</label><textarea id="${idPrefix}Note" placeholder="bu kitabı neden okumak istediğini kısaca anlat" style="width:100%; min-height:70px; padding:10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:14px; background:var(--card); color:var(--ink); resize:vertical; box-sizing:border-box;"></textarea></div>
     <button class="primary" id="${idPrefix}SendBtn">${submitLabel}</button>
   `;
 }
