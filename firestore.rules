@@ -129,7 +129,7 @@ service cloud.firestore {
 
       match /nominations/{nomId} {
         allow read: if isSignedIn();
-        allow create, update: if isSignedIn();
+        allow create, update, delete: if isSignedIn();
       }
       match /rounds/{roundId}/matches/{matchId} {
         allow read: if isSignedIn();

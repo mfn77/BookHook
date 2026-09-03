@@ -4730,7 +4730,8 @@ async function renderQpNominating(body, qp){
   noms.sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
   const myCount = noms.filter(n=>n.uid===currentUid).length;
   const rows = noms.map(n=>{
-    const extra = n.uid===currentUid ? `<div class="row" style="flex:0 0 auto; width:auto; gap:6px;">
+    const canManage = n.uid===currentUid || myProfile.role==='admin';
+    const extra = canManage ? `<div class="row" style="flex:0 0 auto; width:auto; gap:6px;">
       <button type="button" class="secondary tiny" data-qp-edit="${n.id}">Düzenle</button>
       <button type="button" class="secondary tiny" data-qp-delete="${n.id}" style="border-color:var(--cloth-dark); color:var(--cloth-dark);">Sil</button>
     </div>` : '';
@@ -4932,6 +4933,7 @@ async function submitQuarterlyNomination(bookTitle, bookAuthor, bookCover, note,
       tx.set(newRef, { uid:currentUid, name:myProfile.name, bookTitle, bookAuthor:bookAuthor||'', bookCover:bookCover||'', note:note||'', createdAt:new Date().toISOString(), status:'active' });
     }
   });
+  createPost('quarterly_pick', { subtype:'nomination_made', bookTitle, bookAuthor: bookAuthor||'', bookCover: bookCover||'' }, currentUid, myProfile.name);
 }
 async function objectToQuarterlyNomination(nomId, bookTitle){
   if(!confirm(`"${bookTitle}" kitabını yakın zamanda okuduğunu belirtip öneriden düşürmek istediğine emin misin?`)) return;
@@ -5976,6 +5978,12 @@ function postBodyHtml(p, expanded){
       if(sub==='objecting_open') return `🔎 1 günlük itiraz süresi başladı — bir kitabı yakın zamanda okuduysan "Öneriler" sekmesinden itiraz edebilirsin.`;
       if(sub==='objecting_near_end') return `⏰ İtiraz süresi bitmek üzere (2 saat kaldı).`;
       if(sub==='objection_made') return `🙅 <b>${escapeHtml(p.name||'')}</b>, "${escapeHtml(p.bookTitle||'')}" kitabına itiraz etti (yakın zamanda okumuş) — öneriden düştü.`;
+      if(sub==='nomination_made'){
+        const cover = p.bookCover
+          ? `<img src="${p.bookCover}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml(p.bookTitle||'')}" data-book-cover="${escapeHtml(p.bookCover)}" />`
+          : `<span class="post-book-cover" style="display:inline-block; overflow:hidden; border-radius:6px;">${placeholderCoverHtml(p.bookTitle||'')}</span>`;
+        return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div>📖 <b>${escapeHtml(p.name||'')}</b> bir kitap önerdi: <b>${escapeHtml(p.bookTitle||'')}</b>${p.bookAuthor?` (${escapeHtml(p.bookAuthor)})`:''}</div></div>`;
+      }
       if(sub==='round_start'){
         const label = p.round===p.totalRounds ? 'Final' : (p.round===(p.totalRounds-1) ? 'Yarı final' : `${p.round}. tur`);
         return `🗳️ ${label} oylaması başladı! ${p.matchCount||''} eşleşme var, "Öneriler" sekmesinden oy verebilirsin.`;
