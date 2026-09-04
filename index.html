@@ -496,6 +496,7 @@
   .qp-deadline{ font-size:12px; color:var(--ink-70); margin-bottom:12px; }
   .qp-nom-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
   .qp-nom-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; border:1.5px solid var(--line); border-radius:12px; cursor:pointer; }
+  .qp-nom-row.qp-editing{ display:block; cursor:default; }
   .qp-nom-cover{ width:34px; height:50px; object-fit:cover; border-radius:5px; box-shadow:var(--shadow); flex:0 0 auto; }
   .qp-nom-cover-ph{ width:34px; height:50px; border-radius:5px; overflow:hidden; box-shadow:var(--shadow); flex:0 0 auto; }
   .qp-nom-info{ flex:1 1 auto; min-width:0; }
@@ -4675,6 +4676,27 @@ function qpWireNomRowClicks(body){
     });
   });
 }
+// Bir öneri satırını (kapak+isim yan yana duran, dar flex bir satır) düzenleme formuna
+// çevirir. Satırın kendi flex düzenini (display:block ile) geçersiz kılıyoruz, yoksa form
+// alanları (kitap adı, yazar adı vs.) o dar satırın içinde yan yana sıkışıp kalıyordu — dar
+// ekranlarda okunamaz hâle geliyordu. Ayrıca diğer önerileri aşağı itme, yumuşak bir
+// yükseklik animasyonuyla oluyor.
+function qpExpandRowToForm(row, formHtml){
+  row.classList.add('qp-editing');
+  row.style.overflow = 'hidden';
+  row.style.maxHeight = row.offsetHeight + 'px';
+  row.style.transition = 'max-height .35s ease';
+  row.innerHTML = formHtml;
+  requestAnimationFrame(()=>{
+    row.style.maxHeight = row.scrollHeight + 'px';
+  });
+  row.addEventListener('transitionend', function handler(e){
+    if(e.propertyName!=='max-height') return;
+    row.style.maxHeight = 'none';
+    row.style.overflow = 'visible';
+    row.removeEventListener('transitionend', handler);
+  });
+}
 function qpNominationFormHtml(idPrefix, submitLabel){
   return `
     <div class="field"><label>Kitap Adı</label><input type="text" id="${idPrefix}Book" autocomplete="off" placeholder="yazmaya başla, aransın — bulamazsan yazmaya devam et" /><div id="${idPrefix}BookSuggest" class="book-suggest-box"></div></div>
@@ -4753,7 +4775,7 @@ async function renderQpNominating(body, qp){
       const nomId = btn.dataset.qpEdit;
       const nom = qpNomCache[nomId];
       const row = btn.closest('.qp-nom-row');
-      row.innerHTML = qpNominationFormHtml('qpEdit_'+nomId, 'Güncelle');
+      qpExpandRowToForm(row, qpNominationFormHtml('qpEdit_'+nomId, 'Güncelle'));
       document.getElementById('qpEdit_'+nomId+'Book').value = nom.bookTitle||'';
       document.getElementById('qpEdit_'+nomId+'Author').value = nom.bookAuthor||'';
       document.getElementById('qpEdit_'+nomId+'Cover').value = nom.bookCover||'';
@@ -4791,7 +4813,7 @@ async function renderQpObjecting(body, qp){
         ${canFill ? `<button type="button" class="qp-slot-fill-btn" data-fill-slot="${n.id}">+</button><span class="muted" style="font-size:12px;">boş yer — bir kitap öner</span>` : `<span class="muted" style="font-size:12px;">boş yer ("${escapeHtml(n.bookTitle)}" itiraz edildi)</span>`}
       </div>`;
     }
-    return qpNomRowHtml(n, `<button type="button" class="secondary tiny" data-qp-object="${n.id}" data-qp-title="${escapeHtml(n.bookTitle)}">Yakın zamanda okudum</button>`);
+    return qpNomRowHtml(n, `<button type="button" class="secondary tiny" data-qp-object="${n.id}" data-qp-title="${escapeHtml(n.bookTitle)}">Bunu Okudum</button>`);
   }).join('');
   body.innerHTML = `
     <div class="qp-phase-label">İtiraz Süresi</div>
@@ -4810,7 +4832,7 @@ async function renderQpObjecting(body, qp){
       const row = btn.closest('.qp-nom-row');
       row.classList.remove('ghost');
       row.style.display = 'block';
-      row.innerHTML = qpNominationFormHtml('qpFill_'+slotId, 'Öner');
+      qpExpandRowToForm(row, qpNominationFormHtml('qpFill_'+slotId, 'Öner'));
       qpWireNominationForm('qpFill_'+slotId, async ({title,author,cover,note})=>{
         await submitQuarterlyNomination(title, author, cover, note, slotId);
         showToast('Öneri gönderildi!');
@@ -4829,9 +4851,9 @@ async function renderQpVoting(body, qp){
       ${book.bookCover?`<img src="${book.bookCover}" class="qp-vs-cover" alt="" onerror="this.style.display='none';" />`:''}
       <div class="qp-vs-title">${escapeHtml(book.bookTitle)}</div>
       <div class="qp-vs-author">${escapeHtml(book.bookAuthor||'')}</div>
-      <div class="qp-vs-votes">${votes} oy</div>
+      <div class="qp-vs-votes" data-vote-count>${votes} oy</div>
     </div>`;
-  const rows = matches.map(m=>`<div class="qp-match-wrap"><div class="qp-vs-row">
+  const rows = matches.map(m=>`<div class="qp-match-wrap" data-qp-match="${m.id}"><div class="qp-vs-row">
     ${cardHtml(m.id,'A',m.slotA,(m.votesA||[]).length,(m.votesA||[]).includes(currentUid))}
     <div class="qp-vs-mid">VS</div>
     ${cardHtml(m.id,'B',m.slotB,(m.votesB||[]).length,(m.votesB||[]).includes(currentUid))}
@@ -4842,7 +4864,27 @@ async function renderQpVoting(body, qp){
     ${rows}
   `;
   body.querySelectorAll('[data-qp-vote]').forEach(card=>{
-    card.addEventListener('click', ()=> voteQuarterlyMatch(qp.round, card.dataset.qpVote, card.dataset.qpSlot));
+    card.addEventListener('click', ()=>{
+      const matchWrap = card.closest('[data-qp-match]');
+      const cardA = matchWrap.querySelector('[data-qp-slot="A"]');
+      const cardB = matchWrap.querySelector('[data-qp-slot="B"]');
+      const clickedSlot = card.dataset.qpSlot;
+      const countA = cardA.querySelector('[data-vote-count]');
+      const countB = cardB.querySelector('[data-vote-count]');
+      let nA = parseInt(countA.textContent,10) || 0;
+      let nB = parseInt(countB.textContent,10) || 0;
+      // Anlık (iyimser) güncelleme — yazı Firestore'a arka planda gidiyor, ekranda beklemiyorsun.
+      if(clickedSlot==='A'){
+        if(cardA.classList.contains('voted')){ nA--; cardA.classList.remove('voted'); }
+        else { nA++; cardA.classList.add('voted'); if(cardB.classList.contains('voted')){ nB--; cardB.classList.remove('voted'); } }
+      } else {
+        if(cardB.classList.contains('voted')){ nB--; cardB.classList.remove('voted'); }
+        else { nB++; cardB.classList.add('voted'); if(cardA.classList.contains('voted')){ nA--; cardA.classList.remove('voted'); } }
+      }
+      countA.textContent = `${nA} oy`;
+      countB.textContent = `${nB} oy`;
+      voteQuarterlyMatch(qp.round, card.dataset.qpVote, clickedSlot);
+    });
   });
 }
 function qpWinnerBigCardHtml(cover, title, author){
@@ -4871,7 +4913,15 @@ async function renderQpBookInBugun(containerId){
   if(!el) return;
   let qp = qpCache;
   if(!qp){ try{ const snap = await getDoc(qpDocRef()); if(snap.exists()) qp = snap.data(); }catch(e){} }
-  if(!qp || qp.phase!=='reading'){ el.innerHTML = ''; return; }
+  if(!qp || qp.phase!=='reading'){
+    el.innerHTML = `
+      <div style="margin-top:14px; text-align:center;">
+        <div class="muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">📚 Ortak Kitap</div>
+        <p class="muted" style="font-size:13px;">Seçim Aşamasında</p>
+      </div>
+    `;
+    return;
+  }
   const finished = (qp.finishedBy||[]).includes(currentUid);
   const daysLeft = Math.max(0, Math.ceil((new Date(qp.readingEndsAt) - Date.now())/(24*60*60*1000)));
   el.innerHTML = `
@@ -4955,8 +5005,7 @@ async function voteQuarterlyMatch(round, matchId, slot){
       }
       tx.update(matchRef, { votesA, votesB });
     });
-    renderQuarterlyPickCard();
-  }catch(err){ alert('Oy verilemedi: '+(err.message||err)); }
+  }catch(err){ alert('Oy verilemedi: '+(err.message||err)); renderQuarterlyPickCard(); }
 }
 
 /* ============ YÖNETİCİYE ÖZEL DENEME: ORTAK KİTAP SEÇİMİ ============
@@ -5040,7 +5089,7 @@ async function renderQpTestNominating(body, qp){
       const nomId = btn.dataset.qpTestEdit;
       const nom = qpNomCache[nomId];
       const row = btn.closest('.qp-nom-row');
-      row.innerHTML = qpNominationFormHtml('qpTestEdit_'+nomId, 'Güncelle');
+      qpExpandRowToForm(row, qpNominationFormHtml('qpTestEdit_'+nomId, 'Güncelle'));
       document.getElementById('qpTestEdit_'+nomId+'Book').value = nom.bookTitle||'';
       document.getElementById('qpTestEdit_'+nomId+'Author').value = nom.bookAuthor||'';
       document.getElementById('qpTestEdit_'+nomId+'Cover').value = nom.bookCover||'';
@@ -5071,7 +5120,7 @@ async function renderQpTestObjecting(body, qp){
         <button type="button" class="qp-slot-fill-btn" data-fill-slot="${n.id}">+</button><span class="muted" style="font-size:12px;">boş yer — bir kitap öner</span>
       </div>`;
     }
-    return qpNomRowHtml(n, `<button type="button" class="secondary tiny" data-qp-object="${n.id}">İtiraz Et</button>`);
+    return qpNomRowHtml(n, `<button type="button" class="secondary tiny" data-qp-object="${n.id}">Bunu Okudum</button>`);
   }).join('');
   body.innerHTML = `
     <div class="qp-phase-label">İtiraz Süresi (deneme — süre yok)</div>
@@ -5094,7 +5143,7 @@ async function renderQpTestObjecting(body, qp){
       const row = btn.closest('.qp-nom-row');
       row.classList.remove('ghost');
       row.style.display = 'block';
-      row.innerHTML = qpNominationFormHtml('qpTestFill_'+slotId, 'Öner');
+      qpExpandRowToForm(row, qpNominationFormHtml('qpTestFill_'+slotId, 'Öner'));
       qpWireNominationForm('qpTestFill_'+slotId, async ({title,author,cover,note})=>{
         await updateDoc(doc(db,'quarterlyPickTest','current','nominations',slotId), { replacementFilled:true });
         await addDoc(qpTestNomsCol(), { uid:currentUid, name:myProfile.name, bookTitle:title, bookAuthor:author, bookCover:cover, note:note||'', createdAt:new Date().toISOString(), status:'active', isReplacementFor:slotId });
@@ -5113,9 +5162,9 @@ async function renderQpTestVoting(body, qp){
       ${book.bookCover?`<img src="${book.bookCover}" class="qp-vs-cover" alt="" onerror="this.style.display='none';" />`:''}
       <div class="qp-vs-title">${escapeHtml(book.bookTitle)}</div>
       <div class="qp-vs-author">${escapeHtml(book.bookAuthor||'')}</div>
-      <div class="qp-vs-votes">${votes} oy</div>
+      <div class="qp-vs-votes" data-vote-count>${votes} oy</div>
     </div>`;
-  const rows = matches.map(m=>`<div class="qp-match-wrap"><div class="qp-vs-row">
+  const rows = matches.map(m=>`<div class="qp-match-wrap" data-qp-match="${m.id}"><div class="qp-vs-row">
     ${cardHtml(m.id,'A',m.slotA,(m.votesA||[]).length,(m.votesA||[]).includes(currentUid))}
     <div class="qp-vs-mid">VS</div>
     ${cardHtml(m.id,'B',m.slotB,(m.votesB||[]).length,(m.votesB||[]).includes(currentUid))}
@@ -5127,18 +5176,39 @@ async function renderQpTestVoting(body, qp){
   `;
   qpTestWireAdvanceBtn();
   body.querySelectorAll('[data-qp-vote]').forEach(card=>{
-    card.addEventListener('click', async ()=>{
-      const matchRef = doc(db,'quarterlyPickTest','current','rounds',String(qp.round),'matches',card.dataset.qpVote);
-      const snap = await getDoc(matchRef);
-      if(!snap.exists()) return;
-      const m = snap.data();
-      const slot = card.dataset.qpSlot;
-      const votesA = (m.votesA||[]).filter(u=>u!==currentUid);
-      const votesB = (m.votesB||[]).filter(u=>u!==currentUid);
-      const already = slot==='A' ? (m.votesA||[]).includes(currentUid) : (m.votesB||[]).includes(currentUid);
-      if(!already){ if(slot==='A') votesA.push(currentUid); else votesB.push(currentUid); }
-      await updateDoc(matchRef, { votesA, votesB });
-      renderQpTestCard();
+    card.addEventListener('click', ()=>{
+      const matchWrap = card.closest('[data-qp-match]');
+      const cardA = matchWrap.querySelector('[data-qp-slot="A"]');
+      const cardB = matchWrap.querySelector('[data-qp-slot="B"]');
+      const clickedSlot = card.dataset.qpSlot;
+      const countA = cardA.querySelector('[data-vote-count]');
+      const countB = cardB.querySelector('[data-vote-count]');
+      let nA = parseInt(countA.textContent,10) || 0;
+      let nB = parseInt(countB.textContent,10) || 0;
+      if(clickedSlot==='A'){
+        if(cardA.classList.contains('voted')){ nA--; cardA.classList.remove('voted'); }
+        else { nA++; cardA.classList.add('voted'); if(cardB.classList.contains('voted')){ nB--; cardB.classList.remove('voted'); } }
+      } else {
+        if(cardB.classList.contains('voted')){ nB--; cardB.classList.remove('voted'); }
+        else { nB++; cardB.classList.add('voted'); if(cardA.classList.contains('voted')){ nA--; cardA.classList.remove('voted'); } }
+      }
+      countA.textContent = `${nA} oy`;
+      countB.textContent = `${nB} oy`;
+      (async ()=>{
+        try{
+          const matchRef = doc(db,'quarterlyPickTest','current','rounds',String(qp.round),'matches',card.dataset.qpVote);
+          await runTransaction(db, async (tx)=>{
+            const snap = await tx.get(matchRef);
+            if(!snap.exists()) return;
+            const m = snap.data();
+            const votesA = (m.votesA||[]).filter(u=>u!==currentUid);
+            const votesB = (m.votesB||[]).filter(u=>u!==currentUid);
+            const already = clickedSlot==='A' ? (m.votesA||[]).includes(currentUid) : (m.votesB||[]).includes(currentUid);
+            if(!already){ if(clickedSlot==='A') votesA.push(currentUid); else votesB.push(currentUid); }
+            tx.update(matchRef, { votesA, votesB });
+          });
+        }catch(err){ alert('Oy verilemedi: '+(err.message||err)); renderQpTestCard(); }
+      })();
     });
   });
 }
