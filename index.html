@@ -868,7 +868,6 @@
         </div>
         <div id="aSelfStatusNote" class="muted" style="text-align:center;"></div>
         <div id="aSelfStreakNote" class="muted" style="text-align:center; margin-top:8px;"></div>
-        <div id="aSelfQpBook"></div>
       </div>
 
       <div class="card">
@@ -876,6 +875,10 @@
         <div style="text-align:center; padding:16px 0;">
           <span id="totalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Inter',sans-serif;">–</span>
         </div>
+      </div>
+
+      <div class="card">
+        <div id="aSelfQpBook"></div>
       </div>
     </section>
 
@@ -1000,7 +1003,6 @@
         </div>
         <div id="mMyStatusNote" class="muted" style="text-align:center;"></div>
         <div id="mMyStreakNote" class="muted" style="text-align:center; margin-top:8px;"></div>
-        <div id="mMyQpBook"></div>
       </div>
 
       <div class="card">
@@ -1008,6 +1010,10 @@
         <div style="text-align:center; padding:16px 0;">
           <span id="mTotalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Inter',sans-serif;">–</span>
         </div>
+      </div>
+
+      <div class="card">
+        <div id="mMyQpBook"></div>
       </div>
     </section>
 
@@ -1050,6 +1056,11 @@
           <p class="muted" id="giftsIntro"></p>
         </div>
         <div id="giftsContent"></div>
+      </div>
+      <div class="card" id="qpGiftCardWrap" style="display:none;">
+        <h2>📚 Ortak Kitap Hediyesi</h2>
+        <p class="muted" style="font-size:12px;">Ortak kitabı zamanında bitirmeyenlerin, bitirenlere verdiği hediye — haftalık kuradan tamamen ayrı.</p>
+        <div id="qpGiftContent"></div>
       </div>
       <div class="card" id="giftsMemberLastWeekWrap" style="display:none;">
         <h2>Geçen Haftanın Kurası</h2>
@@ -4324,10 +4335,93 @@ async function fetchAllGiftRequests(){
   });
   return map;
 }
+// 3 aylık ortak kitap hediyesi: haftalık hediye kurasından tamamen ayrı, kendi koleksiyonunda
+// (quarterlyGiftPending / quarterlyGiftRequests) tutuluyor. Sadece kullanıcının KENDİ ilgili
+// olduğu eşleşme(ler) varsa kart gösteriliyor, yoksa (ilgisi yoksa) kart tamamen gizli kalıyor.
+async function renderQpGiftCard(){
+  const wrap = document.getElementById('qpGiftCardWrap');
+  const content = document.getElementById('qpGiftContent');
+  if(!wrap || !content) return;
+  let pending = null;
+  try{ const snap = await getDoc(doc(db,'quarterlyGiftPending','current')); if(snap.exists()) pending = snap.data(); }catch(e){}
+  if(!pending){ wrap.style.display = 'none'; return; }
+  const myPairs = (pending.pairs||[]).filter(p=> p.giverUid===currentUid || p.receiverUid===currentUid);
+  if(myPairs.length===0){ wrap.style.display = 'none'; return; }
+
+  if(!pending.applied){
+    wrap.style.display = 'block';
+    content.innerHTML = myPairs.map(p=>{
+      if(p.giverUid===currentUid){
+        return `<div class="receipt"><div class="rweek">Ortak kitabı zamanında bitirmediğin için <span class="giver">${userChipHtml(p.receiverUid)}</span>'e bir kitap hediye edeceksin.</div><div class="empty-note">Hangi kitap olacağı, bir sonraki ortak kitap seçimi tamamlanınca belli olacak.</div></div>`;
+      }
+      return `<div class="receipt"><div class="rweek"><span class="giver">${userChipHtml(p.giverUid)}</span> sana bir kitap hediye edecek.</div><div class="empty-note">Hangi kitap olacağı, bir sonraki ortak kitap seçimi tamamlanınca belli olacak.</div></div>`;
+    }).join('');
+    return;
+  }
+
+  let html = '';
+  for(const p of myPairs){
+    const reqId = `${pending.sourceCycleNumber}_${p.giverUid}_${p.receiverUid}`;
+    let req = null;
+    try{ const s = await getDoc(doc(db,'quarterlyGiftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+    if(!req || req.received) continue;
+    if(p.receiverUid===currentUid){
+      if(req.shipped){
+        html += `<div class="receipt">
+          <div class="rweek"><span class="giver">${userChipHtml(p.giverUid)}</span> kitabını gönderdi 📮</div>
+          <div class="muted" style="display:flex; align-items:center; gap:8px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:32px;height:48px;object-fit:cover;border-radius:4px;box-shadow:var(--shadow);cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
+          <button class="primary qp-gift-received" data-reqid="${reqId}" data-giver="${p.giverUid}" style="margin-top:8px;">📬 Kitabı Aldım</button>
+        </div>`;
+      } else {
+        html += `<div class="receipt">
+          <div class="rweek"><span class="giver">${userChipHtml(p.giverUid)}</span> sana kitap hediye edecek: <b>${escapeHtml(req.bookTitle||'')}</b></div>
+          <p class="muted" style="font-size:12px;">Adres bilgilerin profilinden otomatik iletildi.</p>
+        </div>`;
+      }
+    } else {
+      if(req.shipped){
+        html += `<div class="receipt"><div class="rweek">${userChipHtml(p.receiverUid)}'e gönderdiğini işaretledin</div><div class="empty-note">📬 Alıcı onayı bekleniyor.</div></div>`;
+      } else {
+        html += `<div class="receipt"><div class="rweek">${userChipHtml(p.receiverUid)}'e kitap hediye edeceksin</div>
+          <div class="muted" style="display:flex; gap:10px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:40px;height:60px;object-fit:cover;border-radius:5px;box-shadow:var(--shadow); flex:0 0 auto;cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b><br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>
+          <button class="secondary qp-gift-shipped" data-reqid="${reqId}" data-receiver="${p.receiverUid}" style="margin-top:8px;">📮 Kitabı Gönderdim</button>
+        </div>`;
+      }
+    }
+  }
+  if(!html){ wrap.style.display='none'; return; }
+  wrap.style.display = 'block';
+  content.innerHTML = html;
+  content.querySelectorAll('.qp-gift-shipped').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm('Kitabı gönderdiğini onaylıyor musun? Alıcı, aldığını onayladığında bu hediye geçmişe taşınacak.')) return;
+      btn.disabled = true;
+      try{
+        await updateDoc(doc(db,'quarterlyGiftRequests',btn.dataset.reqid), {shipped:true, shippedAt:new Date().toISOString()});
+        notifyUser(btn.dataset.receiver, `${myProfile.name} ortak kitap hediyesini gönderdi! Aldığında "Hediye Kitap" sekmesinden onaylamayı unutma.`, 'gifts');
+        showToast('Kitap gönderildi olarak işaretlendi.');
+        renderQpGiftCard();
+      }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); btn.disabled = false; }
+    });
+  });
+  content.querySelectorAll('.qp-gift-received').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm('Kitabı aldığını onaylıyor musun? Onayladıktan sonra bu hediye geçmişe taşınacak.')) return;
+      btn.disabled = true;
+      try{
+        await updateDoc(doc(db,'quarterlyGiftRequests',btn.dataset.reqid), {received:true, receivedAt:new Date().toISOString()});
+        notifyUser(btn.dataset.giver, `${myProfile.name} ortak kitap hediyesini aldığını onayladı. 🎉`, 'gifts');
+        showToast('Alındı olarak işaretlendi, teşekkürler!');
+        renderQpGiftCard();
+      }catch(err){ alert('İşaretlenemedi: '+(err.message||err)); btn.disabled = false; }
+    });
+  });
+}
 async function renderGiftsTab(){
   document.getElementById('giftsMemberLastWeekWrap').style.display = myProfile.role==='admin' ? 'none' : 'block';
   document.getElementById('giftsDrawHistAdminWrap').style.display = myProfile.role==='admin' ? 'block' : 'none';
   document.getElementById('giftsDrawHistMemberWrap').style.display = myProfile.role==='admin' ? 'none' : 'block';
+  renderQpGiftCard();
   const intro = document.getElementById('giftsIntro');
   const content = keepOrLoading('giftsContent');
   await loadDraws();
@@ -4915,18 +5009,16 @@ async function renderQpBookInBugun(containerId){
   if(!qp){ try{ const snap = await getDoc(qpDocRef()); if(snap.exists()) qp = snap.data(); }catch(e){} }
   if(!qp || qp.phase!=='reading'){
     el.innerHTML = `
-      <div style="margin-top:14px; text-align:center;">
-        <div class="muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">📚 Ortak Kitap</div>
-        <p class="muted" style="font-size:13px;">Seçim Aşamasında</p>
-      </div>
+      <h2>📚 Ortak Kitap</h2>
+      <p class="muted" style="text-align:center; font-size:13px;">Seçim Aşamasında</p>
     `;
     return;
   }
   const finished = (qp.finishedBy||[]).includes(currentUid);
   const daysLeft = Math.max(0, Math.ceil((new Date(qp.readingEndsAt) - Date.now())/(24*60*60*1000)));
   el.innerHTML = `
-    <div style="margin-top:14px; text-align:center;">
-      <div class="muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">📚 Ortak Kitap</div>
+    <h2>📚 Ortak Kitap</h2>
+    <div style="text-align:center;">
       ${qpWinnerBigCardHtml(qp.winnerCover, qp.winnerTitle, qp.winnerAuthor)}
       <div class="muted" style="font-size:12px;">${daysLeft} gün kaldı</div>
       <button type="button" class="secondary tiny" id="qpFinishBtn_${containerId}" ${finished?'disabled':''} style="margin-top:8px;">${finished?'✓ Bitirdim':'Bu Kitabı Bitirdim'}</button>
@@ -6053,6 +6145,8 @@ function postBodyHtml(p, expanded){
         return `📊 Tur sona erdi! Bir üst tura geçenler: ${winners}`;
       }
       if(sub==='final_winner') return `🏆 Ortak kitap seçildi: <b>"${escapeHtml(p.bookTitle||'')}"</b>! 3 ay boyunca bunu okuyacağız.`;
+      if(sub==='gift_lottery_drawn') return `🎁 Ortak kitabı bitirmeyenler için hediye kurası çekildi (${p.pairCount||0} kişi hediye verecek) — hangi kitap olacağı bir sonraki ortak kitap seçimi tamamlanınca belli olacak.`;
+      if(sub==='gift_lottery_applied') return `🎁 Ortak kitap hediyeleri belli oldu: <b>"${escapeHtml(p.bookTitle||'')}"</b>! "Hediye Kitap" sekmesinden bakabilirsin.`;
       return '📚 Ortak kitap seçimi güncellendi.';
     }
     default: return escapeHtml(p.text||'');
