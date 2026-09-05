@@ -5069,18 +5069,43 @@ async function submitQuarterlyNomination(bookTitle, bookAuthor, bookCover, note,
 async function objectToQuarterlyNomination(nomId, bookTitle){
   if(!confirm(`"${bookTitle}" kitabını yakın zamanda okuduğunu belirtip öneriden düşürmek istediğine emin misin?`)) return;
   const nomRef = doc(db,'quarterlyPick','current','nominations',nomId);
+  let nominatorUid = null;
   try{
     await runTransaction(db, async (tx)=>{
       const snap = await tx.get(nomRef);
       if(!snap.exists()) throw new Error('Öneri bulunamadı.');
       const data = snap.data();
       if(data.status!=='active') throw new Error('Bu öneri zaten itiraz edilmiş.');
+      nominatorUid = data.uid;
       tx.update(nomRef, { status:'objected', objectedBy:currentUid, objectedByName:myProfile.name, objectedAt:new Date().toISOString() });
     });
     createPost('quarterly_pick', { subtype:'objection_made', bookTitle }, currentUid, myProfile.name);
     showToast('İtiraz kaydedildi.');
+    notifyQpObjectionEligible(nominatorUid, bookTitle);
     renderQuarterlyPickCard();
   }catch(err){ alert('İtiraz edilemedi: '+(err.message||err)); }
+}
+// İtiraz edilen kitabı öneren kişiye (hakkı dolu olsa bile — kendi boşluğunu her zaman
+// doldurabilir) VE hâlâ öneri hakkı dolmamış herkese "yerine önerebilirsin" bildirimi gider.
+async function notifyQpObjectionEligible(nominatorUid, bookTitle){
+  try{
+    const snap = await getDocs(qpNomsCol());
+    const counts = {};
+    snap.forEach(d=>{
+      const n = d.data();
+      if(n.status==='active' || n.status==='objected'){
+        counts[n.uid] = (counts[n.uid]||0) + 1;
+      }
+    });
+    const toNotify = new Set();
+    if(nominatorUid) toNotify.add(nominatorUid);
+    activeUids().forEach(uid=>{
+      if((counts[uid]||0) < QP_MAX_NOMINATIONS) toNotify.add(uid);
+    });
+    toNotify.forEach(uid=>{
+      notifyUser(uid, `"${bookTitle}" kitabına itiraz edildi, öneriden düştü. Yerine yeni bir öneri yapabilirsin!`, 'recs');
+    });
+  }catch(e){ /* bildirim gönderilemezse sessizce geç */ }
 }
 async function voteQuarterlyMatch(round, matchId, slot){
   const matchRef = doc(db,'quarterlyPick','current','rounds',String(round),'matches',matchId);
