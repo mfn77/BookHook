@@ -686,7 +686,85 @@ async function qpStartNominationPhase(prevData) {
   await notifyAllBackend(`📚 Yeni ortak kitap önerileri başladı! ${QP_NOMINATION_DAYS} gün içinde en fazla 3 kitap önerebilirsin.`, "recs");
 }
 
+// Sadece bu 3 aylık ortak kitap sürecine özel, HAFTALIK hediye kurasından TAMAMEN bağımsız bir
+// kura: 3 ay bitince, ortak kitabı "Bitirdim" diye işaretlemeyenlerin her biri, işaretleyenlerden
+// birine (herkes en az bir tane alana kadar sırayla, sonra gerekirse tekrar baştan) bir kitap
+// hediye eder. Hangi KİTABIN hediye edileceği henüz belli değildir (bir sonraki ortak kitap
+// seçimi tamamlanınca belli olur) — o yüzden burada sadece KİMİN KİME vereceği belirlenip
+// "quarterlyGiftPending/current" içinde bekletilir.
+function runQuarterlyGiftLotteryBackend(nonReaders, readers) {
+  const givers = shuffleBackend(nonReaders);
+  const pool = shuffleBackend(readers);
+  let remaining = [...pool];
+  const pairs = [];
+  givers.forEach((g) => {
+    if (pool.length === 0) { pairs.push({ giverUid: g.uid, giverName: g.name, receiverUid: null, receiverName: null }); return; }
+    if (remaining.length === 0) remaining = shuffleBackend(pool);
+    const idx = Math.floor(Math.random() * remaining.length);
+    const r = remaining.splice(idx, 1)[0];
+    pairs.push({ giverUid: g.uid, giverName: g.name, receiverUid: r.uid, receiverName: r.name });
+  });
+  return pairs;
+}
+async function qpDrawQuarterlyGiftLottery(data) {
+  const usersSnap = await db.collection("users").get();
+  const activeUsers = [];
+  usersSnap.forEach((d) => {
+    const u = d.data();
+    if (u.banned || u.deleted) return;
+    activeUsers.push({ uid: d.id, name: u.name || "" });
+  });
+  const finishedBy = new Set(data.finishedBy || []);
+  const readers = activeUsers.filter((u) => finishedBy.has(u.uid));
+  const nonReaders = activeUsers.filter((u) => !finishedBy.has(u.uid));
+  if (nonReaders.length === 0 || readers.length === 0) return; // hediye edecek veya alacak yoksa kura anlamsız
+
+  const pairs = runQuarterlyGiftLotteryBackend(nonReaders, readers);
+  await db.collection("quarterlyGiftPending").doc("current").set({
+    sourceCycleNumber: data.cycleNumber,
+    pairs,
+    drawnAt: new Date().toISOString(),
+    applied: false,
+  });
+  await postQuarterly("gift_lottery_drawn", { pairCount: pairs.length });
+}
+// Bir sonraki ortak kitap seçimi TAMAMLANDIĞINDA (yeni kazanan belli olduğunda) çağrılır: eğer
+// bekleyen bir hediye kurası varsa, hediye edilecek kitabı bu YENİ kazananla dolduruyoruz ve
+// gerçek "hediye isteği" kayıtlarını — alıcının kendi profil bilgileriyle (adres, telefon, ad)
+// otomatik doldurulmuş olarak, sanki kendisi formu doldurup göndermiş gibi — oluşturuyoruz.
+async function qpApplyPendingGiftLottery(winner) {
+  const pendingRef = db.collection("quarterlyGiftPending").doc("current");
+  const pendingSnap = await pendingRef.get();
+  if (!pendingSnap.exists) return;
+  const pending = pendingSnap.data();
+  if (pending.applied) return;
+
+  const usersSnap = await db.collection("users").get();
+  const usersMap = {};
+  usersSnap.forEach((d) => { usersMap[d.id] = d.data(); });
+
+  for (const p of pending.pairs) {
+    if (!p.receiverUid) continue;
+    const receiver = usersMap[p.receiverUid] || {};
+    const reqId = `${pending.sourceCycleNumber}_${p.giverUid}_${p.receiverUid}`;
+    await db.collection("quarterlyGiftRequests").doc(reqId).set({
+      sourceCycleNumber: pending.sourceCycleNumber,
+      giverUid: p.giverUid, giverName: p.giverName,
+      receiverUid: p.receiverUid, receiverName: p.receiverName,
+      bookTitle: winner.bookTitle, bookAuthor: winner.bookAuthor || "", bookCover: winner.bookCover || "",
+      recipientName: receiver.surname ? `${receiver.name || ""} ${receiver.surname}` : (receiver.name || ""),
+      address: receiver.address || "", phone: receiver.phone || "",
+      shipped: false, received: false, createdAt: new Date().toISOString(),
+    });
+    await notifyUserBackend(p.giverUid, `${p.receiverName} için ortak kitap hediyesi göndereceksin: "${winner.bookTitle}". "Hediye Kitap" sekmesine bak.`, "gifts");
+    await notifyUserBackend(p.receiverUid, `Ortak kitabı okumadığın için ${p.giverName} sana bir hediye kitap gönderecek: "${winner.bookTitle}"! 🎁`, "gifts");
+  }
+  await pendingRef.update({ applied: true, appliedAt: new Date().toISOString(), appliedBookTitle: winner.bookTitle });
+  await postQuarterly("gift_lottery_applied", { bookTitle: winner.bookTitle });
+}
+
 async function qpArchiveAndRestart(data) {
+  await qpDrawQuarterlyGiftLottery(data);
   await db.collection("quarterlyPickHistory").doc(String(data.cycleNumber)).set({
     cycleNumber: data.cycleNumber,
     winnerTitle: data.winnerTitle || null,
@@ -744,6 +822,7 @@ async function qpFinalizeObjecting(data) {
       });
       await postQuarterly("final_winner", { bookTitle: only.bookTitle, bookAuthor: only.bookAuthor || "", bookCover: only.bookCover || "" });
       await notifyAllBackend(`🏆 Yeni ortak kitap seçildi: "${only.bookTitle}"! 3 ay boyunca bunu okuyacağız.`, "recs");
+      await qpApplyPendingGiftLottery({ bookTitle: only.bookTitle, bookAuthor: only.bookAuthor || "", bookCover: only.bookCover || "" });
     } else {
       await qpStartNominationPhase(data);
     }
@@ -799,6 +878,7 @@ async function qpFinalizeRound(data) {
     });
     await postQuarterly("final_winner", { bookTitle: winner.bookTitle, bookAuthor: winner.bookAuthor || "", bookCover: winner.bookCover || "" });
     await notifyAllBackend(`🏆 Yeni ortak kitap seçildi: "${winner.bookTitle}"! 3 ay boyunca bunu okuyacağız.`, "recs");
+    await qpApplyPendingGiftLottery({ bookTitle: winner.bookTitle, bookAuthor: winner.bookAuthor || "", bookCover: winner.bookCover || "" });
     return;
   }
 
