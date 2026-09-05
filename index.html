@@ -5701,10 +5701,10 @@ async function renderBookHistoryGrid(uid, gridId, editable, collectionName){
 
   const cardsHtml = pageItems.map(b=>{
     const coverHtml = b.cover
-      ? `<img src="${b.cover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml((b.author?b.author+' - ':'')+(b.title||''))}" data-book-cover="${escapeHtml(b.cover)}" style="cursor:pointer;" onerror="this.parentElement.innerHTML='<span class=\\'bh-noimg\\'>📖</span>';" />`
-      : `<span class="bh-noimg">📖</span>`;
+      ? `<img src="${b.cover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(b.title||'').replace(/'/g,"\\'")}');" />`
+      : placeholderCoverHtml(b.title||'');
     const delBtn = editable ? `<button class="bh-delete" data-id="${b.id}" title="Kaldır">✕</button>` : '';
-    return `<div class="bh-card">
+    return `<div class="bh-card" data-bh-id="${b.id}" style="cursor:pointer;">
       <div class="bh-cover-wrap">${coverHtml}</div>
       <div class="bh-author">${escapeHtml(b.author||'')}</div>
       <div class="bh-title">${escapeHtml(b.title||'')}</div>
@@ -5717,9 +5717,17 @@ async function renderBookHistoryGrid(uid, gridId, editable, collectionName){
     grid.querySelector('.bh-prev-btn')?.addEventListener('click', ()=>{ bhPageState[gridId]--; renderBookHistoryGrid(uid, gridId, editable, collectionName); });
     grid.querySelector('.bh-next-btn')?.addEventListener('click', ()=>{ bhPageState[gridId]++; renderBookHistoryGrid(uid, gridId, editable, collectionName); });
   }
+  grid.querySelectorAll('.bh-card').forEach(card=>{
+    card.addEventListener('click', (e)=>{
+      if(e.target.closest('.bh-delete')) return;
+      const b = pageItems.find(x=>x.id===card.dataset.bhId);
+      if(b) showBhBookInfo(b, uid, gridId, collectionName);
+    });
+  });
   if(editable){
     grid.querySelectorAll('.bh-delete').forEach(btn=>{
-      btn.addEventListener('click', async ()=>{
+      btn.addEventListener('click', async (e)=>{
+        e.stopPropagation();
         try{
           await deleteDoc(doc(db,'users',currentUid,collectionName,btn.dataset.id));
           renderBookHistoryGrid(currentUid, gridId, true, collectionName);
@@ -5728,6 +5736,45 @@ async function renderBookHistoryGrid(uid, gridId, editable, collectionName){
     });
   }
   markLoaded(grid);
+}
+// Kitaplığım'daki bir kitaba tıklayınca açılan pencere: kapak, yazar, kitap adı, ve listeye özel
+// tek bir ilerleme tuşu — "Okumak İstediklerim"de "Okuyorum" (kitabı "Şu An Okuduklarım"a
+// taşır), "Şu An Okuduklarım"da "Okudum" (kitabı "Kitap Geçmişim"e taşır). "Kitap Geçmişim"
+// zaten son durak olduğu için orada bir tuş yok. Sadece kişinin KENDİ kitaplığında (başkasının
+// profilini görüntülerken değil) gösteriliyor.
+function showBhBookInfo(b, uid, gridId, collectionName){
+  const body = document.getElementById('bookInfoModalBody');
+  document.getElementById('bookInfoModal').style.display='flex';
+  const coverHtml = b.cover
+    ? `<img src="${b.cover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(b.title||'').replace(/'/g,"\\'")}')+this.parentElement.innerHTML;" />`
+    : `<div style="width:100px; height:150px; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); margin:0 auto 12px;">${placeholderCoverHtml(b.title||'')}</div>`;
+  let actionBtn = '';
+  if(uid===currentUid){
+    if(collectionName==='wantToRead') actionBtn = `<button type="button" class="primary" id="bhMoveBtn" style="margin-top:10px;">📖 Okuyorum</button>`;
+    else if(collectionName==='readBooks') actionBtn = `<button type="button" class="primary" id="bhMoveBtn" style="margin-top:10px;">✓ Okudum</button>`;
+  }
+  body.innerHTML = `
+    ${coverHtml}
+    <h2 style="margin:4px 0 2px;">${escapeHtml(b.title||'')}</h2>
+    <div class="muted" style="margin-bottom:10px;">${escapeHtml(b.author||'')}</div>
+    ${actionBtn}
+  `;
+  const btn = document.getElementById('bhMoveBtn');
+  if(btn){
+    btn.addEventListener('click', async ()=>{
+      btn.disabled = true;
+      const destCollection = collectionName==='wantToRead' ? 'readBooks' : 'bookHistory';
+      try{
+        await addDoc(collection(db,'users',currentUid,destCollection), { title:b.title||'', author:b.author||'', cover:b.cover||'', addedAt:new Date().toISOString() });
+        await deleteDoc(doc(db,'users',currentUid,collectionName,b.id));
+        closeModal('bookInfoModal');
+        showToast(collectionName==='wantToRead' ? 'Şu An Okuduklarım\'a taşındı!' : 'Kitap Geçmişim\'e taşındı!');
+        renderBookHistoryGrid(currentUid, gridId, true, collectionName);
+        const destGridId = destCollection==='readBooks' ? 'readBooksGrid' : 'bookHistoryGrid';
+        if(document.getElementById(destGridId)) renderBookHistoryGrid(currentUid, destGridId, true, destCollection);
+      }catch(err){ alert('Taşınamadı: '+(err.message||err)); btn.disabled = false; }
+    });
+  }
 }
 setupAddToggle('bookHistoryAddBtn', 'bookHistoryFormWrap');
 setupAddToggle('wantToReadAddBtn', 'wantToReadFormWrap');
