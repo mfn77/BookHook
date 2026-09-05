@@ -71,6 +71,18 @@ service cloud.firestore {
       allow create, update: if isSignedIn() && (request.resource.data.receiverUid == request.auth.uid || request.resource.data.giverUid == request.auth.uid || isAdmin());
     }
 
+    // 3 aylık ortak kitabı bitirmeyenler için çekilen, haftalık hediye kurasından bağımsız kura.
+    // Kimin kime vereceği ve hediye edilecek kitap sadece sunucu (Admin SDK) tarafından yazılıyor;
+    // istemci sadece okuyor ve (gönderdim/aldım) durumunu güncelliyor.
+    match /quarterlyGiftPending/{id} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+    match /quarterlyGiftRequests/{id} {
+      allow read: if isSignedIn();
+      allow update: if isSignedIn() && (resource.data.receiverUid == request.auth.uid || resource.data.giverUid == request.auth.uid || isAdmin());
+    }
+
     match /notifications/{uid}/items/{id} {
       allow read, update, delete: if isSignedIn() && request.auth.uid == uid;
       allow create: if isSignedIn();
