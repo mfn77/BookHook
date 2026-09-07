@@ -401,20 +401,35 @@ function weightedPickWithoutReplacementBackend(pool) {
   }
   return pool.splice(pool.length - 1, 1)[0];
 }
-function buildWeightedPoolBackend(list, previousWinners) {
-  return list.map((s) => ({ ...s, weight: previousWinners && previousWinners.has(s.uid) ? 0.8 : 1 }));
+// İstemcideki computeReceiverWeight ile birebir aynı: hiç kazanmayanın şansı %40 artar;
+// kazanmış olanın şansı, (toplam kazandığı / bugüne kadar dağıtılan toplam hediye) oranı kadar
+// (yüzdeye yuvarlanarak) düşer; bir önceki hafta da kazandıysa üstüne ayrıca %20 daha düşer.
+function computeReceiverWeightBackend(uid, winCounts, totalGiftsGivenSoFar, previousWinners) {
+  const myWins = (winCounts && winCounts[uid]) || 0;
+  let weight;
+  if (myWins === 0) {
+    weight = 1.4;
+  } else {
+    const share = totalGiftsGivenSoFar > 0 ? myWins / totalGiftsGivenSoFar : 0;
+    const reduction = Math.round(share * 100) / 100;
+    weight = 1 - reduction;
+  }
+  if (previousWinners && previousWinners.has(uid)) weight -= 0.20;
+  return Math.max(weight, 0.05);
+}
+function buildWeightedPoolBackend(list, previousWinners, winCounts, totalGiftsGivenSoFar) {
+  return list.map((s) => ({ ...s, weight: computeReceiverWeightBackend(s.uid, winCounts, totalGiftsGivenSoFar, previousWinners) }));
 }
 // İstemcideki runLottery ile birebir aynı eşleştirme mantığı: tier1 (kusursuz) tamamen
-// tükenmeden tier2'ye (1 pas) geçilmez; bir önceki haftanın kazananlarının bu haftaki alıcı
-// olma şansı %20 azaltılır (elenmez, sadece ağırlığı düşer).
-function runLotteryBackend(statsArr, previousWinners) {
+// tükenmeden tier2'ye (1 pas) geçilmez.
+function runLotteryBackend(statsArr, previousWinners, winCounts, totalGiftsGivenSoFar) {
   const eligible = statsArr.filter((s) => s.marked > 0);
   const givers = shuffleBackend(eligible.filter((s) => s.miss >= 2));
   const tier1Base = shuffleBackend(eligible.filter((s) => s.miss === 0));
   const tier2Base = shuffleBackend(eligible.filter((s) => s.miss === 1));
   const safeCount = tier1Base.length + tier2Base.length;
-  let tier1Pool = buildWeightedPoolBackend(tier1Base, previousWinners);
-  let tier2Pool = buildWeightedPoolBackend(tier2Base, previousWinners);
+  let tier1Pool = buildWeightedPoolBackend(tier1Base, previousWinners, winCounts, totalGiftsGivenSoFar);
+  let tier2Pool = buildWeightedPoolBackend(tier2Base, previousWinners, winCounts, totalGiftsGivenSoFar);
   const pairs = [];
   givers.forEach((g) => {
     if (safeCount === 0) {
@@ -422,8 +437,8 @@ function runLotteryBackend(statsArr, previousWinners) {
       return;
     }
     if (tier1Pool.length === 0 && tier2Pool.length === 0) {
-      tier1Pool = buildWeightedPoolBackend(tier1Base, previousWinners);
-      tier2Pool = buildWeightedPoolBackend(tier2Base, previousWinners);
+      tier1Pool = buildWeightedPoolBackend(tier1Base, previousWinners, winCounts, totalGiftsGivenSoFar);
+      tier2Pool = buildWeightedPoolBackend(tier2Base, previousWinners, winCounts, totalGiftsGivenSoFar);
     }
     const r = tier1Pool.length > 0 ? weightedPickWithoutReplacementBackend(tier1Pool) : weightedPickWithoutReplacementBackend(tier2Pool);
     pairs.push({ giverUid: g.uid || null, giverName: g.name, receiverUid: r.uid || null, receiverName: r.name });
@@ -503,15 +518,28 @@ async function finalizeWeekBackend(mondayStr) {
     return;
   }
   // Bir önceki haftanın kazananlarını (alıcılarını) çek — bu haftaki alıcı seçiminde onların
-  // şansını %20 azaltmak için.
+  // şansını ek %20 azaltmak için.
   const prevMondayStr = addDaysToDateStr(mondayStr, -7);
   const prevDrawSnap = await db.collection("draws").doc(prevMondayStr).get();
   const previousWinners = new Set();
   if (prevDrawSnap.exists) {
     (prevDrawSnap.data().pairs || []).forEach((p) => { if (p.receiverUid) previousWinners.add(p.receiverUid); });
   }
+  // Bugüne kadarki TÜM haftaların kura sonuçlarından, kimin kaç kere kazandığını ve toplamda
+  // kaç hediye dağıtıldığını hesapla (yeni ağırlıklandırma formülü için).
+  const winCounts = {};
+  let totalGiftsGivenSoFar = 0;
+  const allDrawsSnap = await db.collection("draws").get();
+  allDrawsSnap.forEach((d) => {
+    (d.data().pairs || []).forEach((p) => {
+      if (p.receiverUid) {
+        winCounts[p.receiverUid] = (winCounts[p.receiverUid] || 0) + 1;
+        totalGiftsGivenSoFar++;
+      }
+    });
+  });
   const stats = await computeWeekStatsBackend(mondayStr);
-  const { giverCount, safeCount, pairs } = runLotteryBackend(stats, previousWinners);
+  const { giverCount, safeCount, pairs } = runLotteryBackend(stats, previousWinners, winCounts, totalGiftsGivenSoFar);
   const weekEnd = addDaysToDateStr(mondayStr, 6);
   const data = { weekStart: mondayStr, weekEnd, giverCount, safeCount, pairs, generatedAt: new Date().toISOString() };
   let didWrite = false;
