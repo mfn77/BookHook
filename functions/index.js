@@ -876,7 +876,7 @@ async function qpFinalizeObjecting(data) {
 
   await QP_REF().update({
     phase: "voting", round: 1, totalRounds, bracketSize,
-    phaseStartedAt: now, phaseEndsAt: addDaysIso(now, QP_VOTING_ROUND_DAYS), nearEndPosted: false,
+    phaseStartedAt: now, phaseEndsAt: addDaysIso(now, QP_VOTING_ROUND_DAYS), nearEndPosted: false, fullyVotedAt: null,
   });
   await postQuarterly("round_start", { round: 1, totalRounds, bracketSize, matchCount: bracketOrder.length / 2 });
   await notifyAllBackend(`🗳️ Ortak kitap turnuvası başladı! ${bracketSize} kitap arasından oylamalar açıldı.`, "recs");
@@ -922,15 +922,17 @@ async function qpFinalizeRound(data) {
 
   const now = new Date().toISOString();
   await QP_REF().update({
-    round: nextRound, phaseStartedAt: now, phaseEndsAt: addDaysIso(now, QP_VOTING_ROUND_DAYS), nearEndPosted: false,
+    round: nextRound, phaseStartedAt: now, phaseEndsAt: addDaysIso(now, QP_VOTING_ROUND_DAYS), nearEndPosted: false, fullyVotedAt: null,
   });
   await postQuarterly("round_result", { round: data.round, results: results.map((r) => ({ title: r.winner.bookTitle, aTitle: r.slotATitle, bTitle: r.slotBTitle, aVotes: r.aVotes, bVotes: r.bVotes })) });
   await postQuarterly("round_start", { round: nextRound, totalRounds: data.totalRounds, matchCount: winners.length / 2 });
   await notifyAllBackend("🗳️ Yeni tur başladı! Oy vermeyi unutma.", "recs");
 }
 
+const QP_EARLY_FINISH_MINUTES = 5;
+
 exports.quarterlyPickTick = onSchedule(
-  { schedule: "*/15 * * * *", timeZone: "Europe/Istanbul" },
+  { schedule: "*/2 * * * *", timeZone: "Europe/Istanbul" },
   async () => {
     const snap = await QP_REF().get();
     if (!snap.exists) {
@@ -955,6 +957,18 @@ exports.quarterlyPickTick = onSchedule(
       if (data.phase === "nominating") await postQuarterly("nominations_near_end", {});
       else if (data.phase === "objecting") await postQuarterly("objecting_near_end", {});
       else if (data.phase === "voting") await postQuarterly("round_near_end", { round: data.round });
+    }
+
+    // Bir oylama turunda AKTİF herkes oy kullandıysa (bkz. istemci tarafındaki
+    // qpCheckRoundFullyVoted — orada "fullyVotedAt" damgası basılıyor), o turu tam 1 gün
+    // beklemeden, son oydan 5 dakika sonra erken kapatıyoruz — yeter ki o 5 dakika içinde kimse
+    // oyunu geri çekmemiş olsun (geri çekilirse istemci fullyVotedAt'i zaten temizliyor).
+    if (data.phase === "voting" && data.fullyVotedAt) {
+      const fullyVotedAt = new Date(data.fullyVotedAt);
+      if (now >= new Date(fullyVotedAt.getTime() + QP_EARLY_FINISH_MINUTES * 60 * 1000)) {
+        await qpFinalizeRound(data);
+        return;
+      }
     }
 
     if (now >= endsAt) {
