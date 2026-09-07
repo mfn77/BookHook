@@ -5007,6 +5007,7 @@ async function renderQpVoting(body, qp){
   body.innerHTML = `
     <div class="qp-phase-label">${roundLabel} — Oylama</div>
     <div class="qp-deadline">⏳ ${qpFmtRemaining(qp.phaseEndsAt)}</div>
+    ${qp.fullyVotedAt ? `<p class="muted" style="font-size:12px; color:var(--gold); margin-bottom:8px;">✓ Herkes oy kullandı — kimse oyunu değiştirmezse bu tur birkaç dakika içinde erken bitecek.</p>` : ''}
     ${rows}
   `;
   body.querySelectorAll('[data-qp-vote]').forEach(card=>{
@@ -5174,7 +5175,32 @@ async function voteQuarterlyMatch(round, matchId, slot){
       }
       tx.update(matchRef, { votesA, votesB });
     });
+    qpCheckRoundFullyVoted(round); // arka planda, beklemeden — turun tamamı oylandıysa erken bitiş damgası basılır
   }catch(err){ alert('Oy verilemedi: '+(err.message||err)); renderQuarterlyPickCard(); }
+}
+// Bir oydan sonra, o turdaki TÜM eşleşmelerde AKTİF her üyenin oy kullanıp kullanmadığını
+// kontrol eder. Herkes oy kullandıysa "fullyVotedAt" damgası basılır — sunucu tarafı bunu görüp
+// 1 gün dolmadan, son oydan 5 dakika sonra turu erken kapatır (kimse oyunu geri çekmezse). Biri
+// oyunu geri çekip tam katılımı bozarsa damga temizlenir (erken bitiş iptal olur).
+async function qpCheckRoundFullyVoted(round){
+  try{
+    const qpSnap = await getDoc(qpDocRef());
+    if(!qpSnap.exists()) return;
+    const qp = qpSnap.data();
+    if(qp.phase!=='voting' || qp.round!==round) return; // bu arada tur değişmiş olabilir, boşuna yazma
+    const matchesSnap = await getDocs(qpMatchesCol(round));
+    const matches = []; matchesSnap.forEach(d=> matches.push(d.data()));
+    const activeUidList = activeUids();
+    const fullyVoted = matches.length>0 && activeUidList.length>0 && matches.every(m=>{
+      const voted = new Set([...(m.votesA||[]), ...(m.votesB||[])]);
+      return activeUidList.every(uid=> voted.has(uid));
+    });
+    if(fullyVoted && !qp.fullyVotedAt){
+      await updateDoc(qpDocRef(), { fullyVotedAt: new Date().toISOString() });
+    } else if(!fullyVoted && qp.fullyVotedAt){
+      await updateDoc(qpDocRef(), { fullyVotedAt: null });
+    }
+  }catch(e){ /* arka plan kontrolü, sessizce geç */ }
 }
 
 /* ============ YÖNETİCİYE ÖZEL DENEME: ORTAK KİTAP SEÇİMİ ============
