@@ -756,6 +756,27 @@ async function qpDrawQuarterlyGiftLottery(data) {
   });
   await postQuarterly("gift_lottery_drawn", { pairCount: pairs.length });
 }
+// Seçim tamamlanıp yeni ortak kitap belli olunca, o kitabı otomatik olarak HERKESİN kendi
+// "Okumak İstediklerim" listesine ekler — zaten aynı kitap listesinde varsa tekrar eklemez.
+async function qpAddWinnerToEveryonesWantToRead(winner) {
+  const usersSnap = await db.collection("users").get();
+  for (const userDoc of usersSnap.docs) {
+    const u = userDoc.data();
+    if (u.banned || u.deleted) continue;
+    const uid = userDoc.id;
+    try {
+      const existing = await db.collection("users").doc(uid).collection("wantToRead")
+        .where("title", "==", winner.bookTitle).limit(1).get();
+      if (!existing.empty) continue;
+      await db.collection("users").doc(uid).collection("wantToRead").add({
+        title: winner.bookTitle, author: winner.bookAuthor || "", cover: winner.bookCover || "",
+        addedAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.error(`[qpAddWinnerToEveryonesWantToRead] ${uid} için eklenemedi:`, e);
+    }
+  }
+}
 // Bir sonraki ortak kitap seçimi TAMAMLANDIĞINDA (yeni kazanan belli olduğunda) çağrılır: eğer
 // bekleyen bir hediye kurası varsa, hediye edilecek kitabı bu YENİ kazananla dolduruyoruz ve
 // gerçek "hediye isteği" kayıtlarını — alıcının kendi profil bilgileriyle (adres, telefon, ad)
@@ -851,6 +872,7 @@ async function qpFinalizeObjecting(data) {
       await postQuarterly("final_winner", { bookTitle: only.bookTitle, bookAuthor: only.bookAuthor || "", bookCover: only.bookCover || "" });
       await notifyAllBackend(`🏆 Yeni ortak kitap seçildi: "${only.bookTitle}"! 3 ay boyunca bunu okuyacağız.`, "recs");
       await qpApplyPendingGiftLottery({ bookTitle: only.bookTitle, bookAuthor: only.bookAuthor || "", bookCover: only.bookCover || "" });
+      await qpAddWinnerToEveryonesWantToRead({ bookTitle: only.bookTitle, bookAuthor: only.bookAuthor || "", bookCover: only.bookCover || "" });
     } else {
       await qpStartNominationPhase(data);
     }
@@ -907,6 +929,7 @@ async function qpFinalizeRound(data) {
     await postQuarterly("final_winner", { bookTitle: winner.bookTitle, bookAuthor: winner.bookAuthor || "", bookCover: winner.bookCover || "" });
     await notifyAllBackend(`🏆 Yeni ortak kitap seçildi: "${winner.bookTitle}"! 3 ay boyunca bunu okuyacağız.`, "recs");
     await qpApplyPendingGiftLottery({ bookTitle: winner.bookTitle, bookAuthor: winner.bookAuthor || "", bookCover: winner.bookCover || "" });
+    await qpAddWinnerToEveryonesWantToRead({ bookTitle: winner.bookTitle, bookAuthor: winner.bookAuthor || "", bookCover: winner.bookCover || "" });
     return;
   }
 
