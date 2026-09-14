@@ -1087,6 +1087,11 @@
         </div>
       </div>
       <div class="card">
+        <h2>Bugüne Kadar</h2>
+        <p class="muted">Kulüp kurulduğundan beri kim kaç hediye verdi, kaç hediye aldı — en çok alan en üstte.</p>
+        <div id="giftStatsList" class="badge-shelf-list"></div>
+      </div>
+      <div class="card">
         <h2>Bugüne Kadar Hediye Edilen Kitaplar</h2>
         <div id="giftBooksGrid"></div>
       </div>
@@ -4469,6 +4474,34 @@ async function renderQpGiftCard(){
     });
   });
 }
+// "Bugüne Kadar" kartı: kulüp kurulduğundan beri kim kaç hediye almış/vermiş — Rozet
+// Geçmişi'ndeki madalyon görünümüyle aynı stil, sadece 2 "rozet" (aldı/verdi) var.
+function renderGiftStatsList(){
+  const box = document.getElementById('giftStatsList');
+  if(!box) return;
+  const stats = {};
+  drawsCache.forEach(d=>{
+    (d.pairs||[]).forEach(p=>{
+      if(p.giverUid){ stats[p.giverUid] = stats[p.giverUid] || {given:0, received:0}; stats[p.giverUid].given++; }
+      if(p.receiverUid){ stats[p.receiverUid] = stats[p.receiverUid] || {given:0, received:0}; stats[p.receiverUid].received++; }
+    });
+  });
+  const uids = Object.keys(stats).filter(uid=>usersCache[uid]);
+  uids.sort((a,b)=> stats[b].received - stats[a].received);
+  if(uids.length===0){ box.innerHTML = `<p class="muted">Henüz hiç hediye verilmemiş.</p>`; return; }
+  box.innerHTML = uids.map(uid=>{
+    const s = stats[uid];
+    const receivedColor = '#2f9e6e', givenColor = '#c2564f';
+    const coin = (icon, color, count, title)=> `<div class="badge-shelf-item"><div class="badge-shelf-coin" style="background:${color};" title="${title}: ${count}"><span>${icon}</span>${count>0?`<span class="badge-shelf-count" style="background:linear-gradient(145deg, ${shadeHexColor(color,-0.28)} 0%, ${shadeHexColor(color,-0.62)} 100%);"><span class="badge-shelf-count-num">${count}</span></span>`:''}</div></div>`;
+    return `<div class="badge-shelf-row">
+      <div class="badge-shelf-name">${userChipHtml(uid,26)}</div>
+      <div class="badge-shelf-icons" style="flex:0 0 auto; justify-content:flex-start; gap:16px;">
+        ${coin('📥', receivedColor, s.received, 'Aldığı hediye')}
+        ${coin('📤', givenColor, s.given, 'Verdiği hediye')}
+      </div>
+    </div>`;
+  }).join('');
+}
 async function renderGiftsTab(){
   document.getElementById('giftsMemberLastWeekWrap').style.display = myProfile.role==='admin' ? 'none' : 'block';
   document.getElementById('giftsDrawHistAdminWrap').style.display = myProfile.role==='admin' ? 'block' : 'none';
@@ -4477,6 +4510,7 @@ async function renderGiftsTab(){
   const intro = document.getElementById('giftsIntro');
   const content = keepOrLoading('giftsContent');
   await loadDraws();
+  renderGiftStatsList();
   const reqMap = await fetchAllGiftRequests();
 
   let personalHtml = '';
