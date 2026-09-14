@@ -1614,22 +1614,22 @@ function weightedPickWithoutReplacement(pool){
 }
 // Bir kişinin bu haftaki ALICI olma ağırlığını, bugüne kadarki TÜM kura geçmişine bakarak
 // hesaplar:
-// - Hiç hediye kazanmamışsa: ağırlığı %40 ARTAR (1.4).
+// - Hiç hediye kazanmamışsa: ağırlığı %80 ARTAR (1.8).
 // - Daha önce kazanmışsa: ağırlığı, (kişinin toplam kazandığı hediye sayısı / bugüne kadar
-//   dağıtılan TOPLAM hediye sayısı) oranı kadar (yüzdeye yuvarlanarak) DÜŞER. Örn. kişi 4 kere
-//   kazanmış, toplamda 12 hediye dağıtılmış: 4/12=0.33 → şansı %33 düşer.
-// - Bunun üstüne, eğer bir önceki hafta da kazandıysa, AYRICA %20 daha düşer (eklenerek).
+//   dağıtılan TOPLAM hediye sayısı) oranının 2 KATI kadar (yüzdeye yuvarlanarak) DÜŞER. Örn.
+//   kişi 4 kere kazanmış, toplamda 12 hediye dağıtılmış: 4/12=%33, 2 katı %66 → şansı %66 düşer.
+// - Bunun üstüne, eğer bir önceki hafta da kazandıysa, AYRICA %80 daha düşer (eklenerek).
 function computeReceiverWeight(uid, winCounts, totalGiftsGivenSoFar, previousWinners){
   const myWins = (winCounts && winCounts[uid]) || 0;
   let weight;
   if(myWins===0){
-    weight = 1.4;
+    weight = 1.8;
   } else {
     const share = totalGiftsGivenSoFar>0 ? myWins/totalGiftsGivenSoFar : 0;
-    const reduction = Math.round(share*100)/100;
+    const reduction = Math.round(share*100*2)/100;
     weight = 1 - reduction;
   }
-  if(previousWinners && previousWinners.has(uid)) weight -= 0.20;
+  if(previousWinners && previousWinners.has(uid)) weight -= 0.80;
   return Math.max(weight, 0.05); // sıfıra/negatife düşmesin diye güvenlik tabanı
 }
 function buildWeightedPool(list, previousWinners, winCounts, totalGiftsGivenSoFar){
