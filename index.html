@@ -472,6 +472,20 @@
   .compose-poll-option-row{ display:flex; gap:6px; align-items:center; margin-bottom:6px; }
   .compose-poll-option-row input{ flex:1 1 auto; min-width:0; }
   .compose-poll-option-remove{ flex:0 0 auto; background:none; border:none; color:var(--ink-70); font-size:16px; cursor:pointer; padding:4px 8px; }
+  /* ============ HEDİYE SEKMESİ: "BUGÜNE KADAR" IZGARASI ============ */
+  .gift-stats-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:6px 8px; }
+  @media (min-width:641px){ .gift-stats-grid{ grid-template-columns:repeat(4, 1fr); } }
+  .gift-stats-cell{ display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px; border-radius:14px; }
+  .gift-stats-avatar{ margin-bottom:6px; }
+  .gift-stats-name{ font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600; color:var(--ink); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gift-stats-coins{ display:flex; gap:10px; margin-top:8px; }
+  .gift-stats-coin{ width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; box-shadow:0 0 0 2px var(--card), 0 2px 3px rgba(0,0,0,0.22); position:relative; flex:0 0 auto; }
+  .gift-stats-coin-count{ position:absolute; right:-4px; bottom:-4px; min-width:15px; height:15px; padding:0 2px; border-radius:8px; box-shadow:0 0 0 1.5px var(--card), inset 0 1px 0 rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; }
+  .gift-stats-coin-count-num{
+    font-family:'Roboto Mono',monospace; font-weight:800; font-size:9px; color:#e2e2e2;
+    background-image:linear-gradient(180deg, #ffffff 0%, #d8d8d8 30%, #8a8a8a 50%, #f2f2f2 68%, #a8a8a8 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  }
   /* ============ AKIŞTA ANKET (WhatsApp tarzı) ============ */
   .poll-question{ font-family:'Inter',sans-serif; font-weight:700; font-size:15px; margin-bottom:10px; }
   .poll-option-row{ position:relative; border:1.5px solid var(--line); border-radius:10px; padding:9px 12px; margin-bottom:7px; cursor:pointer; overflow:hidden; background:var(--paper-2); transition:border-color .15s var(--ease); }
@@ -4477,8 +4491,7 @@ async function renderQpGiftCard(){
 // "Bugüne Kadar" kartı: kulüp kurulduğundan beri kim kaç hediye almış/vermiş — Rozet
 // Geçmişi'ndeki madalyon görünümüyle aynı stil, sadece 2 "rozet" (aldı/verdi) var.
 function renderGiftStatsList(){
-  const box = document.getElementById('giftStatsList');
-  if(!box) return;
+  const box = keepOrLoading('giftStatsList');
   const stats = {};
   drawsCache.forEach(d=>{
     (d.pairs||[]).forEach(p=>{
@@ -4488,19 +4501,21 @@ function renderGiftStatsList(){
   });
   const uids = Object.keys(stats).filter(uid=>usersCache[uid]);
   uids.sort((a,b)=> stats[b].received - stats[a].received);
-  if(uids.length===0){ box.innerHTML = `<p class="muted">Henüz hiç hediye verilmemiş.</p>`; return; }
-  box.innerHTML = uids.map(uid=>{
+  if(uids.length===0){ box.innerHTML = `<p class="muted">Henüz hiç hediye verilmemiş.</p>`; markLoaded(box); return; }
+  const receivedColor = '#2f9e6e', givenColor = '#c2564f';
+  const coin = (icon, color, count, title)=> `<div class="gift-stats-coin" style="background:${color};" title="${title}: ${count}"><span>${icon}</span>${count>0?`<span class="gift-stats-coin-count" style="background:linear-gradient(145deg, ${shadeHexColor(color,-0.28)} 0%, ${shadeHexColor(color,-0.62)} 100%);"><span class="gift-stats-coin-count-num">${count}</span></span>`:''}</div>`;
+  box.innerHTML = `<div class="gift-stats-grid">${uids.map(uid=>{
     const s = stats[uid];
-    const receivedColor = '#2f9e6e', givenColor = '#c2564f';
-    const coin = (icon, color, count, title)=> `<div class="badge-shelf-item"><div class="badge-shelf-coin" style="background:${color};" title="${title}: ${count}"><span>${icon}</span>${count>0?`<span class="badge-shelf-count" style="background:linear-gradient(145deg, ${shadeHexColor(color,-0.28)} 0%, ${shadeHexColor(color,-0.62)} 100%);"><span class="badge-shelf-count-num">${count}</span></span>`:''}</div></div>`;
-    return `<div class="badge-shelf-row">
-      <div class="badge-shelf-name">${userChipHtml(uid,26)}</div>
-      <div class="badge-shelf-icons" style="flex:0 0 auto; justify-content:flex-start; gap:16px;">
+    return `<div class="gift-stats-cell">
+      <div class="gift-stats-avatar">${avatarHtmlFromProfile(usersCache[uid], 44)}</div>
+      <div class="gift-stats-name">${escapeHtml(usersCache[uid].name||'')}</div>
+      <div class="gift-stats-coins">
         ${coin('📥', receivedColor, s.received, 'Aldığı hediye')}
         ${coin('📤', givenColor, s.given, 'Verdiği hediye')}
       </div>
     </div>`;
-  }).join('');
+  }).join('')}</div>`;
+  markLoaded(box);
 }
 async function renderGiftsTab(){
   document.getElementById('giftsMemberLastWeekWrap').style.display = myProfile.role==='admin' ? 'none' : 'block';
