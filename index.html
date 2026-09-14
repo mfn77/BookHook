@@ -475,17 +475,28 @@
   /* ============ HEDİYE SEKMESİ: "BUGÜNE KADAR" IZGARASI ============ */
   .gift-stats-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:6px 8px; }
   @media (min-width:641px){ .gift-stats-grid{ grid-template-columns:repeat(4, 1fr); } }
-  .gift-stats-cell{ display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px; border-radius:14px; }
+  .gift-stats-cell{ display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px; border-radius:14px; position:relative; }
+  /* Kişiler arasında, sadece sayıların hizasında (tüm hücre boyunca değil) silik kısa bir
+     ayraç çizgisi — hangi sayının kime ait olduğu daha net görünsün diye. */
+  .gift-stats-cell:not(:nth-child(2n))::after{
+    content:''; position:absolute; right:0; bottom:12px; width:1px; height:34px; background:var(--line);
+  }
+  @media (min-width:641px){
+    .gift-stats-cell:not(:nth-child(2n))::after{ display:none; }
+    .gift-stats-cell:not(:nth-child(4n))::after{
+      content:''; display:block; position:absolute; right:0; bottom:12px; width:1px; height:34px; background:var(--line);
+    }
+  }
   .gift-stats-avatar{ margin-bottom:6px; }
   .gift-stats-name{ font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600; color:var(--ink); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .gift-stats-coins{ display:flex; gap:10px; margin-top:8px; }
-  .gift-stats-coin{ width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; box-shadow:0 0 0 2px var(--card), 0 2px 3px rgba(0,0,0,0.22); position:relative; flex:0 0 auto; }
-  .gift-stats-coin-count{ position:absolute; right:-4px; bottom:-4px; min-width:15px; height:15px; padding:0 2px; border-radius:8px; box-shadow:0 0 0 1.5px var(--card), inset 0 1px 0 rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; }
-  .gift-stats-coin-count-num{
-    font-family:'Roboto Mono',monospace; font-weight:800; font-size:9px; color:#e2e2e2;
+  .gift-stats-coins{ display:flex; gap:10px; margin-top:8px; align-items:center; }
+  .gift-stats-num{ width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.25); flex:0 0 auto; }
+  .gift-stats-num-text{
+    font-family:'Roboto Mono',monospace; font-weight:800; font-size:15px; color:#e2e2e2;
     background-image:linear-gradient(180deg, #ffffff 0%, #d8d8d8 30%, #8a8a8a 50%, #f2f2f2 68%, #a8a8a8 100%);
     -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
   }
+  .gift-stats-icon-only{ width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex:0 0 auto; background:var(--paper-2); opacity:.4; }
   /* ============ AKIŞTA ANKET (WhatsApp tarzı) ============ */
   .poll-question{ font-family:'Inter',sans-serif; font-weight:700; font-size:15px; margin-bottom:10px; }
   .poll-option-row{ position:relative; border:1.5px solid var(--line); border-radius:10px; padding:9px 12px; margin-bottom:7px; cursor:pointer; overflow:hidden; background:var(--paper-2); transition:border-color .15s var(--ease); }
@@ -4503,7 +4514,12 @@ function renderGiftStatsList(){
   uids.sort((a,b)=> stats[b].received - stats[a].received);
   if(uids.length===0){ box.innerHTML = `<p class="muted">Henüz hiç hediye verilmemiş.</p>`; markLoaded(box); return; }
   const receivedColor = '#2f9e6e', givenColor = '#c2564f';
-  const coin = (icon, color, count, title)=> `<div class="gift-stats-coin" style="background:${color};" title="${title}: ${count}"><span>${icon}</span>${count>0?`<span class="gift-stats-coin-count" style="background:linear-gradient(145deg, ${shadeHexColor(color,-0.28)} 0%, ${shadeHexColor(color,-0.62)} 100%);"><span class="gift-stats-coin-count-num">${count}</span></span>`:''}</div>`;
+  const coin = (icon, color, count, title)=>{
+    if(count>0){
+      return `<div class="gift-stats-num" style="background:linear-gradient(145deg, ${shadeHexColor(color,-0.15)} 0%, ${shadeHexColor(color,-0.55)} 100%);" title="${title}: ${count}"><span class="gift-stats-num-text">${count}</span></div>`;
+    }
+    return `<div class="gift-stats-icon-only" title="${title}: 0"><span>${icon}</span></div>`;
+  };
   box.innerHTML = `<div class="gift-stats-grid">${uids.map(uid=>{
     const s = stats[uid];
     return `<div class="gift-stats-cell">
