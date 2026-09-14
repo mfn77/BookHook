@@ -401,20 +401,21 @@ function weightedPickWithoutReplacementBackend(pool) {
   }
   return pool.splice(pool.length - 1, 1)[0];
 }
-// İstemcideki computeReceiverWeight ile birebir aynı: hiç kazanmayanın şansı %40 artar;
-// kazanmış olanın şansı, (toplam kazandığı / bugüne kadar dağıtılan toplam hediye) oranı kadar
-// (yüzdeye yuvarlanarak) düşer; bir önceki hafta da kazandıysa üstüne ayrıca %20 daha düşer.
+// İstemcideki computeReceiverWeight ile birebir aynı: hiç kazanmayanın şansı %80 artar;
+// kazanmış olanın şansı, (toplam kazandığı / bugüne kadar dağıtılan toplam hediye) oranının
+// 2 katı kadar (yüzdeye yuvarlanarak) düşer; bir önceki hafta da kazandıysa üstüne ayrıca
+// %80 daha düşer.
 function computeReceiverWeightBackend(uid, winCounts, totalGiftsGivenSoFar, previousWinners) {
   const myWins = (winCounts && winCounts[uid]) || 0;
   let weight;
   if (myWins === 0) {
-    weight = 1.4;
+    weight = 1.8;
   } else {
     const share = totalGiftsGivenSoFar > 0 ? myWins / totalGiftsGivenSoFar : 0;
-    const reduction = Math.round(share * 100) / 100;
+    const reduction = Math.round(share * 100 * 2) / 100;
     weight = 1 - reduction;
   }
-  if (previousWinners && previousWinners.has(uid)) weight -= 0.20;
+  if (previousWinners && previousWinners.has(uid)) weight -= 0.80;
   return Math.max(weight, 0.05);
 }
 function buildWeightedPoolBackend(list, previousWinners, winCounts, totalGiftsGivenSoFar) {
