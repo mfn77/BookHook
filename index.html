@@ -580,6 +580,9 @@
   .post-card-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
   .post-card-time{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
   .post-card-body{ font-size:14.5px; line-height:1.5; }
+  .post-title{ font-family:'Inter',sans-serif; font-weight:700; font-size:16px; line-height:1.3; color:var(--ink); margin-bottom:5px; }
+  .post-card.weight-medium .post-title{ font-size:17px; }
+  .post-card.weight-high .post-title{ font-size:19px; }
   /* Önem sırasına göre görsel ağırlık: manuel gönderi > kitap ekleme/puanlama > geri kalanı. */
   .post-card.weight-medium .post-card-body{ font-size:15.5px; }
   .post-card.weight-medium{ padding-top:16px; padding-bottom:18px; }
@@ -602,6 +605,24 @@
   }
   .join-conversation-bar:hover{ border-color:var(--ink-70); }
   .join-conversation-plus{ font-size:18px; font-weight:400; color:var(--ink-70); opacity:0.45; flex:0 0 auto; line-height:1; }
+  .join-conversation-form{
+    width:100%; margin:4px 0 14px; padding:14px 16px; border:1.5px solid var(--line); border-radius:16px; background:var(--card);
+  }
+  .jc-title-input{
+    width:100%; padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif;
+    font-weight:700; font-size:15px; background:var(--card); color:var(--ink); box-sizing:border-box; margin-bottom:8px;
+  }
+  .jc-text-input{
+    width:100%; min-height:80px; padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif;
+    font-size:14px; background:var(--card); color:var(--ink); resize:vertical; box-sizing:border-box;
+  }
+  .jc-form-actions{ display:flex; align-items:center; gap:8px; margin-top:10px; }
+  .jc-image-btn{
+    width:34px; height:34px; border-radius:50%; border:1.5px solid var(--line); background:none; color:var(--ink-70);
+    font-size:18px; cursor:pointer; flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+  }
+  .jc-image-btn:hover{ background:var(--paper-2); }
+  .jc-form-actions #jcCancelBtn{ margin-left:auto; }
   .discover-cat{ margin-bottom:22px; }
   .discover-cat-title{ font-family:'Roboto',sans-serif; font-weight:700; font-size:16px; margin-bottom:10px; }
   .discover-filters-wrap{ margin-bottom:16px; }
@@ -895,10 +916,24 @@
     <section class="tab" id="tab-social" style="padding-bottom:0;">
       <div id="pinnedPostBar" style="display:none;"></div>
       <div id="socialFeedView">
-        <button type="button" id="joinConversationBar" class="join-conversation-bar">
+        <button type="button" id="joinConversationTrigger" class="join-conversation-bar">
           <span class="join-conversation-plus">+</span>
           <span>Konuşmaya Katıl</span>
         </button>
+        <div id="joinConversationForm" class="join-conversation-form" style="display:none;">
+          <input type="text" id="jcTitleInput" class="jc-title-input" maxlength="100" placeholder="Başlık" />
+          <textarea id="jcTextInput" class="jc-text-input" maxlength="280" placeholder="Ne düşünüyorsun?"></textarea>
+          <div id="jcImagePreviewWrap" style="display:none; margin-top:8px; text-align:center;">
+            <img id="jcImagePreview" src="" style="max-width:100%; border-radius:10px;" />
+            <button type="button" class="secondary tiny" id="jcImageRemoveBtn" style="margin-top:6px;">Görseli Kaldır</button>
+          </div>
+          <input type="file" id="jcImageInput" accept="image/*" style="display:none;" />
+          <div class="jc-form-actions">
+            <button type="button" id="jcImageBtn" class="jc-image-btn" title="Görsel Ekle">+</button>
+            <button type="button" id="jcCancelBtn" class="secondary tiny">Vazgeç</button>
+            <button type="button" id="jcSendBtn" class="primary tiny">Paylaş</button>
+          </div>
+        </div>
         <div id="timelineFeed"></div>
       </div>
       <div id="socialProfileView" style="display:none; padding-bottom:90px;">
@@ -6515,6 +6550,50 @@ function timeAgoLabel(iso){
   const d = new Date(iso);
   return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
 }
+// Reddit tarzı: her gönderinin kalın bir BAŞLIĞI, altında da açıklayıcı gövde metni var.
+// Kullanıcı gönderilerinde başlığı kişi kendisi giriyor (p.title); sistem gönderilerinde ve
+// anketlerde burada sabit/otomatik bir başlık üretiliyor.
+function postTitleFor(p){
+  if(p.type==='user_post') return p.title ? escapeHtml(p.title) : null;
+  if(p.type==='poll') return `📊 ${escapeHtml(p.question||'Anket')}`;
+  const T = {
+    read: '✓ Bugün Okudu',
+    skip: '😴 Bugün Okuyamadı',
+    badge_gained: '🏅 Rozet Kazandı',
+    badge_lost: '💔 Rozet Kaybetti',
+    gift_won: '🎁 Hediye Kazandı',
+    gift_requested: '📮 Hediye İsteği',
+    gift_completed: '🎉 Hediyeye Kavuştu',
+    new_member: '👋 Yeni Üye',
+    book_review: '⭐ Kitap Puanladı',
+    book_review_batch: '⭐ Kitap Puanlamaları',
+    book_added: '📖 Kitaplığa Ekledi',
+    book_added_batch: '📖 Kitaplığa Ekledi',
+    record_dethrone: '👑 Rekor Kırıldı',
+    no_lottery: '🍀 Kura Çekilmedi',
+    rec_personal: '💡 Kitap Önerdi',
+    rec_group: '💡 Gruba Öneri',
+  };
+  if(p.type==='quarterly_pick'){
+    const QT = {
+      nominations_open: '📚 Öneriler Başladı',
+      nominations_near_end: '⏰ Öneri Süresi Bitiyor',
+      objecting_open: '🔎 İtiraz Süresi Başladı',
+      objecting_near_end: '⏰ İtiraz Süresi Bitiyor',
+      objection_made: '🙅 İtiraz Edildi',
+      nomination_made: '📖 Yeni Öneri',
+      round_start: '🗳️ Oylama Turu Başladı',
+      round_near_end: '⏰ Tur Bitiyor',
+      round_result: '📊 Tur Sonuçlandı',
+      final_winner: '🏆 Ortak Kitap Seçildi',
+      gift_lottery_drawn: '🎁 Hediye Kurası Çekildi',
+      gift_lottery_applied: '🎁 Ortak Kitap Hediyeleri Belli Oldu',
+      discussion_opened: '💬 Tartışma Açıldı',
+    };
+    return QT[p.subtype] || '📚 Ortak Kitap';
+  }
+  return T[p.type] || null;
+}
 function postBodyHtml(p, expanded){
   const name = escapeHtml(p.name||'');
   switch(p.type){
@@ -6557,27 +6636,27 @@ function postBodyHtml(p, expanded){
       if(sub==='nominations_near_end') return `⏰ Ortak kitap önerileri için son 2 saat! Önerecek kitabın varsa şimdi ekle.`;
       if(sub==='objecting_open') return `🔎 1 günlük itiraz süresi başladı — bir kitabı yakın zamanda okuduysan "Öneriler" sekmesinden itiraz edebilirsin.`;
       if(sub==='objecting_near_end') return `⏰ İtiraz süresi bitmek üzere (2 saat kaldı).`;
-      if(sub==='objection_made') return `🙅 <b>${escapeHtml(p.name||'')}</b>, "${escapeHtml(p.bookTitle||'')}" kitabına itiraz etti (yakın zamanda okumuş) — öneriden düştü.`;
+      if(sub==='objection_made') return `<b>${escapeHtml(p.name||'')}</b>, "${escapeHtml(p.bookTitle||'')}" kitabına itiraz etti (yakın zamanda okumuş) — öneriden düştü.`;
       if(sub==='nomination_made'){
         const cover = p.bookCover
           ? `<img src="${p.bookCover}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml(p.bookTitle||'')}" data-book-cover="${escapeHtml(p.bookCover)}" />`
           : `<span class="post-book-cover" style="display:inline-block; overflow:hidden; border-radius:6px;">${placeholderCoverHtml(p.bookTitle||'')}</span>`;
-        return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div>📖 <b>${escapeHtml(p.name||'')}</b> bir kitap önerdi: <b>${escapeHtml(p.bookTitle||'')}</b>${p.bookAuthor?` (${escapeHtml(p.bookAuthor)})`:''}</div></div>`;
+        return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div><b>${escapeHtml(p.name||'')}</b> bir kitap önerdi: <b>${escapeHtml(p.bookTitle||'')}</b>${p.bookAuthor?` (${escapeHtml(p.bookAuthor)})`:''}</div></div>`;
       }
       if(sub==='round_start'){
         const label = p.round===p.totalRounds ? 'Final' : (p.round===(p.totalRounds-1) ? 'Yarı final' : `${p.round}. tur`);
-        return `🗳️ ${label} oylaması başladı! ${p.matchCount||''} eşleşme var, "Öneriler" sekmesinden oy verebilirsin.`;
+        return `${label} oylaması başladı! ${p.matchCount||''} eşleşme var, "Öneriler" sekmesinden oy verebilirsin.`;
       }
-      if(sub==='round_near_end') return `⏰ Bu turun oylaması bitmek üzere (2 saat kaldı).`;
+      if(sub==='round_near_end') return `Bu turun oylaması bitmek üzere (2 saat kaldı).`;
       if(sub==='round_result'){
         const winners = (p.results||[]).map(r=>escapeHtml(r.title)).join(', ');
-        return `📊 Tur sona erdi! Bir üst tura geçenler: ${winners}`;
+        return `Tur sona erdi! Bir üst tura geçenler: ${winners}`;
       }
-      if(sub==='final_winner') return `🏆 Ortak kitap seçildi: <b>"${escapeHtml(p.bookTitle||'')}"</b>! 3 ay boyunca bunu okuyacağız.`;
-      if(sub==='discussion_opened') return `💬 "${escapeHtml(p.bookTitle||'')}" için tartışma açıldı! Bitirme formunu doldurduysan herkesin cevaplarını görebilir, sohbete katılabilirsin.`;
-      if(sub==='gift_lottery_drawn') return `🎁 Ortak kitabı bitirmeyenler için hediye kurası çekildi (${p.pairCount||0} kişi hediye verecek) — hangi kitap olacağı bir sonraki ortak kitap seçimi tamamlanınca belli olacak.`;
-      if(sub==='gift_lottery_applied') return `🎁 Ortak kitap hediyeleri belli oldu: <b>"${escapeHtml(p.bookTitle||'')}"</b>! "Hediye Kitap" sekmesinden bakabilirsin.`;
-      return '📚 Ortak kitap seçimi güncellendi.';
+      if(sub==='final_winner') return `Ortak kitap seçildi: <b>"${escapeHtml(p.bookTitle||'')}"</b>! 3 ay boyunca bunu okuyacağız.`;
+      if(sub==='discussion_opened') return `"${escapeHtml(p.bookTitle||'')}" için tartışma açıldı! Bitirme formunu doldurduysan herkesin cevaplarını görebilir, sohbete katılabilirsin.`;
+      if(sub==='gift_lottery_drawn') return `Ortak kitabı bitirmeyenler için hediye kurası çekildi (${p.pairCount||0} kişi hediye verecek) — hangi kitap olacağı bir sonraki ortak kitap seçimi tamamlanınca belli olacak.`;
+      if(sub==='gift_lottery_applied') return `Ortak kitap hediyeleri belli oldu: <b>"${escapeHtml(p.bookTitle||'')}"</b>! "Hediye Kitap" sekmesinden bakabilirsin.`;
+      return 'Ortak kitap seçimi güncellendi.';
     }
     default: return escapeHtml(p.text||'');
   }
@@ -6623,7 +6702,7 @@ function pollBodyHtml(p, expanded){
     </div>`;
   }).join('');
   const img = p.image ? `<img src="${p.image}" alt="" style="max-width:100%; border-radius:10px; margin-bottom:8px; display:block;" />` : '';
-  return `${img}<div class="poll-question">📊 ${escapeHtml(p.question||'')}</div>${rows}<div class="poll-total-votes">${totalVotes} oy</div>`;
+  return `${img}${rows}<div class="poll-total-votes">${totalVotes} oy</div>`;
 }
 async function voteOnPoll(postId, optionIdx){
   if(!postId || Number.isNaN(optionIdx)) return;
@@ -6756,7 +6835,7 @@ function renderPostCard(p){
         ${pinned?`<span title="Sabitlenmiş" style="margin-left:auto; font-size:13px;">📌</span>`:''}
         ${canDelete?`<button type="button" class="post-menu-btn" data-post-menu="${p.id}" data-can-edit="${canEdit?'1':'0'}" data-is-pinned="${pinned?'1':'0'}" style="${pinned?'':'margin-left:auto;'}" title="Seçenekler">⋮</button>`:''}
       </div>
-      <div class="post-card-body">${postBodyHtml(p)}</div>
+      <div class="post-card-body">${(()=>{const t=postTitleFor(p); return t?`<div class="post-title">${t}</div>`:'';})()}${postBodyHtml(p)}</div>
       <div class="post-actions">
         ${postVoteRowHtml(p)}
         <button type="button" class="post-action-btn post-comment-inline-btn" data-post-id="${p.id}"><span class="post-comment-count">💬 ${p.commentCount||0}</span></button>
@@ -6946,7 +7025,56 @@ function resizeImageToDataUrl(file, maxDim, quality){
   });
 }
 let composeImageDataUrl = null;
-document.getElementById('joinConversationBar').addEventListener('click', ()=> document.getElementById('composePostBtn').click());
+// "Konuşmaya Katıl" — tıklanınca pencere açmadan, sayfa üzerinde aşağı doğru genişleyip
+// başlık+metin girme alanı çıkıyor. Görsel eklemek istenirse küçük "+" tuşu dosya seçiciyi açıyor.
+let jcImageDataUrl = null;
+function jcExpand(){
+  document.getElementById('joinConversationTrigger').style.display = 'none';
+  const form = document.getElementById('joinConversationForm');
+  form.style.display = 'block';
+  document.getElementById('jcTitleInput').focus();
+}
+function jcCollapse(){
+  document.getElementById('joinConversationTrigger').style.display = 'flex';
+  document.getElementById('joinConversationForm').style.display = 'none';
+  document.getElementById('jcTitleInput').value = '';
+  document.getElementById('jcTextInput').value = '';
+  document.getElementById('jcImageInput').value = '';
+  jcImageDataUrl = null;
+  document.getElementById('jcImagePreviewWrap').style.display = 'none';
+}
+document.getElementById('joinConversationTrigger').addEventListener('click', jcExpand);
+document.getElementById('jcCancelBtn').addEventListener('click', jcCollapse);
+document.getElementById('jcImageBtn').addEventListener('click', ()=> document.getElementById('jcImageInput').click());
+document.getElementById('jcImageInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    jcImageDataUrl = await resizeImageToDataUrl(file, 800, 0.72);
+    document.getElementById('jcImagePreview').src = jcImageDataUrl;
+    document.getElementById('jcImagePreviewWrap').style.display = 'block';
+  }catch(err){ alert('Görsel işlenemedi: '+(err.message||err)); }
+});
+document.getElementById('jcImageRemoveBtn').addEventListener('click', ()=>{
+  jcImageDataUrl = null;
+  document.getElementById('jcImagePreviewWrap').style.display = 'none';
+  document.getElementById('jcImageInput').value = '';
+});
+document.getElementById('jcSendBtn').addEventListener('click', async ()=>{
+  const title = document.getElementById('jcTitleInput').value.trim();
+  const text = document.getElementById('jcTextInput').value.trim();
+  if(!title){ alert('Başlık yazmalısın.'); return; }
+  const btn = document.getElementById('jcSendBtn');
+  btn.disabled = true;
+  try{
+    await createPost('user_post', { title, text, image: jcImageDataUrl||'' });
+    await notifyAllMembers(`${myProfile.name} yeni bir gönderi paylaştı.`, 'social', currentUid);
+    jcCollapse();
+    showToast('Gönderi paylaşıldı!');
+    renderTimelineTab();
+  }catch(err){ alert('Paylaşılamadı: '+(err.message||err)); }
+  finally{ btn.disabled = false; }
+});
 document.getElementById('composePostBtn').addEventListener('click', ()=>{
   composeImageDataUrl = null;
   let composeMode = 'text';
@@ -6957,6 +7085,7 @@ document.getElementById('composePostBtn').addEventListener('click', ()=>{
       <button type="button" class="secondary tiny compose-mode-btn" data-mode="poll" style="flex:1;">📊 Anket</button>
     </div>
     <div id="composeTextMode">
+      <input type="text" id="composeTitle" class="compose-poll-input" maxlength="100" placeholder="Başlık" style="margin-bottom:8px;" />
       <textarea id="composeText" class="compose-textarea" maxlength="280" placeholder="Ne düşünüyorsun?"></textarea>
       <div class="muted" id="composeCharCount" style="text-align:right; font-size:11px; margin-top:2px;"></div>
     </div>
@@ -7044,10 +7173,12 @@ document.getElementById('composePostBtn').addEventListener('click', ()=>{
       }catch(err){ alert('Paylaşılamadı: '+(err.message||err)); }
       return;
     }
+    const title = document.getElementById('composeTitle').value.trim();
     const text = textarea.value.trim();
+    if(!title){ alert('Başlık yazmalısın.'); return; }
     if(!text && !composeImageDataUrl){ alert('Bir şey yazmalısın veya görsel eklemelisin.'); return; }
     try{
-      await createPost('user_post', { text, image: composeImageDataUrl||'' });
+      await createPost('user_post', { title, text, image: composeImageDataUrl||'' });
       await notifyAllMembers(`${myProfile.name} yeni bir gönderi paylaştı.`, 'social', currentUid);
       closeModal('bookInfoModal');
       showToast('Gönderi paylaşıldı!');
@@ -7062,6 +7193,7 @@ async function openEditPostModal(postId, refresh){
   composeImageDataUrl = p.image || null;
   showSimpleInfoModal(`
     <h2 style="margin-bottom:10px;">Gönderiyi Düzenle</h2>
+    <input type="text" id="composeTitle" class="compose-poll-input" maxlength="100" placeholder="Başlık" value="${escapeHtml(p.title||'')}" style="margin-bottom:8px;" />
     <textarea id="composeText" class="compose-textarea" maxlength="280">${escapeHtml(p.text||'')}</textarea>
     <div class="muted" id="composeCharCount" style="text-align:right; font-size:11px; margin-top:2px;"></div>
     <div id="composeImagePreviewWrap" style="${p.image?'':'display:none;'} margin-top:10px; text-align:center;">
@@ -7102,10 +7234,12 @@ async function openEditPostModal(postId, refresh){
     updateLimit();
   });
   document.getElementById('composeSendBtn').addEventListener('click', async ()=>{
+    const title = document.getElementById('composeTitle').value.trim();
     const text = textarea.value.trim();
+    if(!title){ alert('Başlık yazmalısın.'); return; }
     if(!text && !composeImageDataUrl){ alert('Bir şey yazmalısın veya görsel eklemelisin.'); return; }
     try{
-      await updateDoc(doc(db,'posts',postId), { text, image: composeImageDataUrl||'' });
+      await updateDoc(doc(db,'posts',postId), { title, text, image: composeImageDataUrl||'' });
       closeModal('bookInfoModal');
       showToast('Gönderi güncellendi!');
       refresh();
@@ -7221,7 +7355,7 @@ async function openPostModal(postId){
   ` : '';
   body.innerHTML = `
     <div class="post-card-head">${userChipHtml(p.uid)}<span class="post-card-time">&middot; ${exactTimeLabel(p.createdAt)}</span></div>
-    <div class="post-card-body" style="margin-bottom:10px;">${postBodyHtml(p, true)}</div>
+    <div class="post-card-body" style="margin-bottom:10px;">${(()=>{const t=postTitleFor(p); return t?`<div class="post-title" style="font-size:19px;">${t}</div>`:'';})()}${postBodyHtml(p, true)}</div>
     ${batchItemsHtml}
     <div class="post-card-footer">
       ${postVoteRowHtml(p)}
