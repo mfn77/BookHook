@@ -22,7 +22,7 @@
     --rust:#E66100; --rust-dark:#AB4800;
     --line: rgba(0,0,0,0.09);
     --card-bg: 255,255,255; --paper-bg: 242,242,245;
-    --sidebar-tint: 22,74,52;
+    --sidebar-tint: 11,42,29;
     --shadow: 0 1px 2px rgba(0,0,0,.10), 0 1px 4px rgba(0,0,0,.08);
     --shadow-lg: 0 2px 6px rgba(0,0,0,.14), 0 6px 18px rgba(0,0,0,.10);
     --ease: cubic-bezier(.4,0,.2,1);
@@ -80,7 +80,7 @@
   .sidebar{
     position:fixed; top:0; left:0; height:100vh; height:100dvh; overflow-y:auto;
     width:78px; flex:0 0 auto; display:flex; flex-direction:column; align-items:center;
-    background:rgba(var(--sidebar-tint),0.5); backdrop-filter:blur(20px) saturate(1.4); -webkit-backdrop-filter:blur(20px) saturate(1.4);
+    background:rgba(var(--sidebar-tint),0.68); backdrop-filter:blur(20px) saturate(1.4); -webkit-backdrop-filter:blur(20px) saturate(1.4);
     border-right:1px solid var(--line);
     padding:env(safe-area-inset-top, 0px) 0 16px; z-index:20;
     transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
@@ -185,13 +185,14 @@
     flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
     width:100%; height:56px; border-radius:14px;
     font-family:'Inter', sans-serif; font-size:10.5px; font-weight:600; letter-spacing:0.01em; line-height:1.15;
-    background:none; border:none; padding:6px 2px; color:var(--ink-70); cursor:pointer; text-align:center;
+    background:none; border:none; padding:6px 2px; color:rgba(255,255,255,0.75); cursor:pointer; text-align:center;
   }
   .sidebar-tabs.tabs button .tab-icon{ font-size:18px; line-height:1; }
+  .sidebar-tabs.tabs button:not(.active) .mono-icon{ filter:grayscale(1) brightness(1.8) contrast(1.1); opacity:0.85; }
   .sidebar-tabs.tabs button.active{ background:var(--gold); color:#fff; font-weight:700; }
   .sidebar-tabs.tabs button.active .tab-icon{ filter:brightness(0) invert(1); }
   @media (hover: hover){
-    .sidebar-tabs.tabs button:hover:not(.active){ background:rgba(var(--card-bg),0.35); color:var(--ink); }
+    .sidebar-tabs.tabs button:hover:not(.active){ background:rgba(255,255,255,0.12); color:#fff; }
   }
   .card{ position:relative; max-width:100%; overflow-x:hidden; }
   .card h2{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -579,6 +580,12 @@
   .post-card-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
   .post-card-time{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
   .post-card-body{ font-size:14.5px; line-height:1.5; }
+  /* Önem sırasına göre görsel ağırlık: manuel gönderi > kitap ekleme/puanlama > geri kalanı. */
+  .post-card.weight-medium .post-card-body{ font-size:15.5px; }
+  .post-card.weight-medium{ padding-top:16px; padding-bottom:18px; }
+  .post-card.weight-high{ padding-top:18px; padding-bottom:20px; }
+  .post-card.weight-high .post-card-body{ font-size:17px; line-height:1.55; }
+  .post-card.weight-high .post-card-head{ margin-bottom:10px; }
   .post-actions{ display:flex; align-items:center; gap:8px; margin-top:12px; }
   .post-action-btn{ display:inline-flex; align-items:center; gap:5px; background:var(--paper-2); border:none; border-radius:16px; padding:7px 13px; font-family:'Inter',sans-serif; font-weight:600; font-size:12.5px; color:var(--ink-70); cursor:pointer; }
   .post-action-btn:hover{ background:var(--line); }
@@ -588,6 +595,13 @@
   .post-comment-inline-form input{ flex:1 1 auto; min-width:0; padding:8px 10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:13.5px; background:var(--card); color:var(--ink); }
   .post-comment-inline-send{ flex:0 0 auto; }
   .post-book-cover{ width:44px; height:66px; object-fit:cover; border-radius:6px; box-shadow:var(--shadow); flex:0 0 auto; }
+  .join-conversation-bar{
+    display:flex; align-items:center; gap:10px; width:100%; margin:4px 0 14px; padding:12px 16px;
+    border:1.5px solid var(--line); border-radius:24px; background:var(--card); cursor:pointer;
+    font-family:'Inter',sans-serif; font-size:14px; color:var(--ink-70); text-align:left;
+  }
+  .join-conversation-bar:hover{ border-color:var(--ink-70); }
+  .join-conversation-plus{ font-size:18px; font-weight:400; color:var(--ink-70); opacity:0.45; flex:0 0 auto; line-height:1; }
   .discover-cat{ margin-bottom:22px; }
   .discover-cat-title{ font-family:'Roboto',sans-serif; font-weight:700; font-size:16px; margin-bottom:10px; }
   .discover-filters-wrap{ margin-bottom:16px; }
@@ -881,6 +895,10 @@
     <section class="tab" id="tab-social" style="padding-bottom:0;">
       <div id="pinnedPostBar" style="display:none;"></div>
       <div id="socialFeedView">
+        <button type="button" id="joinConversationBar" class="join-conversation-bar">
+          <span class="join-conversation-plus">+</span>
+          <span>Konuşmaya Katıl</span>
+        </button>
         <div id="timelineFeed"></div>
       </div>
       <div id="socialProfileView" style="display:none; padding-bottom:90px;">
@@ -6718,11 +6736,19 @@ async function setPostVote(postId, dir){
     if(notifyUid) notifyUser(notifyUid, `${myProfile.name} gönderini beğendi.`, 'social', postId);
   }catch(err){ alert('Oy verilemedi: '+(err.message||err)); }
 }
+// Gönderinin önemine göre görsel ağırlık sınıfı: manuel yazılan gönderiler en büyük, kitap
+// ekleme/puanlama gönderileri orta, geri kalan her şey (rozet, hediye, sistem gönderileri vb.)
+// varsayılan boyutta kalıyor.
+function postWeightClass(p){
+  if(p.type==='user_post') return 'weight-high';
+  if(p.type==='book_review' || p.type==='book_review_batch' || p.type==='book_added' || p.type==='book_added_batch') return 'weight-medium';
+  return '';
+}
 function renderPostCard(p){
   const canDelete = p.uid===currentUid || myProfile.role==='admin';
   const canEdit = p.uid===currentUid && p.type==='user_post';
   const pinned = isPostPinned(p);
-  return `<div class="post-card modal-card-anim" data-post-id="${p.id}">
+  return `<div class="post-card ${postWeightClass(p)} modal-card-anim" data-post-id="${p.id}">
     <div class="post-inner">
       <div class="post-card-head">
         ${userChipHtml(p.uid)}
@@ -6739,6 +6765,7 @@ function renderPostCard(p){
       <div class="post-comment-inline-form" data-post-id="${p.id}" data-post-uid="${p.uid||''}" data-comment-count="${p.commentCount||0}">
         <input type="text" class="post-comment-inline-input" placeholder="Yorum yaz..." />
         <button type="button" class="secondary tiny post-comment-inline-send">Gönder</button>
+
       </div>
     </div>
   </div>`;
@@ -6919,6 +6946,7 @@ function resizeImageToDataUrl(file, maxDim, quality){
   });
 }
 let composeImageDataUrl = null;
+document.getElementById('joinConversationBar').addEventListener('click', ()=> document.getElementById('composePostBtn').click());
 document.getElementById('composePostBtn').addEventListener('click', ()=>{
   composeImageDataUrl = null;
   let composeMode = 'text';
