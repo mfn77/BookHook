@@ -557,19 +557,30 @@
   .qp-chat-input-row{ display:flex; gap:8px; margin-top:10px; }
   .qp-chat-input-row input{ flex:1; padding:9px 12px; border:1.5px solid var(--line); border-radius:20px; font-family:'Inter',sans-serif; font-size:13.5px; background:var(--card); color:var(--ink); }
   .post-card{
-    background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3);
-    border-radius:16px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow); cursor:pointer; position:relative;
+    display:flex; align-items:stretch; gap:0; padding:0; margin-bottom:12px; cursor:pointer; position:relative;
+    background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden;
+    transition:border-color .15s var(--ease);
   }
-  /* Kullanıcının kendi tepkisi: başlık satırında (avatarın solunda), tepki çubuğundaki "ekle"
-     düğmesinin (14px) iki katı büyüklükte, çerçevesiz/arka plansız tek başına duruyor. Tepki
-     verilince/değişince zaten var olan genel .reaction-burst zıplama animasyonuyla oynuyor. */
-  .my-reaction-badge{ font-size:28px; line-height:1; flex:0 0 auto; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.22)); }
+  .post-card:hover{ border-color:var(--ink-70); }
+  /* ============ REDDİT TARZI OY (BEĞEN/BEĞENME) ÇUBUĞU ============ */
+  .post-vote-rail{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:2px; padding:12px 8px; background:var(--paper-2); flex:0 0 auto; min-width:40px; }
+  .post-vote-row{ display:inline-flex; align-items:center; gap:6px; }
+  .post-vote-btn{ background:none; border:none; cursor:pointer; font-size:16px; line-height:1; padding:4px; color:var(--ink-70); border-radius:4px; transition:color .12s ease, transform .1s ease; }
+  .post-vote-btn:active{ transform:scale(0.82); }
+  .post-vote-btn.up.active{ color:#FF4500; }
+  .post-vote-btn.down.active{ color:#7193FF; }
+  .post-vote-score{ font-family:'Roboto Mono',monospace; font-weight:800; font-size:13px; color:var(--ink); padding:2px 0; min-width:16px; text-align:center; }
+  .post-vote-score.voted-up{ color:#FF4500; }
+  .post-vote-score.voted-down{ color:#7193FF; }
+  .post-inner{ flex:1 1 auto; min-width:0; padding:12px 14px 12px 12px; }
   .post-card-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
   .post-card-time{ font-size:11px; color:var(--ink-70); font-family:'Roboto Mono',monospace; }
   .post-card-body{ font-size:14.5px; line-height:1.5; }
-  .post-card-footer{ display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
-  .post-comment-count{ font-size:12.5px; color:var(--ink-70); }
-  .post-comment-inline-btn{ background:none; border:none; color:var(--gold); font-size:12px; font-weight:600; cursor:pointer; padding:0; margin-left:8px; }
+  .post-actions{ display:flex; align-items:center; gap:8px; margin-top:10px; }
+  .post-action-btn{ display:inline-flex; align-items:center; gap:5px; background:var(--paper-2); border:none; border-radius:16px; padding:6px 12px; font-family:'Inter',sans-serif; font-weight:600; font-size:12.5px; color:var(--ink-70); cursor:pointer; }
+  .post-action-btn:hover{ background:var(--line); }
+  .post-comment-count{ font-size:12.5px; }
+  .post-card-footer{ display:flex; align-items:center; justify-content:space-between; margin-top:4px; margin-bottom:10px; }
   .post-comment-inline-form{ display:none; align-items:center; gap:8px; margin-top:10px; }
   .post-comment-inline-form input{ flex:1 1 auto; min-width:0; padding:8px 10px; border:1.5px solid var(--line); border-radius:12px; font-family:'Inter',sans-serif; font-size:13.5px; background:var(--card); color:var(--ink); }
   .post-comment-inline-send{ flex:0 0 auto; }
@@ -6617,40 +6628,110 @@ async function voteOnPoll(postId, optionIdx){
 function isPostPinned(p){
   return !!(p.pinnedUntil && new Date(p.pinnedUntil).getTime() > Date.now());
 }
-function myReactionEmoji(reactions){
-  if(!reactions) return null;
-  for(const em of Object.keys(reactions)){
-    if((reactions[em]||[]).includes(currentUid)) return em;
-  }
-  return null;
-}
 // Bir tepki verildiğinde/değiştirildiğinde, o gönderinin köşesindeki tepki rozetine kısa bir
-// zıplama animasyonu ekler (zaten var olan genel .reaction-burst sınıfını kullanıyor).
+// zıplama animasyonu ekler (yorumlar/öneriler hâlâ emoji tepki sistemini kullanıyor).
 function burstMyReactionBadge(target){
   const badge = document.querySelector(`.my-reaction-badge[data-target="${target}"]`);
   if(badge){ badge.classList.add('reaction-burst'); setTimeout(()=>badge.classList.remove('reaction-burst'), 300); }
+}
+// ============ GÖNDERİLER İÇİN REDDİT TARZI BEĞEN/BEĞENME (yorumlar/öneriler hâlâ emoji
+// tepki sistemini kullanıyor, bu sadece gönderilerin kendisi için). ============
+function postVoteRailHtml(p){
+  const up = (p.votes && p.votes.up) || [];
+  const down = (p.votes && p.votes.down) || [];
+  const score = up.length - down.length;
+  const myUp = up.includes(currentUid), myDown = down.includes(currentUid);
+  return `<div class="post-vote-rail" data-vote-rail="${p.id}">
+    <button type="button" class="post-vote-btn up${myUp?' active':''}" data-vote-post="${p.id}" data-dir="up" title="Beğen">▲</button>
+    <div class="post-vote-score${myUp?' voted-up':myDown?' voted-down':''}" data-vote-score>${score}</div>
+    <button type="button" class="post-vote-btn down${myDown?' active':''}" data-vote-post="${p.id}" data-dir="down" title="Beğenme">▼</button>
+  </div>`;
+}
+function postVoteRowHtml(p){
+  const up = (p.votes && p.votes.up) || [];
+  const down = (p.votes && p.votes.down) || [];
+  const score = up.length - down.length;
+  const myUp = up.includes(currentUid), myDown = down.includes(currentUid);
+  return `<div class="post-vote-row" data-vote-rail="${p.id}">
+    <button type="button" class="post-vote-btn up${myUp?' active':''}" data-vote-post="${p.id}" data-dir="up" title="Beğen">▲</button>
+    <span class="post-vote-score${myUp?' voted-up':myDown?' voted-down':''}" data-vote-score>${score}</span>
+    <button type="button" class="post-vote-btn down${myDown?' active':''}" data-vote-post="${p.id}" data-dir="down" title="Beğenme">▼</button>
+  </div>`;
+}
+// Tıklanır tıklanmaz ekranı anında günceller (Firestore yazması arka planda gidiyor) — oy
+// verme hiçbir zaman gecikmeli hissettirmesin diye.
+function applyOptimisticVoteUI(railEl, dir){
+  const upBtn = railEl.querySelector('.post-vote-btn.up');
+  const downBtn = railEl.querySelector('.post-vote-btn.down');
+  const scoreEl = railEl.querySelector('[data-vote-score]');
+  let score = parseInt(scoreEl.textContent,10) || 0;
+  const wasUp = upBtn.classList.contains('active');
+  const wasDown = downBtn.classList.contains('active');
+  if(dir==='up'){
+    if(wasUp){ score -= 1; upBtn.classList.remove('active'); }
+    else { score += wasDown ? 2 : 1; upBtn.classList.add('active'); downBtn.classList.remove('active'); }
+  } else {
+    if(wasDown){ score += 1; downBtn.classList.remove('active'); }
+    else { score -= wasUp ? 2 : 1; downBtn.classList.add('active'); upBtn.classList.remove('active'); }
+  }
+  scoreEl.textContent = score;
+  scoreEl.classList.remove('voted-up','voted-down');
+  if(upBtn.classList.contains('active')) scoreEl.classList.add('voted-up');
+  if(downBtn.classList.contains('active')) scoreEl.classList.add('voted-down');
+}
+function wireVoteButtons(container){
+  container.querySelectorAll('.post-vote-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const postId = btn.dataset.votePost;
+      const dir = btn.dataset.dir;
+      const rail = btn.closest('[data-vote-rail]');
+      applyOptimisticVoteUI(rail, dir);
+      setPostVote(postId, dir);
+    });
+  });
+}
+async function setPostVote(postId, dir){
+  const ref = doc(db,'posts',postId);
+  let notifyUid = null;
+  try{
+    await runTransaction(db, async(tx)=>{
+      const snap = await tx.get(ref);
+      if(!snap.exists()) return;
+      const data = snap.data();
+      const up = ((data.votes&&data.votes.up)||[]).filter(u=>u!==currentUid);
+      const down = ((data.votes&&data.votes.down)||[]).filter(u=>u!==currentUid);
+      const wasUp = ((data.votes&&data.votes.up)||[]).includes(currentUid);
+      const wasDown = ((data.votes&&data.votes.down)||[]).includes(currentUid);
+      if(dir==='up' && !wasUp) up.push(currentUid);
+      if(dir==='down' && !wasDown) down.push(currentUid);
+      tx.update(ref, {'votes.up':up, 'votes.down':down});
+      if(dir==='up' && !wasUp && data.uid && data.uid!==currentUid) notifyUid = data.uid;
+    });
+    if(notifyUid) notifyUser(notifyUid, `${myProfile.name} gönderini beğendi.`, 'social', postId);
+  }catch(err){ alert('Oy verilemedi: '+(err.message||err)); }
 }
 function renderPostCard(p){
   const canDelete = p.uid===currentUid || myProfile.role==='admin';
   const canEdit = p.uid===currentUid && p.type==='user_post';
   const pinned = isPostPinned(p);
-  const myReaction = myReactionEmoji(p.reactions);
   return `<div class="post-card modal-card-anim" data-post-id="${p.id}">
-    <div class="post-card-head">
-      ${myReaction?`<span class="my-reaction-badge" data-target="post:${p.id}" title="Tepkin">${myReaction}</span>`:''}
-      ${userChipHtml(p.uid)}
-      <span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span>
-      ${pinned?`<span title="Sabitlenmiş" style="margin-left:auto; font-size:13px;">📌</span>`:''}
-      ${canDelete?`<button type="button" class="post-menu-btn" data-post-menu="${p.id}" data-can-edit="${canEdit?'1':'0'}" data-is-pinned="${pinned?'1':'0'}" style="${pinned?'':'margin-left:auto;'}" title="Seçenekler">⋮</button>`:''}
-    </div>
-    <div class="post-card-body">${postBodyHtml(p)}</div>
-    <div class="post-card-footer">
-      ${renderReactionBar(p.reactions, `post:${p.id}`)}
-      <span><span class="post-comment-count">💬 ${p.commentCount||0}</span><button type="button" class="post-comment-inline-btn" data-post-id="${p.id}">Yorum Yaz</button></span>
-    </div>
-    <div class="post-comment-inline-form" data-post-id="${p.id}" data-post-uid="${p.uid||''}" data-comment-count="${p.commentCount||0}">
-      <input type="text" class="post-comment-inline-input" placeholder="Yorum yaz..." />
-      <button type="button" class="secondary tiny post-comment-inline-send">Gönder</button>
+    ${postVoteRailHtml(p)}
+    <div class="post-inner">
+      <div class="post-card-head">
+        ${userChipHtml(p.uid)}
+        <span class="post-card-time">&middot; ${timeAgoLabel(p.createdAt)}</span>
+        ${pinned?`<span title="Sabitlenmiş" style="margin-left:auto; font-size:13px;">📌</span>`:''}
+        ${canDelete?`<button type="button" class="post-menu-btn" data-post-menu="${p.id}" data-can-edit="${canEdit?'1':'0'}" data-is-pinned="${pinned?'1':'0'}" style="${pinned?'':'margin-left:auto;'}" title="Seçenekler">⋮</button>`:''}
+      </div>
+      <div class="post-card-body">${postBodyHtml(p)}</div>
+      <div class="post-actions">
+        <button type="button" class="post-action-btn post-comment-inline-btn" data-post-id="${p.id}"><span class="post-comment-count">💬 ${p.commentCount||0}</span></button>
+      </div>
+      <div class="post-comment-inline-form" data-post-id="${p.id}" data-post-uid="${p.uid||''}" data-comment-count="${p.commentCount||0}">
+        <input type="text" class="post-comment-inline-input" placeholder="Yorum yaz..." />
+        <button type="button" class="secondary tiny post-comment-inline-send">Gönder</button>
+      </div>
     </div>
   </div>`;
 }
@@ -7003,12 +7084,7 @@ function wirePostCards(container, refreshFn){
       openPostMenu(btn, btn.dataset.postMenu, btn.dataset.canEdit==='1', refresh, btn.dataset.isPinned==='1');
     });
   });
-  container.querySelectorAll('.reaction-pill').forEach(btn=>{
-    btn.addEventListener('click', (e)=>{ e.stopPropagation(); showReactorsModal(btn.dataset.uids, btn.dataset.emoji); });
-  });
-  container.querySelectorAll('.reaction-add-btn').forEach(btn=>{
-    btn.addEventListener('click', (e)=>{ e.stopPropagation(); pendingReactionRefresh = refresh; toggleReactionDrawer(btn, btn.dataset.target); });
-  });
+  wireVoteButtons(container);
   container.querySelectorAll('[data-poll-option]').forEach(row=>{
     row.addEventListener('click', async (e)=>{
       e.stopPropagation();
@@ -7059,7 +7135,7 @@ function wirePostCards(container, refreshFn){
   });
   container.querySelectorAll('.post-card').forEach(card=>{
     card.addEventListener('click', (e)=>{
-      if(e.target.closest('.user-chip') || e.target.closest('.book-cover-clickable') || e.target.closest('[data-poll-option]') || e.target.closest('.post-comment-inline-btn') || e.target.closest('.post-comment-inline-form')) return;
+      if(e.target.closest('.user-chip') || e.target.closest('.book-cover-clickable') || e.target.closest('[data-poll-option]') || e.target.closest('.post-comment-inline-btn') || e.target.closest('.post-comment-inline-form') || e.target.closest('.post-vote-btn')) return;
       openPostModal(card.dataset.postId);
     });
   });
@@ -7109,7 +7185,7 @@ async function openPostModal(postId){
     <div class="post-card-body" style="margin-bottom:10px;">${postBodyHtml(p, true)}</div>
     ${batchItemsHtml}
     <div class="post-card-footer">
-      ${renderReactionBar(p.reactions, `post:${p.id}`)}
+      ${postVoteRowHtml(p)}
       ${(p.uid===currentUid||myProfile.role==='admin')?`<button type="button" class="secondary tiny" id="postModalDelBtn">Kaldır</button>`:''}
     </div>
     <div class="rec-comments-label">💬 ${comments.length} Yorum</div>
@@ -7119,6 +7195,7 @@ async function openPostModal(postId){
       <button class="secondary tiny" id="postCommentSendBtn" style="flex:0 0 auto;">Gönder</button>
     </div>
   `;
+  wireVoteButtons(body);
   body.querySelectorAll('.reaction-pill').forEach(btn=>{
     btn.addEventListener('click', ()=> showReactorsModal(btn.dataset.uids, btn.dataset.emoji));
   });
