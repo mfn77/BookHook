@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>BookHook</title>
-<meta name="theme-color" content="#24314B" />
+<meta name="theme-color" content="#F8FAF4" />
 <link rel="manifest" href="./manifest.json" />
 <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=4" />
 <link rel="icon" href="./favicon.png?v=4" />
@@ -12,8 +12,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Pirata+One&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css" />
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css?v=material-1" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -22,7 +22,7 @@
 
 <div id="authScreen" class="auth-wrap" style="display:none;">
   <div class="center-logo">
-    <div class="center-logo-mark"><img src="./logo-mark.png?v=5" alt="BookHook" /></div>
+    <div class="center-logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5c-3-3-7-3-10-2v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/></svg></div>
     <div class="center-logo-word">BookHook</div>
   </div>
   <div id="bannedNotice" class="banned-notice" style="display:none;"></div>
@@ -60,14 +60,14 @@
 <div id="appRoot" style="display:none;">
   <div class="app-shell">
     <aside class="sidebar" id="sidebarNav">
-      <div class="sidebar-header"><img src="./logo-mark.png?v=5" alt="BookHook" class="sidebar-logo" id="sidebarLogoBtn" style="cursor:pointer;" /></div>
+      <div class="sidebar-header"><button id="sidebarLogoBtn" class="brand-button" aria-label="Bugün"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5c-3-3-7-3-10-2v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/></svg></button></div>
       <nav class="sidebar-tabs tabs" id="tabs"></nav>
       <button type="button" id="sidebarCollapseBtn" class="sidebar-collapse-btn" title="Menüyü gizle">◀</button>
     </aside>
     <button type="button" id="sidebarExpandFab" class="sidebar-expand-fab" title="Menüyü göster">▶</button>
     <div class="content-col" id="contentCol">
       <header class="top">
-        <div class="header-title-area"><span id="currentTabTitle"></span></div>
+        <div class="header-title-area"><button id="materialBack" class="icon-button" aria-label="Geri">←</button><span id="currentTabTitle"></span></div>
         <div class="whoami">
           <div id="whoamiClickable" class="header-pill" style="cursor:pointer;">
             <span id="whoamiAvatar" style="display:inline-flex; vertical-align:middle;"></span><span id="whoamiName">—</span>
@@ -127,37 +127,16 @@
         </div>
       </div>
     </section>
-    <section class="tab" id="tab-today">
-      <div class="card">
-        <h2>Bugün okudun mu?</h2>
-        <div class="card-desc-wrap">
-          <p class="muted" id="aSelfDateNote"></p>
-        </div>
-        <div style="display:flex; justify-content:center; gap:20px; margin:18px 0;">
-          <div style="text-align:center;">
-            <button class="stamp-btn big read" id="aSelfReadBtn" title="Okudum">✓</button>
-            <div class="muted" style="margin-top:6px;">Okudum</div>
-          </div>
-          <div style="text-align:center;">
-            <button class="stamp-btn big skip" id="aSelfSkipBtn" title="Okuyamam">✕</button>
-            <div class="muted" style="margin-top:6px;">Okuyamam</div>
-          </div>
-        </div>
-        <div id="aSelfStatusNote" class="muted" style="text-align:center;"></div>
-        <div id="aSelfStreakNote" class="muted" style="text-align:center; margin-top:8px;"></div>
-      </div>
-
-      <div class="card">
-        <h2>En Az Bu Kadar Sayfa Okudun</h2>
-        <div style="text-align:center; padding:16px 0;">
-          <span id="totalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Inter',sans-serif;">–</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <div id="aSelfQpBook"></div>
-      </div>
-    </section>
+    <section class="tab daily-tab" id="tab-today">
+ <div class="daily-greeting">Merhaba, <span data-material-name></span><span class="muted">İyi ki buradasın.</span></div>
+ <h1>Bugün biraz okuyalım.</h1>
+ <div class="card daily-checkin"><div class="eyebrow" data-material-date></div><h2>Bugün okudun mu?</h2>
+ <div class="daily-actions"><button class="stamp-btn big read" id="aSelfReadBtn" title="Okudum">✓ <span>Okudum</span></button><button class="stamp-btn big skip" id="aSelfSkipBtn" title="Okuyamam">− <span>Okuyamam</span></button></div>
+ <div id="aSelfStatusNote" class="muted" role="status"></div><details class="daily-help"><summary>Günün 06.00’da yenilenir</summary><p class="muted" id="aSelfDateNote"></p></details></div>
+ <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="aSelfStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="totalPagesNumber">–</strong><span>Tahmini sayfa</span><span class="muted">Okunan gün × 15</span></div></div>
+ <div class="card common-today"><div id="aSelfQpBook"></div></div>
+ <button class="destination-row" data-material-route="records"><span class="route-icon">▥</span><span><b>Haftalık kayıtlar</b><small>Bu haftanın detaylı görünümü</small></span><span>›</span></button>
+ </section>
 
     <section class="tab" id="tab-whoreadtoday">
       <div class="card">
@@ -192,7 +171,7 @@
       </div>
     </section>
 
-    <section class="tab" id="tab-week">
+    <section class="tab" id="tab-week"><div class="segmented" data-panels="week" role="tablist"><button type="button" data-pane="0" class="active">Kulüp</button><button type="button" data-pane="1" class="">Ben</button></div>
       <div class="card">
         <h2>Bu haftanın karnesi</h2>
         <p class="muted">Haftalık pas hakkı: <b>1</b>. 2. "okumadım" cezaya düşürür. Gün, gece okumalar için ertesi gün 06:00'a kadar sürer.</p>
@@ -262,39 +241,18 @@
     </section>
 
     <!-- MEMBER TABS -->
-    <section class="tab" id="tab-msurvey">
-      <div class="card">
-        <h2>Bugün okudun mu?</h2>
-        <div class="card-desc-wrap">
-          <p class="muted" id="mDateNote"></p>
-        </div>
-        <div style="display:flex; justify-content:center; gap:20px; margin:18px 0;">
-          <div style="text-align:center;">
-            <button class="stamp-btn big read" id="mReadBtn" title="Okudum">✓</button>
-            <div class="muted" style="margin-top:6px;">Okudum</div>
-          </div>
-          <div style="text-align:center;">
-            <button class="stamp-btn big skip" id="mSkipBtn" title="Okuyamam">✕</button>
-            <div class="muted" style="margin-top:6px;">Okuyamam</div>
-          </div>
-        </div>
-        <div id="mMyStatusNote" class="muted" style="text-align:center;"></div>
-        <div id="mMyStreakNote" class="muted" style="text-align:center; margin-top:8px;"></div>
-      </div>
+    <section class="tab daily-tab" id="tab-msurvey">
+ <div class="daily-greeting">Merhaba, <span data-material-name></span><span class="muted">İyi ki buradasın.</span></div>
+ <h1>Bugün biraz okuyalım.</h1>
+ <div class="card daily-checkin"><div class="eyebrow" data-material-date></div><h2>Bugün okudun mu?</h2>
+ <div class="daily-actions"><button class="stamp-btn big read" id="mReadBtn" title="Okudum">✓ <span>Okudum</span></button><button class="stamp-btn big skip" id="mSkipBtn" title="Okuyamam">− <span>Okuyamam</span></button></div>
+ <div id="mMyStatusNote" class="muted" role="status"></div><details class="daily-help"><summary>Günün 06.00’da yenilenir</summary><p class="muted" id="mDateNote"></p></details></div>
+ <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="mMyStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="mTotalPagesNumber">–</strong><span>Tahmini sayfa</span><span class="muted">Okunan gün × 15</span></div></div>
+ <div class="card common-today"><div id="mMyQpBook"></div></div>
+ <button class="destination-row" data-material-route="records"><span class="route-icon">▥</span><span><b>Haftalık kayıtlar</b><small>Bu haftanın detaylı görünümü</small></span><span>›</span></button>
+ </section>
 
-      <div class="card">
-        <h2>En Az Bu Kadar Sayfa Okudun</h2>
-        <div style="text-align:center; padding:16px 0;">
-          <span id="mTotalPagesNumber" style="font-size:52px; font-weight:700; color:var(--gold); font-family:'Inter',sans-serif;">–</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <div id="mMyQpBook"></div>
-      </div>
-    </section>
-
-    <section class="tab" id="tab-mtoday">
+    <section class="tab" id="tab-mtoday"><div class="segmented" data-panels="mtoday" role="tablist"><button type="button" data-pane="0" class="active">Kulüp</button><button type="button" data-pane="1" class="">Ben</button></div>
       <div class="card">
         <h2>Herkesin Bu Haftası</h2>
         <p class="muted">Cevap verilmeyen günler her gece saat 06:00'da otomatik "okumadı" olarak işaretlenir.</p>
@@ -505,11 +463,8 @@
 
 
     <!-- ORTAK: KİTAP ÖNERİLERİ -->
-    <section class="tab" id="tab-recs">
-      <div class="card" id="quarterlyPickCard">
-        <h2>📚 Ortak Kitap Seçimi</h2>
-        <div id="quarterlyPickBody"><span class="muted">Yükleniyor…</span></div>
-      </div>
+    <section class="tab" id="tab-recs"><button class="common-selection-link" data-material-route="quarterly">Ortak kitap seçimi <span>→</span></button><div class="segmented" data-panels="recs" role="tablist"><button type="button" data-pane="0" class="active">Kişiye</button><button type="button" data-pane="1" class="">Gruba</button></div>
+
 
       <div class="card">
         <h2>Şahsi Öneriler</h2>
@@ -552,7 +507,7 @@
     </section>
 
     <!-- ORTAK: KİTAP GEÇMİŞİM (hamburger menüden erişilir) -->
-    <section class="tab" id="tab-mybooks">
+    <section class="tab" id="tab-mybooks"><div class="segmented" data-panels="mybooks" role="tablist"><button type="button" data-pane="0" class="active">Okuyorum</button><button type="button" data-pane="1" class="">İstek listem</button><button type="button" data-pane="2" class="">Geçmişim</button></div>
       <div class="card">
         <h2>Şu An Okuduklarım</h2>
         <div class="card-desc-wrap">
@@ -599,6 +554,13 @@
         </div>
       </div>
     </section>
+
+<section class="tab" id="tab-club"><h1>Birlikte daha çok<br>okuyoruz.</h1><p class="page-subtitle">BookHook kulübün</p><button class="club-feature" data-material-route="quarterly"><span class="club-book-icon">▤</span><span><small>Ortak kitabımız</small><b id="clubBookTitle">Ortak kitap</b><span id="clubBookMeta">Birlikte seç, birlikte oku</span></span><span>›</span></button><div class="club-grid" id="materialClubGrid"></div></section>
+<section class="tab" id="tab-quarterly"><div id="materialQpSteps" class="phase-steps"></div>      <div class="card" id="quarterlyPickCard">
+        <h2>📚 Ortak Kitap Seçimi</h2>
+        <div id="quarterlyPickBody"><span class="muted">Yükleniyor…</span></div>
+      </div></section>
+<section class="tab" id="tab-admin"><p class="page-subtitle">Kulübü birlikte daha iyi bir yere taşıyalım.</p><h2>Kulübü yönet</h2><div id="materialAdminLinks" class="settings-list"></div><h2>Deneme alanları</h2><div class="settings-list"><button class="destination-row" data-material-route="manual"><span class="route-icon">⚄</span><span><b>Manuel kura</b><small>Gerçek kayıtlardan bağımsız deneme</small></span><span>›</span></button><button class="destination-row" data-material-route="qptest"><span class="route-icon">▤</span><span><b>Ortak kitap seçimi</b><small>Ayrı deneme alanı</small></span><span>›</span></button></div><details id="materialMaintenance"><summary>Bakım araçları ve kura yönetimi</summary></details></section>
       </main>
     </div>
   </div>
@@ -611,7 +573,7 @@
      altındaki içeriğe geçmesine yol açıyordu. Body seviyesinde olduğu için bu sorunu yaşamıyor,
      görünürlüğü artık switchTab() içinde aktif sekmeye göre elle kontrol ediliyor. -->
 <div id="socialFloatingAction" class="social-floating-action hidden">
-  <button type="button" id="composePostBtn" class="social-fab">+</button>
+  <button type="button" id="composePostBtn" class="social-fab">✎ <span>Paylaş</span></button>
 </div>
 <button type="button" id="discoverFabPrev">◀</button>
 <button type="button" id="discoverFabNext">▶</button>
@@ -1463,7 +1425,7 @@ document.body.addEventListener('click', (e)=>{
 // "Yükleniyor…" çıkıyor) — böylece normal günlük kullanımda önbellek her zaman anında
 // gösterilmeye devam ediyor, ama bir konteynerin taze render'ı haftalarca hiç
 // tamamlanamazsa o eski içerik sonsuza kadar takılı kalmıyor, kendiliğinden düşüyor.
-const APP_CACHE_VERSION = 'v3';
+const APP_CACHE_VERSION = 'material-v1';
 const CACHE_PREFIX = 'bh_cache_'+APP_CACHE_VERSION+'_';
 const CACHE_TTL_MS = 7*24*60*60*1000; // 1 hafta
 function getPersistedHTML(key){
@@ -1907,19 +1869,16 @@ document.body.addEventListener('click', (e)=>{
 });
 
 function buildNav(){
-  const tabs = myProfile.role === 'admin' ? ADMIN_TABS : MEMBER_TABS;
+  const tabs = materialPrimaryTabs();
   const nav = document.getElementById('tabs');
-  nav.innerHTML = tabs.map((t,i)=>`<button data-tab="${t.id}" class="${i===0?'active':''}"><span class="tab-icon mono-icon">${t.icon}</span><span>${t.label}</span></button>`).join('');
-  nav.querySelectorAll('button').forEach(btn=>{
-    btn.addEventListener('click', ()=>{ switchTab(btn.dataset.tab); btn.blur(); });
-  });
+  nav.innerHTML = tabs.map(t=>`<button data-tab="${t.id}"><span class="tab-icon">${t.icon}</span><span>${t.label}</span></button>`).join('');
+  nav.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
   buildHamburgerMenu();
+  materialInit();
   switchTab(profileGateActive ? 'profile' : tabs[0].id);
 }
 
-function getTabOrder(){
-  return myProfile && myProfile.role==='admin' ? ADMIN_TABS.map(t=>t.id) : MEMBER_TABS.map(t=>t.id);
-}
+function getTabOrder(){ return materialPrimaryTabs().map(t=>t.id); }
 let profileGateActive = false;
 const PROFILE_GATE_FIELDS = ['profileSurname','profilePhone','profileAddress'];
 function flashRequiredFields(){
@@ -1985,6 +1944,7 @@ function switchTab(id){
   const socialFab = document.getElementById('socialFloatingAction');
   if(socialFab) socialFab.classList.toggle('hidden', id!=='social');
   if(typeof updateDiscoverFabVisibility==='function') updateDiscoverFabVisibility();
+  materialSyncNavigation(id);
   renderTab(id);
 }
 
@@ -2224,6 +2184,9 @@ function switchTab(id){
 })();
 
 function renderTab(id){
+  if(id==='club') { materialRenderClub(); return; }
+  if(id==='quarterly') { renderQuarterlyPickCard(); return; }
+  if(id==='admin') { renderSettingsTab(); renderAdminDraws(); return; }
   if(id==='today') renderAdminSelfToday();
   else if(id==='whoreadtoday') renderAdminToday();
   else if(id==='editpast'){ renderEditPastTab(); editPastWeekOffset=0; renderEditPastWeekReport(); }
@@ -2263,6 +2226,7 @@ function renderTab(id){
 function renderHeader(){
   document.getElementById('whoamiAvatar').innerHTML = avatarHtmlFromProfile(myProfile,18);
   document.getElementById('whoamiName').textContent = myProfile.name;
+  document.querySelectorAll('[data-material-name]').forEach(el=>el.textContent=myProfile.name||'');
 }
 
 /* ============ FIRESTORE YARDIMCILARI ============ */
@@ -3224,23 +3188,9 @@ async function renderWormsShared(containerId, historyContainerId){
   if(results.length===0){
     list.innerHTML = `<div class="empty-state">Henüz üye yok.</div>`;
   } else {
-    // GNOME "EarTag" uygulama simgesinin küpe/etiket şeklini rozet olarak kullanıyoruz: üstteki boş
-    // halkanın içine profil fotoğrafı (rozet çerçevesi ve köşe simgesiyle birlikte, tıklanabilir),
-    // altına isim, onun altına da (orijinaldeki nota yerine) serinin gün sayısı büyük punto ile geliyor.
-    // Aktif serisi olmayanlarda tüm rozet gri tonlarına dönüyor. Kaç üye varsa o kadar rozet, sığdığı
-    // kadarıyla yan yana (grid otomatik satır sarıyor).
-    list.innerHTML = `<div class="streak-badge-grid">${results.map(r=>{
-      const u = usersCache[r.uid] || {};
-      const name = (u && u.name) || '?';
-      const tierDef = u.currentTier ? BADGE_DEFS.find(d=>d.key===u.currentTier) : null;
-      const crestColor = tierDef ? tierDef.color : '#c2564f';
-      return `<div class="streak-badge ${r.streak>0?'has-streak':''}">
-        ${earTagCrestSvg(r.uid, crestColor)}
-        <span class="user-chip streak-badge-avatar-chip" data-uid="${r.uid}">${avatarHtmlFromProfile(u,'100%',18)}</span>
-        <span class="user-chip streak-badge-name" data-uid="${r.uid}">${escapeHtml(name)}</span>
-        <div class="streak-badge-num">${r.streak}</div>
-      </div>`;
-    }).join('')}</div>`;
+    const own = results.find(r=>r.uid===currentUid);
+    const streak = own ? own.streak : 0;
+    list.innerHTML = `<div class="material-streak-hero"><div class="material-medal">${streak}</div><h2>${streak} gündür aralıksız</h2><p class="muted">Her gün birkaç sayfa, yeni bir alışkanlık.</p><div class="milestones">${BADGE_DEFS.map(d=>`<div class="milestone ${streak>=d.days?'earned':''}"><span>${d.days}</span><small>${d.days} gün</small></div>`).join('')}</div></div><h3>Kulübün okuma serileri</h3><div class="streak-list">${results.map(r=>`<div class="member-row">${userChipHtml(r.uid,36)}<b>${r.streak} gün</b></div>`).join('')}</div>`;
   }
   markLoaded(list);
 
@@ -3299,7 +3249,7 @@ function wireSelfMarkCard(ids){
       st==='skip' ? 'Bugün için "Okuyamam" dedin.' :
       'Bugün için henüz işaretleme yapmadın.';
     computeStreak(currentUid).then(s=>{
-      document.getElementById(ids.streakNote).textContent = s>0 ? `🔥 ${s} gündür aralıksız okuyorsun.` : '';
+      document.getElementById(ids.streakNote).textContent = `${s} gün`;
     });
     renderTotalPagesCard(ids.pagesNumber);
     if(ids.qpBook) renderQpBookInBugun(ids.qpBook);
@@ -3503,6 +3453,7 @@ document.getElementById('profileSaveBtn').addEventListener('click', async ()=>{
     myProfile.bio = bio;
     document.getElementById('whoamiAvatar').innerHTML = avatarHtmlFromProfile(myProfile,18);
   document.getElementById('whoamiName').textContent = myProfile.name;
+  document.querySelectorAll('[data-material-name]').forEach(el=>el.textContent=myProfile.name||'');
     if(profileGateActive){
       profileGateActive = false;
       showToast('Profilin tamamlandı, artık uygulamayı kullanabilirsin!');
@@ -4109,6 +4060,7 @@ async function renderQuarterlyPickCard(){
   let qp = null;
   try{ const snap = await getDoc(qpDocRef()); if(snap.exists()) qp = snap.data(); }catch(e){}
   qpCache = qp;
+  materialRenderPhase(qp);
   if(!qp){ body.innerHTML = `<p class="muted">Henüz başlamamış, yakında başlayacak.</p>`; return; }
   if(qp.phase==='nominating') return renderQpNominating(body, qp);
   if(qp.phase==='objecting') return renderQpObjecting(body, qp);
@@ -4376,13 +4328,8 @@ function qpWinnerBigCardHtml(cover, title, author){
   </div>`;
 }
 function renderQpReadingSummary(body, qp){
-  const daysLeft = Math.max(0, Math.ceil((new Date(qp.readingEndsAt) - Date.now())/(24*60*60*1000)));
-  body.innerHTML = `
-    <div class="qp-phase-label">Okuma Dönemi</div>
-    ${qpWinnerBigCardHtml(qp.winnerCover, qp.winnerTitle, qp.winnerAuthor)}
-    <p class="muted" style="text-align:center; font-size:12px;">öneren: ${escapeHtml(qp.winnerNominatedByName||'')} &middot; ${daysLeft} gün kaldı</p>
-    <p class="muted" style="text-align:center; font-size:12px; margin-top:4px;">"Bugün" sekmesinden bu kitabı bitirdiğinde işaretleyebilirsin.</p>
-  `;
+  body.innerHTML = '<div id="materialCommonReading"></div>';
+  renderQpBookInBugun('materialCommonReading');
 }
 async function renderQpBookInBugun(containerId){
   const el = document.getElementById(containerId);
@@ -4394,6 +4341,11 @@ async function renderQpBookInBugun(containerId){
       <h2>📚 Ortak Kitap</h2>
       <p class="muted" style="text-align:center; font-size:13px;">Seçim Aşamasında</p>
     `;
+    return;
+  }
+  if(containerId==='aSelfQpBook' || containerId==='mMyQpBook'){
+    const days = Math.max(0,Math.ceil((new Date(qp.readingEndsAt)-Date.now())/86400000));
+    el.innerHTML = `<h2>Ortak kitabımız</h2><div class="daily-book">${qp.winnerCover?`<img src="${qp.winnerCover}" alt="" />`:`<div class="daily-book-placeholder">${escapeHtml(qp.winnerTitle||'Ortak kitap')}</div>`}<div><span class="chip ok">${days} gün kaldı</span><h3>${escapeHtml(qp.winnerTitle||'')}</h3><p class="muted">${escapeHtml(qp.winnerAuthor||'')}</p><button class="primary" data-material-route="quarterly">Kitaba git →</button></div></div>`;
     return;
   }
   const finished = (qp.finishedBy||[]).includes(currentUid);
@@ -4410,9 +4362,9 @@ async function renderQpBookInBugun(containerId){
         <div class="qp-nom-meta">${escapeHtml(qp.winnerAuthor||'')}</div>
         <div class="muted" style="font-size:11px; margin-top:2px;">${daysLeft} gün kaldı</div>
       </div>
-      <button type="button" class="stamp-btn read${finished?' selected':''}" id="qpFinishTick_${containerId}" title="Bitirdim" ${finished?'disabled':''}>✓</button>
+      <button type="button" class="stamp-btn read${finished?' selected':''}" id="qpFinishTick_${containerId}" title="Bitirdim" aria-disabled="true">✓ Bitirdim</button>
     </div>
-    <div id="qpFinishFormWrap_${containerId}"></div>
+    <p class="muted">Bitirme formu henüz kullanıma açık değil.</p><div id="qpFinishFormWrap_${containerId}"></div>
     ${myProfile.role==='admin' ? qpDiscussionQEditorHtml(qp, containerId) : ''}
     <div id="qpDiscussionWrap_${containerId}"></div>
   `;
@@ -4455,7 +4407,7 @@ function qpFinishFormHtml(q1, q2){
   return `
     <div class="qp-finish-form">
       <div class="qp-disc-q-title">Kitabı puanla</div>
-      <div class="rating-star-row" id="qpFinishStars" data-selected="0">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="rating-star" data-n="${n}">★</span>`).join('')}</div>
+      <div class="rating-star-row" id="qpFinishStars" data-selected="0">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="rating-star" data-n="${n}" aria-label="10 üzerinden ${n} puan">${n}</button>`).join('')}</div>
       <div class="qp-disc-q-title" style="margin-top:14px;">Genel ruh hali nasıldı?</div>
       <div class="qp-mood-row">${QP_MOODS.map(m=>`<button type="button" class="qp-mood-chip" data-mood="${m.key}" data-label="${m.icon} ${m.label}">${m.icon} ${m.label}</button>`).join('')}</div>
       <div class="field" style="margin-top:14px;"><label>${escapeHtml(q1)}</label><textarea id="qpFinishCharAnswer" class="qp-finish-textarea"></textarea></div>
@@ -5268,6 +5220,7 @@ async function renderBookHistoryGrid(uid, gridId, editable, collectionName){
       <div class="bh-cover-wrap">${coverHtml}</div>
       <div class="bh-author">${escapeHtml(b.author||'')}</div>
       <div class="bh-title">${escapeHtml(b.title||'')}</div>
+      ${editable&&collectionName!=='bookHistory'?`<span class="book-state-action">${collectionName==='readBooks'?'✓ Okudum':'▤ Okuyorum'}</span>`:''}
       ${delBtn}
     </div>`;
   }).join('');
@@ -5800,9 +5753,9 @@ function postBodyHtml(p, expanded){
     case 'poll': return pollBodyHtml(p, expanded);
     case 'quarterly_pick': {
       const sub = p.subtype;
-      if(sub==='nominations_open') return `📚 Yeni ortak kitap önerileri başladı! ${p.days||2} gün içinde en fazla 3 kitap önerebilirsin. "Öneriler" sekmesinden katılabilirsin.`;
+      if(sub==='nominations_open') return `📚 Yeni ortak kitap önerileri başladı! ${p.days||2} gün içinde en fazla 3 kitap önerebilirsin. "Kulüp → Ortak kitap" bölümünden katılabilirsin.`;
       if(sub==='nominations_near_end') return `⏰ Ortak kitap önerileri için son 2 saat! Önerecek kitabın varsa şimdi ekle.`;
-      if(sub==='objecting_open') return `🔎 1 günlük itiraz süresi başladı — bir kitabı yakın zamanda okuduysan "Öneriler" sekmesinden itiraz edebilirsin.`;
+      if(sub==='objecting_open') return `🔎 1 günlük itiraz süresi başladı — bir kitabı yakın zamanda okuduysan "Kulüp → Ortak kitap" bölümünden itiraz edebilirsin.`;
       if(sub==='objecting_near_end') return `⏰ İtiraz süresi bitmek üzere (2 saat kaldı).`;
       if(sub==='objection_made') return `<b>${escapeHtml(p.name||'')}</b>, "${escapeHtml(p.bookTitle||'')}" kitabına itiraz etti (yakın zamanda okumuş) — öneriden düştü.`;
       if(sub==='nomination_made'){
@@ -5813,7 +5766,7 @@ function postBodyHtml(p, expanded){
       }
       if(sub==='round_start'){
         const label = p.round===p.totalRounds ? 'Final' : (p.round===(p.totalRounds-1) ? 'Yarı final' : `${p.round}. tur`);
-        return `${label} oylaması başladı! ${p.matchCount||''} eşleşme var, "Öneriler" sekmesinden oy verebilirsin.`;
+        return `${label} oylaması başladı! ${p.matchCount||''} eşleşme var, "Kulüp → Ortak kitap" bölümünden oy verebilirsin.`;
       }
       if(sub==='round_near_end') return `Bu turun oylaması bitmek üzere (2 saat kaldı).`;
       if(sub==='round_result'){
@@ -8945,13 +8898,14 @@ async function openBookDiscoverModal(book){
       <div id="coverFixTarget" style="width:110px; height:160px; margin:0 auto 10px; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); border:3px solid ${LEVEL_COLORS[level]||'var(--line)'}; ${isAdminView?'cursor:pointer;':''}" ${isAdminView?'title="Kapağı düzelt (sadece yönetici)"':''}>${coverHtml}</div>
       <h2 style="margin:0 0 2px;">${escapeHtml(book.title)}</h2>
       <div class="muted">${escapeHtml(book.author||'')}</div>
+      ${groupList.length?`<div class="book-average">★ ${groupAvg(groupDoc.ratings).toLocaleString('tr-TR',{maximumFractionDigits:1})} <small>/ 10 · Kulüp ortalaması</small></div>`:''}
       ${yearHtml}
       ${levelHtml}
     </div>
     ${whyHtml}
     ${groupHtml}
     <div class="rec-comments-label" style="margin-top:14px;">${myRating?'Puanını Güncelle':'Grupta Puan Ver'}</div>
-    <div class="rating-star-row" id="ratingStarRow">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="rating-star" data-n="${n}">★</span>`).join('')}</div>
+    <div class="rating-star-row" id="ratingStarRow">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="rating-star" data-n="${n}" aria-label="10 üzerinden ${n} puan">${n}</button>`).join('')}</div>
     <textarea id="ratingCommentInput" placeholder="Yorumun (opsiyonel)" style="width:100%; margin-top:10px; padding:10px; border:1.5px solid var(--line); border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; min-height:60px; background:var(--card); color:var(--ink);">${myRating?escapeHtml(myRating.comment||''):''}</textarea>
     <button class="primary" id="ratingSubmitBtn" style="width:100%; margin-top:8px;">Gönder</button>
     <div id="libraryBtnsWrapDiscover" style="margin-top:8px;"><span class="muted" style="font-size:12px;">…</span></div>
@@ -9174,6 +9128,143 @@ async function renderGroupRecs(){
 async function renderMemberWorms(){ await renderWormsShared('mWormsList','mWormsHistory'); }
 
 /* ============ GİRİŞ / AUTH DURUM TAKİBİ ============ */
+/* BookHook Material UI adapter. Only presentation/navigation; existing data model retained. */
+function materialIcon(kind){
+ const paths={home:'<path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/>',feed:'<path d="M4 5h16M4 10h16M4 15h10M4 20h6"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',book:'<path d="M12 5C9 2 5 2 2 3v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/>',club:'<circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M3 9a3 3 0 0 0 0 6m18-6a3 3 0 0 1 0 6M2 21v-2m20 2v-2"/>',gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8H8a3 3 0 1 1 3-3Zm0 0h4a3 3 0 1 0-3-3Z"/>',badge:'<circle cx="12" cy="9" r="6"/><path d="m8 14-2 8 6-3 6 3-2-8m-6-6 2-3 2 3"/>',records:'<path d="M4 3h16v18H4ZM8 8h8M8 12h8M8 16h5"/>',settings:'<path d="m9 3-1 3-3 1v4l-2 1 2 2v4l3 1 1 3h6l1-3 3-1v-4l2-2-2-1V7l-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/>'};
+ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[kind]||paths.book}</svg>`;
+}
+function materialPrimaryTabs(){
+ const admin=myProfile&&myProfile.role==='admin';
+ return [{id:admin?'today':'msurvey',label:'Bugün',icon:materialIcon('home')},{id:'social',label:'Akış',icon:materialIcon('feed')},{id:'bookhistory',label:'Keşfet',icon:materialIcon('search')},{id:'mybooks',label:'Kitaplığım',icon:materialIcon('book')},{id:'club',label:'Kulüp',icon:materialIcon('club')}];
+}
+function materialRoute(id){
+ if(id==='records') return myProfile.role==='admin'?'week':'mtoday';
+ if(id==='badges') return myProfile.role==='admin'?'worms':'mworms';
+ return id;
+}
+function materialLink(id,label,description,icon){
+ return `<button class="destination-row" data-material-route="${id}"><span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span><span aria-hidden="true">›</span></button>`;
+}
+function materialInit(){
+ document.querySelectorAll('[data-material-name]').forEach(el=>el.textContent=myProfile.name||'');
+ document.querySelectorAll('[data-material-date]').forEach(el=>el.textContent=nowLogical().toLocaleDateString('tr-TR',{day:'numeric',month:'long',weekday:'long'}));
+ document.querySelectorAll('[data-panels]').forEach(control=>{
+  const section=document.getElementById('tab-'+control.dataset.panels);
+  const cards=[...section.children].filter(x=>x.classList.contains('card'));
+  const chosen=Number(control.dataset.selected || (control.dataset.panels==='recs'?'1':control.dataset.panels==='week'||control.dataset.panels==='mtoday'?'1':'0'));
+  const select=(i)=>{
+   control.dataset.selected=String(i);
+   cards.forEach((card,j)=>{card.hidden=i!==j;});
+   control.querySelectorAll('[data-pane]').forEach((button,j)=>{button.classList.toggle('active',i===Number(button.dataset.pane));button.setAttribute('role','tab');button.setAttribute('aria-selected',String(i===Number(button.dataset.pane))); });
+  };
+  control.querySelectorAll('[data-pane]').forEach(button=>button.onclick=()=>select(Number(button.dataset.pane)));
+  select(chosen);
+ });
+ const recControls=document.querySelector('[data-panels="recs"]');
+ if(recControls)recControls.prepend(recControls.querySelector('[data-pane="1"]'));
+ const gifts=document.getElementById('tab-gifts');
+ if(!document.getElementById('materialGiftTabs'))gifts.insertAdjacentHTML('afterbegin','<div class="segmented" id="materialGiftTabs"><button data-gift-view="0" class="active">Bekleyen</button><button data-gift-view="1">Geçmiş</button></div>');
+ const giftCards=[...gifts.children].filter(c=>c.classList.contains('card'));
+ const selectGifts=(view)=>{giftCards.forEach((c,i)=>c.hidden=view===0?i>=2:i<2);document.querySelectorAll('[data-gift-view]').forEach(b=>b.classList.toggle('active',Number(b.dataset.giftView)===view));};
+ document.querySelectorAll('[data-gift-view]').forEach(b=>b.onclick=()=>selectGifts(Number(b.dataset.giftView)));selectGifts(0);
+ const admin=myProfile.role==='admin';
+ document.getElementById('materialClubGrid').innerHTML=[['recs','Kitap önerileri','Kulübün önerdiği kitaplar','book'],['records','Kayıtlar','Haftalık okuma durumları','records'],['badges','Rozetler','Okuma serilerini kutlayalım','badge'],['gifts','Hediyeler','Kitaplaşan dostluklar','gift'],['rules','Grup kuralları','Birlikte daha iyi bir deneyim','club'],...(admin?[['admin','Yönetim','Kulüp ayarları ve üyeler','settings']]:[])].map(x=>materialLink(...x)).join('');
+ document.getElementById('materialAdminLinks').innerHTML=[['members','Üyeler','Rol, katılım tarihi, ban ve silme','club'],['whoreadtoday','Bugün kim okudu','Günlük durumları yönet','records'],['editpast','Geçmiş okumaları düzenle','Gün ve hafta kayıtları','records'],['rules','Kurallar ve öneriler','Kulüp kuralları ve gelen öneriler','book']].map(x=>materialLink(...x)).join('');
+ const maintenance=document.getElementById('settingsAdminOnlyWrap');
+ if(maintenance) document.getElementById('materialMaintenance').append(maintenance);
+ const settings=document.getElementById('tab-settings');
+ if(!document.getElementById('materialThemeSettings')){
+  settings.insertAdjacentHTML('afterbegin',`<div class="card" id="materialThemeSettings"><h2>Görünüm</h2><p class="muted">Uygulamanın temasını seç.</p><div class="segmented" id="materialThemeChoices"><button data-theme-choice="light">Açık</button><button data-theme-choice="dark">Koyu</button><button data-theme-choice="auto">Otomatik</button></div><p class="muted">Otomatik tema günün saatine göre değişir.</p></div>`);
+  settings.insertAdjacentHTML('beforeend',`<div class="settings-list">${materialLink('rules','Grup kuralları','Kulübün kuralları ve önerilerin','club')}<button class="destination-row" id="materialEnablePush">${materialIcon('gift')}<b>Bildirimleri aç</b></button><button class="destination-row danger" id="materialLogout">Çıkış yap</button></div>`);
+  document.getElementById('materialEnablePush').onclick=enablePushNotifications;
+  document.getElementById('materialLogout').onclick=()=>document.getElementById('logoutBtn').click();
+ }
+ document.querySelectorAll('[data-theme-choice]').forEach(button=>{
+  button.onclick=()=>{const v=button.dataset.themeChoice;setAutoThemeEnabled(v==='auto');setTheme(v==='auto'?computeAutoTheme():v);materialThemeSync();buildHamburgerMenu();};
+ });
+ materialThemeSync();
+ const name=document.getElementById('whoamiClickable');name.setAttribute('role','button');name.tabIndex=0;name.setAttribute('aria-label','Profilim');name.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();name.click();}};
+ document.querySelectorAll('button[title]').forEach(button=>{if(!button.hasAttribute('aria-label'))button.setAttribute('aria-label',button.title);});
+ document.getElementById('notifBellBtn').setAttribute('aria-label','Bildirimler');
+ document.getElementById('hamburgerBtn').setAttribute('aria-label','Hesap ve ayarlar');
+}
+function materialThemeSync(){
+ const selected=getAutoThemeEnabled()?'auto':document.documentElement.getAttribute('data-theme')||'light';
+ document.querySelectorAll('[data-theme-choice]').forEach(button=>{button.classList.toggle('active',button.dataset.themeChoice===selected);button.setAttribute('aria-pressed',String(button.dataset.themeChoice===selected));});
+ const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=document.documentElement.getAttribute('data-theme')==='dark'?'#131A14':'#F8FAF4';
+}
+function materialSyncNavigation(id){
+ const primary=materialPrimaryTabs().map(t=>t.id);
+ document.body.dataset.screen=id;
+ document.body.classList.toggle('detail-screen',!primary.includes(id));
+ const back=document.getElementById('materialBack');back.hidden=primary.includes(id);
+ back.onclick=()=>switchTab(id==='profile'||id==='settings'?getTabOrder()[0]:['members','manual','qptest','editpast','whoreadtoday'].includes(id)?'admin':'club');
+ document.querySelectorAll('nav.tabs button').forEach(button=>{const selected=button.dataset.tab===(primary.includes(id)?id:'club');button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
+ const names={club:'Kulüp',quarterly:'Ortak kitap',admin:'Yönetim',worms:'Rozetler',mworms:'Rozetler',gifts:'Hediyeler',recs:'Kitap önerileri'};
+ if(names[id])document.getElementById('currentTabTitle').textContent=names[id];
+ if(id==='today'||id==='msurvey')document.getElementById('currentTabTitle').textContent='BookHook';
+ if(id==='settings')materialThemeSync();
+ window.scrollTo({top:0,behavior:'instant'});
+}
+async function materialRenderClub(){
+ try{
+  const snap=await getDoc(qpDocRef());const qp=snap.exists()?snap.data():null;
+  document.getElementById('clubBookTitle').textContent=qp&&qp.winnerTitle||'Sıradaki kitabımızı seçelim';
+  const labels={nominating:'Öneri toplama',objecting:'İtiraz süresi',voting:'Oylama',reading:'Okuma dönemi'};
+  document.getElementById('clubBookMeta').textContent=qp?labels[qp.phase]||'Ortak kitap':'Birlikte seç, birlikte oku';
+ }catch(e){document.getElementById('clubBookMeta').textContent='Ortak kitap seçimine git';}
+}
+function materialRenderPhase(qp){
+ const steps=document.getElementById('materialQpSteps');if(!steps)return;
+ const phases=['nominating','objecting','voting','reading'];const labels=['Öneri','İtiraz','Oylama','Okuma'];
+ const i=qp?phases.indexOf(qp.phase):-1;
+ steps.innerHTML=phases.map((p,n)=>`<div class="phase-step ${n===i?'current':''} ${n<i?'complete':''}" ${n===i?'aria-current="step"':''}><span>${n<i?'✓':n+1}</span><small>${labels[n]}</small></div>`).join('');
+}
+document.body.addEventListener('click',e=>{
+ const route=e.target.closest('[data-material-route]');if(!route||!myProfile)return;
+ const id=materialRoute(route.dataset.materialRoute);
+ if(['admin','members','manual','qptest','editpast','whoreadtoday'].includes(id)&&myProfile.role!=='admin')return;
+ switchTab(id);
+});
+// Keyboard support for dynamically rendered interactive cards without changing their actions.
+document.body.addEventListener('keydown',e=>{
+ if((e.key==='Enter'||e.key===' ')&&e.target.matches('.bh-card,.discover-book-card,.qp-vs-card,.notif-row')){e.preventDefault();e.target.click();}
+});
+const materialObserver=new MutationObserver(records=>{
+ for(const record of records)for(const added of record.addedNodes){
+  if(added.nodeType!==1)continue;
+  const cards=[...(added.matches('.bh-card,.discover-book-card,.qp-vs-card,.notif-row')?[added]:[]),...added.querySelectorAll('.bh-card,.discover-book-card,.qp-vs-card,.notif-row')];
+  cards.forEach(card=>{card.tabIndex=0;card.setAttribute('role','button');});
+ }
+});
+materialObserver.observe(document.getElementById('appRoot'),{childList:true,subtree:true});
+// Dialogs stay in the viewport and keep keyboard focus inside the active screen.
+let materialDialog=null, materialReturnFocus=null;
+const materialModalObserver=new MutationObserver(()=>{
+ const open=[...document.querySelectorAll('.modal-overlay-anim')].filter(el=>el.style.display==='flex').sort((a,b)=>Number(getComputedStyle(a).zIndex)-Number(getComputedStyle(b).zIndex));
+ const top=open.at(-1)||null;
+ if(top===materialDialog)return;
+ if(top){
+  if(!materialDialog)materialReturnFocus=document.activeElement;
+  document.documentElement.style.overflow='hidden';top.setAttribute('role','dialog');top.setAttribute('aria-modal','true');
+  const heading=top.querySelector('h2');top.setAttribute('aria-label',heading?.textContent||'Detay');
+  top.querySelector('button')?.focus({preventScroll:true});
+ }else{
+  document.documentElement.style.overflow='';materialReturnFocus?.focus({preventScroll:true});materialReturnFocus=null;
+ }
+ materialDialog=top;
+});
+document.querySelectorAll('.modal-overlay-anim').forEach(el=>materialModalObserver.observe(el,{attributes:true,attributeFilter:['style']}));
+document.addEventListener('keydown',e=>{
+ if(!materialDialog)return;
+ if(e.key==='Escape'){closeModal(materialDialog.id);e.preventDefault();return;}
+ if(e.key!=='Tab')return;
+ const items=[...materialDialog.querySelectorAll('button,input,textarea,select,a[href],[tabindex="0"]')].filter(el=>!el.disabled&&el.getClientRects().length);
+ if(!items.length)return;
+ if(e.shiftKey&&document.activeElement===items[0]){items.at(-1).focus();e.preventDefault();}
+ else if(!e.shiftKey&&document.activeElement===items.at(-1)){items[0].focus();e.preventDefault();}
+});
+
 onAuthStateChanged(auth, async (user)=>{
   if(unsubUsers){ unsubUsers(); unsubUsers=null; }
   if(unsubToday){ unsubToday(); unsubToday=null; subscribedTodayKey=null; }
