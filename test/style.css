@@ -104,8 +104,10 @@ textarea{resize:vertical;min-height:100px;line-height:1.6}input[type=checkbox]{a
 svg.hub-illustration{position:absolute;right:8px;bottom:8px;width:56px;height:48px;pointer-events:none}
 .hub-item .hub-chevron{transition:transform .25s var(--ease)}
 .hub-item.expanded .hub-chevron{transform:rotate(90deg)}
-.hub-item-panel{max-height:0;overflow:hidden;opacity:0;transition:max-height .38s var(--ease),opacity .25s var(--ease)}
-.hub-item.expanded .hub-item-panel{max-height:3000px;opacity:1;padding:0 4px 18px;border-top:1px solid var(--line)}
+.hub-item-panel{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .38s var(--ease),opacity .25s var(--ease)}
+.hub-item.expanded .hub-item-panel{grid-template-rows:1fr;opacity:1}
+.hub-item-panel-inner{overflow:hidden;min-height:0}
+.hub-item.expanded .hub-item-panel-inner{padding:0 4px 18px;border-top:1px solid var(--line)}
 .hub-item-panel section.tab{display:block!important;animation:none!important}
 .settings-list{background:var(--card);border-radius:24px;overflow:hidden;margin:16px 0 28px}.settings-list .destination-row{border-radius:0;border-bottom:1px solid var(--line)}.settings-list .destination-row:last-child{border:0}
 #materialMaintenance{border-radius:24px;background:var(--card);padding:20px}#materialMaintenance>summary{cursor:pointer;font-weight:600}#materialMaintenance .card{padding:16px 0;border-bottom:1px solid var(--line);border-radius:0}

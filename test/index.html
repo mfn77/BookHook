@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-14" />
+<link rel="stylesheet" href="./style.css?v=material-15" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -9155,12 +9155,12 @@ const HUB_ILLUSTRATIONS = {
 };
 function materialHubLink(hubId,targetId,label,description,icon){
  HUB_PARENT[targetId] = hubId;
- return `<div class="hub-item" data-hub-target="${targetId}"><button type="button" class="destination-row hub-item-toggle"><div class="hub-item-summary">${HUB_ILLUSTRATIONS[icon]||''}<span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span></div><span class="hub-chevron" aria-hidden="true">›</span></button><div class="hub-item-panel"></div></div>`;
+ return `<div class="hub-item" data-hub-target="${targetId}"><button type="button" class="destination-row hub-item-toggle"><div class="hub-item-summary">${HUB_ILLUSTRATIONS[icon]||''}<span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span></div><span class="hub-chevron" aria-hidden="true">›</span></button><div class="hub-item-panel"><div class="hub-item-panel-inner"></div></div></div>`;
 }
 function materialExpandHubItem(item, targetId){
- const panel = item.querySelector('.hub-item-panel');
+ const inner = item.querySelector('.hub-item-panel-inner');
  const section = document.getElementById('tab-'+targetId);
- if(section){ panel.appendChild(section); section.classList.add('active'); renderTab(targetId); }
+ if(section){ inner.appendChild(section); section.classList.add('active'); renderTab(targetId); }
  item.classList.add('expanded');
 }
 function materialCollapseHubItem(item){ item.classList.remove('expanded'); }
