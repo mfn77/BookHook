@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-2" />
+<link rel="stylesheet" href="./style.css?v=material-3" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -3721,10 +3721,9 @@ function renderGiftStatsList(){
   const uids = Object.keys(stats).filter(uid=>usersCache[uid]);
   uids.sort((a,b)=> stats[b].received - stats[a].received);
   if(uids.length===0){ box.innerHTML = `<p class="muted">Henüz hiç hediye verilmemiş.</p>`; markLoaded(box); return; }
-  const receivedColor = '#2f9e6e', givenColor = '#8073ad';
-  const coin = (icon, color, count, title)=>{
+  const coin = (icon, kind, count, title)=>{
     if(count>0){
-      return `<div class="gift-stats-num" style="background:linear-gradient(145deg, ${shadeHexColor(color,-0.15)} 0%, ${shadeHexColor(color,-0.55)} 100%);" title="${title}: ${count}"><span class="gift-stats-num-text">${count}</span></div>`;
+      return `<div class="gift-stats-num ${kind}" title="${title}: ${count}"><span class="gift-stats-num-text">${count}</span></div>`;
     }
     return `<div class="gift-stats-icon-only" title="${title}: 0"><span>${icon}</span></div>`;
   };
@@ -3734,8 +3733,8 @@ function renderGiftStatsList(){
       <div class="gift-stats-avatar">${avatarHtmlFromProfile(usersCache[uid], 44)}</div>
       <div class="gift-stats-name">${escapeHtml(usersCache[uid].name||'')}</div>
       <div class="gift-stats-coins">
-        ${coin('📥', receivedColor, s.received, 'Aldığı hediye')}
-        ${coin('📤', givenColor, s.given, 'Verdiği hediye')}
+        ${coin('📥', 'received', s.received, 'Aldığı hediye')}
+        ${coin('📤', 'given', s.given, 'Verdiği hediye')}
       </div>
     </div>`;
   }).join('')}</div>`;
