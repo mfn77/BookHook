@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-13" />
+<link rel="stylesheet" href="./style.css?v=material-14" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -5909,10 +5909,13 @@ function renderPostCard(p){
         <button type="button" class="post-action-btn post-comment-inline-btn" data-post-id="${p.id}"><span class="post-comment-count">💬 ${p.commentCount||0}</span></button>
         ${postReactionPillHtml(p)}
       </div>
-      <div class="post-comment-inline-form" data-post-id="${p.id}" data-post-uid="${p.uid||''}" data-comment-count="${p.commentCount||0}">
-        <input type="text" class="post-comment-inline-input" placeholder="Yorum yaz..." />
-        <button type="button" class="secondary tiny post-comment-inline-send">Gönder</button>
-
+      <div class="post-comments-panel" data-post-id="${p.id}" data-post-uid="${p.uid||''}" data-comment-count="${p.commentCount||0}">
+        <div class="rec-comments-label">💬 Yorumlar</div>
+        <div class="post-comments-list"><span class="muted">Yükleniyor…</span></div>
+        <div class="row" style="margin-top:10px;">
+          <input type="text" class="post-comment-inline-input" placeholder="Yorum yaz..." />
+          <button type="button" class="secondary tiny post-comment-inline-send" style="flex:0 0 auto;">Gönder</button>
+        </div>
       </div>
     </div>
   </div>`;
@@ -6337,37 +6340,28 @@ function wirePostCards(container, refreshFn){
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
       const card = btn.closest('.post-card');
-      const form = card && card.querySelector('.post-comment-inline-form');
-      if(!form) return;
-      const showing = form.style.display==='flex';
-      form.style.display = showing ? 'none' : 'flex';
-      if(!showing){
-        const input = form.querySelector('.post-comment-inline-input');
-        input.value = '';
-        input.focus();
-      }
+      if(card) togglePostComments(card.dataset.postId);
     });
   });
-  container.querySelectorAll('.post-comment-inline-form').forEach(form=>{
-    form.addEventListener('click', (e)=> e.stopPropagation());
-    const input = form.querySelector('.post-comment-inline-input');
-    const sendBtn = form.querySelector('.post-comment-inline-send');
+  container.querySelectorAll('.post-comments-panel').forEach(panel=>{
+    panel.addEventListener('click', (e)=> e.stopPropagation());
+    const input = panel.querySelector('.post-comment-inline-input');
+    const sendBtn = panel.querySelector('.post-comment-inline-send');
     const submit = async ()=>{
       const text = input.value.trim();
       if(!text) return;
-      const postId = form.dataset.postId;
-      const postUid = form.dataset.postUid;
-      const newCount = parseInt(form.dataset.commentCount,10) + 1;
+      const postId = panel.dataset.postId;
+      const postUid = panel.dataset.postUid;
+      const newCount = parseInt(panel.dataset.commentCount,10) + 1;
       sendBtn.disabled = true;
       try{
         await addDoc(collection(db,'posts',postId,'comments'), { uid:currentUid, name:myProfile.name, text, createdAt:new Date().toISOString() });
         await updateDoc(doc(db,'posts',postId), { commentCount: newCount });
-        form.dataset.commentCount = newCount;
+        panel.dataset.commentCount = newCount;
         syncFeedCardCommentCount(postId, newCount);
         if(postUid && postUid!==currentUid) notifyUser(postUid, `${myProfile.name} gönderine yorum yaptı.`, 'social', postId);
         input.value = '';
-        form.style.display = 'none';
-        showToast('Yorum eklendi.');
+        renderPostCommentsPanel(postId);
       }catch(err){ alert('Yorum gönderilemedi: '+(err.message||err)); }
       finally{ sendBtn.disabled = false; }
     };
@@ -6376,8 +6370,8 @@ function wirePostCards(container, refreshFn){
   });
   container.querySelectorAll('.post-card').forEach(card=>{
     card.addEventListener('click', (e)=>{
-      if(e.target.closest('.user-chip') || e.target.closest('.book-cover-clickable') || e.target.closest('[data-poll-option]') || e.target.closest('.post-comment-inline-btn') || e.target.closest('.post-comment-inline-form') || e.target.closest('.post-vote-btn') || e.target.closest('.reaction-add-btn')) return;
-      openPostModal(card.dataset.postId);
+      if(e.target.closest('.user-chip') || e.target.closest('.book-cover-clickable') || e.target.closest('[data-poll-option]') || e.target.closest('.post-comment-inline-btn') || e.target.closest('.post-comments-panel') || e.target.closest('.post-vote-btn') || e.target.closest('.reaction-add-btn') || e.target.closest('.post-menu-btn')) return;
+      togglePostComments(card.dataset.postId);
     });
   });
 }
@@ -6387,6 +6381,56 @@ function wirePostCards(container, refreshFn){
 function syncFeedCardCommentCount(postId, newCount){
   document.querySelectorAll(`.post-card[data-post-id="${postId}"] .post-comment-count`).forEach(el=>{
     el.textContent = `💬 ${newCount}`;
+  });
+}
+// Akıştaki gönderiye tıklayınca ayrı bir modal açmak yerine kartın kendisini genişletiyoruz —
+// diğer kartlar hub kartlarındaki gibi aşağı kayıyor, yorumlar da aynı yerde okunup yazılabiliyor.
+function togglePostComments(postId){
+  const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
+  if(!card) return;
+  const wasExpanded = card.classList.contains('expanded');
+  document.querySelectorAll('.post-card.expanded').forEach(c=>{ if(c!==card) c.classList.remove('expanded'); });
+  if(wasExpanded){
+    card.classList.remove('expanded');
+  }else{
+    card.classList.add('expanded');
+    renderPostCommentsPanel(postId);
+  }
+}
+async function renderPostCommentsPanel(postId){
+  const panel = document.querySelector(`.post-comments-panel[data-post-id="${postId}"]`);
+  if(!panel) return;
+  const list = panel.querySelector('.post-comments-list');
+  list.innerHTML = `<span class="muted">Yükleniyor…</span>`;
+  let comments = [];
+  const commentsSnap = await getDocs(collection(db,'posts',postId,'comments')).catch(()=>null);
+  if(commentsSnap){
+    commentsSnap.forEach(d=> comments.push({id:d.id, ...d.data()}));
+    comments.sort((a,b)=> new Date(a.createdAt) - new Date(b.createdAt));
+  }
+  list.innerHTML = comments.length ? comments.map(c=>`<div class="rec-comment-row">
+    <div class="rec-comment-body">${userChipHtml(c.uid,18)}<span class="muted" style="font-size:11px; margin-left:4px;">· ${timeAgoLabel(c.createdAt)}</span><div style="margin-top:2px;">${escapeHtml(c.text)}</div>${renderReactionBar(c.reactions, `postcomment:${postId}|${c.id}`)}</div>
+    ${(c.uid===currentUid||myProfile.role==='admin')?`<button class="rec-comment-del" data-del-postcomment="${c.id}">✕</button>`:''}
+  </div>`).join('') : `<span class="muted">Henüz yorum yok.</span>`;
+  list.querySelectorAll('.reaction-pill').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); showReactorsModal(btn.dataset.uids, btn.dataset.emoji); });
+  });
+  list.querySelectorAll('.reaction-add-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); pendingReactionRefresh = ()=>renderPostCommentsPanel(postId); toggleReactionDrawer(btn, btn.dataset.target); });
+  });
+  list.querySelectorAll('[data-del-postcomment]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      if(!confirm('Bu yorumu silmek istediğine emin misin?')) return;
+      try{
+        const newCount = Math.max(0, parseInt(panel.dataset.commentCount,10) - 1);
+        await deleteDoc(doc(db,'posts',postId,'comments',btn.dataset.delPostcomment));
+        await updateDoc(doc(db,'posts',postId), {commentCount: newCount});
+        panel.dataset.commentCount = newCount;
+        syncFeedCardCommentCount(postId, newCount);
+        renderPostCommentsPanel(postId);
+      }catch(err){ alert('Silinemedi: '+(err.message||err)); }
+    });
   });
 }
 async function openPostModal(postId){
