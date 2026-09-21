@@ -130,7 +130,7 @@
     <section class="tab daily-tab" id="tab-today">
  <div class="daily-greeting">Merhaba, <span data-material-name></span><span class="muted">İyi ki buradasın.</span></div>
  <h1>Bugün biraz okuyalım.</h1>
- <div class="card daily-checkin"><div class="eyebrow" data-material-date></div><h2>Bugün okudun mu?</h2>
+ <div class="card daily-checkin"><svg class="daily-illustration" viewBox="0 0 100 100" aria-hidden="true"><rect x="18" y="10" width="64" height="64" rx="18" transform="rotate(-8 50 42)" fill="var(--secondary-container)"/><rect x="26" y="26" width="52" height="52" rx="14" transform="rotate(10 52 52)" fill="var(--primary-container)"/><circle cx="76" cy="76" r="17" fill="var(--gold)"/><path d="M68 76l5.5 5.5L84 71" fill="none" stroke="var(--on-primary)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="eyebrow" data-material-date></div><h2>Bugün okudun mu?</h2>
  <div class="daily-actions"><button class="stamp-btn big read" id="aSelfReadBtn" title="Okudum">✓ <span>Okudum</span></button><button class="stamp-btn big skip" id="aSelfSkipBtn" title="Okuyamam">− <span>Okuyamam</span></button></div>
  <div id="aSelfStatusNote" class="muted" role="status"></div><details class="daily-help"><summary>Günün 06.00’da yenilenir</summary><p class="muted" id="aSelfDateNote"></p></details></div>
  <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="aSelfStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="totalPagesNumber">–</strong><span>Tahmini sayfa</span><span class="muted">Okunan gün × 15</span></div></div>
@@ -244,7 +244,7 @@
     <section class="tab daily-tab" id="tab-msurvey">
  <div class="daily-greeting">Merhaba, <span data-material-name></span><span class="muted">İyi ki buradasın.</span></div>
  <h1>Bugün biraz okuyalım.</h1>
- <div class="card daily-checkin"><div class="eyebrow" data-material-date></div><h2>Bugün okudun mu?</h2>
+ <div class="card daily-checkin"><svg class="daily-illustration" viewBox="0 0 100 100" aria-hidden="true"><rect x="18" y="10" width="64" height="64" rx="18" transform="rotate(-8 50 42)" fill="var(--secondary-container)"/><rect x="26" y="26" width="52" height="52" rx="14" transform="rotate(10 52 52)" fill="var(--primary-container)"/><circle cx="76" cy="76" r="17" fill="var(--gold)"/><path d="M68 76l5.5 5.5L84 71" fill="none" stroke="var(--on-primary)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="eyebrow" data-material-date></div><h2>Bugün okudun mu?</h2>
  <div class="daily-actions"><button class="stamp-btn big read" id="mReadBtn" title="Okudum">✓ <span>Okudum</span></button><button class="stamp-btn big skip" id="mSkipBtn" title="Okuyamam">− <span>Okuyamam</span></button></div>
  <div id="mMyStatusNote" class="muted" role="status"></div><details class="daily-help"><summary>Günün 06.00’da yenilenir</summary><p class="muted" id="mDateNote"></p></details></div>
  <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="mMyStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="mTotalPagesNumber">–</strong><span>Tahmini sayfa</span><span class="muted">Okunan gün × 15</span></div></div>
@@ -555,6 +555,7 @@
       </div>
     </section>
 
+<section class="tab" id="tab-library"><h1>Kitaplar</h1><p class="page-subtitle">Keşfet, kitaplığın ve öneriler bir arada.</p><div class="club-grid" id="materialLibraryGrid"></div></section>
 <section class="tab" id="tab-club"><h1>Birlikte daha çok<br>okuyoruz.</h1><p class="page-subtitle">BookHook kulübün</p><button class="club-feature" data-material-route="quarterly"><span class="club-book-icon">▤</span><span><small>Ortak kitabımız</small><b id="clubBookTitle">Ortak kitap</b><span id="clubBookMeta">Birlikte seç, birlikte oku</span></span><span>›</span></button><div class="club-grid" id="materialClubGrid"></div></section>
 <section class="tab" id="tab-quarterly"><div id="materialQpSteps" class="phase-steps"></div>      <div class="card" id="quarterlyPickCard">
         <h2>📚 Ortak Kitap Seçimi</h2>
@@ -1871,7 +1872,7 @@ document.body.addEventListener('click', (e)=>{
 function buildNav(){
   const tabs = materialPrimaryTabs();
   const nav = document.getElementById('tabs');
-  nav.innerHTML = tabs.map(t=>`<button data-tab="${t.id}"><span class="tab-icon">${t.icon}</span><span>${t.label}</span></button>`).join('');
+  nav.innerHTML = tabs.map(t=>`<button data-tab="${t.id}" aria-label="${t.label}"><span class="tab-icon">${t.icon}</span><span>${t.label}</span></button>`).join('');
   nav.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
   buildHamburgerMenu();
   materialInit();
@@ -2185,6 +2186,7 @@ function switchTab(id){
 
 function renderTab(id){
   if(id==='club') { materialRenderClub(); return; }
+  if(id==='library') { return; }
   if(id==='quarterly') { renderQuarterlyPickCard(); return; }
   if(id==='admin') { renderSettingsTab(); renderAdminDraws(); return; }
   if(id==='today') renderAdminSelfToday();
@@ -9135,7 +9137,7 @@ function materialIcon(kind){
 }
 function materialPrimaryTabs(){
  const admin=myProfile&&myProfile.role==='admin';
- return [{id:admin?'today':'msurvey',label:'Bugün',icon:materialIcon('home')},{id:'social',label:'Akış',icon:materialIcon('feed')},{id:'bookhistory',label:'Keşfet',icon:materialIcon('search')},{id:'mybooks',label:'Kitaplığım',icon:materialIcon('book')},{id:'club',label:'Kulüp',icon:materialIcon('club')}];
+ return [{id:admin?'today':'msurvey',label:'Bugün',icon:materialIcon('home')},{id:'social',label:'Akış',icon:materialIcon('feed')},{id:'library',label:'Kitaplık',icon:materialIcon('book')},{id:'club',label:'Kulüp',icon:materialIcon('club')}];
 }
 function materialRoute(id){
  if(id==='records') return myProfile.role==='admin'?'week':'mtoday';
@@ -9168,7 +9170,8 @@ function materialInit(){
  const selectGifts=(view)=>{giftCards.forEach((c,i)=>c.hidden=view===0?i>=2:i<2);document.querySelectorAll('[data-gift-view]').forEach(b=>b.classList.toggle('active',Number(b.dataset.giftView)===view));};
  document.querySelectorAll('[data-gift-view]').forEach(b=>b.onclick=()=>selectGifts(Number(b.dataset.giftView)));selectGifts(0);
  const admin=myProfile.role==='admin';
- document.getElementById('materialClubGrid').innerHTML=[['recs','Kitap önerileri','Kulübün önerdiği kitaplar','book'],['records','Kayıtlar','Haftalık okuma durumları','records'],['badges','Rozetler','Okuma serilerini kutlayalım','badge'],['gifts','Hediyeler','Kitaplaşan dostluklar','gift'],['rules','Grup kuralları','Birlikte daha iyi bir deneyim','club'],...(admin?[['admin','Yönetim','Kulüp ayarları ve üyeler','settings']]:[])].map(x=>materialLink(...x)).join('');
+ document.getElementById('materialClubGrid').innerHTML=[['records','Kayıtlar','Haftalık okuma durumları','records'],['badges','Rozetler','Okuma serilerini kutlayalım','badge'],['gifts','Hediyeler','Kitaplaşan dostluklar','gift'],['rules','Grup kuralları','Birlikte daha iyi bir deneyim','club'],...(admin?[['admin','Yönetim','Kulüp ayarları ve üyeler','settings']]:[])].map(x=>materialLink(...x)).join('');
+ document.getElementById('materialLibraryGrid').innerHTML=[['bookhistory','Keşfet','Popüler kitaplar ve öneriler','search'],['mybooks','Kitaplığım','Okuduğun ve okuyacağın kitaplar','book'],['recs','Kitap önerileri','Kulüpten ve senden gelen öneriler','club']].map(x=>materialLink(...x)).join('');
  document.getElementById('materialAdminLinks').innerHTML=[['members','Üyeler','Rol, katılım tarihi, ban ve silme','club'],['whoreadtoday','Bugün kim okudu','Günlük durumları yönet','records'],['editpast','Geçmiş okumaları düzenle','Gün ve hafta kayıtları','records'],['rules','Kurallar ve öneriler','Kulüp kuralları ve gelen öneriler','book']].map(x=>materialLink(...x)).join('');
  const maintenance=document.getElementById('settingsAdminOnlyWrap');
  if(maintenance) document.getElementById('materialMaintenance').append(maintenance);
@@ -9198,9 +9201,10 @@ function materialSyncNavigation(id){
  document.body.dataset.screen=id;
  document.body.classList.toggle('detail-screen',!primary.includes(id));
  const back=document.getElementById('materialBack');back.hidden=primary.includes(id);
- back.onclick=()=>switchTab(id==='profile'||id==='settings'?getTabOrder()[0]:['members','manual','qptest','editpast','whoreadtoday'].includes(id)?'admin':'club');
- document.querySelectorAll('nav.tabs button').forEach(button=>{const selected=button.dataset.tab===(primary.includes(id)?id:'club');button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
- const names={club:'Kulüp',quarterly:'Ortak kitap',admin:'Yönetim',worms:'Rozetler',mworms:'Rozetler',gifts:'Hediyeler',recs:'Kitap önerileri'};
+ const libraryScreens=['bookhistory','mybooks','recs'];
+ back.onclick=()=>switchTab(id==='profile'||id==='settings'?getTabOrder()[0]:['members','manual','qptest','editpast','whoreadtoday'].includes(id)?'admin':libraryScreens.includes(id)?'library':'club');
+ document.querySelectorAll('nav.tabs button').forEach(button=>{const selected=button.dataset.tab===(primary.includes(id)?id:libraryScreens.includes(id)?'library':'club');button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
+ const names={club:'Kulüp',library:'Kitaplık',quarterly:'Ortak kitap',admin:'Yönetim',worms:'Rozetler',mworms:'Rozetler',gifts:'Hediyeler',recs:'Kitap önerileri'};
  if(names[id])document.getElementById('currentTabTitle').textContent=names[id];
  if(id==='today'||id==='msurvey')document.getElementById('currentTabTitle').textContent='BookHook';
  if(id==='settings')materialThemeSync();

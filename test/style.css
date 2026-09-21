@@ -175,3 +175,24 @@ textarea{resize:vertical;min-height:100px;line-height:1.6}input[type=checkbox]{a
 .card-add-btn.open::after{content:'Kapat'!important}
 #tab-worms>.card:first-child>h2,#tab-mworms>.card:first-child>h2{font-size:15px;color:var(--ink-70)}
 .book-average{font-size:22px;font-weight:650;color:var(--gold);margin:12px 0}.book-average small{display:block;font-size:12px;font-weight:400;color:var(--ink-70)}
+/* Missed details from the CSS pass: small layout/polish fixes verified against the live markup rather than guessed. */
+.stamp-btns{display:flex;gap:8px}
+.poll-option-text{flex:1;min-width:0}
+.poll-voter-extra{background:var(--ink-70)!important;color:#fff!important;font-size:8px;font-weight:800}
+.join-conversation-plus{font-size:20px;font-weight:400;opacity:.5;flex:0 0 auto}
+.rcount{font-size:11px;color:var(--ink-70);margin-left:2px}
+.pin-icon{flex:0 0 auto;font-size:16px}
+.gift-stats-avatar{margin-bottom:8px}
+.total-pages-clickable{cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.post-vote-score.voted-up{color:#ff4500}.post-vote-score.voted-down{color:#7193ff}
+@keyframes libBtnPulse{0%{transform:scale(1)}40%{transform:scale(.93);opacity:.7}100%{transform:scale(1);opacity:.55}}
+.lib-btn-pulse{animation:libBtnPulse .28s ease-out forwards;pointer-events:none}
+@keyframes slideDownOpen{from{opacity:0;max-height:0}to{opacity:1;max-height:1200px}}
+.slide-down-anim{animation:slideDownOpen .22s var(--ease);overflow:hidden}
+@keyframes reactionBurst{0%{transform:scale(1)}40%{transform:scale(1.6)}100%{transform:scale(1)}}
+.reaction-burst{animation:reactionBurst .28s cubic-bezier(.34,1.56,.64,1)}
+/* New "Kitaplık" hub tab (Keşfet + Kitaplığım + Öneriler merged behind one primary tab) — reuses .club-grid/.destination-row, no new selectors needed beyond this comment marker. */
+.daily-checkin{position:relative;overflow:hidden}
+.daily-illustration{position:absolute;top:14px;right:14px;width:78px;height:78px;pointer-events:none}
+.daily-checkin h2,.daily-checkin .eyebrow{position:relative;max-width:calc(100% - 90px)}
+@media(max-width:420px){.daily-illustration{width:58px;height:58px;top:10px;right:10px}.daily-checkin h2,.daily-checkin .eyebrow{max-width:calc(100% - 68px)}}
