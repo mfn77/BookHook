@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-4" />
+<link rel="stylesheet" href="./style.css?v=material-5" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -1754,6 +1754,14 @@ const HAMBURGER_MEMBER_EXTRA = [
   {id:'settings', label:'Ayarlar', icon:'⚒'},
   {id:'profile', label:'Profilim', icon:'◍'}
 ];
+// Hamburger menüsünde artık sadece kişisel/hesapla ilgili öğeler var — geri kalanı (kurallar,
+// üyeler, geçmiş düzenleme, manuel kura, vs.) zaten Kulüp sekmesinden ulaşılabiliyor, iki kez
+// göstermeye gerek yok. Yukarıdaki iki dizi (HAMBURGER_ADMIN_EXTRA/HAMBURGER_MEMBER_EXTRA) hâlâ
+// switchTab()'daki başlık aramasında kullanıldığı için duruyor, sadece menüde artık gösterilmiyor.
+const HAMBURGER_ITEMS = [
+  {id:'profile', label:'Profilim', icon:'◍'},
+  {id:'settings', label:'Ayarlar', icon:'⚒'}
+];
 
 // Her kartın statik açıklama metnini gizleyip, h2'nin yanına küçük bir "i" bilgi
 // düğmesi ekler; tıklanınca açıklama açılır/kapanır. Dinamik (id'li) durum metinlerine
@@ -1790,7 +1798,7 @@ function setupCardInfoButtons(){
   });
 }
 function buildHamburgerMenu(){
-  const items = myProfile.role==='admin' ? HAMBURGER_ADMIN_EXTRA : HAMBURGER_MEMBER_EXTRA;
+  const items = HAMBURGER_ITEMS;
   const menu = document.getElementById('hamburgerMenu');
   const isDark = document.documentElement.getAttribute('data-theme')==='dark';
   const isAuto = getAutoThemeEnabled();
@@ -1921,6 +1929,15 @@ function switchTab(id){
   if(profileGateActive && id!=='profile'){
     flashRequiredFields();
     showToast('Devam etmek için önce soyad, telefon ve adres bilgilerini doldurup kaydetmen gerekiyor.');
+    return;
+  }
+  if(typeof HUB_PARENT!=='undefined' && HUB_PARENT[id]){
+    const hubId = HUB_PARENT[id];
+    switchTab(hubId);
+    requestAnimationFrame(()=>{
+      const item = document.querySelector(`.hub-item[data-hub-target="${id}"]`);
+      if(item){ materialExpandHubItem(item, id); item.scrollIntoView({behavior:'smooth', block:'start'}); }
+    });
     return;
   }
   const order = getTabOrder();
@@ -9126,7 +9143,7 @@ function materialIcon(kind){
 }
 function materialPrimaryTabs(){
  const admin=myProfile&&myProfile.role==='admin';
- return [{id:admin?'today':'msurvey',label:'Bugün',icon:materialIcon('home')},{id:'social',label:'Akış',icon:materialIcon('feed')},{id:'library',label:'Kitaplık',icon:materialIcon('book')},{id:'club',label:'Kulüp',icon:materialIcon('club')}];
+ return [{id:admin?'today':'msurvey',label:'Bugün',icon:materialIcon('home')},{id:'social',label:'Akış',icon:materialIcon('feed')},{id:'club',label:'Kulüp',icon:materialIcon('club')},{id:'library',label:'Kitaplık',icon:materialIcon('book')}];
 }
 function materialRoute(id){
  if(id==='records') return myProfile.role==='admin'?'week':'mtoday';
@@ -9136,6 +9153,33 @@ function materialRoute(id){
 function materialLink(id,label,description,icon){
  return `<button class="destination-row" data-material-route="${id}"><span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span><span aria-hidden="true">›</span></button>`;
 }
+/* ============ KULÜP/KİTAPLIK HUB'LARI: yerinde büyüyen kartlar (accordion) ============
+   Her hub kartı ayrı bir sayfaya gitmek yerine kendi içinde büyüyor, hedef ekranın <section>'ı
+   (tüm mevcut render fonksiyonları değişmeden) kartın içine taşınıyor. HUB_PARENT, switchTab()'a
+   dışarıdan (geri tuşu, bildirim, "Haftalık kayıtlar" gibi kısayollar) bu id'lerden biriyle
+   gelindiğinde önce doğru hub sekmesine gidip sonra ilgili kartı açması için kullanılıyor. */
+const HUB_PARENT = {};
+function materialHubLink(hubId,targetId,label,description,icon){
+ HUB_PARENT[targetId] = hubId;
+ return `<div class="hub-item" data-hub-target="${targetId}"><button type="button" class="destination-row hub-item-toggle"><span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span><span class="hub-chevron" aria-hidden="true">›</span></button><div class="hub-item-panel"></div></div>`;
+}
+function materialExpandHubItem(item, targetId){
+ const panel = item.querySelector('.hub-item-panel');
+ const section = document.getElementById('tab-'+targetId);
+ if(section){ panel.appendChild(section); section.classList.add('active'); renderTab(targetId); }
+ item.classList.add('expanded');
+}
+function materialCollapseHubItem(item){ item.classList.remove('expanded'); }
+document.body.addEventListener('click', e=>{
+ const toggle = e.target.closest('.hub-item-toggle');
+ if(!toggle) return;
+ const item = toggle.closest('.hub-item');
+ const container = item.parentElement;
+ const wasExpanded = item.classList.contains('expanded');
+ container.querySelectorAll('.hub-item.expanded').forEach(other=>{ if(other!==item) materialCollapseHubItem(other); });
+ if(wasExpanded){ materialCollapseHubItem(item); }
+ else { materialExpandHubItem(item, item.dataset.hubTarget); item.scrollIntoView({behavior:'smooth', block:'start'}); }
+});
 function materialInit(){
  document.querySelectorAll('[data-material-name]').forEach(el=>el.textContent=myProfile.name||'');
  document.querySelectorAll('[data-material-date]').forEach(el=>el.textContent=nowLogical().toLocaleDateString('tr-TR',{day:'numeric',month:'long',weekday:'long'}));
@@ -9159,8 +9203,8 @@ function materialInit(){
  const selectGifts=(view)=>{giftCards.forEach((c,i)=>c.hidden=view===0?i>=2:i<2);document.querySelectorAll('[data-gift-view]').forEach(b=>b.classList.toggle('active',Number(b.dataset.giftView)===view));};
  document.querySelectorAll('[data-gift-view]').forEach(b=>b.onclick=()=>selectGifts(Number(b.dataset.giftView)));selectGifts(0);
  const admin=myProfile.role==='admin';
- document.getElementById('materialClubGrid').innerHTML=[['records','Kayıtlar','Haftalık okuma durumları','records'],['badges','Rozetler','Okuma serilerini kutlayalım','badge'],['gifts','Hediyeler','Kitaplaşan dostluklar','gift'],['rules','Grup kuralları','Birlikte daha iyi bir deneyim','club'],...(admin?[['admin','Yönetim','Kulüp ayarları ve üyeler','settings']]:[])].map(x=>materialLink(...x)).join('');
- document.getElementById('materialLibraryGrid').innerHTML=[['bookhistory','Keşfet','Popüler kitaplar ve öneriler','search'],['mybooks','Kitaplığım','Okuduğun ve okuyacağın kitaplar','book'],['recs','Kitap önerileri','Kulüpten ve senden gelen öneriler','club']].map(x=>materialLink(...x)).join('');
+ document.getElementById('materialClubGrid').innerHTML=[[materialRoute('records'),'Kayıtlar','Haftalık okuma durumları','records'],[materialRoute('badges'),'Rozetler','Okuma serilerini kutlayalım','badge'],['gifts','Hediyeler','Kitaplaşan dostluklar','gift'],['rules','Grup kuralları','Birlikte daha iyi bir deneyim','club'],...(admin?[['admin','Yönetim','Kulüp ayarları ve üyeler','settings']]:[])].map(x=>materialHubLink('club',...x)).join('');
+ document.getElementById('materialLibraryGrid').innerHTML=[['bookhistory','Keşfet','Popüler kitaplar ve öneriler','search'],['mybooks','Kitaplığım','Okuduğun ve okuyacağın kitaplar','book'],['recs','Kitap önerileri','Kulüpten ve senden gelen öneriler','club']].map(x=>materialHubLink('library',...x)).join('');
  document.getElementById('materialAdminLinks').innerHTML=[['members','Üyeler','Rol, katılım tarihi, ban ve silme','club'],['whoreadtoday','Bugün kim okudu','Günlük durumları yönet','records'],['editpast','Geçmiş okumaları düzenle','Gün ve hafta kayıtları','records'],['rules','Kurallar ve öneriler','Kulüp kuralları ve gelen öneriler','book']].map(x=>materialLink(...x)).join('');
  const maintenance=document.getElementById('settingsAdminOnlyWrap');
  if(maintenance) document.getElementById('materialMaintenance').append(maintenance);
