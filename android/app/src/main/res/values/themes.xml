@@ -1,0 +1,8 @@
+<resources>
+    <!-- Compose owns the real theming (see ui/theme/Theme.kt). This is only the
+         system theme used before Compose takes over (launch/window background). -->
+    <style name="Theme.BookHook" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">@android:color/white</item>
+    </style>
+</resources>

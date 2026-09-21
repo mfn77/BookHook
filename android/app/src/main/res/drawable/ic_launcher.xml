@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder launcher icon: gold circle + a bookmark glyph, matching the web app's --gold
+     accent. Swap for a proper adaptive icon (from logo-mark.png) whenever you like — this is
+     just enough to have a working, non-default icon for the MVP. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#2190A4"
+        android:pathData="M12,0.5 C18.35,0.5 23.5,5.65 23.5,12 C23.5,18.35 18.35,23.5 12,23.5 C5.65,23.5 0.5,18.35 0.5,12 C0.5,5.65 5.65,0.5 12,0.5 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M15.5,6.5 H8.5 C7.95,6.5 7.5,6.95 7.5,7.5 V18 L12,15.75 L16.5,18 V7.5 C16.5,6.95 16.05,6.5 15.5,6.5 Z" />
+</vector>
