@@ -9162,6 +9162,43 @@ function materialExpandHubItem(item, targetId){
  const section = document.getElementById('tab-'+targetId);
  if(section){ inner.appendChild(section); section.classList.add('active'); renderTab(targetId); }
  item.classList.add('expanded');
+ watchPanelHeightGrowth(inner);
+}
+// Kart açılırken panel, o anda içeride ne varsa ona göre büyüyor — ama sekmenin verisi
+// Firestore'dan asenkron geliyor, o yüzden tıklama anında panelde genelde sadece küçük bir
+// "Yükleniyor…" yer tutucusu oluyor. Gerçek veri biraz sonra gelip DOM'u değiştirdiğinde
+// grid-template-rows değeri hiç değişmediği için CSS geçişi tekrar tetiklenmiyor ve içerik
+// animasyonsuz aniden tam boyuna zıplıyor. Açılıştan sonraki kısa bir pencerede panelin asıl
+// yüksekliğini izleyip her büyümede ölçülmüş, ayrı bir max-height geçişiyle bunu yumuşatıyoruz.
+function watchPanelHeightGrowth(inner){
+ if(!inner) return;
+ if(inner._growthObserver){ inner._growthObserver.disconnect(); }
+ let active = true;
+ let lastHeight = inner.scrollHeight;
+ const ro = new ResizeObserver(()=>{
+  if(!active) return;
+  const newHeight = inner.scrollHeight;
+  if(newHeight > lastHeight + 4){
+   const from = lastHeight;
+   inner.style.maxHeight = from+'px';
+   inner.style.transition = 'none';
+   void inner.offsetHeight;
+   inner.style.transition = 'max-height .3s var(--ease)';
+   requestAnimationFrame(()=>{ inner.style.maxHeight = newHeight+'px'; });
+   const cleanup = ()=>{ inner.style.maxHeight=''; inner.style.transition=''; inner.removeEventListener('transitionend', cleanup); };
+   inner.addEventListener('transitionend', cleanup);
+  }
+  lastHeight = newHeight;
+ });
+ inner._growthObserver = ro;
+ ro.observe(inner);
+ setTimeout(()=>{
+  active = false;
+  ro.disconnect();
+  if(inner._growthObserver===ro) inner._growthObserver = null;
+  inner.style.maxHeight = '';
+  inner.style.transition = '';
+ }, 2500);
 }
 function materialCollapseHubItem(item){ item.classList.remove('expanded'); }
 document.body.addEventListener('click', e=>{
