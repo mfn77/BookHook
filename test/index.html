@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-3" />
+<link rel="stylesheet" href="./style.css?v=material-4" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -2688,17 +2688,6 @@ function earTagCrestSvg(uid, baseColor){
   <path d="m 63 10 c -11.597656 0 -21 9.402344 -21 21 s 9.402344 21 21 21 s 21 -9.402344 21 -21 s -9.402344 -21 -21 -21 z m 0 7.738281 c 7.324219 0 13.261719 5.9375 13.261719 13.261719 s -5.9375 13.261719 -13.261719 13.261719 s -13.261719 -5.9375 -13.261719 -13.261719 s 5.9375 -13.261719 13.261719 -13.261719 z m 0 0" fill="${light}"/>
 </svg>`;
 }
-const WEEKHIST_HILL_PATHS = {
-  // Okudu: normal seviyede (çok yüksek dolgu) başlar, ortada yumuşakça yükselir, tekrar normale döner.
-  // Kenarlarda yatay teğet olduğu için yan yana aynı türden sütunlar kesintisiz devam ediyormuş gibi birleşir.
-  'wh-read':    'M0,60 L0,16 C25,16 25,6 50,6 C75,6 75,16 100,16 L100,60 Z',
-  // Cezalı okumadı: normal seviyede başlar, ortada yumuşakça alçalır, tekrar normale döner.
-  'wh-penalty': 'M0,60 L0,16 C25,16 25,26 50,26 C75,26 75,16 100,16 L100,60 Z',
-  // Pas hakkı: normal seviyede başlar ve düz devam eder (kavis yok).
-  'wh-pas':     'M0,60 L0,16 L100,16 L100,60 Z',
-  // Henüz üye değil / işaretleme yok: düz, çok ince bir şerit (ikon yok, bu yüzden küçük kalabilir).
-  'wh-empty':   'M0,60 L0,46 L100,46 L100,60 Z'
-};
 function buildWeekHistoryHTML(dates, perDate, joinDs, uid, extraColClass){
   uid = uid || currentUid;
   extraColClass = extraColClass ? ' '+extraColClass : '';
@@ -2717,13 +2706,11 @@ function buildWeekHistoryHTML(dates, perDate, joinDs, uid, extraColClass){
         else { cls='wh-penalty'; icon='✕'; title = rec.auto?'Otomatik okumadı (ceza)':'Okumadı (ceza)'; }
       }
     }
-    const hillPath = WEEKHIST_HILL_PATHS[cls];
     return `
       <div class="weekhist-col${extraColClass} ${cls}" title="${title}">
         <div class="weekhist-daylabel">${dow}<span class="weekhist-date">${dateLbl}</span></div>
         <div class="weekhist-fillwrap">
-          <svg class="weekhist-hill" viewBox="0 0 100 60" preserveAspectRatio="none"><path d="${hillPath}"/></svg>
-          <div class="weekhist-icon">${icon}</div>
+          <div class="weekhist-bar"><span class="weekhist-icon">${icon}</span></div>
         </div>
       </div>`;
   }).join('');
