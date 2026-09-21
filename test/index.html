@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-15" />
+<link rel="stylesheet" href="./style.css?v=material-16" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -563,7 +563,7 @@
         <h2>📚 Ortak Kitap Seçimi</h2>
         <div id="quarterlyPickBody"><span class="muted">Yükleniyor…</span></div>
       </div></section>
-<section class="tab" id="tab-admin"><p class="page-subtitle">Kulübü birlikte daha iyi bir yere taşıyalım.</p><h2>Kulübü yönet</h2><div id="materialAdminLinks" class="settings-list"></div><h2>Deneme alanları</h2><div class="settings-list"><button class="destination-row" data-material-route="manual"><span class="route-icon">⚄</span><span><b>Manuel kura</b><small>Gerçek kayıtlardan bağımsız deneme</small></span><span>›</span></button><button class="destination-row" data-material-route="qptest"><span class="route-icon">▤</span><span><b>Ortak kitap seçimi</b><small>Ayrı deneme alanı</small></span><span>›</span></button></div><details id="materialMaintenance"><summary>Bakım araçları ve kura yönetimi</summary></details></section>
+<section class="tab" id="tab-admin"><h2>Kulübü yönet</h2><div id="materialAdminLinks" class="settings-list"></div><h2>Deneme alanları</h2><div class="settings-list"><button class="destination-row" data-material-route="manual"><span class="route-icon">⚄</span><span><b>Manuel kura</b><small>Gerçek kayıtlardan bağımsız deneme</small></span><span>›</span></button><button class="destination-row" data-material-route="qptest"><span class="route-icon">▤</span><span><b>Ortak kitap seçimi</b><small>Ayrı deneme alanı</small></span><span>›</span></button></div><details id="materialMaintenance"><summary>Bakım araçları ve kura yönetimi</summary></details></section>
       </main>
     </div>
   </div>
@@ -1869,7 +1869,7 @@ function switchTab(id){
     showToast('Devam etmek için önce soyad, telefon ve adres bilgilerini doldurup kaydetmen gerekiyor.');
     return;
   }
-  if(typeof HUB_PARENT!=='undefined' && HUB_PARENT[id]){
+  if(typeof HUB_PARENT!=='undefined' && HUB_PARENT[id] && !(typeof HUB_NO_ACCORDION!=='undefined' && HUB_NO_ACCORDION.has(id))){
     const hubId = HUB_PARENT[id];
     switchTab(hubId);
     requestAnimationFrame(()=>{
@@ -9142,6 +9142,9 @@ function materialLink(id,label,description,icon){
    dışarıdan (geri tuşu, bildirim, "Haftalık kayıtlar" gibi kısayollar) bu id'lerden biriyle
    gelindiğinde önce doğru hub sekmesine gidip sonra ilgili kartı açması için kullanılıyor. */
 const HUB_PARENT = {};
+// Ayarlar sekmesindeki kartlar (Yönetim, Grup kuralları, Uygulama ayarları) accordion yerine eski
+// usül ayrı sayfa + geri okuna gitsin diye bu setle işaretleniyor — bkz. materialHubLink().
+const HUB_NO_ACCORDION = new Set();
 const HUB_ILLUSTRATIONS = {
  records: `<svg class="hub-illustration" viewBox="0 0 100 84" aria-hidden="true"><rect x="60" y="6" width="16" height="14" rx="2" fill="none" stroke="var(--gold)" stroke-width="2"/><line x1="64" y1="4" x2="64" y2="9" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"/><line x1="72" y1="4" x2="72" y2="9" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"/><path d="M64,14 66.5,16.5 72,11" fill="none" stroke="var(--forest)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12,80 12,42 22,42 26,36 44,36 44,42 80,42 80,80 Z" fill="var(--secondary-ink)"/><rect x="28" y="20" width="32" height="40" rx="3" fill="var(--card)"/><circle cx="35" cy="29" r="2.4" fill="var(--secondary-container)"/><rect x="40" y="27.5" width="15" height="3" rx="1.5" fill="var(--line)"/><rect x="34" y="36" width="21" height="3" rx="1.5" fill="var(--line)"/><path d="M34.5,45 36,46.5 39,43" fill="none" stroke="var(--forest)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="40" y="43.5" width="15" height="3" rx="1.5" fill="var(--primary-container)"/></svg>`,
  badge: `<svg class="hub-illustration" viewBox="0 0 100 84" aria-hidden="true"><path d="M32,52 22,80 45,69 68,80 58,52" fill="var(--secondary-ink)"/><circle cx="45" cy="34" r="21" fill="var(--gold)"/><polygon points="45,22 48.5,31 58,31 50.5,36.5 53,46 45,40.5 37,46 39.5,36.5 32,31 41.5,31" fill="var(--card)"/><path d="M80,10 80,16 M80,24 80,30 M72,20 78,20 M82,20 88,20" stroke="var(--forest)" stroke-width="2.2" stroke-linecap="round"/></svg>`,
@@ -9153,8 +9156,9 @@ const HUB_ILLUSTRATIONS = {
  heart: `<svg class="hub-illustration" viewBox="0 0 100 84" aria-hidden="true"><path d="M20,80 20,16 62,16 62,80 41,68 Z" fill="var(--secondary-ink)"/><rect x="28" y="30" width="26" height="3" rx="1.5" fill="var(--line)"/><rect x="28" y="40" width="26" height="3" rx="1.5" fill="var(--line)"/><path d="M76,16 C71,9 60,11 60,20 C60,29 76,39 76,39 C76,39 92,29 92,20 C92,11 81,9 76,16 Z" fill="var(--cloth)"/></svg>`,
  account: `<svg class="hub-illustration" viewBox="0 0 100 84" aria-hidden="true"><rect x="30" y="6" width="34" height="72" rx="8" fill="var(--secondary-ink)"/><rect x="35" y="14" width="24" height="50" rx="2" fill="var(--card)"/><circle cx="47" cy="70" r="3" fill="var(--card)"/><circle cx="80" cy="18" r="10" fill="var(--gold)"/><path d="M76,18 79,21 84,14" fill="none" stroke="var(--on-primary)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="50" r="9" fill="var(--forest)"/><circle cx="16" cy="47" r="3.2" fill="var(--card)"/><path d="M10,57 C10,51.5 22,51.5 22,57" fill="none" stroke="var(--card)" stroke-width="2.2" stroke-linecap="round"/></svg>`,
 };
-function materialHubLink(hubId,targetId,label,description,icon){
+function materialHubLink(hubId,targetId,label,description,icon,noAccordion){
  HUB_PARENT[targetId] = hubId;
+ if(noAccordion) HUB_NO_ACCORDION.add(targetId);
  return `<div class="hub-item" data-hub-target="${targetId}"><button type="button" class="destination-row hub-item-toggle"><div class="hub-item-summary">${HUB_ILLUSTRATIONS[icon]||''}<span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span></div><span class="hub-chevron" aria-hidden="true">›</span></button><div class="hub-item-panel"><div class="hub-item-panel-inner"></div></div></div>`;
 }
 function materialExpandHubItem(item, targetId){
@@ -9205,11 +9209,28 @@ document.body.addEventListener('click', e=>{
  const toggle = e.target.closest('.hub-item-toggle');
  if(!toggle) return;
  const item = toggle.closest('.hub-item');
+ const targetId = item.dataset.hubTarget;
+ if(HUB_NO_ACCORDION.has(targetId)){ switchTab(targetId); return; }
  const container = item.parentElement;
  const wasExpanded = item.classList.contains('expanded');
  container.querySelectorAll('.hub-item.expanded').forEach(other=>{ if(other!==item) materialCollapseHubItem(other); });
  if(wasExpanded){ materialCollapseHubItem(item); }
- else { materialExpandHubItem(item, item.dataset.hubTarget); item.scrollIntoView({behavior:'smooth', block:'start'}); }
+ else { materialExpandHubItem(item, targetId); item.scrollIntoView({behavior:'smooth', block:'start'}); }
+});
+// Genişleyen kartın başlık şeridi tamamen kayboluyor (bkz. .hub-item.expanded .destination-row),
+// o yüzden kapatmak için ayrı bir "boşluğa" ihtiyaç yok: içerik olmayan herhangi bir yere —
+// kartın kendisine, panelin gövdesine veya taşınan <section>'ın doğrudan üstüne — tıklamak
+// yeterli. Gerçek içerik (buton, kart, metin vb.) tıklamaları e.target'ı daha derin bir öğeye
+// taşıdığı için bu eşleşmeye hiç girmiyor.
+document.body.addEventListener('click', e=>{
+ const item = e.target.closest('.hub-item.expanded');
+ if(!item) return;
+ const panel = item.querySelector(':scope>.hub-item-panel');
+ const inner = panel && panel.querySelector(':scope>.hub-item-panel-inner');
+ const section = inner && inner.querySelector(':scope>section.tab');
+ if(e.target===item || e.target===panel || e.target===inner || e.target===section){
+  materialCollapseHubItem(item);
+ }
 });
 function materialInit(){
  document.querySelectorAll('[data-material-name]').forEach(el=>el.textContent=myProfile.name||'');
@@ -9236,7 +9257,7 @@ function materialInit(){
  const admin=myProfile.role==='admin';
  document.getElementById('materialClubGrid').innerHTML=[[materialRoute('records'),'Kayıtlar','Haftalık okuma durumları','records'],[materialRoute('badges'),'Rozetler','Okuma serilerini kutlayalım','badge'],['gifts','Hediyeler','Kitaplaşan dostluklar','gift']].map(x=>materialHubLink('club',...x)).join('');
  document.getElementById('materialLibraryGrid').innerHTML=[['bookhistory','Keşfet','Popüler kitaplar ve öneriler','search'],['mybooks','Kitaplığım','Okuduğun ve okuyacağın kitaplar','book'],['recs','Kitap önerileri','Kulüpten ve senden gelen öneriler','heart']].map(x=>materialHubLink('library',...x)).join('');
- document.getElementById('materialSettingsGrid').innerHTML=[['rules','Grup kuralları','Birlikte daha iyi bir deneyim','rules'],['settings','Uygulama ayarları','Bildirimler, tema, hesap','account'],...(admin?[['admin','Yönetim','Kulüp ayarları ve üyeler','settings']]:[])].map(x=>materialHubLink('appsettings',...x)).join('');
+ document.getElementById('materialSettingsGrid').innerHTML=[['rules','Grup kuralları','Birlikte daha iyi bir deneyim','rules',true],['settings','Uygulama ayarları','Bildirimler, tema, hesap','account',true],...(admin?[['admin','Yönetim','Kulüp ayarları ve üyeler','settings',true]]:[])].map(x=>materialHubLink('appsettings',...x)).join('');
  document.getElementById('materialAdminLinks').innerHTML=[['members','Üyeler','Rol, katılım tarihi, ban ve silme','club'],['whoreadtoday','Bugün kim okudu','Günlük durumları yönet','records'],['editpast','Geçmiş okumaları düzenle','Gün ve hafta kayıtları','records'],['rules','Kurallar ve öneriler','Kulüp kuralları ve gelen öneriler','book']].map(x=>materialLink(...x)).join('');
  const maintenance=document.getElementById('settingsAdminOnlyWrap');
  if(maintenance) document.getElementById('materialMaintenance').append(maintenance);

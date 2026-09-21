@@ -93,7 +93,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.6}input[type=checkbox]{a
 .hub-item{background:var(--secondary-container);border-radius:26px;overflow:hidden;transition:grid-column .01s}
 .hub-item.expanded{grid-column:1/-1}
 .hub-item .destination-row{position:relative;background:transparent;padding:20px;border-radius:0;transition:padding .3s var(--ease)}
-.hub-item.expanded .destination-row{padding-top:14px;padding-bottom:14px}
+.hub-item.expanded .destination-row{padding-top:0;padding-bottom:0;min-height:0}
 .hub-item-summary{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:16px;min-height:124px;max-height:300px;opacity:1;overflow:hidden;transition:max-height .3s var(--ease),opacity .2s var(--ease),min-height .3s var(--ease)}
 .hub-item.expanded .hub-item-summary{min-height:0;max-height:0;opacity:0}
 .hub-item .destination-row .route-icon{width:44px;height:44px;flex-basis:44px;border-radius:50%;background:var(--primary-container)}
@@ -102,8 +102,8 @@ textarea{resize:vertical;min-height:100px;line-height:1.6}input[type=checkbox]{a
 .hub-item .destination-row small{font-size:12px}
 .hub-item .destination-row:has(svg.hub-illustration) small{max-width:calc(100% - 54px)}
 svg.hub-illustration{position:absolute;right:8px;bottom:8px;width:56px;height:48px;pointer-events:none}
-.hub-item .hub-chevron{transition:transform .25s var(--ease)}
-.hub-item.expanded .hub-chevron{transform:rotate(90deg)}
+.hub-item .hub-chevron{transition:transform .25s var(--ease),opacity .2s var(--ease)}
+.hub-item.expanded .hub-chevron{transform:rotate(90deg);opacity:0;pointer-events:none}
 .hub-item-panel{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .38s var(--ease),opacity .25s var(--ease)}
 .hub-item.expanded .hub-item-panel{grid-template-rows:1fr;opacity:1}
 .hub-item-panel-inner{overflow:hidden;min-height:0}
