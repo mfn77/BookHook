@@ -15,32 +15,32 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Pirata+One&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#F2F2F5; --paper-2:#E9E9ED; --card:#FFFFFF;
-    --ink:#1C1C1E; --ink-70:#6B6B70;
+    --paper:#F5F4F1; --paper-2:#EAE8E3; --card:#FFFFFF;
+    --ink:#17181B; --ink-70:#6B6B70;
     --cloth:#E01B24; --cloth-dark:#A51D2D;
     --gold:#2190A4; --gold-dark:#176D7D; --forest:#26A269; --forest-dark:#1B7A4C;
     --rust:#E66100; --rust-dark:#AB4800;
-    --line: rgba(0,0,0,0.09);
-    --card-bg: 255,255,255; --paper-bg: 242,242,245;
-    --sidebar-tint: 11,42,29;
-    --shadow: 0 1px 2px rgba(0,0,0,.10), 0 1px 4px rgba(0,0,0,.08);
-    --shadow-lg: 0 2px 6px rgba(0,0,0,.14), 0 6px 18px rgba(0,0,0,.10);
+    --line: rgba(0,0,0,0.10);
+    --card-bg: 255,255,255; --paper-bg: 245,244,241;
+    --sidebar-tint: 23,23,26;
+    --shadow: 0 1px 2px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.04);
+    --shadow-lg: 0 4px 10px rgba(0,0,0,.07), 0 14px 30px rgba(0,0,0,.07);
     --ease: cubic-bezier(.4,0,.2,1);
-    --radius-lg: 20px;
-    --radius-md: 14px;
+    --radius-lg: 16px;
+    --radius-md: 10px;
     color-scheme: light;
   }
   html[data-theme="dark"]{
-    --paper:#1E1E1E; --paper-2:#2A2A2D; --card:#363636;
+    --paper:#18181A; --paper-2:#222225; --card:#29292C;
     --ink:#F6F5F4; --ink-70:#9A9996;
     --cloth:#FF8C82; --cloth-dark:#FFB4A8;
     --gold:#4FD2E8; --gold-dark:#7EE0EF; --forest:#57E389; --forest-dark:#8FF0B5;
     --rust:#FFA348; --rust-dark:#FFC28A;
     --line: rgba(255,255,255,0.10);
-    --card-bg: 54,54,54; --paper-bg: 30,30,30;
-    --sidebar-tint: 10,38,27;
-    --shadow: 0 1px 2px rgba(0,0,0,.45), 0 1px 4px rgba(0,0,0,.35);
-    --shadow-lg: 0 2px 6px rgba(0,0,0,.5), 0 6px 18px rgba(0,0,0,.4);
+    --card-bg: 41,41,44; --paper-bg: 24,24,26;
+    --sidebar-tint: 10,10,12;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,.45), 0 14px 30px rgba(0,0,0,.35);
     color-scheme: dark;
   }
   html, body{ transition: background-color .25s var(--ease); }
@@ -55,21 +55,15 @@
   #bgLayer{
     position:fixed; inset:0; z-index:-1;
     background:
-      radial-gradient(circle at 12% 6%, rgba(33,144,164,0.16), transparent 42%),
-      radial-gradient(circle at 88% 12%, rgba(214,144,224,0.14), transparent 46%),
-      radial-gradient(circle at 25% 95%, rgba(38,162,105,0.14), transparent 46%),
-      radial-gradient(circle at 95% 90%, rgba(230,97,0,0.10), transparent 40%),
+      radial-gradient(circle at 14% 0%, rgba(33,144,164,0.07), transparent 46%),
       var(--paper);
   }
   html[data-theme="dark"] #bgLayer{
     background:
-      radial-gradient(circle at 12% 6%, rgba(79,210,232,0.14), transparent 42%),
-      radial-gradient(circle at 88% 12%, rgba(214,144,224,0.12), transparent 46%),
-      radial-gradient(circle at 25% 95%, rgba(87,227,137,0.12), transparent 46%),
-      radial-gradient(circle at 95% 90%, rgba(255,163,72,0.10), transparent 40%),
+      radial-gradient(circle at 14% 0%, rgba(79,210,232,0.06), transparent 46%),
       var(--paper);
   }
-  h1,h2,h3,.display{font-family:'Inter', Arial, sans-serif; font-weight:700;}
+  h1,h2,h3,.display{font-family:'Inter', Arial, sans-serif; font-weight:800; letter-spacing:-0.02em;}
   .mono{font-family:'Roboto Mono', monospace;}
   button, input, select, textarea{ font-family:'Inter', Arial, sans-serif; }
   button{ transition: transform .12s var(--ease), background-color .15s var(--ease), box-shadow .15s var(--ease), border-color .15s var(--ease); }
@@ -80,7 +74,7 @@
   .sidebar{
     position:fixed; top:0; left:0; height:100vh; height:100dvh; overflow-y:auto;
     width:78px; flex:0 0 auto; display:flex; flex-direction:column; align-items:center;
-    background:rgba(var(--sidebar-tint),0.68); backdrop-filter:blur(20px) saturate(1.4); -webkit-backdrop-filter:blur(20px) saturate(1.4);
+    background:rgba(var(--sidebar-tint),0.82); backdrop-filter:blur(20px) saturate(1.1); -webkit-backdrop-filter:blur(20px) saturate(1.1);
     border-right:1px solid var(--line);
     padding:env(safe-area-inset-top, 0px) 0 16px; z-index:20;
     transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
@@ -140,11 +134,11 @@
     display:flex; justify-content:flex-start; align-items:center; gap:10px;
     position:sticky; top:0; z-index:9;
   }
-  .header-title-area{ font-family:'Inter',sans-serif; font-weight:700; font-size:28px; color:var(--ink); flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .header-title-area{ font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-0.02em; font-size:30px; color:var(--ink); flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .whoami{ display:flex; align-items:center; gap:7px; font-family:'Inter', sans-serif; font-size:12px; color:var(--ink-70); flex:0 0 auto; min-width:0; position:relative; font-weight:600; text-align:left; margin-left:auto; }
   .header-pill{
     display:inline-flex; align-items:center; gap:6px; height:38px; padding:0 14px;
-    background:var(--paper-2); border:1px solid var(--line); border-radius:16px;
+    background:var(--paper-2); border:1px solid var(--line); border-radius:12px;
     color:var(--ink); font-weight:600; font-size:13px; cursor:default; min-width:0;
   }
   .header-pill.icon-pill{ padding:0; width:46px; flex:0 0 auto; justify-content:center; font-size:16px; cursor:pointer; position:relative; }
@@ -330,11 +324,11 @@
   section.tab.anim-from-left{ animation: slideFromLeft .32s var(--ease); }
   section.tab.anim-fade{ animation: fadeInUp .28s var(--ease); }
   .card{
-    background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3);
+    background:var(--card);
     border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow);
     padding:20px; margin-bottom:14px; animation: fadeInUp .3s var(--ease);
   }
-  .card h2{margin:0 0 12px; font-size:16px; font-weight:700; color:var(--ink);}
+  .card h2{margin:0 0 12px; font-size:15px; font-weight:800; letter-spacing:-0.01em; color:var(--ink);}
   .muted{color:var(--ink-70); font-size:13px; line-height:1.55;}
   .member-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line); gap:10px; flex-wrap:wrap; min-width:0; max-width:100%;}
   .member-row:last-child{border-bottom:none;}
@@ -634,7 +628,7 @@
   .discover-filters-toggle-icon{ display:inline-flex; align-items:center; justify-content:center; transition:transform .3s var(--ease); }
   .discover-filters-toggle.expanded .discover-filters-toggle-icon{ transform:rotate(180deg); }
   .discover-filter-chip{
-    border:1.5px solid var(--line); background:rgba(var(--card-bg),0.62); backdrop-filter:blur(28px) saturate(1.3); -webkit-backdrop-filter:blur(28px) saturate(1.3); color:var(--ink); font-family:'Inter',sans-serif;
+    border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-family:'Inter',sans-serif;
     font-weight:600; font-size:13px; padding:7px 14px; border-radius:8px; cursor:pointer; transition:background .15s, color .15s, border-color .15s;
   }
   .discover-filter-chip.active{ background:var(--gold); border-color:var(--gold); color:#fff; }
@@ -669,15 +663,15 @@
   .user-chip{cursor:pointer; border-radius:8px; padding:1px 4px; margin:-1px -4px;}
   .user-chip:hover{background:rgba(33,144,164,0.12);}
   button.primary{
-    font-family:'Inter', sans-serif; font-weight:700; font-size:14px; background:var(--gold); color:#fff;
-    border:none; border-radius:10px; padding:11px 20px; cursor:pointer; box-shadow:none;
+    font-family:'Inter', sans-serif; font-weight:800; letter-spacing:-0.01em; font-size:14px; background:var(--gold); color:#fff;
+    border:none; border-radius:9px; padding:11px 20px; cursor:pointer; box-shadow:none;
   }
   button.primary:hover:not(:disabled){box-shadow:var(--shadow);}
   button.primary:active{transform:scale(0.97);}
   button.primary:disabled{opacity:0.4; cursor:default;}
   button.secondary{
     font-family:'Inter', sans-serif; font-weight:700; font-size:13.5px; background:rgba(33,144,164,0.08); color:var(--gold);
-    border:1.5px solid var(--gold); border-radius:10px; padding:9px 16px; cursor:pointer;
+    border:1.5px solid var(--gold); border-radius:9px; padding:9px 16px; cursor:pointer;
   }
   button.secondary:hover:not(:disabled){background:rgba(33,144,164,0.14);}
   button.tiny{font-size:11.5px; padding:6px 12px; border-radius:8px;}
@@ -685,7 +679,7 @@
   .lib-btn-pulse{ animation: libBtnPulse 0.28s ease-out forwards; pointer-events:none; }
   input[type=text], input[type=email], input[type=password], input[type=date]{
     font-family:'Inter', sans-serif; font-size:15px; padding:10px 12px; border:1.5px solid var(--line);
-    border-radius:12px; width:100%; background:rgba(var(--card-bg),0.6); color:var(--ink);
+    border-radius:10px; width:100%; background:var(--card); color:var(--ink);
   }
   input:focus, select:focus, textarea:focus{
     outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(33,144,164,0.16);
@@ -819,7 +813,7 @@
   .banned-notice{background:rgba(224,27,36,0.08); border:none; border-left:4px solid var(--cloth); color:var(--cloth-dark); padding:12px 14px; border-radius:10px; font-size:13.5px; margin-bottom:14px;}
   .center-logo{text-align:center; margin-bottom:22px;}
   .center-logo-mark img{ width:auto; height:72px; display:block; margin:0 auto; }
-  .center-logo-word{ font-family:'Inter', sans-serif; font-weight:700; font-size:24px; color:var(--ink); margin-top:6px; letter-spacing:0.2px; }
+  .center-logo-word{ font-family:'Inter', sans-serif; font-weight:800; font-size:26px; color:var(--ink); margin-top:8px; letter-spacing:-0.02em; }
   .loading-note{text-align:center; padding:40px; color:var(--ink-70); font-family:'Inter', sans-serif; font-size:13px;}
   /* ============ DAR EKRANLARDA: SOL SEKME MENÜSÜ ALTA GEÇER (yatay tab çubuğu) ============ */
   @media (max-width:700px){
