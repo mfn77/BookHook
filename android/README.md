@@ -24,9 +24,36 @@ is entirely up to you from here — nothing about it is tied to the web app's de
 This session has no Android SDK, and the sandbox's network policy blocks `dl.google.com` (where
 the SDK components live), so `gradle build` can't succeed in this environment — I verified that
 directly rather than guessing. I wrote every file by hand against APIs I'm confident about, but
-**you are the first real compiler this code will see.** Open it in Android Studio and let it sync;
-if anything doesn't compile, tell me the error and I'll fix it — that's a normal, expected step,
-not a sign something is fundamentally wrong.
+**you are the first real compiler this code will see.** GitHub Actions (see below) doesn't have
+that network restriction, so it's actually the more reliable place for the first build — but if
+you use Android Studio instead and it doesn't compile, tell me the error and I'll fix it, that's
+a normal, expected step, not a sign something is fundamentally wrong.
+
+## Getting an APK without installing Android Studio (GitHub Actions)
+
+`.github/workflows/android-release.yml` builds the app on GitHub's own runners (real Android SDK,
+unrestricted network) and hands you back an installable APK — no local setup needed beyond the
+one-time secret below.
+
+1. Do step 1 of **One-time setup** below (register the Android app in Firebase Console, download
+   `google-services.json`) — you need that file's contents regardless of where the build runs.
+2. Base64-encode it and add it as a repository secret named `ANDROID_GOOGLE_SERVICES_JSON`:
+   - GitHub → this repo → **Settings → Secrets and variables → Actions → New repository secret**.
+   - Value: the output of `base64 -i google-services.json` (macOS/Linux) or
+     `certutil -encode google-services.json tmp.b64` (Windows) — the *encoded* text, not the raw
+     JSON.
+3. GitHub → **Actions** tab → **Android APK release** → **Run workflow** (uses the `android-app`
+   branch, or whichever branch you run it from). A few minutes later, the run's **Artifacts**
+   section has `bookhook-debug-apk` — download, unzip, install on a device (you'll need to allow
+   "install unknown apps" for whatever app you transfer it with, since this isn't a Play Store
+   build).
+4. To also get it as a proper **GitHub Release** (a permanent downloadable link, with release
+   notes), push a tag instead: `git tag android-v0.1.0 && git push origin android-v0.1.0`.
+
+This builds a **debug APK** — installable and fully functional, but signed with a generic debug
+key rather than a real release key. That's fine for trying it out; a Play Store submission would
+need a proper release-signing setup (a private keystore kept as a secret, never committed) as a
+separate step later.
 
 ## One-time setup
 
