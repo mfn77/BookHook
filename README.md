@@ -52,7 +52,7 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 
 ## Tech Stack
 
-- **Frontend**: A single-file vanilla HTML/CSS/JavaScript application (`index.html`), with no build step or framework dependency.
+- **Frontend**: A vanilla HTML/CSS/JavaScript application (`index.html` + `style.css`), with no build step or framework dependency.
 - **Backend**: [Firebase](https://firebase.google.com/) - Authentication, Firestore, and Cloud Functions (2nd gen) for push notifications and scheduled reminders.
 - **Hosting**: Static hosting on GitHub Pages, with a service worker (`sw.js`) handling caching and background push delivery.
 - **External data**: [Open Library API](https://openlibrary.org/developers/api) as the primary book data source, with the [Google Books API](https://developers.google.com/books) as a fallback.
@@ -61,7 +61,8 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 
 ```
 .
-├── index.html               Application source (HTML, CSS, and JavaScript)
+├── index.html               Application source (HTML and JavaScript)
+├── style.css                Application styles (design tokens, components, layout)
 ├── sw.js                    Service worker: asset caching and background push notifications
 ├── manifest.json            PWA manifest (name, icons, theme color)
 ├── icon-512.png             App icon (home screen / favicon)

@@ -1,5 +1,5 @@
-const CACHE = "kitap-kulubu-v4";
-const ASSETS = ["./manifest.json", "./icon-192.png", "./icon-512.png", "./favicon.png", "./apple-touch-icon.png"];
+const CACHE = "kitap-kulubu-v5";
+const ASSETS = ["./manifest.json", "./style.css", "./icon-192.png", "./icon-512.png", "./favicon.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
