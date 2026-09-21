@@ -3192,7 +3192,10 @@ async function renderWormsShared(containerId, historyContainerId){
   } else {
     const own = results.find(r=>r.uid===currentUid);
     const streak = own ? own.streak : 0;
-    list.innerHTML = `<div class="material-streak-hero"><div class="material-medal">${streak}</div><h2>${streak} gündür aralıksız</h2><p class="muted">Her gün birkaç sayfa, yeni bir alışkanlık.</p><div class="milestones">${BADGE_DEFS.map(d=>`<div class="milestone ${streak>=d.days?'earned':''}"><span>${d.days}</span><small>${d.days} gün</small></div>`).join('')}</div></div><h3>Kulübün okuma serileri</h3><div class="streak-list">${results.map(r=>`<div class="member-row">${userChipHtml(r.uid,36)}<b>${r.streak} gün</b></div>`).join('')}</div>`;
+    list.innerHTML = `<div class="material-streak-hero"><div class="material-medal">${streak}</div><h2>${streak} gündür aralıksız</h2><p class="muted">Her gün birkaç sayfa, yeni bir alışkanlık.</p><div class="milestones">${BADGE_DEFS.map(d=>`<div class="milestone ${streak>=d.days?'earned':''}"><span>${d.days}</span><small>${d.days} gün</small></div>`).join('')}</div></div><h3>Kulübün okuma serileri</h3><div class="streak-grid">${results.map(r=>{
+      const u = usersCache[r.uid] || {};
+      return `<div class="streak-card ${r.uid===currentUid?'mine':''}">${avatarHtmlFromProfile(u,52)}<b>${escapeHtml(u.name||'?')}</b><span class="streak-card-days">${r.streak} gün</span></div>`;
+    }).join('')}</div>`;
   }
   markLoaded(list);
 
@@ -3718,7 +3721,7 @@ function renderGiftStatsList(){
   const uids = Object.keys(stats).filter(uid=>usersCache[uid]);
   uids.sort((a,b)=> stats[b].received - stats[a].received);
   if(uids.length===0){ box.innerHTML = `<p class="muted">Henüz hiç hediye verilmemiş.</p>`; markLoaded(box); return; }
-  const receivedColor = '#2f9e6e', givenColor = '#c2564f';
+  const receivedColor = '#2f9e6e', givenColor = '#8073ad';
   const coin = (icon, color, count, title)=>{
     if(count>0){
       return `<div class="gift-stats-num" style="background:linear-gradient(145deg, ${shadeHexColor(color,-0.15)} 0%, ${shadeHexColor(color,-0.55)} 100%);" title="${title}: ${count}"><span class="gift-stats-num-text">${count}</span></div>`;
