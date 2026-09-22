@@ -2007,34 +2007,12 @@ function switchTab(id){
     if(bookIcon && bookIcon.parentNode) bookIcon.parentNode.removeChild(bookIcon);
     bookIcon = null;
   }
-  // Sayfayı kaydırma sırasında kilitlemek için document.documentElement/body'yi overflow:hidden
-  // yapmak yerine (bu, Android Chrome'da adres çubuğunun dinamik gizlenme/gösterilme animasyonuyla
-  // çakışıp alt sekme çubuğunun geçiş boyunca ekrandan kaybolmasına — konumunun bozulmasına — sebep
-  // oluyordu, gerçek cihaz kaydından doğrulandı) body'yi olduğu kaydırma konumunda "dondurarak"
-  // (position:fixed + negatif top) kilitliyoruz. Bu teknik tarayıcı araç çubuğu davranışıyla hiç
-  // etkileşime girmiyor, mobil web'de kaydırma kilidi için yaygın kullanılan güvenli yöntem.
-  let scrollLockY = 0;
-  let isScrollLocked = false;
-  function lockPageScroll(){
-    if(isScrollLocked) return;
-    scrollLockY = window.scrollY || document.documentElement.scrollTop || 0;
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollLockY}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
-    document.body.style.width = '100%';
-    isScrollLocked = true;
-  }
-  function unlockPageScroll(){
-    if(!isScrollLocked) return;
-    document.body.style.position = '';
-    document.body.style.top = '';
-    document.body.style.left = '';
-    document.body.style.right = '';
-    document.body.style.width = '';
-    window.scrollTo(0, scrollLockY);
-    isScrollLocked = false;
-  }
+  // Sayfayı kaydırma sırasında kilitlemek için önceden document.documentElement/body'yi
+  // overflow:hidden ya da position:fixed ile "dondurmayı" denedik — ikisi de Android Chrome'da
+  // adres çubuğunun dinamik gizlenme/gösterilme animasyonuyla çakışıp parmağın kalktığı anda tüm
+  // sayfanın bir kare boyunca beyaz/boş görünmesine sebep oluyordu (gerçek cihaz kaydından
+  // doğrulandı). Bu kilitleme kavramının kendisi sorunluydu; şimdi yalnızca touchmove'daki
+  // e.preventDefault() ile native kaydırmayı bastırıyoruz, body'ye hiç dokunmuyoruz.
   function stopWatchdog(){
     if(watchdogInterval){ clearInterval(watchdogInterval); watchdogInterval=null; }
   }
@@ -2046,7 +2024,6 @@ function switchTab(id){
         // güvenli şekilde, sekme değiştirmeden, olduğu yere geri dönerek sıfırlıyoruz.
         dragging = false;
         touchStartX = null;
-        unlockPageScroll();
         contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
         contentCol.style.transform = 'translateX(0)';
         settlePreview(0);
@@ -2065,7 +2042,6 @@ function switchTab(id){
     // yeni jestin her zaman temiz bir konumdan başlaması için burada kesin olarak sıfırlıyoruz.
     contentCol.style.transition = 'none';
     contentCol.style.transform = 'translateX(0)';
-    unlockPageScroll();
     if(e.touches.length!==1){ touchStartX=null; return; }
     const t = e.target;
     // Kart içi sekmesi olan bir alanda (ör. genişlemiş "Kayıtlar"/"Kitaplığım" kartındaki
@@ -2103,10 +2079,6 @@ function switchTab(id){
       dragging = true;
       contentCol.style.transition = 'none';
       startPreview();
-      // Dokunuş olaylarının zamanlamasıyla uğraşmak yerine, sayfayı burada doğrudan ve kesin
-      // olarak kaydırılamaz hale getiriyoruz — bu, tarayıcının erken scroll kararı verip
-      // vermediğinden bağımsız, garantili bir kilit.
-      lockPageScroll();
       startWatchdog();
     }
     if(dragging && e.cancelable) e.preventDefault();
@@ -2127,7 +2099,6 @@ function switchTab(id){
     touchStartX = null;
     if(!dragging){ return; }
     dragging = false;
-    unlockPageScroll();
     stopWatchdog();
     const order = getTabOrder();
     const idx = order.indexOf(activeTab);
@@ -2186,7 +2157,6 @@ function switchTab(id){
     touchStartX = null;
     if(!dragging) return;
     dragging = false;
-    unlockPageScroll();
     stopWatchdog();
     if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
     contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
