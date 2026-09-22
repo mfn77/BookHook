@@ -60,7 +60,7 @@ section.tab{display:none}section.tab.active{display:block;animation:screen-in .2
 .tab-icon{display:flex;align-items:center;justify-content:center;width:62px;height:32px;border-radius:999px;transition:background .2s}
 .tab-icon svg{width:24px;height:24px}.sidebar-tabs button.active{color:var(--gold-dark);font-weight:700}.sidebar-tabs button.active .tab-icon{background:var(--primary-container)}
 #sidebarCollapseBtn,#sidebarExpandFab{display:none!important}
-header.top{position:sticky;top:0;z-index:75;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:76px;max-width:840px;margin:0 auto;padding:14px 28px;background:var(--paper)}
+header.top{position:sticky;top:0;z-index:75;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:76px;max-width:840px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top,0px)) 28px 14px;background:var(--paper)}
 .header-title-area{display:flex;align-items:center;gap:12px;min-width:0;font-size:27px;font-weight:650;letter-spacing:-.7px}
 #currentTabTitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #currentTabTitle.title-animating{position:relative;display:inline-block;height:1.25em;vertical-align:top;overflow:hidden}
@@ -215,7 +215,7 @@ svg.hub-illustration{position:absolute;right:8px;bottom:8px;width:56px;height:48
 @media(min-width:1100px){main{padding-top:26px}.daily-tab h1{font-size:42px}.daily-stats{gap:18px}.club-grid{grid-template-columns:repeat(3,1fr)}.hub-item.expanded{grid-column:1/-1}}
 @media(max-width:700px){
  :root{--rail:0px}body{font-size:14px}.content-col{margin-left:0!important;padding-bottom:calc(var(--nav-height) + env(safe-area-inset-bottom,0px))}
- header.top{min-height:70px;padding:12px 20px}.header-title-area{font-size:27px;gap:6px}.header-pill{width:38px;height:42px}.whoami{gap:2px}
+ header.top{min-height:70px;padding:calc(12px + env(safe-area-inset-top,0px)) 20px 12px}.header-title-area{font-size:27px;gap:6px}.header-pill{width:38px;height:42px}.whoami{gap:2px}
  main{padding:12px 20px 40px}h1{font-size:31px;margin-bottom:22px}h2{font-size:19px}
  .sidebar{inset:auto 0 0;width:100%;height:calc(var(--nav-height) + env(safe-area-inset-bottom,0px));padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));background:var(--paper);border-top:1px solid var(--line);z-index:100}.sidebar-header{display:none}.sidebar-tabs{flex-direction:row;gap:0;height:100%;justify-content:space-around}.sidebar-tabs button{flex:1;min-width:0;min-height:60px;font-size:11px;gap:4px}.tab-icon{width:58px;height:32px}.tab-icon svg{width:23px;height:23px}
  .card{padding:20px;border-radius:24px;margin-bottom:16px}.daily-greeting{margin-bottom:20px;font-size:13px}.daily-checkin{padding:20px}.daily-checkin h2{font-size:23px}.daily-stats{gap:12px}.stat-card{padding:17px;min-height:128px}.stat-icon{right:14px;top:16px;font-size:22px}.stat-card strong,.streak-stat{font-size:26px}.daily-book{gap:16px}.daily-book>img,.daily-book-placeholder{width:84px;height:128px;flex-basis:84px}.daily-book h3{font-size:17px}.daily-book .primary{font-size:12px;min-height:42px;padding:10px 16px}
