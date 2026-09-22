@@ -40,10 +40,19 @@ h2{font-size:20px;line-height:1.3;font-weight:600;margin-bottom:16px;letter-spac
 p{margin-bottom:14px}small{font-size:12px}.muted,.page-subtitle{color:var(--ink-70);line-height:1.55;font-size:13px}.page-subtitle{font-size:15px;margin-top:-9px;margin-bottom:24px}
 .mono{font-family:inherit!important}.mono-icon{line-height:1}.svg-icon{width:22px;height:22px}
 #bgLayer{position:fixed;inset:0;background:var(--paper);z-index:-1}
-.app-shell{min-height:100dvh}.content-col{margin-left:var(--rail);min-width:0;touch-action:pan-y}
-main{width:100%;max-width:840px;margin:auto;padding:16px 28px 112px;position:relative}
+.app-shell{min-height:100dvh}.content-col{margin-left:var(--rail);min-width:0;touch-action:pan-y;perspective:1200px}
+main{width:100%;max-width:840px;margin:auto;padding:16px 28px 112px;position:relative;transform-style:preserve-3d}
 section.tab{display:none}section.tab.active{display:block;animation:screen-in .2s var(--ease)}
 @keyframes screen-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+/* Sekmeler arası kaydırma artık düz bir kayma yerine kitap sayfası gibi menteşeden açılıp
+   kapanan bir "katlama" (fold) hissi veriyor — deneme amaçlı, sadece test/'te. Kapanış
+   (parmakla sürüklerken ve bırakınca uçuş) setupSwipeNav() içinde main'in transform'una
+   canlı olarak uygulanıyor; açılış burada, yeni aktif olan section'a doğrudan CSS animasyonuyla.
+   direction='right' (ileri) / 'left' (geri) switchTab()'ta zaten hesaplanıyordu. */
+@keyframes foldInRight{from{transform:rotateY(-62deg);opacity:.35}to{transform:rotateY(0deg);opacity:1}}
+@keyframes foldInLeft{from{transform:rotateY(62deg);opacity:.35}to{transform:rotateY(0deg);opacity:1}}
+section.tab.active.anim-from-right{transform-origin:left center;animation:foldInRight .32s cubic-bezier(.22,.9,.32,1)}
+section.tab.active.anim-from-left{transform-origin:right center;animation:foldInLeft .32s cubic-bezier(.22,.9,.32,1)}
 .sidebar{position:fixed;inset:0 auto 0 0;width:var(--rail);background:var(--paper-2);display:flex;flex-direction:column;align-items:center;padding:20px 6px;z-index:80}
 .sidebar-header{margin-bottom:24px}.brand-button{width:56px;height:56px;border-radius:20px;background:var(--primary-container);color:var(--gold)}.brand-button svg{width:30px;height:30px}
 .sidebar-tabs{display:flex;flex-direction:column;width:100%;gap:10px}

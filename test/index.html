@@ -2094,7 +2094,12 @@ function switchTab(id){
     lastMoveX = touch.clientX;
     lastMoveTime = e.timeStamp;
     lastMoveWallTime = Date.now();
-    contentCol.style.transform = `translateX(${dx}px)`;
+    // Katlama (fold) hissi: sürüklerken parmağı takip etmeye devam ediyor (translateX), ama
+    // buna ek olarak hafif bir rotateY ile sanki sayfa menteşeden açılıyormuş gibi bir devrilme
+    // veriyoruz — bırakınca (touchend) bu dönüş belirginleşip tam bir "kapanış" oluyor.
+    const dragRot = Math.max(-1, Math.min(1, dx / containerWidth)) * 13;
+    contentCol.style.transformOrigin = dx < 0 ? 'right center' : 'left center';
+    contentCol.style.transform = `translateX(${dx}px) rotateY(${dragRot}deg)`;
     updatePreview(dx);
   }, {passive:false});
 
@@ -2123,7 +2128,8 @@ function switchTab(id){
     if(flipPage) flipPage.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
     if(shouldComplete){
       const flyDist = goingNext ? -containerWidth : containerWidth;
-      contentCol.style.transform = `translateX(${flyDist}px)`;
+      contentCol.style.transformOrigin = goingNext ? 'right center' : 'left center';
+      contentCol.style.transform = `translateX(${flyDist}px) rotateY(${goingNext?-58:58}deg)`;
       settlePreview(goingNext ? -1 : 1);
       if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
       // Alt sekme çubuğunun hangi sekmenin aktif olduğu, parmağın kalktığı an belli olur — bunu
