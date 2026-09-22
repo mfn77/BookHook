@@ -722,6 +722,47 @@ Bu listelerin hiçbirinde OLMAYAN, gerçekten var olan, BİRBİRİNDEN FARKLI ${
   return result;
 });
 
+// Bir öneri kartına tıklayınca, o TEK kitap için spoiler vermeden ikna edici bir metin
+// hazırlıyor. Önbelleğe alınmıyor (sadece kullanıcı tıkladığında, isteğe bağlı çağrılıyor,
+// maliyeti zaten kullanıcının etkileşimiyle sınırlı) — istemci tarafında oturum içi basit bir
+// önbellekle aynı kitaba tekrar tıklanırsa yeniden istenmiyor.
+exports.getBookPitch = onCall({ secrets: [anthropicApiKey] }, async (request) => {
+  const uid = request.auth && request.auth.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Giriş yapmış olmalısın.");
+
+  const title = request.data && String(request.data.title || "").trim().slice(0, 200);
+  const author = request.data && String(request.data.author || "").trim().slice(0, 200);
+  if (!title) throw new HttpsError("invalid-argument", "Kitap adı gerekli.");
+
+  const prompt = `"${title}"${author ? ` (${author})` : ""} adlı kitabı henüz okumamış birine, bu kitabı NEDEN okuması gerektiğini anlatan, ikna edici ve sıcak bir metin yaz.
+KESİNLİKLE hikayeyi, olay örgüsünü, karakterlerin başına geleni veya sonunu anlatma — spoiler verme. Sadece atmosferi, temayı, yazarın üslubunu, kitabın neden değerli veya keyifli olduğunu anlat.
+Türkçe, 3-4 cümle, doğrudan okuyucuya hitap eden samimi bir ton kullan. Sadece bu metni yaz, başlık ya da başka hiçbir açıklama ekleme.`;
+
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": anthropicApiKey.value(),
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 300,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => "");
+    console.error("[getBookPitch] Anthropic API hatası:", resp.status, errText);
+    throw new HttpsError("internal", "Metin alınamadı, biraz sonra tekrar dene.");
+  }
+  const data = await resp.json();
+  const text = ((data.content && data.content[0] && data.content[0].text) || "").trim();
+  if (!text) throw new HttpsError("internal", "Metin boş geldi.");
+  return { text: text.slice(0, 1000) };
+});
+
 /* ============================================================================
    3 AYLIK ORTAK KİTAP SEÇİMİ (turnuva usulü oylama)
    Tüm faz geçişleri (öneri → itiraz → oylama turları → okuma → yeniden başlama) burada,
