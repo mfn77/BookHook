@@ -1913,94 +1913,86 @@ function switchTab(id){
   renderTab(id);
 }
 
-/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) — parmakla birlikte anlık kayar, boşta kalan
-   tarafta kenardan belirip kısa sürede ortalanan ve orada sabit kalan bir kitap simgesi
-   gösterir, animasyon sürerken dikey kaydırmayı kilitler, iOS/Android'deki gibi mesafe + hız
-   kombinasyonuyla karar verir ============ */
+/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) — parmakla birlikte anlık kayar, hedef sekme
+   kenardan GERÇEK içeriğiyle (kart içi sekme karuseli gibi) girer. Komşu sekmenin DOM'da zaten
+   var olan (önceden ziyaret edildiyse dolu, edilmediyse henüz boş) bölümü gösterilir —
+   renderTab() jest sırasında ASLA ikinci kez çağrılmaz, bu yüzden çift Firestore dinleyicisi ya
+   da ekstra sorgu maliyeti oluşmaz; gerçek veri tazeleme her zaman olduğu gibi jest tamamlanıp
+   switchTab() çalıştığında olur. Animasyon sürerken dikey kaydırmayı kilitler, iOS/Android'deki
+   gibi mesafe + hız kombinasyonuyla karar verir ============ */
 (function setupSwipeNav(){
-  let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, contentLeft=0, pendingSettleTimeout=null;
-  let lastMoveX=0, lastMoveTime=0, lastMoveWallTime=0, velocity=0, bookIcon=null, watchdogInterval=null;
-  // Sadece <main> (asıl sayfa içeriği) kayar — header (başlık/profil/bildirim/ayar) ve alt sekme
-  // çubuğu .content-col'un dışında/sabit kaldığı için hiç dokunulmuyor, kaymıyor, kaybolmuyor.
+  let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, pendingSettleTimeout=null;
+  let lastMoveX=0, lastMoveTime=0, lastMoveWallTime=0, velocity=0, watchdogInterval=null;
+  let previewCurrentSection=null, previewTargetSection=null, previewGoingNext=false, previewTargetIdx=-1;
   const contentCol = document.querySelector('.content-col > main');
   const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
   const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
 
-  function buildBookIcon(){
-    const wrap = document.createElement('div');
-    wrap.id = 'swipeBookIcon';
-    wrap.style.cssText = 'position:fixed; top:50%; transform:translateY(-50%); width:88px; height:76px; z-index:5; pointer-events:none; opacity:0; transition:opacity 0.15s;';
-    wrap.innerHTML = `
-      <svg viewBox="0 0 100 84" width="88" height="74" style="position:absolute; top:0; left:0; overflow:visible; filter:drop-shadow(0 3px 4px rgba(0,0,0,0.18));">
-        <defs>
-          <linearGradient id="swipeBookCoverL" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#8a5a34"/>
-            <stop offset="100%" stop-color="#6b4423"/>
-          </linearGradient>
-          <linearGradient id="swipeBookCoverR" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#7c4f2d"/>
-            <stop offset="100%" stop-color="#5e3a1e"/>
-          </linearGradient>
-          <linearGradient id="swipeBookPage" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#fdf6e9"/>
-            <stop offset="100%" stop-color="#f2e6cf"/>
-          </linearGradient>
-        </defs>
-        <path d="M50 12 C40 6,18 6,8 13 L8 72 C18 65,40 65,50 71 Z" fill="url(#swipeBookCoverL)"></path>
-        <path d="M50 12 C60 6,82 6,92 13 L92 72 C82 65,60 65,50 71 Z" fill="url(#swipeBookCoverR)"></path>
-        <path d="M50 16 C41 11,21 11,12 17 L12 69 C21 63,41 63,50 68 Z" fill="url(#swipeBookPage)"></path>
-        <path d="M50 16 C59 11,79 11,88 17 L88 69 C79 63,59 63,50 68 Z" fill="url(#swipeBookPage)"></path>
-        <path d="M50 16 L50 68" stroke="#d8c7a6" stroke-width="1" opacity="0.6"></path>
-        <path d="M56 4 L66 4 L66 30 L61 24 L56 30 Z" fill="#b5382e"></path>
-      </svg>
-      <div id="swipeBookFlipPage" style="position:absolute; top:14px; left:44px; width:37px; height:47px; overflow:hidden; transform-origin:left center;">
-        <svg viewBox="0 0 100 84" width="88" height="74" style="position:absolute; top:-14px; left:-44px; filter:drop-shadow(1px 0 1px rgba(0,0,0,0.15));">
-          <path d="M50 16 C59 11,79 11,88 17 L88 69 C79 63,59 63,50 68 Z" fill="url(#swipeBookPage)"></path>
-        </svg>
-      </div>
-    `;
-    return wrap;
+  function resetSection(section, hide){
+    if(!section) return;
+    section.style.position = '';
+    section.style.top = '';
+    section.style.left = '';
+    section.style.width = '';
+    section.style.transform = '';
+    section.style.transition = '';
+    section.style.zIndex = '';
+    section.style.pointerEvents = '';
+    if(hide) section.style.display = '';
   }
-  function startPreview(){
-    bookIcon = buildBookIcon();
-    document.body.appendChild(bookIcon);
+  function cleanupPreview(){
+    resetSection(previewTargetSection, true);
+    resetSection(previewCurrentSection, false);
+    previewCurrentSection = null;
+    previewTargetSection = null;
+    previewTargetIdx = -1;
+  }
+  // Hedef sekmeyi (DOM'da zaten var olan ama aktif olmayan <section>) mevcut sekmenin tam
+  // yanına, onun GERÇEK render edilmiş dikdörtgenine göre konumlandırır (position:fixed ile —
+  // main'in padding'iyle ilgili yüzde hesaplarıyla uğraşmaya hiç gerek kalmıyor).
+  function beginPreview(currentSection, targetSection, targetIdx, goingNext){
+    const rect = currentSection.getBoundingClientRect();
+    previewCurrentSection = currentSection;
+    previewTargetSection = targetSection;
+    previewTargetIdx = targetIdx;
+    previewGoingNext = goingNext;
+    targetSection.style.transition = 'none';
+    targetSection.style.display = 'block';
+    targetSection.style.position = 'fixed';
+    targetSection.style.top = rect.top + 'px';
+    targetSection.style.left = (rect.left + (goingNext ? rect.width : -rect.width)) + 'px';
+    targetSection.style.width = rect.width + 'px';
+    targetSection.style.zIndex = '1';
+    targetSection.style.pointerEvents = 'none';
+    currentSection.style.transition = 'none';
   }
   function updatePreview(dx){
-    if(!bookIcon) return;
-    const iconW = 88, iconHalfW = 44;
-    const gapWidth = Math.abs(dx);
-    const goingNext = dx < 0;
-    // İkon HİÇBİR ZAMAN gerçek içeriğe binmesin: boşluk ikon genişliğinden dar olduğunda
-    // ikonu boşluğun iç kenarına yasla (taşan kısmı ekranın dışında/görünmez kalsın),
-    // boşluk yeterince büyüyünce normal şekilde ortalanmaya devam etsin.
-    let iconLeft;
-    if(goingNext){
-      const rightEdge = contentLeft + containerWidth;
-      const desiredLeft = (rightEdge - gapWidth/2) - iconHalfW;
-      iconLeft = Math.max(desiredLeft, rightEdge - gapWidth);
-    } else {
-      const leftEdge = contentLeft;
-      const desiredRight = (leftEdge + gapWidth/2) + iconHalfW;
-      const iconRight = Math.min(desiredRight, leftEdge + gapWidth);
-      iconLeft = iconRight - iconW;
-    }
-    bookIcon.style.left = iconLeft + 'px';
-    // İkon, boşluk küçükken görünmesin; belli bir eşiği geçince belirsin (kenardan girmiş hissi verir).
-    bookIcon.style.opacity = gapWidth > 26 ? '0.92' : '0';
-    const flipPage = document.getElementById('swipeBookFlipPage');
-    if(flipPage){
-      // Sayfa çevirme, sürüklemenin tamamlanma eşiğine (yaklaşık %80'ine) yakın bir hızda ilerlesin.
-      const flipProgress = Math.max(-1, Math.min(1, dx / (containerWidth * 0.8)));
-      flipPage.style.transform = `scaleX(${Math.cos(flipProgress*Math.PI)})`;
-    }
+    if(!previewCurrentSection || !previewTargetSection) return;
+    previewCurrentSection.style.transform = `translateX(${dx}px)`;
+    previewTargetSection.style.transform = `translateX(${dx}px)`;
   }
-  function settlePreview(finalProgress){
-    const flipPage = document.getElementById('swipeBookFlipPage');
-    if(flipPage) flipPage.style.transform = `scaleX(${Math.cos(finalProgress*Math.PI)})`;
+  function settlePreview(dx, animate){
+    if(!previewCurrentSection || !previewTargetSection) return;
+    const transition = animate ? 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)' : 'none';
+    previewCurrentSection.style.transition = transition;
+    previewTargetSection.style.transition = transition;
+    previewCurrentSection.style.transform = `translateX(${dx}px)`;
+    previewTargetSection.style.transform = `translateX(${dx}px)`;
   }
-  function endPreview(){
-    if(bookIcon && bookIcon.parentNode) bookIcon.parentNode.removeChild(bookIcon);
-    bookIcon = null;
+  // Sürüklerken yön tersine dönerse (kullanıcı vazgeçip tam tersine gitmeye başlarsa) önizlemeyi
+  // yeni yön için baştan kurar; yeni yön sınır dışındaysa (ör. ilk sekmede geri gitmeye çalışmak)
+  // false döner — çağıran yer bu durumda dx'i 0'da kelepçeler, önizleme olduğu yerde durur.
+  function maybeFlipDirection(goingNextNow){
+    if(goingNextNow===previewGoingNext || !previewCurrentSection) return true;
+    const order = getTabOrder();
+    const idx = order.indexOf(activeTab);
+    const targetIdx = goingNextNow ? idx+1 : idx-1;
+    if(targetIdx<0 || targetIdx>=order.length) return false;
+    const targetSection = document.getElementById('tab-'+order[targetIdx]);
+    if(!targetSection) return false;
+    resetSection(previewTargetSection, true);
+    beginPreview(previewCurrentSection, targetSection, targetIdx, goingNextNow);
+    return true;
   }
   function unlockPageScroll(){
     document.documentElement.style.overflow = '';
@@ -2018,24 +2010,17 @@ function switchTab(id){
         dragging = false;
         touchStartX = null;
         unlockPageScroll();
-        contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
-        contentCol.style.transform = 'translateX(0)';
-        settlePreview(0);
-        if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
-        pendingSettleTimeout = setTimeout(()=>{ endPreview(); pendingSettleTimeout=null; }, 240);
+        settlePreview(0, true);
+        pendingSettleTimeout = setTimeout(()=>{ cleanupPreview(); pendingSettleTimeout=null; }, 240);
         stopWatchdog();
       }
     }, 200);
   }
 
   document.addEventListener('touchstart', (e)=>{
-    endPreview(); // hızlı art arda kaydırmalarda önceki katman takılı kalmasın diye önce her ihtimale karşı temizle
+    cleanupPreview(); // hızlı art arda kaydırmalarda önceki önizleme takılı kalmasın diye önce her ihtimale karşı temizle
     stopWatchdog();
     if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
-    // Önceki kaydırmadan yarım kalmış bir dönüşüm varsa (hızlı art arda kaydırmada olabiliyor),
-    // yeni jestin her zaman temiz bir konumdan başlaması için burada kesin olarak sıfırlıyoruz.
-    contentCol.style.transition = 'none';
-    contentCol.style.transform = 'translateX(0)';
     unlockPageScroll();
     if(e.touches.length!==1){ touchStartX=null; return; }
     const t = e.target;
@@ -2054,7 +2039,6 @@ function switchTab(id){
     lastMoveTime = e.timeStamp;
     lastMoveWallTime = Date.now();
     containerWidth = contentCol.offsetWidth || window.innerWidth;
-    contentLeft = contentCol.getBoundingClientRect().left;
   }, {passive:true});
 
   document.addEventListener('touchmove', (e)=>{
@@ -2071,27 +2055,28 @@ function switchTab(id){
       const order = getTabOrder();
       const idx = order.indexOf(activeTab);
       if(idx===-1 || profileGateActive || (dx<0 && idx>=order.length-1) || (dx>0 && idx<=0)){ touchStartX=null; return; }
+      const goingNext = dx < 0;
+      const targetIdx = goingNext ? idx+1 : idx-1;
+      const currentSection = contentCol.querySelector(':scope > section.tab.active');
+      const targetSection = document.getElementById('tab-'+order[targetIdx]);
+      if(!currentSection || !targetSection){ touchStartX=null; return; }
       dragging = true;
-      contentCol.style.transition = 'none';
-      startPreview();
+      beginPreview(currentSection, targetSection, targetIdx, goingNext);
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
       startWatchdog();
     }
-    if(dragging && e.cancelable) e.preventDefault();
     if(dragging && e.cancelable) e.preventDefault();
     const dt = e.timeStamp - lastMoveTime;
     if(dt > 0) velocity = (touch.clientX - lastMoveX) / dt;
     lastMoveX = touch.clientX;
     lastMoveTime = e.timeStamp;
     lastMoveWallTime = Date.now();
-    // Katlama (fold) hissi: sürüklerken parmağı takip etmeye devam ediyor (translateX), ama
-    // buna ek olarak hafif bir rotateY ile sanki sayfa menteşeden açılıyormuş gibi bir devrilme
-    // veriyoruz — bırakınca (touchend) bu dönüş belirginleşip tam bir "kapanış" oluyor.
-    const dragRot = Math.max(-1, Math.min(1, dx / containerWidth)) * 13;
-    contentCol.style.transformOrigin = dx < 0 ? 'right center' : 'left center';
-    contentCol.style.transform = `translateX(${dx}px) rotateY(${dragRot}deg)`;
-    updatePreview(dx);
+    if(dragging){
+      const goingNextNow = dx < 0;
+      const canFollow = maybeFlipDirection(goingNextNow);
+      updatePreview(canFollow ? dx : 0);
+    }
   }, {passive:false});
 
   document.addEventListener('touchend', (e)=>{
@@ -2105,24 +2090,17 @@ function switchTab(id){
     stopWatchdog();
     const order = getTabOrder();
     const idx = order.indexOf(activeTab);
+    const goingNext = dx < 0;
+    // Yön, jest sırasında tersine dönmüş olabilir — önizlemenin şu an GERÇEKTEN hangi sekmeye
+    // kurulu olduğunu (previewGoingNext/previewTargetIdx) esas alıyoruz, dx'in çiğ işaretini değil.
+    const canComplete = previewCurrentSection && goingNext===previewGoingNext && previewTargetIdx>=0;
     const distanceOk = Math.abs(dx) > containerWidth * DISTANCE_THRESHOLD_RATIO;
     const flickOk = Math.abs(velocity) > VELOCITY_THRESHOLD && Math.sign(velocity)===Math.sign(dx);
-    const goingNext = dx < 0;
-    const targetIdx = goingNext ? idx+1 : idx-1;
-    // Parmağını sürüklerken yön değiştirip (vazgeçip tam tersine gidip) en baştaki/sondaki
-    // sekmede olmayan bir yöne geçmeye çalışmış olabilirsin — burada hedefin gerçekten var
-    // olduğunu doğruluyoruz, yoksa var olmayan bir sekmeye geçip boş sayfada kalırdı.
-    const targetExists = targetIdx>=0 && targetIdx<order.length;
-    const shouldComplete = (distanceOk || flickOk) && idx!==-1 && targetExists;
-    contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
-    const flipPage = document.getElementById('swipeBookFlipPage');
-    if(flipPage) flipPage.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
+    const shouldComplete = canComplete && idx!==-1 && (distanceOk || flickOk);
     if(shouldComplete){
+      const targetIdx = previewTargetIdx;
       const flyDist = goingNext ? -containerWidth : containerWidth;
-      contentCol.style.transformOrigin = goingNext ? 'right center' : 'left center';
-      contentCol.style.transform = `translateX(${flyDist}px) rotateY(${goingNext?-58:58}deg)`;
-      settlePreview(goingNext ? -1 : 1);
-      if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
+      settlePreview(flyDist, true);
       // Alt sekme çubuğunun hangi sekmenin aktif olduğu, parmağın kalktığı an belli olur — bunu
       // içerik kayma animasyonunun bitmesini (240ms) beklemeden hemen burada güncelliyoruz.
       // Yoksa eski sekme, kaybolan içerikle birlikte hâlâ "highlighted" görünmeye devam ediyor ve
@@ -2139,17 +2117,13 @@ function switchTab(id){
         if(nextLabel) setTabTitleAnimated(nextLabel);
       }
       pendingSettleTimeout = setTimeout(()=>{
-        contentCol.style.transition = 'none';
-        contentCol.style.transform = 'translateX(0)';
-        endPreview();
+        cleanupPreview();
         switchTab(order[targetIdx]);
         pendingSettleTimeout = null;
       }, 240);
     } else {
-      contentCol.style.transform = 'translateX(0)';
-      settlePreview(0);
-      if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
-      pendingSettleTimeout = setTimeout(()=>{ endPreview(); pendingSettleTimeout=null; }, 240);
+      settlePreview(0, true);
+      pendingSettleTimeout = setTimeout(()=>{ cleanupPreview(); pendingSettleTimeout=null; }, 240);
     }
   }, {passive:true});
 
@@ -2164,11 +2138,8 @@ function switchTab(id){
     unlockPageScroll();
     stopWatchdog();
     if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
-    contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
-    contentCol.style.transform = 'translateX(0)';
-    settlePreview(0);
-    if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
-    pendingSettleTimeout = setTimeout(()=>{ endPreview(); pendingSettleTimeout=null; }, 240);
+    settlePreview(0, true);
+    pendingSettleTimeout = setTimeout(()=>{ cleanupPreview(); pendingSettleTimeout=null; }, 240);
   }, {passive:true});
 })();
 
