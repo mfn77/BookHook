@@ -227,11 +227,16 @@
       </div>
     </section>
 
-    <section class="tab" id="tab-worms">
+    <section class="tab" id="tab-worms"><div class="segmented" data-panels="worms" role="tablist"><button type="button" data-pane="0" class="active">Kitap Kurtları</button><button type="button" data-pane="1" class="">Kulübün Serileri</button><button type="button" data-pane="2" class="">Rozet Geçmişi</button></div>
       <div class="card">
         <h2>Kitap Kurtları</h2>
         <p class="muted">Profil resmindeki renkli çerçeve ve köşe simgesi, o kişinin o anki aktif serisini gösterir; seri bozulunca kaybolur.</p>
-        <div id="wormsList" style="margin-top:12px;"></div>
+        <div id="wormsMyStreak" style="margin-top:12px;"></div>
+      </div>
+      <div class="card">
+        <h2>Kulübün Okuma Serileri</h2>
+        <p class="muted">Kim şu an kaç günlük seride.</p>
+        <div id="wormsClubStreaks" style="margin-top:12px;"></div>
       </div>
       <div class="card">
         <h2>Rozet Geçmişi</h2>
@@ -271,11 +276,16 @@
       </div>
     </section>
 
-    <section class="tab" id="tab-mworms">
+    <section class="tab" id="tab-mworms"><div class="segmented" data-panels="mworms" role="tablist"><button type="button" data-pane="0" class="active">Kitap Kurtları</button><button type="button" data-pane="1" class="">Kulübün Serileri</button><button type="button" data-pane="2" class="">Rozet Geçmişi</button></div>
       <div class="card">
         <h2>Kitap Kurtları</h2>
         <p class="muted">Profil resmindeki renkli çerçeve ve köşe simgesi, o kişinin o anki aktif serisini gösterir; seri bozulunca kaybolur.</p>
-        <div id="mWormsList"></div>
+        <div id="mWormsMyStreak"></div>
+      </div>
+      <div class="card">
+        <h2>Kulübün Okuma Serileri</h2>
+        <p class="muted">Kim şu an kaç günlük seride.</p>
+        <div id="mWormsClubStreaks"></div>
       </div>
       <div class="card">
         <h2>Rozet Geçmişi</h2>
@@ -322,13 +332,14 @@
           <div id="mDrawHistBox"></div>
         </div>
       </div>
+      <div class="segmented" id="giftHistoryInnerTabs" role="tablist"><button type="button" data-gift-hist-pane="0" class="active">Hediye Kayıtları</button><button type="button" data-gift-hist-pane="1" class="">Hediye Kitap Geçmişi</button></div>
       <div class="card">
-        <h2>Bugüne Kadar</h2>
+        <h2>Hediye Kayıtları</h2>
         <p class="muted">Kulüp kurulduğundan beri kim kaç hediye verdi, kaç hediye aldı — en çok alan en üstte.</p>
         <div id="giftStatsList" class="badge-shelf-list"></div>
       </div>
       <div class="card">
-        <h2>Bugüne Kadar Hediye Edilen Kitaplar</h2>
+        <h2>Hediye Kitap Geçmişi</h2>
         <div id="giftBooksGrid"></div>
       </div>
     </section>
@@ -3137,8 +3148,12 @@ document.addEventListener('click', (e)=>{
   if(e.target.closest('.badge-shelf-coin')) return;
   document.querySelectorAll('.badge-shelf-info.show').forEach(p=> p.classList.remove('show'));
 });
-async function renderWormsShared(containerId, historyContainerId){
-  const list = keepOrLoading(containerId, 'Hesaplanıyor…');
+async function renderWormsShared(myStreakContainerId, clubStreaksContainerId, historyContainerId){
+  // Eskiden "Kitap Kurtları" tek bir kartın içinde hem senin güncel serini hem kulübün tüm
+  // serilerini üst üste gösteriyordu — artık kart-içi sekmelerde ayrı ayrı gösterildiği için
+  // (bkz. tab-worms/tab-mworms) bu iki parça ayrı konteynerlere yazılıyor.
+  const myBox = keepOrLoading(myStreakContainerId, 'Hesaplanıyor…');
+  const clubBox = keepOrLoading(clubStreaksContainerId, 'Hesaplanıyor…');
   const historyBox = historyContainerId ? keepOrLoading(historyContainerId, 'Hesaplanıyor…') : null;
   // Sekme açıldığında önce önbellekteki (eski) HTML anında gösteriliyor, gerçek veri henüz
   // gelmeden — tıklama dinleyicisi de bu yüzden en başta bağlanıyor, yoksa sayfa ilk açıldığında
@@ -3155,16 +3170,19 @@ async function renderWormsShared(containerId, historyContainerId){
   results.sort((a,b)=>b.streak-a.streak);
 
   if(results.length===0){
-    list.innerHTML = `<div class="empty-state">Henüz üye yok.</div>`;
+    myBox.innerHTML = `<div class="empty-state">Henüz üye yok.</div>`;
+    clubBox.innerHTML = `<div class="empty-state">Henüz üye yok.</div>`;
   } else {
     const own = results.find(r=>r.uid===currentUid);
     const streak = own ? own.streak : 0;
-    list.innerHTML = `<div class="material-streak-hero"><div class="material-medal">${streak}</div><h2>${streak} gündür aralıksız</h2><p class="muted">Her gün birkaç sayfa, yeni bir alışkanlık.</p><div class="milestones">${BADGE_DEFS.map(d=>`<div class="milestone ${streak>=d.days?'earned':''}"><span>${d.days}</span><small>${d.days} gün</small></div>`).join('')}</div></div><h3>Kulübün okuma serileri</h3><div class="streak-grid">${results.map(r=>{
+    myBox.innerHTML = `<div class="material-streak-hero"><div class="material-medal">${streak}</div><h2>${streak} gündür aralıksız</h2><p class="muted">Her gün birkaç sayfa, yeni bir alışkanlık.</p><div class="milestones">${BADGE_DEFS.map(d=>`<div class="milestone ${streak>=d.days?'earned':''}"><span>${d.days}</span><small>${d.days} gün</small></div>`).join('')}</div></div>`;
+    clubBox.innerHTML = `<div class="streak-grid">${results.map(r=>{
       const u = usersCache[r.uid] || {};
       return `<div class="streak-card ${r.uid===currentUid?'mine':''}">${avatarHtmlFromProfile(u,52)}<b>${escapeHtml(u.name||'?')}</b><span class="streak-card-days">${r.streak} gün</span></div>`;
     }).join('')}</div>`;
   }
-  markLoaded(list);
+  markLoaded(myBox);
+  markLoaded(clubBox);
 
   if(historyBox){
     const rows = results;
@@ -3200,7 +3218,7 @@ async function computeTotalReadDays(uid){
   const snaps = await Promise.all(dateStrs.map(ds => getDoc(doc(db,'days',ds,'answers',uid)).catch(()=>null)));
   return snaps.filter(snap => snap && snap.exists() && snap.data().status==='read').length;
 }
-async function renderAdminWorms(){ await renderWormsShared('wormsList','wormsHistory'); }
+async function renderAdminWorms(){ await renderWormsShared('wormsMyStreak','wormsClubStreaks','wormsHistory'); }
 
 /* ============ ORTAK: "BUGÜN OKUDUN MU?" KENDİNİ İŞARETLEME KARTI ============ */
 // Hem üye hem yönetici "Bugün" sekmesinde aynı kendini işaretleme kartını görüyor; ikisi de aynı
@@ -9358,7 +9376,7 @@ async function renderGroupRecs(){
 }
 
 /* ============ ÜYE: KİTAP KURTLARI ============ */
-async function renderMemberWorms(){ await renderWormsShared('mWormsList','mWormsHistory'); }
+async function renderMemberWorms(){ await renderWormsShared('mWormsMyStreak','mWormsClubStreaks','mWormsHistory'); }
 
 /* ============ GİRİŞ / AUTH DURUM TAKİBİ ============ */
 /* BookHook Material UI adapter. Only presentation/navigation; existing data model retained. */
@@ -9655,14 +9673,35 @@ function materialInit(){
  const gifts=document.getElementById('tab-gifts');
  if(!document.getElementById('materialGiftTabs'))gifts.insertAdjacentHTML('afterbegin','<div class="segmented" id="materialGiftTabs"><button data-gift-view="0" class="active">Bekleyen</button><button data-gift-view="1">Geçmiş</button></div>');
  if(!gifts.querySelector(':scope>.inner-pane-viewport')){
-  const giftCards=[...gifts.children].filter(c=>c.classList.contains('card'));
+  // Burada artık .card sınıfına göre otomatik dilimleme yerine elemanları tek tek isimlendirip
+  // elle grupluyoruz — çünkü "Geçmiş" grubunun içine, kendi kartı olmayan bir düğme şeridi de
+  // (giftHistTabs) kartlarıyla birlikte taşınması gerekiyor (bkz. aşağıdaki iç içe karusel).
+  const giftMainCard = document.getElementById('giftsContent') ? document.getElementById('giftsContent').closest('.card') : null;
+  const qpGiftCard = document.getElementById('qpGiftCardWrap');
+  const lastWeekCard = document.getElementById('giftsMemberLastWeekWrap');
+  const drawHistCard = document.getElementById('giftsDrawHistAdminWrap') ? document.getElementById('giftsDrawHistAdminWrap').closest('.card') : null;
+  const giftHistTabs = document.getElementById('giftHistoryInnerTabs');
+  const giftStatsCard = document.getElementById('giftStatsList') ? document.getElementById('giftStatsList').closest('.card') : null;
+  const giftBooksCard = document.getElementById('giftBooksGrid') ? document.getElementById('giftBooksGrid').closest('.card') : null;
   const giftButtonEntries=[...document.querySelectorAll('[data-gift-view]')].map(btn=>({el:btn, index:Number(btn.dataset.giftView)}));
-  const giftGroups=[giftCards.slice(0,2), giftCards.slice(2)].filter(g=>g.length);
+  const giftGroups=[
+   [giftMainCard, qpGiftCard].filter(Boolean),
+   [lastWeekCard, drawHistCard, giftHistTabs, giftStatsCard, giftBooksCard].filter(Boolean)
+  ].filter(g=>g.length);
   const giftCarousel = giftGroups.length>1 ? buildInnerPaneCarousel(gifts, giftGroups, giftButtonEntries) : null;
   if(!giftCarousel){
-   const selectGifts=(view)=>{giftCards.forEach((c,i)=>c.hidden=view===0?i>=2:i<2);giftButtonEntries.forEach(({el,index})=>el.classList.toggle('active',index===view));};
+   const allGiftCards=[giftMainCard, qpGiftCard, lastWeekCard, drawHistCard, giftStatsCard, giftBooksCard].filter(Boolean);
+   const selectGifts=(view)=>{ allGiftCards.forEach(c=>c.hidden=false); giftButtonEntries.forEach(({el,index})=>el.classList.toggle('active',index===view)); };
    giftButtonEntries.forEach(({el,index})=>el.onclick=()=>selectGifts(index));
    selectGifts(0);
+  } else if(giftHistTabs && giftStatsCard && giftBooksCard){
+   // "Geçmiş" panesinin (index 1) içinde, Hediye Kayıtları / Hediye Kitap Geçmişi arasında
+   // geçen küçük bir iç içe (nested) karusel daha kuruyoruz.
+   const historyPane = gifts.querySelectorAll(':scope>.inner-pane-viewport>.inner-pane-track>.inner-pane')[1];
+   if(historyPane){
+    const histButtonEntries=[...giftHistTabs.querySelectorAll('[data-gift-hist-pane]')].map(btn=>({el:btn, index:Number(btn.dataset.giftHistPane)}));
+    buildInnerPaneCarousel(historyPane, [[giftStatsCard],[giftBooksCard]], histButtonEntries);
+   }
   }
  }
  const admin=myProfile.role==='admin';
