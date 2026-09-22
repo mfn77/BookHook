@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-30" />
+<link rel="stylesheet" href="./style.css?v=material-31" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -1963,6 +1963,7 @@ function switchTab(id){
     section.style.transition = '';
     section.style.zIndex = '';
     section.style.pointerEvents = '';
+    section.style.willChange = '';
     if(hide) section.style.display = '';
   }
   function cleanupPreview(){
@@ -1996,7 +1997,9 @@ function switchTab(id){
     targetSection.style.width = rect.width + 'px';
     targetSection.style.zIndex = '1';
     targetSection.style.pointerEvents = 'none';
+    targetSection.style.willChange = 'transform';
     currentSection.style.transition = 'none';
+    currentSection.style.willChange = 'transform';
   }
   function updatePreview(dx){
     if(!previewCurrentSection || !previewTargetSection) return;
