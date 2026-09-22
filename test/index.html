@@ -1929,12 +1929,15 @@ function switchTab(id){
   function buildBookIcon(){
     const wrap = document.createElement('div');
     wrap.id = 'swipeBookIcon';
-    // top:50dvh, desteklenen tarayıcılarda top:50%'nin üzerine geçer (geçersizse yoksayılır ve
-    // 50% kalır). Mobil tarayıcının adres çubuğu açılıp/kapanırken "layout viewport" yüksekliği
-    // değişiyor; top:50% buna göre yeniden hesaplanınca ikon aşağı/yukarı sıçrıyormuş gibi
-    // görünüyordu. dvh (dynamic viewport height), tarayıcı arayüzündeki bu değişimi hesaba katan
-    // birim olduğu için ikonu sabit tutuyor.
-    wrap.style.cssText = 'position:fixed; top:50%; top:50dvh; transform:translateY(-50%) translateZ(0); width:88px; height:76px; z-index:5; pointer-events:none; opacity:0; transition:opacity 0.15s;';
+    // top:50svh, desteklenen tarayıcılarda top:50%'nin üzerine geçer (geçersizse yoksayılır ve
+    // 50% kalır). svh (small viewport height — araç çubuğu göstermiş kabul edilen, SABİT değer)
+    // kullanıyoruz; önceden burada dvh (dynamic viewport height) vardı ama bu element her
+    // sürükleme jesti boyunca DOM'da yaşadığı için, dvh tarayıcının araç çubuğu animasyonunun HER
+    // KARESİNDE tüm sayfayı yeniden hesaplamasına zorluyordu — tam da parmağın kalktığı anda
+    // sayfanın bir kare boyunca beyaz/boş görünmesine sebep olan performans sorununun asıl kaynağı
+    // buydu. svh sabit olduğu için bu maliyeti hiç doğurmuyor, ama ikonun sıçramasını da aynı
+    // şekilde önlüyor.
+    wrap.style.cssText = 'position:fixed; top:50%; top:50svh; transform:translateY(-50%) translateZ(0); width:88px; height:76px; z-index:5; pointer-events:none; opacity:0; transition:opacity 0.15s;';
     wrap.innerHTML = `
       <svg viewBox="0 0 100 84" width="88" height="74" style="position:absolute; top:0; left:0; overflow:visible; filter:drop-shadow(0 3px 4px rgba(0,0,0,0.18));">
         <defs>
