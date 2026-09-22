@@ -332,7 +332,6 @@
           <div id="mDrawHistBox"></div>
         </div>
       </div>
-      <div class="segmented" id="giftHistoryInnerTabs" role="tablist"><button type="button" data-gift-hist-pane="0" class="active">Hediye Kayıtları</button><button type="button" data-gift-hist-pane="1" class="">Hediye Kitap Geçmişi</button></div>
       <div class="card">
         <h2>Hediye Kayıtları</h2>
         <p class="muted">Kulüp kurulduğundan beri kim kaç hediye verdi, kaç hediye aldı — en çok alan en üstte.</p>
@@ -9745,22 +9744,23 @@ function materialInit(){
  // konumuyla tutarlı. Varsayılan "chosen" hâlâ Gruba (1) gösteriyor, karusel açılışta oraya kayıp
  // solundan Kişisel'in ufak bir dilimini (peek) gösteriyor.
  const gifts=document.getElementById('tab-gifts');
- if(!document.getElementById('materialGiftTabs'))gifts.insertAdjacentHTML('afterbegin','<div class="segmented" id="materialGiftTabs"><button data-gift-view="0" class="active">Bekleyen</button><button data-gift-view="1">Geçmiş</button></div>');
+ if(!document.getElementById('materialGiftTabs'))gifts.insertAdjacentHTML('afterbegin','<div class="segmented scrollable" id="materialGiftTabs"><button data-gift-view="0" class="active">Bekleyen</button><button data-gift-view="1">Geçmiş</button><button data-gift-view="2">Hediye Kayıtları</button><button data-gift-view="3">Hediye Kitap Geçmişi</button></div>');
  if(!gifts.querySelector(':scope>.inner-pane-viewport')){
   // Burada artık .card sınıfına göre otomatik dilimleme yerine elemanları tek tek isimlendirip
-  // elle grupluyoruz — çünkü "Geçmiş" grubunun içine, kendi kartı olmayan bir düğme şeridi de
-  // (giftHistTabs) kartlarıyla birlikte taşınması gerekiyor (bkz. aşağıdaki iç içe karusel).
+  // elle grupluyoruz — 4 sekme hepsi aynı seviyede, yan yana: Bekleyen / Geçmiş / Hediye
+  // Kayıtları / Hediye Kitap Geçmişi (iç içe değil, düz bir karusel).
   const giftMainCard = document.getElementById('giftsContent') ? document.getElementById('giftsContent').closest('.card') : null;
   const qpGiftCard = document.getElementById('qpGiftCardWrap');
   const lastWeekCard = document.getElementById('giftsMemberLastWeekWrap');
   const drawHistCard = document.getElementById('giftsDrawHistAdminWrap') ? document.getElementById('giftsDrawHistAdminWrap').closest('.card') : null;
-  const giftHistTabs = document.getElementById('giftHistoryInnerTabs');
   const giftStatsCard = document.getElementById('giftStatsList') ? document.getElementById('giftStatsList').closest('.card') : null;
   const giftBooksCard = document.getElementById('giftBooksGrid') ? document.getElementById('giftBooksGrid').closest('.card') : null;
   const giftButtonEntries=[...document.querySelectorAll('[data-gift-view]')].map(btn=>({el:btn, index:Number(btn.dataset.giftView)}));
   const giftGroups=[
    [giftMainCard, qpGiftCard].filter(Boolean),
-   [lastWeekCard, drawHistCard, giftHistTabs, giftStatsCard, giftBooksCard].filter(Boolean)
+   [lastWeekCard, drawHistCard].filter(Boolean),
+   [giftStatsCard].filter(Boolean),
+   [giftBooksCard].filter(Boolean)
   ].filter(g=>g.length);
   const giftCarousel = giftGroups.length>1 ? buildInnerPaneCarousel(gifts, giftGroups, giftButtonEntries) : null;
   if(!giftCarousel){
@@ -9768,14 +9768,6 @@ function materialInit(){
    const selectGifts=(view)=>{ allGiftCards.forEach(c=>c.hidden=false); giftButtonEntries.forEach(({el,index})=>el.classList.toggle('active',index===view)); };
    giftButtonEntries.forEach(({el,index})=>el.onclick=()=>selectGifts(index));
    selectGifts(0);
-  } else if(giftHistTabs && giftStatsCard && giftBooksCard){
-   // "Geçmiş" panesinin (index 1) içinde, Hediye Kayıtları / Hediye Kitap Geçmişi arasında
-   // geçen küçük bir iç içe (nested) karusel daha kuruyoruz.
-   const historyPane = gifts.querySelectorAll(':scope>.inner-pane-viewport>.inner-pane-track>.inner-pane')[1];
-   if(historyPane){
-    const histButtonEntries=[...giftHistTabs.querySelectorAll('[data-gift-hist-pane]')].map(btn=>({el:btn, index:Number(btn.dataset.giftHistPane)}));
-    buildInnerPaneCarousel(historyPane, [[giftStatsCard],[giftBooksCard]], histButtonEntries);
-   }
   }
  }
  const admin=myProfile.role==='admin';
