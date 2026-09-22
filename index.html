@@ -9826,25 +9826,17 @@ function materialHubRoot(id){
 // çalışıyordu, bu programatik sıçrama ondan tamamen bağımsızdı). Burada da aynı "body'yi olduğu
 // yerde dondur" tekniğiyle, tarayıcının fark edeceği gerçek bir kaydırma hiç oluşturmadan üste
 // zıplıyoruz.
+// Video kanıtıyla doğrulandı: burada önceden body.style.position='fixed' ile "sessizce"
+// kaydırma sıfırlama numarası vardı — ama .sidebar (alt nav) da position:fixed olduğu için,
+// body'yi de position:fixed yapmak Android Chrome'da "fixed içinde fixed" durumu oluşturuyor ve
+// nav birkaç kare boyunca tamamen kayboluyordu (tam olarak bu fonksiyonun her swipe/sekme
+// geçişinde iki kez çağrıldığı anlarla örtüşen bir video kaydında doğrulandı). body'nin
+// position'ına HİÇ dokunmadan, doğrudan scrollTop sıfırlamak (scroll-behavior:smooth'u da
+// tetiklemiyor, çünkü bu özellik sadece scrollTo()/scrollIntoView() çağrılarını etkiliyor) hem
+// yeterince "sessiz" hem de bu riski tamamen ortadan kaldırıyor.
 function silentScrollToTop(){
- const y = window.scrollY || document.documentElement.scrollTop || 0;
- if(y<=0) return;
- const body = document.body;
- const prev = { position:body.style.position, top:body.style.top, left:body.style.left, right:body.style.right, width:body.style.width };
- body.style.position = 'fixed';
- body.style.top = '0';
- body.style.left = '0';
- body.style.right = '0';
- body.style.width = '100%';
  document.documentElement.scrollTop = 0;
  document.body.scrollTop = 0;
- requestAnimationFrame(()=>{
-  body.style.position = prev.position;
-  body.style.top = prev.top;
-  body.style.left = prev.left;
-  body.style.right = prev.right;
-  body.style.width = prev.width;
- });
 }
 function materialSyncNavigation(id){
  const primary=materialPrimaryTabs().map(t=>t.id);
