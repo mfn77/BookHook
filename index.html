@@ -464,7 +464,7 @@
 
 
     <!-- ORTAK: KİTAP ÖNERİLERİ -->
-    <section class="tab" id="tab-recs"><button class="common-selection-link" data-material-route="quarterly">Ortak kitap seçimi <span>→</span></button><div class="segmented" data-panels="recs" role="tablist"><button type="button" data-pane="0" class="active">Kişiye</button><button type="button" data-pane="1" class="">Gruba</button></div>
+    <section class="tab" id="tab-recs"><button class="common-selection-link" data-material-route="quarterly">Ortak kitap seçimi <span>→</span></button><div class="segmented" data-panels="recs" role="tablist"><button type="button" data-pane="0" class="active">Kişisel</button><button type="button" data-pane="1" class="">Gruba</button></div>
 
 
       <div class="card">
@@ -2038,7 +2038,7 @@ function switchTab(id){
     // Kulüp/Ben, Okuyorum/İstek listem/Geçmişim gibi iç sekmeler) dokunuş başlıyorsa, sayfa
     // seviyesindeki bu sekmeler-arası kaydırmayı hiç başlatma — o alan kendi kart-içi kaydırmasını
     // ayrıca yönetiyor (bkz. setupInnerPaneCarousels).
-    if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport')){
+    if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport') || t.closest('#discoverFeed')){
       touchStartX=null; return;
     }
     touchStartX = e.touches[0].clientX;
@@ -8724,6 +8724,55 @@ window.addEventListener('resize', ()=>{
 function renderDiscoverContent(){
   renderDiscoverCategoryGrid(discoverActiveCategory);
 }
+// Keşfet filtreleri de kart-içi sekmeler gibi sağa/sola kaydırarak değişsin istendi — ama buradaki
+// "sekmeler" (kategoriler) onlarca olabiliyor ve her biri sayfalanan, Firestore'dan asenkron gelen
+// ayrı bir liste, o yüzden hepsini yan yana önceden çizip fiziksel bir "peek" karuseli yapmak
+// (diğer kart-içi sekmelerdeki gibi) pratik değil. Onun yerine: içerik alanında sağa/sola
+// sürüklemek bir sonraki/önceki filtre kategorisine geçiyor (çip'e tıklamışsın gibi), kısa bir
+// solma geçişiyle. Sayfa seviyesindeki sekmeler-arası kaydırma bu alanda hiç tetiklenmiyor (bkz.
+// setupSwipeNav içindeki #discoverFeed hariç tutması).
+(function setupDiscoverSwipe(){
+  const feed = document.getElementById('discoverFeed');
+  if(!feed) return;
+  let touchStartX=null, touchStartY=0, dragging=false;
+  feed.addEventListener('touchstart', (e)=>{
+    if(e.touches.length!==1){ touchStartX=null; return; }
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    dragging = false;
+  }, {passive:true});
+  feed.addEventListener('touchmove', (e)=>{
+    if(touchStartX===null) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+    if(!dragging){
+      if(Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(dy)*2.2) return;
+      dragging = true;
+    }
+  }, {passive:true});
+  feed.addEventListener('touchend', (e)=>{
+    if(touchStartX===null) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartX;
+    touchStartX = null;
+    if(!dragging) return;
+    dragging = false;
+    if(Math.abs(dx) < 60) return;
+    const idx = DISCOVER_CATEGORIES.findIndex(c=>c.slug===discoverActiveCategory);
+    if(idx===-1) return;
+    const targetIdx = dx<0 ? idx+1 : idx-1;
+    if(targetIdx<0 || targetIdx>=DISCOVER_CATEGORIES.length) return;
+    discoverActiveCategory = DISCOVER_CATEGORIES[targetIdx].slug;
+    discoverPage = 0;
+    feed.classList.add('discover-swipe-fade');
+    requestAnimationFrame(()=>{
+      renderDiscoverFilters();
+      renderDiscoverContent();
+      requestAnimationFrame(()=>{ feed.classList.remove('discover-swipe-fade'); });
+    });
+  }, {passive:true});
+})();
 
 function openBookPickerModal(onSelect){
   showSimpleInfoModal(`
@@ -9598,8 +9647,11 @@ function materialInit(){
    select(chosen);
   }
  });
- const recControls=document.querySelector('[data-panels="recs"]');
- if(recControls && !recControls.dataset.reordered){ recControls.prepend(recControls.querySelector('[data-pane="1"]')); recControls.dataset.reordered='1'; }
+ // Not: eskiden burada "Gruba" düğmesi görsel olarak başa alınıyordu (varsayılan seçili pane
+ // buydu) — ama artık karusel pane'leri fiziksel olarak index sırasına göre yan yana dizildiği
+ // için, düğme sırası içerikle eşleşmeli: Kişisel solda/0, Gruba sağda/1, ikisi de karusel
+ // konumuyla tutarlı. Varsayılan "chosen" hâlâ Gruba (1) gösteriyor, karusel açılışta oraya kayıp
+ // solundan Kişisel'in ufak bir dilimini (peek) gösteriyor.
  const gifts=document.getElementById('tab-gifts');
  if(!document.getElementById('materialGiftTabs'))gifts.insertAdjacentHTML('afterbegin','<div class="segmented" id="materialGiftTabs"><button data-gift-view="0" class="active">Bekleyen</button><button data-gift-view="1">Geçmiş</button></div>');
  if(!gifts.querySelector(':scope>.inner-pane-viewport')){
