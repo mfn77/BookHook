@@ -1,6 +1,7 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
@@ -638,6 +639,84 @@ exports.adminDeleteMember = onCall(async (request) => {
 
   console.log(`[adminDeleteMember] ${targetUid} (${targetData.name || ""}) tamamen silindi. İşlemi yapan: ${callerUid}.`);
   return { success: true };
+});
+
+/* ============================================================================
+   YAPAY ZEKA KİTAP ÖNERİSİ
+   Kullanıcının okuduğu, okumakta olduğu ve okumak istediği kitaplara bakıp Claude'dan
+   tek bir kişisel öneri istiyor. API anahtarı burada, sadece sunucu tarafında kalıyor —
+   istemciye hiç gitmiyor. Sonuç users/{uid}.aiRecommendation altına yazılıyor ki istemci
+   her sekme açılışında değil, sadece kullanıcı "yeni öneri iste" dediğinde tekrar çağırsın. */
+const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
+
+exports.getBookRecommendation = onCall({ secrets: [anthropicApiKey] }, async (request) => {
+  const uid = request.auth && request.auth.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Giriş yapmış olmalısın.");
+
+  const [historySnap, readingSnap, wantSnap] = await Promise.all([
+    db.collection("users").doc(uid).collection("bookHistory").get(),
+    db.collection("users").doc(uid).collection("readBooks").get(),
+    db.collection("users").doc(uid).collection("wantToRead").get(),
+  ]);
+  const listOf = (snap) => snap.docs
+    .map((d) => d.data())
+    .map((b) => (b.author ? `${b.title} (${b.author})` : b.title))
+    .filter(Boolean);
+  const history = listOf(historySnap);
+  const reading = listOf(readingSnap);
+  const wantToRead = listOf(wantSnap);
+
+  if (!history.length && !reading.length && !wantToRead.length) {
+    throw new HttpsError("failed-precondition", "Önce kitaplığına birkaç kitap eklemen gerekiyor.");
+  }
+
+  const prompt = `Bir kitap kulübü uygulamasında kullanıcıya kişiselleştirilmiş TEK bir kitap önerisi hazırlıyorsun.
+Daha önce okuyup bitirdiği kitaplar: ${history.join(", ") || "yok"}.
+Şu an okumakta olduğu kitap(lar): ${reading.join(", ") || "yok"}.
+Okumak istediği ama henüz başlamadığı kitaplar: ${wantToRead.join(", ") || "yok"}.
+
+Bu listelerin hiçbirinde OLMAYAN, gerçekten var olan, tek bir kitap öner. Zevkine uygun ama listesinde zaten olmayan bir şey seç. Sadece şu JSON formatında, başka hiçbir açıklama eklemeden cevap ver:
+{"title":"kitabın adı","author":"yazarın adı","reason":"Türkçe, samimi, 1-2 cümlelik öneri gerekçesi"}`;
+
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": anthropicApiKey.value(),
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 400,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => "");
+    console.error("[getBookRecommendation] Anthropic API hatası:", resp.status, errText);
+    throw new HttpsError("internal", "Öneri alınamadı, biraz sonra tekrar dene.");
+  }
+  const data = await resp.json();
+  const text = (data.content && data.content[0] && data.content[0].text) || "";
+  let rec;
+  try {
+    const match = text.match(/\{[\s\S]*\}/);
+    rec = JSON.parse(match ? match[0] : text);
+  } catch (e) {
+    console.error("[getBookRecommendation] JSON parse hatası. Ham cevap:", text);
+    throw new HttpsError("internal", "Öneri işlenemedi.");
+  }
+  if (!rec || !rec.title) throw new HttpsError("internal", "Öneri boş geldi.");
+
+  const result = {
+    title: String(rec.title).slice(0, 200),
+    author: String(rec.author || "").slice(0, 200),
+    reason: String(rec.reason || "").slice(0, 500),
+    generatedAt: new Date().toISOString(),
+  };
+  await db.collection("users").doc(uid).update({ aiRecommendation: result });
+  return result;
 });
 
 /* ============================================================================
