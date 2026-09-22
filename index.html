@@ -9591,15 +9591,22 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
   const el = panes[current];
   if(!el) return;
   const h = el.scrollHeight;
-  if(animate){
-   const from = viewport.getBoundingClientRect().height || h;
+  // "from", viewport'un O ANKİ gerçek render edilmiş yüksekliğinden (getBoundingClientRect)
+  // DEĞİL, bizim EN SON kendi belirlediğimiz px değerinden okunuyor. Bunun sebebi: bu fonksiyon
+  // artık paneResizeObserver tarafından da (içerik asenkron değiştiğinde) tetikleniyor — o an
+  // DOM zaten yeni boyutuna reflow olmuş oluyor (ResizeObserver her zaman DEĞİŞİKLİKTEN SONRA
+  // ateşlenir), yani getBoundingClientRect zaten "h" ile aynı değeri verir ve "geçiş" görünmeden
+  // anında zıplardı. Kendi son belirlediğimiz değeri hatırlayarak gerçek bir "eski->yeni" farkı
+  // elde ediyoruz — bu yüzden viewport'un height'ını ASLA ''(auto)'ya geri sıfırlamıyoruz, hep
+  // açık bir piksel değeri olarak kalıyor.
+  const currentPx = parseFloat(viewport.style.height);
+  const from = !isNaN(currentPx) ? currentPx : (viewport.getBoundingClientRect().height || h);
+  viewport.style.transition = 'none';
+  if(animate && from!==h){
    viewport.style.height = from+'px';
-   viewport.style.transition = 'none';
    void viewport.offsetHeight;
    viewport.style.transition = 'height .26s var(--ease)';
    requestAnimationFrame(()=>{ viewport.style.height = h+'px'; });
-   const done=()=>{ viewport.style.height=''; viewport.style.transition=''; viewport.removeEventListener('transitionend', done); };
-   viewport.addEventListener('transitionend', done);
   } else {
    viewport.style.height = h+'px';
   }
@@ -9666,6 +9673,17 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
   goTo(current, true);
  }, {passive:true});
  goTo(0, false);
+ // goTo() yüksekliği SADECE geçiş anında ölçüyor — ama ör. Hediyeler kartındaki "Geçmiş" panesi
+ // gibi içeriği Firestore'dan asenkron gelen bir pane'e tam o veri gelmeden hemen önce/sırasında
+ // kaydırılırsa, ölçülen yükseklik eski (kısa) kalıyor ve veri az sonra gelince viewport ya
+ // içeriği kırpıyor ya da (dışarıdaki akordeon yükseklik izleyicisiyle çakışınca) kart aniden
+ // küçülüp büyüyormuş gibi görünüyordu. Aktif pane'in kendi yüksekliğini sürekli izleyip her
+ // değiştiğinde viewport'u yumuşakça buna göre ayarlayarak bunu kalıcı olarak çözüyoruz.
+ const paneResizeObserver = new ResizeObserver(()=>{
+  if(dragging) return;
+  setHeight(true);
+ });
+ panes.forEach(p=>paneResizeObserver.observe(p));
  return { goTo, get current(){ return current; } };
 }
 // section: pane gruplarının (her biri bir veya birden çok .card) şu an düz sırayla çocuğu olduğu
