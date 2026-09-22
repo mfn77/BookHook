@@ -1952,11 +1952,11 @@ function switchTab(id){
   // main'in padding'iyle ilgili yüzde hesaplarıyla uğraşmaya hiç gerek kalmıyor).
   function beginPreview(currentSection, targetSection, targetIdx, goingNext){
     const rect = currentSection.getBoundingClientRect();
-    // İki sekme birbirine dip dibe kaymasın — normalde kart içeriğinin ekran kenarından içeride
-    // durduğu kadar (main'in kendi yatay padding'i) bir boşluk bırakarak kaysınlar. Bu boşluk
-    // sadece sürükleme SIRASINDA görünür; jest tamamlanınca hedef tam olarak mevcut sekmenin
-    // durduğu yere oturur, boşluk kaybolur.
-    const gap = parseFloat(getComputedStyle(contentCol).paddingLeft) || 0;
+    // İki sekme birbirine dip dibe kaymasın — mevcut sekmenin sağ/sol kenarındaki inset ile
+    // hedef sekmenin kendi kenarındaki inset TOPLANARAK (main'in yatay padding'inin iki katı)
+    // aradaki boşluk belirlenir. Bu boşluk sadece sürükleme SIRASINDA görünür; jest tamamlanınca
+    // hedef tam olarak mevcut sekmenin durduğu yere oturur, boşluk kaybolur.
+    const gap = (parseFloat(getComputedStyle(contentCol).paddingLeft) || 0) * 2;
     previewCurrentSection = currentSection;
     previewTargetSection = targetSection;
     previewTargetIdx = targetIdx;
