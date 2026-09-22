@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-20" />
+<link rel="stylesheet" href="./style.css?v=material-21" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -5096,44 +5096,65 @@ function renderBookHistoryTab(){
   setupDiscoverNavObserver();
 }
 // Kitaplık sekmesinin en üstündeki büyük "Senin İçin Seçtik" kartı — okuma geçmişine göre
-// tek bir kişisel öneri hazırlaması için sunucudaki (functions/index.js) getBookRecommendation
-// Cloud Function'ını çağırıyor. Sonuç profildeki aiRecommendation alanına yazıldığı için
+// birkaç kişisel öneri hazırlaması için sunucudaki (functions/index.js) getBookRecommendation
+// Cloud Function'ını çağırıyor. Sonuç profildeki aiRecommendations alanına yazıldığı için
 // her sekme açılışında yeniden çağırmıyoruz, sadece hiç öneri yoksa otomatik bir kere
-// hesaplıyoruz; sonrasında kullanıcı "yeni öneri iste" ile manuel tetikliyor.
-function aiRecHtml(rec){
-  return `<div class="ai-rec-row">
-    <div class="ai-rec-cover">${placeholderCoverHtml(rec.title||'')}</div>
-    <div class="ai-rec-text">
-      <b>${escapeHtml(rec.title||'')}</b>
-      <div class="muted" style="margin:2px 0 8px;">${escapeHtml(rec.author||'')}</div>
-      <div style="font-size:13px; line-height:1.5;">${escapeHtml(rec.reason||'')}</div>
-    </div>
-  </div>
+// hesaplıyoruz; sonrasında kullanıcı "yeni öneri iste" ile manuel tetikliyor. Kapak resimleri
+// Claude'un cevabında yok (uydurma bir link vermesi riskli olurdu) — bunun yerine, kitap
+// ekleme formunda zaten kullandığımız Google Books aramasıyla ayrıca, istemci tarafında çekiliyor.
+function aiRecItemHtml(rec){
+  const coverHtml = rec.cover
+    ? `<img src="${rec.cover}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(rec.title||'').replace(/'/g,"\\'")}');" />`
+    : placeholderCoverHtml(rec.title||'');
+  return `<div class="ai-rec-item">
+    <div class="ai-rec-cover">${coverHtml}</div>
+    <b>${escapeHtml(rec.title||'')}</b>
+    <div class="muted" style="font-size:12px; margin:2px 0 4px;">${escapeHtml(rec.author||'')}</div>
+    <div style="font-size:12px; line-height:1.4;">${escapeHtml(rec.reason||'')}</div>
+  </div>`;
+}
+function aiRecHtml(items){
+  return `<div class="ai-rec-list">${items.map(aiRecItemHtml).join('')}</div>
   <button type="button" class="secondary tiny" id="aiRecRefreshBtn" style="margin-top:14px;">🔄 Yeni öneri iste</button>`;
 }
 function wireAiRecRefresh(){
   const btn = document.getElementById('aiRecRefreshBtn');
   if(btn) btn.addEventListener('click', fetchAiRecommendation);
 }
+// Her öneri için Google Books'ta başlık+yazarla arayıp ilk sonucun kapak resmini ekliyor;
+// bulunamazsa rec.cover boş kalır ve aiRecItemHtml zaten var olan süslü yer tutucuya düşer.
+async function attachCoversToRecs(items){
+  await Promise.all(items.map(async (rec)=>{
+    try{
+      const results = await searchGoogleBooks(`intitle:${rec.title} inauthor:${rec.author||''}`);
+      if(results[0] && results[0].cover) rec.cover = results[0].cover;
+    }catch(e){}
+  }));
+}
 async function fetchAiRecommendation(){
   const body = document.getElementById('aiRecBody');
   if(!body) return;
-  body.innerHTML = `<span class="muted">Senin için bir kitap seçiliyor…</span>`;
+  body.innerHTML = `<span class="muted">Senin için kitaplar seçiliyor…</span>`;
   try{
     const fn = httpsCallable(cloudFunctions, 'getBookRecommendation');
     const res = await fn();
-    myProfile.aiRecommendation = res.data;
-    body.innerHTML = aiRecHtml(res.data);
+    const items = res.data.items || [];
+    myProfile.aiRecommendations = res.data;
+    await attachCoversToRecs(items);
+    body.innerHTML = aiRecHtml(items);
   }catch(err){
     body.innerHTML = `<span class="muted">${escapeHtml(err.message||'Öneri alınamadı.')}</span><div style="margin-top:10px;"><button type="button" class="secondary tiny" id="aiRecRefreshBtn">Tekrar dene</button></div>`;
   }
   wireAiRecRefresh();
 }
-function renderAiRecCard(){
+async function renderAiRecCard(){
   const body = document.getElementById('aiRecBody');
   if(!body) return;
-  if(myProfile.aiRecommendation){
-    body.innerHTML = aiRecHtml(myProfile.aiRecommendation);
+  const cached = myProfile.aiRecommendations;
+  if(cached && cached.items && cached.items.length){
+    body.innerHTML = `<span class="muted">Yükleniyor…</span>`;
+    await attachCoversToRecs(cached.items);
+    body.innerHTML = aiRecHtml(cached.items);
     wireAiRecRefresh();
   } else {
     fetchAiRecommendation();

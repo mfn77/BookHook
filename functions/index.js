@@ -644,10 +644,12 @@ exports.adminDeleteMember = onCall(async (request) => {
 /* ============================================================================
    YAPAY ZEKA KİTAP ÖNERİSİ
    Kullanıcının okuduğu, okumakta olduğu ve okumak istediği kitaplara bakıp Claude'dan
-   tek bir kişisel öneri istiyor. API anahtarı burada, sadece sunucu tarafında kalıyor —
-   istemciye hiç gitmiyor. Sonuç users/{uid}.aiRecommendation altına yazılıyor ki istemci
-   her sekme açılışında değil, sadece kullanıcı "yeni öneri iste" dediğinde tekrar çağırsın. */
+   birkaç kişisel öneri istiyor. API anahtarı burada, sadece sunucu tarafında kalıyor —
+   istemciye hiç gitmiyor. Sonuç users/{uid}.aiRecommendations altına (bir dizi olarak)
+   yazılıyor ki istemci her sekme açılışında değil, sadece kullanıcı "yeni öneri iste"
+   dediğinde tekrar çağırsın. */
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
+const AI_REC_COUNT = 3;
 
 exports.getBookRecommendation = onCall({ secrets: [anthropicApiKey] }, async (request) => {
   const uid = request.auth && request.auth.uid;
@@ -670,13 +672,13 @@ exports.getBookRecommendation = onCall({ secrets: [anthropicApiKey] }, async (re
     throw new HttpsError("failed-precondition", "Önce kitaplığına birkaç kitap eklemen gerekiyor.");
   }
 
-  const prompt = `Bir kitap kulübü uygulamasında kullanıcıya kişiselleştirilmiş TEK bir kitap önerisi hazırlıyorsun.
+  const prompt = `Bir kitap kulübü uygulamasında kullanıcıya kişiselleştirilmiş ${AI_REC_COUNT} kitap önerisi hazırlıyorsun.
 Daha önce okuyup bitirdiği kitaplar: ${history.join(", ") || "yok"}.
 Şu an okumakta olduğu kitap(lar): ${reading.join(", ") || "yok"}.
 Okumak istediği ama henüz başlamadığı kitaplar: ${wantToRead.join(", ") || "yok"}.
 
-Bu listelerin hiçbirinde OLMAYAN, gerçekten var olan, tek bir kitap öner. Zevkine uygun ama listesinde zaten olmayan bir şey seç. Sadece şu JSON formatında, başka hiçbir açıklama eklemeden cevap ver:
-{"title":"kitabın adı","author":"yazarın adı","reason":"Türkçe, samimi, 1-2 cümlelik öneri gerekçesi"}`;
+Bu listelerin hiçbirinde OLMAYAN, gerçekten var olan, BİRBİRİNDEN FARKLI ${AI_REC_COUNT} kitap öner. Zevkine uygun ama listesinde zaten olmayan şeyler seç. Sadece şu JSON formatında, bir DİZİ olarak, başka hiçbir açıklama eklemeden cevap ver:
+[{"title":"kitabın adı","author":"yazarın adı","reason":"Türkçe, samimi, 1 cümlelik öneri gerekçesi"}, ...]`;
 
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -687,7 +689,7 @@ Bu listelerin hiçbirinde OLMAYAN, gerçekten var olan, tek bir kitap öner. Zev
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 400,
+      max_tokens: 700,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -699,23 +701,24 @@ Bu listelerin hiçbirinde OLMAYAN, gerçekten var olan, tek bir kitap öner. Zev
   }
   const data = await resp.json();
   const text = (data.content && data.content[0] && data.content[0].text) || "";
-  let rec;
+  let recs;
   try {
-    const match = text.match(/\{[\s\S]*\}/);
-    rec = JSON.parse(match ? match[0] : text);
+    const match = text.match(/\[[\s\S]*\]/);
+    recs = JSON.parse(match ? match[0] : text);
   } catch (e) {
     console.error("[getBookRecommendation] JSON parse hatası. Ham cevap:", text);
     throw new HttpsError("internal", "Öneri işlenemedi.");
   }
-  if (!rec || !rec.title) throw new HttpsError("internal", "Öneri boş geldi.");
+  if (!Array.isArray(recs)) recs = [recs];
+  recs = recs.filter((r) => r && r.title).slice(0, AI_REC_COUNT).map((r) => ({
+    title: String(r.title).slice(0, 200),
+    author: String(r.author || "").slice(0, 200),
+    reason: String(r.reason || "").slice(0, 300),
+  }));
+  if (!recs.length) throw new HttpsError("internal", "Öneri boş geldi.");
 
-  const result = {
-    title: String(rec.title).slice(0, 200),
-    author: String(rec.author || "").slice(0, 200),
-    reason: String(rec.reason || "").slice(0, 500),
-    generatedAt: new Date().toISOString(),
-  };
-  await db.collection("users").doc(uid).update({ aiRecommendation: result });
+  const result = { items: recs, generatedAt: new Date().toISOString() };
+  await db.collection("users").doc(uid).update({ aiRecommendations: result });
   return result;
 });
 
