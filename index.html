@@ -5200,13 +5200,14 @@ function wireAiRecRefresh(){
 }
 function wireAiRecItems(items){
   document.querySelectorAll('#aiRecBody .ai-rec-item').forEach(el=>{
-    el.addEventListener('click', ()=> showAiRecDetail(items[Number(el.dataset.aiRecIdx)]));
+    const idx = Number(el.dataset.aiRecIdx);
+    el.addEventListener('click', ()=> showAiRecDetail(items[idx], items, idx));
   });
 }
 // Aynı oturumda aynı kitaba tekrar tıklanırsa ikna metnini yeniden istemeyelim diye basit bir
 // önbellek — sayfa yenilenince temizlenir, Firestore'a yazılmaz (zaten ucuz/isteğe bağlı bir çağrı).
 const aiPitchCache = {};
-async function showAiRecDetail(rec){
+async function showAiRecDetail(rec, items, idx){
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
   const coverHtml = rec.cover
@@ -5221,12 +5222,13 @@ async function showAiRecDetail(rec){
     <h2 style="margin:4px 0 2px;">${escapeHtml(rec.title||'')}</h2>
     <div class="muted" style="margin-bottom:10px;">${escapeHtml(rec.author||'')}</div>
     <div id="aiRecPitchText" style="text-align:left; font-size:14px; line-height:1.6;">${pitchHtml}</div>
-    <div class="row" style="justify-content:center; gap:8px; margin-top:16px;">
+    <div class="row" style="justify-content:center; gap:8px; margin-top:16px; flex-wrap:wrap;">
       <button type="button" class="primary" id="aiRecMarkReadingBtn">📖 Okuyorum</button>
       <button type="button" class="secondary" id="aiRecMarkReadBtn">✓ Okudum</button>
+      <button type="button" class="secondary" id="aiRecMarkWantBtn">➕ Okumak istiyorum</button>
     </div>
   `;
-  wireAiRecDetailActions(rec);
+  wireAiRecDetailActions(rec, items, idx);
   if(!aiPitchCache[cacheKey]){
     try{
       const fn = httpsCallable(cloudFunctions, 'getBookPitch');
@@ -5240,27 +5242,60 @@ async function showAiRecDetail(rec){
     }
   }
 }
-function wireAiRecDetailActions(rec){
+function wireAiRecDetailActions(rec, items, idx){
   const wire = (btnId, collectionName, toastMsg)=>{
     const btn = document.getElementById(btnId);
     if(!btn) return;
     btn.addEventListener('click', async ()=>{
-      btn.disabled = true;
+      document.querySelectorAll('#bookInfoModalBody button').forEach(b=>b.disabled=true);
       try{
         await addDoc(collection(db,'users',currentUid,collectionName), { title:rec.title||'', author:rec.author||'', cover:rec.cover||'', addedAt:new Date().toISOString() });
         closeModal('bookInfoModal');
         showToast(toastMsg);
         if(document.getElementById('readBooksGrid')) renderMyBooksTab();
-      }catch(err){ alert('Eklenemedi: '+(err.message||err)); btn.disabled = false; }
+        if(Array.isArray(items) && idx!==undefined) replaceAiRecSlot(items, idx);
+      }catch(err){
+        alert('Eklenemedi: '+(err.message||err));
+        document.querySelectorAll('#bookInfoModalBody button').forEach(b=>b.disabled=false);
+      }
     });
   };
   wire('aiRecMarkReadingBtn', 'readBooks', 'Şu An Okuduklarım\'a eklendi!');
   wire('aiRecMarkReadBtn', 'bookHistory', 'Kitap Geçmişim\'e eklendi!');
+  wire('aiRecMarkWantBtn', 'wantToRead', 'Okumak İstediklerim\'e eklendi!');
+}
+// Bir öneri "okuyorum/okudum/okumak istiyorum" ile kartından kaldırılınca, o TEK boşluk için tek
+// bir yeni öneri isteyip aynı konuma yerleştiriyoruz — diğer iki öneri yerinde kalıyor, tüm liste
+// baştan yüklenmiyor. Yeni öneri gelene kadar liste 2 kitapla gösterilir.
+async function replaceAiRecSlot(items, idx){
+  if(!Array.isArray(items) || idx<0 || idx>=items.length) return;
+  const removed = items[idx];
+  items.splice(idx, 1);
+  const body = document.getElementById('aiRecBody');
+  if(body){ body.innerHTML = aiRecHtml(items); wireAiRecRefresh(); wireAiRecItems(items); }
+  myProfile.aiRecommendations = { items: items.slice(), generatedAt: (myProfile.aiRecommendations && myProfile.aiRecommendations.generatedAt) || new Date().toISOString() };
+  try{
+    const exclude = [...items, removed].map(r=> r.author ? `${r.title} (${r.author})` : r.title);
+    const fn = httpsCallable(cloudFunctions, 'getBookRecommendation');
+    const res = await fn({ count:1, exclude });
+    const newItem = res.data && res.data.items && res.data.items[0];
+    if(newItem){
+      await attachCoversToRecs([newItem]);
+      items.splice(idx, 0, newItem);
+      myProfile.aiRecommendations = { items: items.slice(), generatedAt: new Date().toISOString() };
+      await updateDoc(doc(db,'users',currentUid), { aiRecommendations: myProfile.aiRecommendations }).catch(()=>{});
+      const bodyNow = document.getElementById('aiRecBody');
+      if(bodyNow){ bodyNow.innerHTML = aiRecHtml(items); wireAiRecRefresh(); wireAiRecItems(items); }
+    }
+  }catch(err){
+    // Sessizce 2 kitapla kalır — kullanıcı "Yeni öneri iste" ile tam listeyi yenileyebilir.
+  }
 }
 // Her öneri için Google Books'ta başlık+yazarla arayıp ilk sonucun kapak resmini ekliyor;
 // bulunamazsa rec.cover boş kalır ve aiRecItemHtml zaten var olan süslü yer tutucuya düşer.
 async function attachCoversToRecs(items){
   await Promise.all(items.map(async (rec)=>{
+    if(rec.cover) return; // zaten var (önbellekten geldi) — tekrar aranmıyor
     try{
       const results = await searchGoogleBooks(`intitle:${rec.title} inauthor:${rec.author||''}`);
       if(results[0] && results[0].cover) rec.cover = results[0].cover;
@@ -5286,6 +5321,9 @@ async function fetchAiRecommendation(){
     const items = res.data.items || [];
     myProfile.aiRecommendations = res.data;
     await attachCoversToRecs(items);
+    // Kapaklar Cloud Function'ın kendi yazdığı belgeye dahil değildi (orada henüz aranmamışlardı)
+    // — burada bulunduktan sonra üzerine yazıyoruz ki bir sonraki açılışta yine aranmasınlar.
+    updateDoc(doc(db,'users',currentUid), { aiRecommendations: myProfile.aiRecommendations }).catch(()=>{});
     body.innerHTML = aiRecHtml(items);
     wireAiRecItems(items);
   }catch(err){
@@ -5301,8 +5339,15 @@ async function renderAiRecCard(){
   if(document.querySelector('#aiRecBody .ai-rec-item')) return; // zaten ekranda öneri var, ilgisiz bir profil güncellemesi yüzünden yeniden çizmeye gerek yok
   const cached = myProfile.aiRecommendations;
   if(cached && cached.items && cached.items.length){
-    body.innerHTML = `<span class="muted">Yükleniyor…</span>`;
-    await attachCoversToRecs(cached.items);
+    const missingCovers = cached.items.some(it=>!it.cover);
+    if(missingCovers){
+      body.innerHTML = `<span class="muted">Yükleniyor…</span>`;
+      await attachCoversToRecs(cached.items);
+      // Kapaklar artık myProfile.aiRecommendations üzerinde (aynı obje referansı) — bir sonraki
+      // sayfa açılışında da aynı Google Books aramalarını tekrarlamamak için Firestore'a da
+      // yazıyoruz, böylece öneriler gerçekten "diğer her şey gibi" önbelleğe alınmış oluyor.
+      updateDoc(doc(db,'users',currentUid), { aiRecommendations: myProfile.aiRecommendations }).catch(()=>{});
+    }
     body.innerHTML = aiRecHtml(cached.items);
     wireAiRecRefresh();
     wireAiRecItems(cached.items);

@@ -655,6 +655,16 @@ exports.getBookRecommendation = onCall({ secrets: [anthropicApiKey] }, async (re
   const uid = request.auth && request.auth.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Giriş yapmış olmalısın.");
 
+  // count<AI_REC_COUNT: tek bir öneriyi (kullanıcı "okuyorum/okudum/okumak istiyorum" deyip o
+  // kitabı listeden kaldırınca) değiştirmek için kullanılıyor — bu durumda sunucu önbelleğine
+  // (aiRecommendations) DOKUNMUYORUZ, istemci kalan öğelerle birleştirip kendi yazıyor (bkz.
+  // replaceAiRecSlot istemci tarafında).
+  const count = Math.max(1, Math.min(AI_REC_COUNT, Number((request.data && request.data.count) || AI_REC_COUNT)));
+  const isFullFetch = count >= AI_REC_COUNT;
+  const exclude = Array.isArray(request.data && request.data.exclude)
+    ? request.data.exclude.map((x) => String(x).slice(0, 200)).slice(0, 20)
+    : [];
+
   const [historySnap, readingSnap, wantSnap] = await Promise.all([
     db.collection("users").doc(uid).collection("bookHistory").get(),
     db.collection("users").doc(uid).collection("readBooks").get(),
@@ -672,12 +682,14 @@ exports.getBookRecommendation = onCall({ secrets: [anthropicApiKey] }, async (re
     throw new HttpsError("failed-precondition", "Önce kitaplığına birkaç kitap eklemen gerekiyor.");
   }
 
-  const prompt = `Bir kitap kulübü uygulamasında kullanıcıya kişiselleştirilmiş ${AI_REC_COUNT} kitap önerisi hazırlıyorsun.
+  const excludeLine = exclude.length ? `\nAyrıca şu kitapları ÖNERME (zaten önerilmiş veya az önce eklenmiş): ${exclude.join(", ")}.` : "";
+  const countWord = count === 1 ? "1 kitap" : `${count} kitap`;
+  const prompt = `Bir kitap kulübü uygulamasında kullanıcıya kişiselleştirilmiş ${countWord} önerisi hazırlıyorsun.
 Daha önce okuyup bitirdiği kitaplar: ${history.join(", ") || "yok"}.
 Şu an okumakta olduğu kitap(lar): ${reading.join(", ") || "yok"}.
-Okumak istediği ama henüz başlamadığı kitaplar: ${wantToRead.join(", ") || "yok"}.
+Okumak istediği ama henüz başlamadığı kitaplar: ${wantToRead.join(", ") || "yok"}.${excludeLine}
 
-Bu listelerin hiçbirinde OLMAYAN, gerçekten var olan, BİRBİRİNDEN FARKLI ${AI_REC_COUNT} kitap öner. Zevkine uygun ama listesinde zaten olmayan şeyler seç. Sadece şu JSON formatında, bir DİZİ olarak, başka hiçbir açıklama eklemeden cevap ver:
+Bu listelerin hiçbirinde OLMAYAN, gerçekten var olan${count > 1 ? ", BİRBİRİNDEN FARKLI" : ""} ${countWord} öner. Zevkine uygun ama listesinde zaten olmayan şeyler seç. Sadece şu JSON formatında, bir DİZİ olarak, başka hiçbir açıklama eklemeden cevap ver:
 [{"title":"kitabın adı","author":"yazarın adı","reason":"Türkçe, samimi, 1 cümlelik öneri gerekçesi"}, ...]`;
 
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
@@ -710,7 +722,7 @@ Bu listelerin hiçbirinde OLMAYAN, gerçekten var olan, BİRBİRİNDEN FARKLI ${
     throw new HttpsError("internal", "Öneri işlenemedi.");
   }
   if (!Array.isArray(recs)) recs = [recs];
-  recs = recs.filter((r) => r && r.title).slice(0, AI_REC_COUNT).map((r) => ({
+  recs = recs.filter((r) => r && r.title).slice(0, count).map((r) => ({
     title: String(r.title).slice(0, 200),
     author: String(r.author || "").slice(0, 200),
     reason: String(r.reason || "").slice(0, 300),
@@ -718,7 +730,9 @@ Bu listelerin hiçbirinde OLMAYAN, gerçekten var olan, BİRBİRİNDEN FARKLI ${
   if (!recs.length) throw new HttpsError("internal", "Öneri boş geldi.");
 
   const result = { items: recs, generatedAt: new Date().toISOString() };
-  await db.collection("users").doc(uid).update({ aiRecommendations: result });
+  if (isFullFetch) {
+    await db.collection("users").doc(uid).update({ aiRecommendations: result });
+  }
   return result;
 });
 
