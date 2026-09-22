@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-22" />
+<link rel="stylesheet" href="./style.css?v=material-23" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -1827,6 +1827,40 @@ function resolveNotifTab(tabId){
   if(!isAdmin && !tabIsMemberSide) return equiv;
   return tabId;
 }
+// Üstteki sekme başlığı değişirken eskisi silinip yerine yenisi giren küçük bir animasyonla
+// değişsin diye — switchTab() (buton/tıklama ile) ve materialSyncNavigation() (kaydırma anında,
+// parmak kalkar kalkmaz) her ikisi de aynı yardımcı fonksiyonu çağırıyor.
+function setTabTitleAnimated(newText){
+  const el = document.getElementById('currentTabTitle');
+  if(!el) return;
+  // Kaydırma anında hem parmak kalkar kalkmaz (materialSyncNavigation) hem de içerik gerçekten
+  // değişince (switchTab, ~240ms sonra) bu fonksiyon aynı hedef metinle iki kez çağrılıyor.
+  // Animasyon sürerken el.textContent, iki <span>'in birleşimi (ör. "BugünAkış") olduğu için
+  // güvenilir değil — bunun yerine son hedeflenen metni ayrıca saklayıp ona göre kısa devre
+  // yapıyoruz, yoksa ikinci çağrı yarım kalan animasyonu yeniden başlatıp metni birbirine katardı.
+  const currentTarget = el._titleTarget!==undefined ? el._titleTarget : el.textContent;
+  if(currentTarget===newText) return;
+  if(el._titleAnimTimeout){ clearTimeout(el._titleAnimTimeout); el._titleAnimTimeout=null; }
+  const oldText = currentTarget;
+  el._titleTarget = newText;
+  el.classList.add('title-animating');
+  el.innerHTML = `<span class="tab-title-piece tab-title-out">${escapeHtml(oldText)}</span><span class="tab-title-piece tab-title-in">${escapeHtml(newText)}</span>`;
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ el.classList.add('title-animate-run'); }); });
+  el._titleAnimTimeout = setTimeout(()=>{
+    el.classList.remove('title-animating','title-animate-run');
+    el.textContent = newText;
+    el._titleAnimTimeout = null;
+  }, 260);
+}
+// switchTab() ve kaydırma jestinin parmak-kalkar-kalkmaz senkronizasyonu aynı etiket kaynağını
+// kullansın diye — materialSyncNavigation()'daki names haritası yalnızca hub-kökü olan
+// sekmeleri kapsıyor (ör. "Akış" orada yok), o yüzden birincil sekmelerin tümü için başlık bunu
+// kullanmalı.
+function getTabLabel(id){
+  const allTabDefs = [...ADMIN_TABS, ...MEMBER_TABS, ...HAMBURGER_ADMIN_EXTRA, ...HAMBURGER_MEMBER_EXTRA];
+  const def = allTabDefs.find(t=>t.id===id);
+  return def ? def.label : '';
+}
 function switchTab(id){
   lastTabSwitchTime = Date.now();
   if(typeof closeReactionDrawer==='function') closeReactionDrawer();
@@ -1859,10 +1893,9 @@ function switchTab(id){
     sec.classList.add('active');
     sec.classList.add(direction==='right' ? 'anim-from-right' : direction==='left' ? 'anim-from-left' : 'anim-fade');
   }
-  const allTabDefs = [...ADMIN_TABS, ...MEMBER_TABS, ...HAMBURGER_ADMIN_EXTRA, ...HAMBURGER_MEMBER_EXTRA];
-  const def = allTabDefs.find(t=>t.id===id);
+  const label = getTabLabel(id);
   const titleEl = document.getElementById('currentTabTitle');
-  if(titleEl) titleEl.textContent = def ? def.label : '';
+  if(titleEl){ if(label) setTabTitleAnimated(label); else titleEl.textContent = ''; }
   const socialFab = document.getElementById('socialFloatingAction');
   if(socialFab) socialFab.classList.toggle('hidden', id!=='social');
   if(typeof updateDiscoverFabVisibility==='function') updateDiscoverFabVisibility();
@@ -1877,7 +1910,9 @@ function switchTab(id){
 (function setupSwipeNav(){
   let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, contentLeft=0, pendingSettleTimeout=null;
   let lastMoveX=0, lastMoveTime=0, lastMoveWallTime=0, velocity=0, bookIcon=null, watchdogInterval=null;
-  const contentCol = document.querySelector('.content-col');
+  // Sadece <main> (asıl sayfa içeriği) kayar — header (başlık/profil/bildirim/ayar) ve alt sekme
+  // çubuğu .content-col'un dışında/sabit kaldığı için hiç dokunulmuyor, kaymıyor, kaybolmuyor.
+  const contentCol = document.querySelector('.content-col > main');
   const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
   const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
 
@@ -1999,7 +2034,11 @@ function switchTab(id){
     unlockPageScroll();
     if(e.touches.length!==1){ touchStartX=null; return; }
     const t = e.target;
-    if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal')){
+    // Kart içi sekmesi olan bir alanda (ör. genişlemiş "Kayıtlar"/"Kitaplığım" kartındaki
+    // Kulüp/Ben, Okuyorum/İstek listem/Geçmişim gibi iç sekmeler) dokunuş başlıyorsa, sayfa
+    // seviyesindeki bu sekmeler-arası kaydırmayı hiç başlatma — o alan kendi kart-içi kaydırmasını
+    // ayrıca yönetiyor (bkz. setupInnerPaneCarousels).
+    if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport')){
       touchStartX=null; return;
     }
     touchStartX = e.touches[0].clientX;
@@ -2083,6 +2122,14 @@ function switchTab(id){
       // görünebiliyordu. switchTab() içeride aynı senkronizasyonu tekrar yapacak ama bu, zararsız
       // bir tekrardır (idempotent).
       if(typeof materialSyncNavigation==='function') materialSyncNavigation(order[targetIdx]);
+      // materialSyncNavigation() başlığı yalnızca hub-kökü sekmeler için değiştiriyor (ör. "Akış"
+      // orada yok) — birincil sekmelerin tümünde başlık aynı anda değişsin diye ayrıca burada da
+      // kesin kaynaktan (getTabLabel) çağırıyoruz; switchTab() 240ms sonra aynı metinle tekrar
+      // çağıracak ama setTabTitleAnimated zaten hedef aynıysa no-op.
+      if(typeof getTabLabel==='function' && typeof setTabTitleAnimated==='function'){
+        const nextLabel = getTabLabel(order[targetIdx]);
+        if(nextLabel) setTabTitleAnimated(nextLabel);
+      }
       pendingSettleTimeout = setTimeout(()=>{
         contentCol.style.transition = 'none';
         contentCol.style.transform = 'translateX(0)';
@@ -9305,7 +9352,7 @@ const HUB_ILLUSTRATIONS = {
 function materialHubLink(hubId,targetId,label,description,icon,noAccordion){
  HUB_PARENT[targetId] = hubId;
  if(noAccordion) HUB_NO_ACCORDION.add(targetId);
- return `<div class="hub-item" data-hub-target="${targetId}"><button type="button" class="destination-row hub-item-toggle"><div class="hub-item-summary">${HUB_ILLUSTRATIONS[icon]||''}<span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span></div><span class="hub-chevron" aria-hidden="true">›</span></button><div class="hub-item-panel"><div class="hub-item-panel-inner"></div></div></div>`;
+ return `<div class="hub-item" data-hub-target="${targetId}"><button type="button" class="destination-row hub-item-toggle"><div class="hub-item-summary">${HUB_ILLUSTRATIONS[icon]||''}<span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span></div><span class="hub-chevron" aria-hidden="true">›</span></button><div class="hub-item-panel"><div class="hub-item-panel-inner"></div></div><button type="button" class="hub-item-close-btn icon-button" aria-label="Kapat"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button></div>`;
 }
 function materialExpandHubItem(item, targetId){
  const inner = item.querySelector('.hub-item-panel-inner');
@@ -9313,6 +9360,14 @@ function materialExpandHubItem(item, targetId){
  if(section){ inner.appendChild(section); section.classList.add('active'); renderTab(targetId); }
  item.classList.add('expanded');
  watchPanelHeightGrowth(inner);
+ // Kart kapalıyken dar grid hücresi genişliğine göre kurulmuş olabilecek kart-içi karuseller
+ // (bkz. wireInnerPaneCarousel), kart açılıp tam genişliğe geçince yanlış ölçülü kalır —
+ // açılışta bir kez yeniden ölçüp konumluyoruz.
+ requestAnimationFrame(()=>{
+  inner.querySelectorAll('.inner-pane-viewport').forEach(vp=>{
+   if(vp._carousel) vp._carousel.goTo(vp._carousel.current, false);
+  });
+ });
 }
 // Kart açılırken panel, o anda içeride ne varsa ona göre büyüyor — ama sekmenin verisi
 // Firestore'dan asenkron geliyor, o yüzden tıklama anında panelde genelde sadece küçük bir
@@ -9352,6 +9407,12 @@ function watchPanelHeightGrowth(inner){
 }
 function materialCollapseHubItem(item){ item.classList.remove('expanded'); }
 document.body.addEventListener('click', e=>{
+ const closeBtn = e.target.closest('.hub-item-close-btn');
+ if(!closeBtn) return;
+ const item = closeBtn.closest('.hub-item');
+ if(item) materialCollapseHubItem(item);
+});
+document.body.addEventListener('click', e=>{
  const toggle = e.target.closest('.hub-item-toggle');
  if(!toggle) return;
  const item = toggle.closest('.hub-item');
@@ -9378,28 +9439,180 @@ document.body.addEventListener('click', e=>{
   materialCollapseHubItem(item);
  }
 });
+// Kart içi sekme geçişini (bkz. yukarıdaki .inner-pane-* CSS yorumu) yöneten düşük seviye
+// karusel — bir viewport/track/pane üçlüsü üzerinde parmakla sürükleme, mesafe+hız eşiğiyle
+// karar verme ve pane değişince yükseklik geçişini üstleniyor. Sayfa seviyesindeki
+// setupSwipeNav() ile aynı deseni (mesafe/hız eşiği, watchdog'a gerek yok çünkü tek dokunuşluk
+// kısa bir alan) kart-içi ölçeğe indirgenmiş hali.
+function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
+ const PEEK=22, GAP=10; // GAP, .inner-pane-track>.inner-pane margin-right ile eşleşmeli
+ let current=0, cardW=0, touchStartX=null, touchStartY=0, dragging=false, lastMoveX=0, lastMoveTime=0, velocity=0;
+ function measure(){
+  const vw = viewport.clientWidth || 1;
+  cardW = Math.max(40, vw - PEEK*2);
+  panes.forEach(p=>{ p.style.width = cardW+'px'; });
+ }
+ function baseX(i){ return PEEK - i*(cardW+GAP); }
+ function setHeight(animate){
+  const el = panes[current];
+  if(!el) return;
+  const h = el.scrollHeight;
+  if(animate){
+   const from = viewport.getBoundingClientRect().height || h;
+   viewport.style.height = from+'px';
+   viewport.style.transition = 'none';
+   void viewport.offsetHeight;
+   viewport.style.transition = 'height .26s var(--ease)';
+   requestAnimationFrame(()=>{ viewport.style.height = h+'px'; });
+   const done=()=>{ viewport.style.height=''; viewport.style.transition=''; viewport.removeEventListener('transitionend', done); };
+   viewport.addEventListener('transitionend', done);
+  } else {
+   viewport.style.height = h+'px';
+  }
+ }
+ function goTo(i, animate){
+  i = Math.max(0, Math.min(panes.length-1, i));
+  measure();
+  current = i;
+  track.style.transition = animate ? 'transform .26s cubic-bezier(0.25,0.8,0.25,1)' : 'none';
+  track.style.transform = `translateX(${baseX(i)}px)`;
+  setHeight(animate);
+  panes.forEach((p,j)=> p.setAttribute('aria-hidden', String(j!==i)));
+  if(onIndexChange) onIndexChange(i);
+ }
+ viewport.addEventListener('touchstart', (e)=>{
+  if(e.touches.length!==1) return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  dragging = false; velocity = 0;
+  lastMoveX = touchStartX; lastMoveTime = e.timeStamp;
+  measure();
+  track.style.transition = 'none';
+ }, {passive:true});
+ viewport.addEventListener('touchmove', (e)=>{
+  if(touchStartX===null) return;
+  const touch = e.touches[0];
+  const dx = touch.clientX - touchStartX;
+  const dy = touch.clientY - touchStartY;
+  if(!dragging){
+   if(Math.abs(dx) < 5 || Math.abs(dx) <= Math.abs(dy)*2.2) return;
+   dragging = true;
+  }
+  if(e.cancelable) e.preventDefault();
+  const dt = e.timeStamp - lastMoveTime;
+  if(dt>0) velocity = (touch.clientX - lastMoveX)/dt;
+  lastMoveX = touch.clientX; lastMoveTime = e.timeStamp;
+  // Uçtaki (ilk/son) sekmede daha ileri çekilirse lastik gibi hafifçe direnç göster — ama jesti
+  // asla sayfa seviyesindeki sekme geçişine bırakma (o zaten touchstart'ta devre dışı bırakıldı).
+  let d = dx;
+  if(current<=0 && dx>0) d = dx*0.35;
+  if(current>=panes.length-1 && dx<0) d = dx*0.35;
+  track.style.transform = `translateX(${baseX(current)+d}px)`;
+ }, {passive:false});
+ viewport.addEventListener('touchend', (e)=>{
+  if(touchStartX===null) return;
+  const touch = e.changedTouches[0];
+  const dx = touch.clientX - touchStartX;
+  touchStartX = null;
+  if(!dragging) return;
+  dragging = false;
+  const distanceOk = Math.abs(dx) > cardW*0.3;
+  const flickOk = Math.abs(velocity) > 0.35 && Math.sign(velocity)===Math.sign(dx);
+  let target = current;
+  if(distanceOk || flickOk){
+   if(dx<0 && current<panes.length-1) target = current+1;
+   else if(dx>0 && current>0) target = current-1;
+  }
+  goTo(target, true);
+ }, {passive:true});
+ viewport.addEventListener('touchcancel', ()=>{
+  touchStartX = null;
+  if(!dragging) return;
+  dragging = false;
+  goTo(current, true);
+ }, {passive:true});
+ goTo(0, false);
+ return { goTo, get current(){ return current; } };
+}
+// section: pane gruplarının (her biri bir veya birden çok .card) şu an düz sırayla çocuğu olduğu
+// <section>. groups: [[cardEl], [cardEl], ...] veya gift gibi gruplu [[card1,card2],[card3]].
+// buttonEntries: [{el:button, index:Number}] — segmented kontrolündeki sekme düğmeleri.
+function buildInnerPaneCarousel(section, groups, buttonEntries){
+ if(groups.length<2 || !groups[0] || !groups[0][0]) return null;
+ const marker = document.createComment('inner-pane-carousel');
+ section.insertBefore(marker, groups[0][0]);
+ const viewport = document.createElement('div');
+ viewport.className = 'inner-pane-viewport';
+ const track = document.createElement('div');
+ track.className = 'inner-pane-track';
+ groups.forEach(group=>{
+  const pane = document.createElement('div');
+  pane.className = 'inner-pane';
+  group.forEach(el=>{ if(el) pane.appendChild(el); });
+  track.appendChild(pane);
+ });
+ viewport.appendChild(track);
+ section.insertBefore(viewport, marker);
+ marker.remove();
+ const panes = [...track.children];
+ const carousel = wireInnerPaneCarousel(viewport, track, panes, (i)=>{
+  buttonEntries.forEach(({el,index})=>{
+   const match = index===i;
+   el.classList.toggle('active', match);
+   el.setAttribute('role','tab');
+   el.setAttribute('aria-selected', String(match));
+  });
+ });
+ buttonEntries.forEach(({el,index})=> el.onclick = ()=> carousel.goTo(index, true));
+ viewport._carousel = carousel;
+ return carousel;
+}
+let innerCarouselResizeTimeout = null;
+window.addEventListener('resize', ()=>{
+ clearTimeout(innerCarouselResizeTimeout);
+ innerCarouselResizeTimeout = setTimeout(()=>{
+  document.querySelectorAll('.hub-item.expanded .inner-pane-viewport').forEach(vp=>{
+   if(vp._carousel) vp._carousel.goTo(vp._carousel.current, false);
+  });
+ }, 150);
+});
 function materialInit(){
  document.querySelectorAll('[data-material-name]').forEach(el=>el.textContent=myProfile.name||'');
  document.querySelectorAll('[data-material-date]').forEach(el=>el.textContent=nowLogical().toLocaleDateString('tr-TR',{day:'numeric',month:'long',weekday:'long'}));
  document.querySelectorAll('[data-panels]').forEach(control=>{
   const section=document.getElementById('tab-'+control.dataset.panels);
+  // materialInit() ikinci kez çalışabiliyor (ör. profil tamamlanıp buildNav() tekrar çağrılınca) —
+  // karusel zaten kurulduysa kartlar artık .inner-pane içine taşınmış olur, section.children'da
+  // .card kalmaz; burada dokunmadan bırakıyoruz, yoksa düğmelerin onclick'i boş bir diziye
+  // bağlanıp sekme geçişi sessizce kırılırdı.
+  if(section.querySelector(':scope>.inner-pane-viewport')) return;
   const cards=[...section.children].filter(x=>x.classList.contains('card'));
   const chosen=Number(control.dataset.selected || (control.dataset.panels==='recs'?'1':control.dataset.panels==='week'||control.dataset.panels==='mtoday'?'1':'0'));
-  const select=(i)=>{
-   control.dataset.selected=String(i);
-   cards.forEach((card,j)=>{card.hidden=i!==j;});
-   control.querySelectorAll('[data-pane]').forEach((button,j)=>{button.classList.toggle('active',i===Number(button.dataset.pane));button.setAttribute('role','tab');button.setAttribute('aria-selected',String(i===Number(button.dataset.pane))); });
-  };
-  control.querySelectorAll('[data-pane]').forEach(button=>button.onclick=()=>select(Number(button.dataset.pane)));
-  select(chosen);
+  const buttonEntries=[...control.querySelectorAll('[data-pane]')].map(btn=>({el:btn, index:Number(btn.dataset.pane)}));
+  const carousel = buildInnerPaneCarousel(section, cards.map(c=>[c]), buttonEntries);
+  if(carousel){ control.dataset.selected=String(chosen); carousel.goTo(chosen, false); }
+  else {
+   // Tek panelli/az kartlı güvenlik ağı — karusel kurulamadıysa eski göster/gizle davranışı.
+   const select=(i)=>{ control.dataset.selected=String(i); cards.forEach((card,j)=>{card.hidden=i!==j;}); buttonEntries.forEach(({el,index})=>{el.classList.toggle('active',index===i); el.setAttribute('aria-selected', String(index===i));}); };
+   buttonEntries.forEach(({el,index})=> el.onclick=()=>select(index));
+   select(chosen);
+  }
  });
  const recControls=document.querySelector('[data-panels="recs"]');
- if(recControls)recControls.prepend(recControls.querySelector('[data-pane="1"]'));
+ if(recControls && !recControls.dataset.reordered){ recControls.prepend(recControls.querySelector('[data-pane="1"]')); recControls.dataset.reordered='1'; }
  const gifts=document.getElementById('tab-gifts');
  if(!document.getElementById('materialGiftTabs'))gifts.insertAdjacentHTML('afterbegin','<div class="segmented" id="materialGiftTabs"><button data-gift-view="0" class="active">Bekleyen</button><button data-gift-view="1">Geçmiş</button></div>');
- const giftCards=[...gifts.children].filter(c=>c.classList.contains('card'));
- const selectGifts=(view)=>{giftCards.forEach((c,i)=>c.hidden=view===0?i>=2:i<2);document.querySelectorAll('[data-gift-view]').forEach(b=>b.classList.toggle('active',Number(b.dataset.giftView)===view));};
- document.querySelectorAll('[data-gift-view]').forEach(b=>b.onclick=()=>selectGifts(Number(b.dataset.giftView)));selectGifts(0);
+ if(!gifts.querySelector(':scope>.inner-pane-viewport')){
+  const giftCards=[...gifts.children].filter(c=>c.classList.contains('card'));
+  const giftButtonEntries=[...document.querySelectorAll('[data-gift-view]')].map(btn=>({el:btn, index:Number(btn.dataset.giftView)}));
+  const giftGroups=[giftCards.slice(0,2), giftCards.slice(2)].filter(g=>g.length);
+  const giftCarousel = giftGroups.length>1 ? buildInnerPaneCarousel(gifts, giftGroups, giftButtonEntries) : null;
+  if(!giftCarousel){
+   const selectGifts=(view)=>{giftCards.forEach((c,i)=>c.hidden=view===0?i>=2:i<2);giftButtonEntries.forEach(({el,index})=>el.classList.toggle('active',index===view));};
+   giftButtonEntries.forEach(({el,index})=>el.onclick=()=>selectGifts(index));
+   selectGifts(0);
+  }
+ }
  const admin=myProfile.role==='admin';
  document.getElementById('materialClubGrid').innerHTML=[[materialRoute('records'),'Kayıtlar','Haftalık okuma durumları','records'],[materialRoute('badges'),'Rozetler','Okuma serilerini kutlayalım','badge'],['gifts','Hediyeler','Kitaplaşan dostluklar','gift']].map(x=>materialHubLink('club',...x)).join('');
  document.getElementById('materialLibraryGrid').innerHTML=[['bookhistory','Keşfet','Popüler kitaplar ve öneriler','search'],['mybooks','Kitaplığım','Okuduğun ve okuyacağın kitaplar','book'],['recs','Kitap önerileri','Kulüpten ve senden gelen öneriler','heart']].map(x=>materialHubLink('library',...x)).join('');
@@ -9447,7 +9660,7 @@ function materialSyncNavigation(id){
  back.onclick=()=>switchTab((id==='profile'||id==='appsettings')?getTabOrder()[0]:materialHubRoot(id));
  document.querySelectorAll('nav.tabs button').forEach(button=>{const selected=button.dataset.tab===(primary.includes(id)?id:materialHubRoot(id));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
  const names={club:'Kulüp',library:'Kitaplık',appsettings:'Ayarlar',quarterly:'Ortak kitap',admin:'Yönetim',worms:'Rozetler',mworms:'Rozetler',gifts:'Hediyeler',recs:'Kitap önerileri',rules:'Grup kuralları',settings:'Uygulama ayarları',today:'Bugün',msurvey:'Bugün'};
- if(names[id])document.getElementById('currentTabTitle').textContent=names[id];
+ if(names[id]) setTabTitleAnimated(names[id]);
  window.scrollTo({top:0,behavior:'instant'});
 }
 async function materialRenderClub(){

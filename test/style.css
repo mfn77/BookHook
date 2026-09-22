@@ -55,6 +55,12 @@ section.tab{display:none}section.tab.active{display:block;animation:screen-in .2
 header.top{position:sticky;top:0;z-index:75;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:76px;max-width:840px;margin:0 auto;padding:14px 28px;background:var(--paper)}
 .header-title-area{display:flex;align-items:center;gap:12px;min-width:0;font-size:27px;font-weight:650;letter-spacing:-.7px}
 #currentTabTitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#currentTabTitle.title-animating{position:relative;display:inline-block;height:1.25em;vertical-align:top;overflow:hidden}
+.tab-title-piece{position:absolute;left:0;top:0;white-space:nowrap;transition:transform .22s var(--ease),opacity .22s var(--ease)}
+.tab-title-out{transform:translateY(0);opacity:1}
+.tab-title-in{transform:translateY(60%);opacity:0}
+#currentTabTitle.title-animate-run .tab-title-out{transform:translateY(-60%);opacity:0}
+#currentTabTitle.title-animate-run .tab-title-in{transform:translateY(0);opacity:1}
 .whoami{display:flex;align-items:center;gap:6px;position:relative}
 .header-pill,.icon-button{position:relative;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;color:var(--ink)}
 .header-pill:hover,.icon-button:hover{background:var(--paper-2)}
@@ -96,8 +102,10 @@ textarea{resize:vertical;min-height:100px;line-height:1.6}input[type=checkbox]{a
 .ai-rec-item b{font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .ai-rec-cover{width:100%;aspect-ratio:2/3;border-radius:8px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:8px}
 .club-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.hub-item{background:var(--secondary-container);border-radius:26px;overflow:hidden;transition:grid-column .01s}
+.hub-item{position:relative;background:var(--secondary-container);border-radius:26px;overflow:hidden;transition:grid-column .01s}
 .hub-item.expanded{grid-column:1/-1}
+.hub-item-close-btn{position:absolute;top:12px;right:14px;z-index:6;background:var(--card);box-shadow:0 1px 5px rgba(0,0,0,.16);opacity:0;transform:scale(.7);pointer-events:none;transition:opacity .2s var(--ease),transform .25s var(--ease)}
+.hub-item.expanded .hub-item-close-btn{opacity:1;transform:scale(1);pointer-events:auto}
 .hub-item .destination-row{position:relative;background:transparent;padding:20px;border-radius:0;transition:padding .3s var(--ease)}
 .hub-item.expanded .destination-row{padding-top:0;padding-bottom:0;min-height:0}
 .hub-item-summary{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:16px;min-height:124px;max-height:300px;opacity:1;overflow:hidden;transition:max-height .3s var(--ease),opacity .2s var(--ease),min-height .3s var(--ease)}
@@ -115,6 +123,15 @@ svg.hub-illustration{position:absolute;right:8px;bottom:8px;width:56px;height:48
 .hub-item-panel-inner{overflow:hidden;min-height:0}
 .hub-item.expanded .hub-item-panel-inner{padding:18px 16px;border-top:1px solid var(--line)}
 .hub-item-panel section.tab{display:block!important;animation:none!important}
+/* Kart içi sekmeler (ör. genişleyen "Kayıtlar"/"Kitaplığım" kartındaki Kulüp/Ben, Okuyorum/İstek
+   listem/Geçmişim gibi) artık gizle/göster değil, yan yana bir şerit olarak kayıyor — aktif olan
+   tamamen görünürken komşu sekmenin kenarından ufak bir dilim (peek) taşıyor, JS bu genişliği/
+   kaymayı piksel olarak hesaplıyor (bkz. wireInnerPaneCarousel, GAP=10 burada da eşleşmeli). */
+.inner-pane-viewport{position:relative;overflow:hidden;touch-action:pan-y}
+.inner-pane-track{display:flex;align-items:flex-start}
+.inner-pane-track>.inner-pane{flex:0 0 auto;box-sizing:border-box}
+.inner-pane-track>.inner-pane:not(:last-child){margin-right:10px}
+.inner-pane-track>.inner-pane>.card:last-child{margin-bottom:0}
 .settings-list{background:var(--card);border-radius:24px;overflow:hidden;margin:16px 0 28px}.settings-list .destination-row{border-radius:0;border-bottom:1px solid var(--line)}.settings-list .destination-row:last-child{border:0}
 #materialMaintenance{border-radius:24px;background:var(--card);padding:20px}#materialMaintenance>summary{cursor:pointer;font-weight:600}#materialMaintenance .card{padding:16px 0;border-bottom:1px solid var(--line);border-radius:0}
 /* Feed and comments */
