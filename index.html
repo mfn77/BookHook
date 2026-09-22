@@ -5102,11 +5102,11 @@ function renderBookHistoryTab(){
 // hesaplıyoruz; sonrasında kullanıcı "yeni öneri iste" ile manuel tetikliyor. Kapak resimleri
 // Claude'un cevabında yok (uydurma bir link vermesi riskli olurdu) — bunun yerine, kitap
 // ekleme formunda zaten kullandığımız Google Books aramasıyla ayrıca, istemci tarafında çekiliyor.
-function aiRecItemHtml(rec){
+function aiRecItemHtml(rec, idx){
   const coverHtml = rec.cover
     ? `<img src="${rec.cover}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(rec.title||'').replace(/'/g,"\\'")}');" />`
     : placeholderCoverHtml(rec.title||'');
-  return `<div class="ai-rec-item">
+  return `<div class="ai-rec-item" data-ai-rec-idx="${idx}" style="cursor:pointer;">
     <div class="ai-rec-cover">${coverHtml}</div>
     <b>${escapeHtml(rec.title||'')}</b>
     <div class="muted" style="font-size:12px; margin:2px 0 4px;">${escapeHtml(rec.author||'')}</div>
@@ -5120,6 +5120,65 @@ function aiRecHtml(items){
 function wireAiRecRefresh(){
   const btn = document.getElementById('aiRecRefreshBtn');
   if(btn) btn.addEventListener('click', fetchAiRecommendation);
+}
+function wireAiRecItems(items){
+  document.querySelectorAll('#aiRecBody .ai-rec-item').forEach(el=>{
+    el.addEventListener('click', ()=> showAiRecDetail(items[Number(el.dataset.aiRecIdx)]));
+  });
+}
+// Aynı oturumda aynı kitaba tekrar tıklanırsa ikna metnini yeniden istemeyelim diye basit bir
+// önbellek — sayfa yenilenince temizlenir, Firestore'a yazılmaz (zaten ucuz/isteğe bağlı bir çağrı).
+const aiPitchCache = {};
+async function showAiRecDetail(rec){
+  const body = document.getElementById('bookInfoModalBody');
+  document.getElementById('bookInfoModal').style.display='flex';
+  const coverHtml = rec.cover
+    ? `<img src="${rec.cover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(rec.title||'').replace(/'/g,"\\'")}')+this.parentElement.innerHTML;" />`
+    : `<div style="width:100px; height:150px; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); margin:0 auto 12px;">${placeholderCoverHtml(rec.title||'')}</div>`;
+  const cacheKey = `${rec.title}|${rec.author}`;
+  const pitchHtml = aiPitchCache[cacheKey]
+    ? escapeHtml(aiPitchCache[cacheKey])
+    : `<span class="muted">Neden bu kitabı okumalısın, bakalım…</span>`;
+  body.innerHTML = `
+    ${coverHtml}
+    <h2 style="margin:4px 0 2px;">${escapeHtml(rec.title||'')}</h2>
+    <div class="muted" style="margin-bottom:10px;">${escapeHtml(rec.author||'')}</div>
+    <div id="aiRecPitchText" style="text-align:left; font-size:14px; line-height:1.6;">${pitchHtml}</div>
+    <div class="row" style="justify-content:center; gap:8px; margin-top:16px;">
+      <button type="button" class="primary" id="aiRecMarkReadingBtn">📖 Okuyorum</button>
+      <button type="button" class="secondary" id="aiRecMarkReadBtn">✓ Okudum</button>
+    </div>
+  `;
+  wireAiRecDetailActions(rec);
+  if(!aiPitchCache[cacheKey]){
+    try{
+      const fn = httpsCallable(cloudFunctions, 'getBookPitch');
+      const res = await fn({ title: rec.title, author: rec.author });
+      aiPitchCache[cacheKey] = res.data.text;
+      const pitchEl = document.getElementById('aiRecPitchText');
+      if(pitchEl) pitchEl.textContent = res.data.text;
+    }catch(err){
+      const pitchEl = document.getElementById('aiRecPitchText');
+      if(pitchEl) pitchEl.innerHTML = `<span class="muted">${escapeHtml(err.message||'Metin alınamadı.')}</span>`;
+    }
+  }
+}
+function wireAiRecDetailActions(rec){
+  const wire = (btnId, collectionName, toastMsg)=>{
+    const btn = document.getElementById(btnId);
+    if(!btn) return;
+    btn.addEventListener('click', async ()=>{
+      btn.disabled = true;
+      try{
+        await addDoc(collection(db,'users',currentUid,collectionName), { title:rec.title||'', author:rec.author||'', cover:rec.cover||'', addedAt:new Date().toISOString() });
+        closeModal('bookInfoModal');
+        showToast(toastMsg);
+        if(document.getElementById('readBooksGrid')) renderMyBooksTab();
+      }catch(err){ alert('Eklenemedi: '+(err.message||err)); btn.disabled = false; }
+    });
+  };
+  wire('aiRecMarkReadingBtn', 'readBooks', 'Şu An Okuduklarım\'a eklendi!');
+  wire('aiRecMarkReadBtn', 'bookHistory', 'Kitap Geçmişim\'e eklendi!');
 }
 // Her öneri için Google Books'ta başlık+yazarla arayıp ilk sonucun kapak resmini ekliyor;
 // bulunamazsa rec.cover boş kalır ve aiRecItemHtml zaten var olan süslü yer tutucuya düşer.
@@ -5151,6 +5210,7 @@ async function fetchAiRecommendation(){
     myProfile.aiRecommendations = res.data;
     await attachCoversToRecs(items);
     body.innerHTML = aiRecHtml(items);
+    wireAiRecItems(items);
   }catch(err){
     body.innerHTML = `<span class="muted">${escapeHtml(err.message||'Öneri alınamadı.')}</span><div style="margin-top:10px;"><button type="button" class="secondary tiny" id="aiRecRefreshBtn">Tekrar dene</button></div>`;
   }
@@ -5168,6 +5228,7 @@ async function renderAiRecCard(){
     await attachCoversToRecs(cached.items);
     body.innerHTML = aiRecHtml(cached.items);
     wireAiRecRefresh();
+    wireAiRecItems(cached.items);
   } else {
     fetchAiRecommendation();
   }
