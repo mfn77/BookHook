@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-21" />
+<link rel="stylesheet" href="./style.css?v=material-22" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -1884,7 +1884,12 @@ function switchTab(id){
   function buildBookIcon(){
     const wrap = document.createElement('div');
     wrap.id = 'swipeBookIcon';
-    wrap.style.cssText = 'position:fixed; top:50%; transform:translateY(-50%); width:88px; height:76px; z-index:5; pointer-events:none; opacity:0; transition:opacity 0.15s;';
+    // top:50dvh, desteklenen tarayıcılarda top:50%'nin üzerine geçer (geçersizse yoksayılır ve
+    // 50% kalır). Mobil tarayıcının adres çubuğu açılıp/kapanırken "layout viewport" yüksekliği
+    // değişiyor; top:50% buna göre yeniden hesaplanınca ikon aşağı/yukarı sıçrıyormuş gibi
+    // görünüyordu. dvh (dynamic viewport height), tarayıcı arayüzündeki bu değişimi hesaba katan
+    // birim olduğu için ikonu sabit tutuyor.
+    wrap.style.cssText = 'position:fixed; top:50%; top:50dvh; transform:translateY(-50%) translateZ(0); width:88px; height:76px; z-index:5; pointer-events:none; opacity:0; transition:opacity 0.15s;';
     wrap.innerHTML = `
       <svg viewBox="0 0 100 84" width="88" height="74" style="position:absolute; top:0; left:0; overflow:visible; filter:drop-shadow(0 3px 4px rgba(0,0,0,0.18));">
         <defs>
@@ -2071,6 +2076,13 @@ function switchTab(id){
       contentCol.style.transform = `translateX(${flyDist}px)`;
       settlePreview(goingNext ? -1 : 1);
       if(bookIcon){ bookIcon.style.transition = 'opacity 0.18s'; bookIcon.style.opacity = '0'; }
+      // Alt sekme çubuğunun hangi sekmenin aktif olduğu, parmağın kalktığı an belli olur — bunu
+      // içerik kayma animasyonunun bitmesini (240ms) beklemeden hemen burada güncelliyoruz.
+      // Yoksa eski sekme, kaybolan içerikle birlikte hâlâ "highlighted" görünmeye devam ediyor ve
+      // .tab-icon'daki arka plan geçişiyle (0.2s) çakışıp bir an iki sekme de vurgulanmış gibi
+      // görünebiliyordu. switchTab() içeride aynı senkronizasyonu tekrar yapacak ama bu, zararsız
+      // bir tekrardır (idempotent).
+      if(typeof materialSyncNavigation==='function') materialSyncNavigation(order[targetIdx]);
       pendingSettleTimeout = setTimeout(()=>{
         contentCol.style.transition = 'none';
         contentCol.style.transform = 'translateX(0)';
