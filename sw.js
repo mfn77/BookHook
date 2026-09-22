@@ -1,4 +1,4 @@
-const CACHE = "kitap-kulubu-v8";
+const CACHE = "kitap-kulubu-v9";
 const ASSETS = ["./manifest.json", "./style.css", "./icon-192.png", "./icon-512.png", "./favicon.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
