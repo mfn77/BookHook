@@ -2008,9 +2008,33 @@ function switchTab(id){
     if(bookIcon && bookIcon.parentNode) bookIcon.parentNode.removeChild(bookIcon);
     bookIcon = null;
   }
+  // Sayfayı kaydırma sırasında kilitlemek için document.documentElement/body'yi overflow:hidden
+  // yapmak yerine (bu, Android Chrome'da adres çubuğunun dinamik gizlenme/gösterilme animasyonuyla
+  // çakışıp alt sekme çubuğunun geçiş boyunca ekrandan kaybolmasına — konumunun bozulmasına — sebep
+  // oluyordu, gerçek cihaz kaydından doğrulandı) body'yi olduğu kaydırma konumunda "dondurarak"
+  // (position:fixed + negatif top) kilitliyoruz. Bu teknik tarayıcı araç çubuğu davranışıyla hiç
+  // etkileşime girmiyor, mobil web'de kaydırma kilidi için yaygın kullanılan güvenli yöntem.
+  let scrollLockY = 0;
+  let isScrollLocked = false;
+  function lockPageScroll(){
+    if(isScrollLocked) return;
+    scrollLockY = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollLockY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    isScrollLocked = true;
+  }
   function unlockPageScroll(){
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
+    if(!isScrollLocked) return;
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    window.scrollTo(0, scrollLockY);
+    isScrollLocked = false;
   }
   function stopWatchdog(){
     if(watchdogInterval){ clearInterval(watchdogInterval); watchdogInterval=null; }
@@ -2083,8 +2107,7 @@ function switchTab(id){
       // Dokunuş olaylarının zamanlamasıyla uğraşmak yerine, sayfayı burada doğrudan ve kesin
       // olarak kaydırılamaz hale getiriyoruz — bu, tarayıcının erken scroll kararı verip
       // vermediğinden bağımsız, garantili bir kilit.
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
+      lockPageScroll();
       startWatchdog();
     }
     if(dragging && e.cancelable) e.preventDefault();
