@@ -9827,6 +9827,34 @@ function materialHubRoot(id){
  if(['club','library','appsettings'].includes(id)) return id;
  return HUB_PARENT[id] || 'club';
 }
+// Her sekme değişiminde sayfayı en üste sıfırlamak için düz window.scrollTo(0,0) kullanmak,
+// kullanıcı önceki sekmede aşağı kaymışsa GERÇEK, tarayıcının kendisinin de fark ettiği bir
+// kaydırma sıçraması yaratıyordu — bu da (dokunuşla hiç ilgisi olmadan, sadece bu programatik
+// sıçramadan dolayı) Android Chrome'un adres çubuğu animasyonunu tetikleyip alt sekme çubuğunun
+// geçiş boyunca kaybolmasına sebep olabiliyordu (kaydırma kilidimiz sadece parmakla sürüklerken
+// çalışıyordu, bu programatik sıçrama ondan tamamen bağımsızdı). Burada da aynı "body'yi olduğu
+// yerde dondur" tekniğiyle, tarayıcının fark edeceği gerçek bir kaydırma hiç oluşturmadan üste
+// zıplıyoruz.
+function silentScrollToTop(){
+ const y = window.scrollY || document.documentElement.scrollTop || 0;
+ if(y<=0) return;
+ const body = document.body;
+ const prev = { position:body.style.position, top:body.style.top, left:body.style.left, right:body.style.right, width:body.style.width };
+ body.style.position = 'fixed';
+ body.style.top = '0';
+ body.style.left = '0';
+ body.style.right = '0';
+ body.style.width = '100%';
+ document.documentElement.scrollTop = 0;
+ document.body.scrollTop = 0;
+ requestAnimationFrame(()=>{
+  body.style.position = prev.position;
+  body.style.top = prev.top;
+  body.style.left = prev.left;
+  body.style.right = prev.right;
+  body.style.width = prev.width;
+ });
+}
 function materialSyncNavigation(id){
  const primary=materialPrimaryTabs().map(t=>t.id);
  document.body.dataset.screen=id;
@@ -9836,7 +9864,7 @@ function materialSyncNavigation(id){
  document.querySelectorAll('nav.tabs button').forEach(button=>{const selected=button.dataset.tab===(primary.includes(id)?id:materialHubRoot(id));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
  const names={club:'Kulüp',library:'Kitaplık',appsettings:'Ayarlar',quarterly:'Ortak kitap',admin:'Yönetim',worms:'Rozetler',mworms:'Rozetler',gifts:'Hediyeler',recs:'Kitap önerileri',rules:'Grup kuralları',settings:'Uygulama ayarları',today:'Bugün',msurvey:'Bugün'};
  if(names[id]) setTabTitleAnimated(names[id]);
- window.scrollTo({top:0,behavior:'instant'});
+ silentScrollToTop();
 }
 async function materialRenderClub(){
  try{
