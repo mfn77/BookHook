@@ -1923,7 +1923,7 @@ function switchTab(id){
 (function setupSwipeNav(){
   let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, pendingSettleTimeout=null;
   let lastMoveX=0, lastMoveTime=0, lastMoveWallTime=0, velocity=0, watchdogInterval=null;
-  let previewCurrentSection=null, previewTargetSection=null, previewGoingNext=false, previewTargetIdx=-1, previewGap=0;
+  let previewCurrentSection=null, previewTargetSection=null, previewGoingNext=false, previewTargetIdx=-1, previewGap=0, previewWidth=0;
   const contentCol = document.querySelector('.content-col > main');
   const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
   const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
@@ -1962,6 +1962,7 @@ function switchTab(id){
     previewTargetIdx = targetIdx;
     previewGoingNext = goingNext;
     previewGap = gap;
+    previewWidth = rect.width;
     targetSection.style.transition = 'none';
     targetSection.style.display = 'block';
     targetSection.style.position = 'fixed';
@@ -2105,7 +2106,12 @@ function switchTab(id){
     const shouldComplete = canComplete && idx!==-1 && (distanceOk || flickOk);
     if(shouldComplete){
       const targetIdx = previewTargetIdx;
-      const flyDist = goingNext ? -(containerWidth+previewGap) : (containerWidth+previewGap);
+      // NOT: burada containerWidth (main'in KENDİ, padding'i de içeren offsetWidth'i) değil,
+      // previewWidth (kayan section'ın GERÇEK render genişliği, yani main'in İÇERİK genişliği)
+      // kullanılıyor — bu ikisi main'in kendi yatay padding'i kadar farklı, containerWidth
+      // kullanmak hedefi olması gerekenden fazla kaydırıp (jest bittiğinde inline stiller
+      // temizlenip section normal akışa dönünce) bir "düzeltme sıçraması" oluşturuyordu.
+      const flyDist = goingNext ? -(previewWidth+previewGap) : (previewWidth+previewGap);
       settlePreview(flyDist, true);
       // Alt sekme çubuğunun hangi sekmenin aktif olduğu, parmağın kalktığı an belli olur — bunu
       // içerik kayma animasyonunun bitmesini (240ms) beklemeden hemen burada güncelliyoruz.
