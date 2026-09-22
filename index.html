@@ -1929,15 +1929,7 @@ function switchTab(id){
   function buildBookIcon(){
     const wrap = document.createElement('div');
     wrap.id = 'swipeBookIcon';
-    // top:50svh, desteklenen tarayıcılarda top:50%'nin üzerine geçer (geçersizse yoksayılır ve
-    // 50% kalır). svh (small viewport height — araç çubuğu göstermiş kabul edilen, SABİT değer)
-    // kullanıyoruz; önceden burada dvh (dynamic viewport height) vardı ama bu element her
-    // sürükleme jesti boyunca DOM'da yaşadığı için, dvh tarayıcının araç çubuğu animasyonunun HER
-    // KARESİNDE tüm sayfayı yeniden hesaplamasına zorluyordu — tam da parmağın kalktığı anda
-    // sayfanın bir kare boyunca beyaz/boş görünmesine sebep olan performans sorununun asıl kaynağı
-    // buydu. svh sabit olduğu için bu maliyeti hiç doğurmuyor, ama ikonun sıçramasını da aynı
-    // şekilde önlüyor.
-    wrap.style.cssText = 'position:fixed; top:50%; top:50svh; transform:translateY(-50%) translateZ(0); width:88px; height:76px; z-index:5; pointer-events:none; opacity:0; transition:opacity 0.15s;';
+    wrap.style.cssText = 'position:fixed; top:50%; transform:translateY(-50%); width:88px; height:76px; z-index:5; pointer-events:none; opacity:0; transition:opacity 0.15s;';
     wrap.innerHTML = `
       <svg viewBox="0 0 100 84" width="88" height="74" style="position:absolute; top:0; left:0; overflow:visible; filter:drop-shadow(0 3px 4px rgba(0,0,0,0.18));">
         <defs>
@@ -2010,12 +2002,10 @@ function switchTab(id){
     if(bookIcon && bookIcon.parentNode) bookIcon.parentNode.removeChild(bookIcon);
     bookIcon = null;
   }
-  // Sayfayı kaydırma sırasında kilitlemek için önceden document.documentElement/body'yi
-  // overflow:hidden ya da position:fixed ile "dondurmayı" denedik — ikisi de Android Chrome'da
-  // adres çubuğunun dinamik gizlenme/gösterilme animasyonuyla çakışıp parmağın kalktığı anda tüm
-  // sayfanın bir kare boyunca beyaz/boş görünmesine sebep oluyordu (gerçek cihaz kaydından
-  // doğrulandı). Bu kilitleme kavramının kendisi sorunluydu; şimdi yalnızca touchmove'daki
-  // e.preventDefault() ile native kaydırmayı bastırıyoruz, body'ye hiç dokunmuyoruz.
+  function unlockPageScroll(){
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+  }
   function stopWatchdog(){
     if(watchdogInterval){ clearInterval(watchdogInterval); watchdogInterval=null; }
   }
@@ -2027,6 +2017,7 @@ function switchTab(id){
         // güvenli şekilde, sekme değiştirmeden, olduğu yere geri dönerek sıfırlıyoruz.
         dragging = false;
         touchStartX = null;
+        unlockPageScroll();
         contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
         contentCol.style.transform = 'translateX(0)';
         settlePreview(0);
@@ -2045,6 +2036,7 @@ function switchTab(id){
     // yeni jestin her zaman temiz bir konumdan başlaması için burada kesin olarak sıfırlıyoruz.
     contentCol.style.transition = 'none';
     contentCol.style.transform = 'translateX(0)';
+    unlockPageScroll();
     if(e.touches.length!==1){ touchStartX=null; return; }
     const t = e.target;
     // Kart içi sekmesi olan bir alanda (ör. genişlemiş "Kayıtlar"/"Kitaplığım" kartındaki
@@ -2082,6 +2074,8 @@ function switchTab(id){
       dragging = true;
       contentCol.style.transition = 'none';
       startPreview();
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
       startWatchdog();
     }
     if(dragging && e.cancelable) e.preventDefault();
@@ -2102,6 +2096,7 @@ function switchTab(id){
     touchStartX = null;
     if(!dragging){ return; }
     dragging = false;
+    unlockPageScroll();
     stopWatchdog();
     const order = getTabOrder();
     const idx = order.indexOf(activeTab);
@@ -2160,6 +2155,7 @@ function switchTab(id){
     touchStartX = null;
     if(!dragging) return;
     dragging = false;
+    unlockPageScroll();
     stopWatchdog();
     if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
     contentCol.style.transition = 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)';
