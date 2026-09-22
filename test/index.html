@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-16" />
+<link rel="stylesheet" href="./style.css?v=material-17" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -128,7 +128,7 @@
     </section>
     <section class="tab daily-tab" id="tab-today">
  <div class="daily-greeting">Merhaba, <span data-material-name></span><span class="muted">İyi ki buradasın.</span></div>
- <h1>Bugün biraz okuyalım.</h1>
+ <h1 id="aTodayHeading">Bugün biraz okuyalım.</h1>
  <div class="card daily-checkin"><div class="daily-checkin-row"><div class="daily-checkin-text"><div class="eyebrow" data-material-date></div><h2>Bugün okudun mu?</h2>
  <div class="daily-actions"><button class="stamp-btn big read" id="aSelfReadBtn" title="Okudum">✓ <span>Okudum</span></button><button class="stamp-btn big skip" id="aSelfSkipBtn" title="Okuyamam">− <span>Okuyamam</span></button></div></div>
  <svg class="daily-illustration" viewBox="0 0 120 120" aria-hidden="true"><path d="M60,102 24,92 24,76 60,84 Z" fill="var(--gold)"/><path d="M60,102 96,92 96,76 60,84 Z" fill="var(--gold-dark)"/><ellipse cx="28" cy="55" rx="11" ry="13" fill="var(--forest)"/><circle cx="24" cy="52" r="2.6" fill="var(--paper)"/><circle cx="32" cy="52" r="2.6" fill="var(--paper)"/><circle cx="62" cy="42" r="8" fill="var(--gold-dark)"/><rect x="58" y="49" width="8" height="6" rx="1.5" fill="var(--ink-70)"/><line x1="62" y1="26" x2="62" y2="20" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="52" y1="32" x2="47" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="72" y1="32" x2="77" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><polygon points="90,64 102,64 96,48" fill="var(--secondary-ink)"/><circle cx="97" cy="38" r="5" fill="var(--rust)"/><circle cx="42" cy="20" r="2" fill="var(--ink-70)"/><circle cx="55" cy="14" r="2" fill="var(--ink-70)"/><circle cx="68" cy="19" r="2" fill="var(--ink-70)"/><path d="M42,20 55,14 68,19" fill="none" stroke="var(--ink-70)" stroke-width="1.2"/></svg></div>
@@ -243,7 +243,7 @@
     <!-- MEMBER TABS -->
     <section class="tab daily-tab" id="tab-msurvey">
  <div class="daily-greeting">Merhaba, <span data-material-name></span><span class="muted">İyi ki buradasın.</span></div>
- <h1>Bugün biraz okuyalım.</h1>
+ <h1 id="mTodayHeading">Bugün biraz okuyalım.</h1>
  <div class="card daily-checkin"><div class="daily-checkin-row"><div class="daily-checkin-text"><div class="eyebrow" data-material-date></div><h2>Bugün okudun mu?</h2>
  <div class="daily-actions"><button class="stamp-btn big read" id="mReadBtn" title="Okudum">✓ <span>Okudum</span></button><button class="stamp-btn big skip" id="mSkipBtn" title="Okuyamam">− <span>Okuyamam</span></button></div></div>
  <svg class="daily-illustration" viewBox="0 0 120 120" aria-hidden="true"><path d="M60,102 24,92 24,76 60,84 Z" fill="var(--gold)"/><path d="M60,102 96,92 96,76 60,84 Z" fill="var(--gold-dark)"/><ellipse cx="28" cy="55" rx="11" ry="13" fill="var(--forest)"/><circle cx="24" cy="52" r="2.6" fill="var(--paper)"/><circle cx="32" cy="52" r="2.6" fill="var(--paper)"/><circle cx="62" cy="42" r="8" fill="var(--gold-dark)"/><rect x="58" y="49" width="8" height="6" rx="1.5" fill="var(--ink-70)"/><line x1="62" y1="26" x2="62" y2="20" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="52" y1="32" x2="47" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="72" y1="32" x2="77" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><polygon points="90,64 102,64 96,48" fill="var(--secondary-ink)"/><circle cx="97" cy="38" r="5" fill="var(--rust)"/><circle cx="42" cy="20" r="2" fill="var(--ink-70)"/><circle cx="55" cy="14" r="2" fill="var(--ink-70)"/><circle cx="68" cy="19" r="2" fill="var(--ink-70)"/><path d="M42,20 55,14 68,19" fill="none" stroke="var(--ink-70)" stroke-width="1.2"/></svg></div>
@@ -558,7 +558,7 @@
 
 <section class="tab" id="tab-library"><h1>Kitaplar</h1><p class="page-subtitle">Keşfet, kitaplığın ve öneriler bir arada.</p><div class="club-grid" id="materialLibraryGrid"></div></section>
 <section class="tab" id="tab-appsettings"><h1>Ayarlar</h1><p class="page-subtitle">Kulüp yönetimi ve uygulama tercihlerin.</p><div class="club-grid" id="materialSettingsGrid"></div></section>
-<section class="tab" id="tab-club"><h1>Birlikte daha çok<br>okuyoruz.</h1><p class="page-subtitle">BookHook kulübün</p><button class="club-feature" data-material-route="quarterly"><span class="club-book-icon">▤</span><span><small>Ortak kitabımız</small><b id="clubBookTitle">Ortak kitap</b><span id="clubBookMeta">Birlikte seç, birlikte oku</span></span><span>›</span></button><div class="club-grid" id="materialClubGrid"></div></section>
+<section class="tab" id="tab-club"><h1>Okumak için<br>motivasyon</h1><p class="page-subtitle">Kulübü takip et</p><button class="club-feature" data-material-route="quarterly"><span><small>Ortak kitabımız</small><b id="clubBookTitle">Ortak kitap</b><span id="clubBookMeta">Birlikte seç, birlikte oku</span></span><svg class="club-feature-illustration" viewBox="0 0 100 84" aria-hidden="true"><line x1="2" y1="70" x2="98" y2="70" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/><g fill="var(--secondary-ink)"><rect x="12" y="40" width="36" height="20" rx="9"/><path d="M38,42 L48,24 L57,27 L50,44 Z"/><path d="M46,25 L58,20 L62,27 L57,34 L47,32 Z"/><path d="M55,19 L58,12 L61,19 Z"/><path d="M13,44 C4,46 2,56 9,64" fill="none" stroke="var(--secondary-ink)" stroke-width="4.5" stroke-linecap="round"/><rect x="17" y="58" width="5.5" height="13" rx="2"/><rect x="30" y="58" width="5.5" height="13" rx="2"/><rect x="40" y="58" width="5.5" height="13" rx="2"/></g><circle cx="56" cy="26" r="1.6" fill="var(--card)"/><path d="M43,26 C47,21 51,19 55,20" fill="none" stroke="var(--gold)" stroke-width="2.8" stroke-linecap="round"/><circle cx="81" cy="57" r="13" fill="none" stroke="var(--gold-dark)" stroke-width="3.5"/><circle cx="81" cy="57" r="2.6" fill="var(--gold-dark)"/><line x1="81" y1="47" x2="81" y2="67" stroke="var(--gold-dark)" stroke-width="2"/><line x1="71" y1="57" x2="91" y2="57" stroke="var(--gold-dark)" stroke-width="2"/></svg><span>›</span></button><div class="club-grid" id="materialClubGrid"></div></section>
 <section class="tab" id="tab-quarterly"><div id="materialQpSteps" class="phase-steps"></div>      <div class="card" id="quarterlyPickCard">
         <h2>📚 Ortak Kitap Seçimi</h2>
         <div id="quarterlyPickBody"><span class="muted">Yükleniyor…</span></div>
@@ -1760,40 +1760,6 @@ const HAMBURGER_MEMBER_EXTRA = [
 // iki dizi (HAMBURGER_ADMIN_EXTRA/HAMBURGER_MEMBER_EXTRA) hâlâ switchTab()'daki başlık aramasında
 // kullanıldığı için duruyor.
 
-// Her kartın statik açıklama metnini gizleyip, h2'nin yanına küçük bir "i" bilgi
-// düğmesi ekler; tıklanınca açıklama açılır/kapanır. Dinamik (id'li) durum metinlerine
-// dokunmaz, sadece h2'den hemen sonra gelen sabit <p class="muted"> açıklamalarını kapsar.
-function setupCardInfoButtons(){
-  document.querySelectorAll('.card').forEach(card=>{
-    if(card.closest('#guideModal')) return; // Rehberin kendisi zaten bilgi içeriği, üstüne ayrıca bilgi tuşu eklenmesin
-    const h2 = card.querySelector('h2');
-    if(!h2) return;
-    if(h2.querySelector('.card-info-btn')) return;
-    const desc = h2.nextElementSibling;
-    if(!desc) return;
-    const isWrap = desc.classList.contains('card-desc-wrap');
-    const isPlainP = desc.tagName==='P' && desc.classList.contains('muted') && !desc.id;
-    if(!isWrap && !isPlainP) return;
-    if(!desc.textContent.trim()) return;
-    desc.style.display='none';
-    const btn = document.createElement('button');
-    btn.className='card-info-btn';
-    btn.type='button';
-    btn.setAttribute('aria-label','Bilgi');
-    btn.textContent='i';
-    btn.addEventListener('click', ()=>{
-      if(desc.style.display==='none'){
-        desc.style.display = 'block';
-        desc.classList.remove('slide-down-anim');
-        void desc.offsetWidth; // reflow'u tetikleyip animasyonu yeniden başlatıyoruz
-        desc.classList.add('slide-down-anim');
-      } else {
-        desc.style.display = 'none';
-      }
-    });
-    h2.appendChild(btn);
-  });
-}
 let prevTabBeforeProfile = null;
 document.getElementById('whoamiClickable').addEventListener('click', ()=>{
   if(activeTab === 'profile'){
@@ -2784,7 +2750,6 @@ async function renderAdminDraws(){
   await loadDraws();
   const note = document.getElementById('drawStatusNote');
   note.textContent = "Tarih seçip 'Kapat / Yeniden Çek' ile o haftanın kurasını çekebilir veya zaten çekilmişse üzerine yazıp yeniden çekebilirsin. Girilmemiş bir hafta seçersen kura boş çıkar.";
-  setupCardInfoButtons();
   const list = document.getElementById('drawsList');
   if(drawsCache.length===0){ list.innerHTML = `<div class="empty-state"><span class="big">🎁</span>Henüz tamamlanmış bir hafta yok.</div>`; return; }
   list.innerHTML = drawsCache.slice(0,1).map(d=>{
@@ -3181,17 +3146,49 @@ async function renderAdminWorms(){ await renderWormsShared('wormsList','wormsHis
 /* ============ ORTAK: "BUGÜN OKUDUN MU?" KENDİNİ İŞARETLEME KARTI ============ */
 // Hem üye hem yönetici "Bugün" sekmesinde aynı kendini işaretleme kartını görüyor; ikisi de aynı
 // mantığı kullanıyor, sadece farklı DOM id'lerine bağlanıyor (aynı sayfada aynı id iki kez olamaz).
+// Günün saatine ve o günkü işaretleme durumuna göre "Bugün" başlığı için sıcak ama abartısız
+// bir karşılama cümlesi seçer. Hem admin (tab-today) hem üye (tab-msurvey) ekranı aynı fonksiyonu
+// paylaştığı için burada tek yerden yönetiliyor.
+function dailyGreetingText(status){
+  const h = new Date().getHours();
+  const part = h<6 ? 'gece' : h<11 ? 'sabah' : h<17 ? 'oglen' : h<21 ? 'aksam' : 'gece';
+  const lines = {
+    sabah: {
+      read: 'Günaydın! Bugünün kitabını okudun, güne hazırsın.',
+      skip: 'Günaydın! Bugün ara verdin, canın istediğinde devam edersin.',
+      none: 'Günaydın! Okumaya hazır mısın?'
+    },
+    oglen: {
+      read: 'İyi günler! Bugün için okudun bile, harikasın.',
+      skip: 'İyi günler! Bugün ara verdin, yarın devam edebilirsin.',
+      none: 'İyi günler! Güne birkaç sayfa sığdırmaya ne dersin?'
+    },
+    aksam: {
+      read: 'İyi akşamlar! Günü okuyarak kapattın.',
+      skip: 'İyi akşamlar! Bugün ara verdin, yarın kaldığın yerden devam.',
+      none: 'İyi akşamlar! Günü bitirmeden birkaç sayfa okur musun?'
+    },
+    gece: {
+      read: 'İyi geceler! Bugün okudun, tatlı rüyalar.',
+      skip: 'İyi geceler! Bugün ara verdin, yarın devam edersin.',
+      none: 'İyi geceler! Yatmadan birkaç sayfa okumaya ne dersin?'
+    }
+  };
+  return lines[part][status] || lines[part].none;
+}
 function wireSelfMarkCard(ids){
   function render(){
     const st = todayAnswers[currentUid];
     document.getElementById(ids.readBtn).classList.toggle('selected', st==='read');
     document.getElementById(ids.skipBtn).classList.toggle('selected', st==='skip');
+    if(ids.heading){
+      document.getElementById(ids.heading).textContent = dailyGreetingText(st==='read'?'read':st==='skip'?'skip':'none');
+    }
     const ld = nowLogical();
     const dowLabel = DOW[ld.getDay()===0?6:ld.getDay()-1];
     const dateLabel = `${dowLabel} ${pad(ld.getDate())}.${pad(ld.getMonth()+1)}.${ld.getFullYear()}`;
     document.getElementById(ids.dateNote).textContent =
       `Bugünün okuma tarihi: ${dateLabel}. Bu işaretleme yarın sabah 06:00'a kadar geçerli; 06:00'dan sonra yaptığın işaretleme bir sonraki güne yazılır. 06:00'a kadar hiç işaretleme yapmazsan bu gün otomatik "okumadım" sayılır.`;
-    setupCardInfoButtons();
     document.getElementById(ids.statusNote).textContent =
       st==='read' ? 'Bugün için "Okudum" işaretledin. Harika!' :
       st==='skip' ? 'Bugün için "Okuyamam" dedin.' :
@@ -3247,9 +3244,9 @@ function playMarkFx(btn, type){
   ghost.classList.add(cls);
   setTimeout(()=> ghost.remove(), 700);
 }
-const renderMemberSurvey = wireSelfMarkCard({readBtn:'mReadBtn', skipBtn:'mSkipBtn', dateNote:'mDateNote', statusNote:'mMyStatusNote', streakNote:'mMyStreakNote', pagesNumber:'mTotalPagesNumber', qpBook:'mMyQpBook'});
+const renderMemberSurvey = wireSelfMarkCard({readBtn:'mReadBtn', skipBtn:'mSkipBtn', dateNote:'mDateNote', statusNote:'mMyStatusNote', streakNote:'mMyStreakNote', pagesNumber:'mTotalPagesNumber', qpBook:'mMyQpBook', heading:'mTodayHeading'});
 let memberWeekOffset = 0; // 0 = bu hafta, -1 = önceki hafta, ...
-const renderAdminSelfToday = wireSelfMarkCard({readBtn:'aSelfReadBtn', skipBtn:'aSelfSkipBtn', dateNote:'aSelfDateNote', statusNote:'aSelfStatusNote', streakNote:'aSelfStreakNote', pagesNumber:'totalPagesNumber', qpBook:'aSelfQpBook'});
+const renderAdminSelfToday = wireSelfMarkCard({readBtn:'aSelfReadBtn', skipBtn:'aSelfSkipBtn', dateNote:'aSelfDateNote', statusNote:'aSelfStatusNote', streakNote:'aSelfStreakNote', pagesNumber:'totalPagesNumber', qpBook:'aSelfQpBook', heading:'aTodayHeading'});
 
 async function renderMemberOwnWeek(){
   const baseMonday = getMonday(nowLogical());
@@ -3720,7 +3717,6 @@ async function renderGiftsTab(){
   intro.textContent = myProfile.role==='admin'
     ? 'Önce kendi durumun (varsa), altında tüm kulübün bekleyen istekleri.'
     : 'Bu haftanın hediye kitap durumu.';
-  setupCardInfoButtons();
 
   if(!personalHtml && !adminHtml){
     content.innerHTML = drawsCache.length===0
@@ -9300,9 +9296,8 @@ function materialSyncNavigation(id){
  const back=document.getElementById('materialBack');back.hidden=primary.includes(id);
  back.onclick=()=>switchTab((id==='profile'||id==='appsettings')?getTabOrder()[0]:materialHubRoot(id));
  document.querySelectorAll('nav.tabs button').forEach(button=>{const selected=button.dataset.tab===(primary.includes(id)?id:materialHubRoot(id));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
- const names={club:'Kulüp',library:'Kitaplık',appsettings:'Ayarlar',quarterly:'Ortak kitap',admin:'Yönetim',worms:'Rozetler',mworms:'Rozetler',gifts:'Hediyeler',recs:'Kitap önerileri',rules:'Grup kuralları',settings:'Uygulama ayarları'};
+ const names={club:'Kulüp',library:'Kitaplık',appsettings:'Ayarlar',quarterly:'Ortak kitap',admin:'Yönetim',worms:'Rozetler',mworms:'Rozetler',gifts:'Hediyeler',recs:'Kitap önerileri',rules:'Grup kuralları',settings:'Uygulama ayarları',today:'Bugün',msurvey:'Bugün'};
  if(names[id])document.getElementById('currentTabTitle').textContent=names[id];
- if(id==='today'||id==='msurvey')document.getElementById('currentTabTitle').textContent='BookHook';
  window.scrollTo({top:0,behavior:'instant'});
 }
 async function materialRenderClub(){
@@ -9442,7 +9437,6 @@ onAuthStateChanged(auth, async (user)=>{
   appRoot.style.display='block';
   renderHeader();
   buildNav();
-  setupCardInfoButtons();
 
   // Bildirime tıklanarak açılmışsa (?tab=xxx&post=yyy&notif=zzz), ilgili sekmeye/gönderiye geç ve URL'yi temizle.
   const notifUrlParams = new URLSearchParams(location.search);
