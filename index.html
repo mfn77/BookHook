@@ -5131,9 +5131,18 @@ async function attachCoversToRecs(items){
     }catch(e){}
   }));
 }
+// getBookRecommendation, sonucu users/{uid} belgesine yazdığı için istemcideki genel 'users'
+// onSnapshot dinleyicisi (usersCache'i güncelleyip activeTab'i yeniden render eden) bu isteğin
+// TAM ORTASINDA tekrar ateşleniyor — bu da renderAiRecCard()'ı ikinci kez çağırıp henüz
+// bitmemiş isteği/DOM'u sıfırlıyordu (ekranın "seçiliyor" yazısına geri dönüp durması, hiç
+// sonuç göstermemesi buradan geliyordu). Devam eden bir istek varken yenisini başlatmayan ve
+// zaten ekranda öneri varken gereksiz yere yeniden render etmeyen bir koruma ekliyoruz.
+let aiRecFetchInFlight = false;
 async function fetchAiRecommendation(){
+  if(aiRecFetchInFlight) return;
   const body = document.getElementById('aiRecBody');
   if(!body) return;
+  aiRecFetchInFlight = true;
   body.innerHTML = `<span class="muted">Senin için kitaplar seçiliyor…</span>`;
   try{
     const fn = httpsCallable(cloudFunctions, 'getBookRecommendation');
@@ -5146,10 +5155,13 @@ async function fetchAiRecommendation(){
     body.innerHTML = `<span class="muted">${escapeHtml(err.message||'Öneri alınamadı.')}</span><div style="margin-top:10px;"><button type="button" class="secondary tiny" id="aiRecRefreshBtn">Tekrar dene</button></div>`;
   }
   wireAiRecRefresh();
+  aiRecFetchInFlight = false;
 }
 async function renderAiRecCard(){
   const body = document.getElementById('aiRecBody');
   if(!body) return;
+  if(aiRecFetchInFlight) return;
+  if(document.querySelector('#aiRecBody .ai-rec-item')) return; // zaten ekranda öneri var, ilgisiz bir profil güncellemesi yüzünden yeniden çizmeye gerek yok
   const cached = myProfile.aiRecommendations;
   if(cached && cached.items && cached.items.length){
     body.innerHTML = `<span class="muted">Yükleniyor…</span>`;
