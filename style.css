@@ -276,3 +276,8 @@ svg.hub-illustration{position:absolute;right:8px;bottom:8px;width:56px;height:48
 .daily-checkin-text{flex:1;min-width:0}
 .daily-illustration{flex:0 0 auto;width:116px;height:116px;pointer-events:none}
 @media(max-width:420px){.daily-checkin-row{gap:8px}.daily-illustration{width:84px;height:84px}}
+
+/* Swipe: ekran dışına kayan sekmeler kök sayfanın yatay alanını büyütmesin.
+   clip yeni bir scroll container oluşturmaz; dikey kaydırma ve fixed nav korunur.
+   Her iki kökte de tanımlı olması body overflow'unun viewport'a aktarılmasını önler. */
+html, body { overflow-x: clip; }
