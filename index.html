@@ -1867,7 +1867,14 @@ function setTabTitleAnimated(newText){
 // sekmeleri kapsıyor (ör. "Akış" orada yok), o yüzden birincil sekmelerin tümü için başlık bunu
 // kullanmalı.
 function getTabLabel(id){
-  const allTabDefs = [...ADMIN_TABS, ...MEMBER_TABS, ...HAMBURGER_ADMIN_EXTRA, ...HAMBURGER_MEMBER_EXTRA];
+  // ADMIN_TABS/MEMBER_TABS eski (hub'lar öncesi) sekme listeleri — 'club'/'library' gibi hub-kökü
+  // id'leri hiç içermiyor. materialPrimaryTabs() eklenmezse getTabLabel('club') boş dönüyor;
+  // switchTab() bunu "etiket yok" sanıp başlığı '' ile SİLİYOR (bkz. titleEl.textContent=''), ve
+  // eğer o an setTabTitleAnimated'ın kendi _titleTarget'ı zaten aynı metne eşitse (ör. swipe'ın
+  // touchend'te hemen çağırdığı materialSyncNavigation bunu önceden ayarlamışsa), sonraki
+  // düzeltme çağrısı "hedef zaten aynı" diye kısa devre yapıp görünen metni hiç geri doldurmuyor
+  // — başlık kalıcı olarak boş kalıyor. Kök neden burada.
+  const allTabDefs = [...ADMIN_TABS, ...MEMBER_TABS, ...HAMBURGER_ADMIN_EXTRA, ...HAMBURGER_MEMBER_EXTRA, ...materialPrimaryTabs()];
   const def = allTabDefs.find(t=>t.id===id);
   return def ? def.label : '';
 }
