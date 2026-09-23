@@ -1871,7 +1871,7 @@ function getTabLabel(id){
   const def = allTabDefs.find(t=>t.id===id);
   return def ? def.label : '';
 }
-function switchTab(id){
+function switchTab(id, { animate = true } = {}){
   lastTabSwitchTime = Date.now();
   if(typeof closeReactionDrawer==='function') closeReactionDrawer();
   if(profileGateActive && id!=='profile'){
@@ -1900,6 +1900,9 @@ function switchTab(id){
   document.querySelectorAll('section.tab').forEach(s=> s.classList.remove('active','anim-from-right','anim-from-left','anim-fade'));
   const sec = document.getElementById('tab-'+id);
   if(sec){
+    // Swipe zaten tamamlandıysa giriş animasyonuyla sayfayı yeniden soldurma.
+    // Normal sekme tıklamalarında CSS animasyonunu geri etkinleştir.
+    sec.style.animation = animate ? '' : 'none';
     sec.classList.add('active');
     sec.classList.add(direction==='right' ? 'anim-from-right' : direction==='left' ? 'anim-from-left' : 'anim-fade');
   }
@@ -2168,7 +2171,7 @@ function switchTab(id){
       }
       pendingFinish = ()=>{
         cleanupPreview();
-        switchTab(order[targetIdx]);
+        switchTab(order[targetIdx], { animate: false });
         pendingFinish = null;
       };
       pendingSettleTimeout = setTimeout(()=>{ pendingFinish&&pendingFinish(); pendingSettleTimeout=null; }, 240);
