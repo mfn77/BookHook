@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-32-swipe-clip" />
+<link rel="stylesheet" href="./style.css?v=material-34-overscroll" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -1871,7 +1871,7 @@ function getTabLabel(id){
   const def = allTabDefs.find(t=>t.id===id);
   return def ? def.label : '';
 }
-function switchTab(id){
+function switchTab(id, { animate = true } = {}){
   lastTabSwitchTime = Date.now();
   if(typeof closeReactionDrawer==='function') closeReactionDrawer();
   if(profileGateActive && id!=='profile'){
@@ -1900,6 +1900,9 @@ function switchTab(id){
   document.querySelectorAll('section.tab').forEach(s=> s.classList.remove('active','anim-from-right','anim-from-left','anim-fade'));
   const sec = document.getElementById('tab-'+id);
   if(sec){
+    // Swipe zaten tamamlandıysa giriş animasyonuyla sayfayı yeniden soldurma.
+    // Normal sekme tıklamalarında CSS animasyonunu geri etkinleştir.
+    sec.style.animation = animate ? '' : 'none';
     sec.classList.add('active');
     sec.classList.add(direction==='right' ? 'anim-from-right' : direction==='left' ? 'anim-from-left' : 'anim-fade');
   }
@@ -1947,11 +1950,40 @@ function switchTab(id){
    gibi mesafe + hız kombinasyonuyla karar verir ============ */
 (function setupSwipeNav(){
   let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, pendingSettleTimeout=null, pendingFinish=null;
-  let lastMoveX=0, lastMoveTime=0, lastMoveWallTime=0, velocity=0, watchdogInterval=null;
+  let motionSamples=[];
   let previewCurrentSection=null, previewTargetSection=null, previewGoingNext=false, previewTargetIdx=-1, previewGap=0, previewWidth=0;
+  let moveFrame=null, queuedDx=0, previewRect=null, transitionListener=null;
+  let pointerId=null, recoveryTimer=null;
   const contentCol = document.querySelector('.content-col > main');
   const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
   const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
+
+  // Son iki olay yerine kısa bir hareket penceresi: parmak kalkmadan önce gelen
+  // aynı konumlu son olay hızlı fiskenin hızını sıfırlamasın.
+  function recordMotion(x, time){
+    const last=motionSamples[motionSamples.length-1];
+    if(last && time===last.time) last.x=x;
+    else motionSamples.push({x,time});
+    while(motionSamples.length>2 && motionSamples[1].time < time-120) motionSamples.shift();
+  }
+  function releaseVelocity(x, time){
+    recordMotion(x,time);
+    const cutoff=time-100;
+    let start=motionSamples[0];
+    for(let i=1;i<motionSamples.length;i++){
+      const next=motionSamples[i];
+      if(next.time>=cutoff){
+        if(start.time<cutoff && next.time>start.time){
+          const fraction=(cutoff-start.time)/(next.time-start.time);
+          start={x:start.x+(next.x-start.x)*fraction,time:cutoff};
+        }
+        break;
+      }
+      start=next;
+    }
+    const dt=time-start.time;
+    return dt>0 ? (x-start.x)/dt : 0;
+  }
 
   function resetSection(section, hide){
     if(!section) return;
@@ -1967,6 +1999,11 @@ function switchTab(id){
     if(hide) section.style.display = '';
   }
   function cleanupPreview(){
+    if(moveFrame!==null){ cancelAnimationFrame(moveFrame); moveFrame=null; }
+    if(transitionListener && previewCurrentSection) previewCurrentSection.removeEventListener('transitionend', transitionListener);
+    transitionListener=null;
+    if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
+    previewRect=null;
     resetSection(previewTargetSection, true);
     resetSection(previewCurrentSection, false);
     previewCurrentSection = null;
@@ -1977,7 +2014,7 @@ function switchTab(id){
   // yanına, onun GERÇEK render edilmiş dikdörtgenine göre konumlandırır (position:fixed ile —
   // main'in padding'iyle ilgili yüzde hesaplarıyla uğraşmaya hiç gerek kalmıyor).
   function beginPreview(currentSection, targetSection, targetIdx, goingNext){
-    const rect = currentSection.getBoundingClientRect();
+    const rect = previewRect || (previewRect = currentSection.getBoundingClientRect());
     // İki sekme birbirine dip dibe kaymasın — mevcut sekmenin sağ/sol kenarındaki inset ile
     // hedef sekmenin kendi kenarındaki inset TOPLANARAK (main'in yatay padding'inin iki katı)
     // aradaki boşluk belirlenir. Bu boşluk sadece sürükleme SIRASINDA görünür; jest tamamlanınca
@@ -2006,7 +2043,21 @@ function switchTab(id){
     previewCurrentSection.style.transform = `translateX(${dx}px)`;
     previewTargetSection.style.transform = `translateX(${dx}px)`;
   }
+  // Çok sayıdaki touchmove olayını ekran başına tek görsel güncellemeye indir.
+  function queuePreview(dx){
+    queuedDx=dx;
+    if(moveFrame===null) moveFrame=requestAnimationFrame(()=>{
+      moveFrame=null;
+      updatePreview(queuedDx);
+    });
+  }
   function settlePreview(dx, animate){
+    if(moveFrame!==null){
+      cancelAnimationFrame(moveFrame); moveFrame=null;
+      updatePreview(queuedDx);
+      // Son parmak konumu transition başlangıcı olarak işlensin (yalnızca bırakırken).
+      if(previewCurrentSection) getComputedStyle(previewCurrentSection).transform;
+    }
     if(!previewCurrentSection || !previewTargetSection) return;
     const transition = animate ? 'transform 0.24s cubic-bezier(0.25,0.8,0.25,1)' : 'none';
     previewCurrentSection.style.transition = transition;
@@ -2029,32 +2080,54 @@ function switchTab(id){
     beginPreview(previewCurrentSection, targetSection, targetIdx, goingNextNow);
     return true;
   }
-  function unlockPageScroll(){
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
+  function releaseGesture(){
+    clearTimeout(recoveryTimer); recoveryTimer=null;
+    const id=pointerId; pointerId=null;
+    if(id!==null && contentCol.hasPointerCapture(id)) contentCol.releasePointerCapture(id);
   }
-  function stopWatchdog(){
-    if(watchdogInterval){ clearInterval(watchdogInterval); watchdogInterval=null; }
+  function cancelGesture(){
+    touchStartX=null;
+    const wasDragging=dragging;
+    dragging=false;
+    releaseGesture();
+    if(!wasDragging) return;
+    settlePreview(0, true);
+    pendingFinish=()=>{ cleanupPreview(); pendingFinish=null; };
+    waitForSettle();
   }
-  function startWatchdog(){
-    stopWatchdog();
-    watchdogInterval = setInterval(()=>{
-      if(dragging && Date.now()-lastMoveWallTime > 450){
-        // Dokunuş (touchend/touchcancel hiç gelmeden) sessizce kaybolmuş olmalı — kendimizi
-        // güvenli şekilde, sekme değiştirmeden, olduğu yere geri dönerek sıfırlıyoruz.
-        dragging = false;
-        touchStartX = null;
-        unlockPageScroll();
-        settlePreview(0, true);
-        pendingFinish = ()=>{ cleanupPreview(); pendingFinish=null; };
-        pendingSettleTimeout = setTimeout(()=>{ pendingFinish&&pendingFinish(); pendingSettleTimeout=null; }, 240);
-        stopWatchdog();
-      }
-    }, 200);
+  function armRecovery(){
+    clearTimeout(recoveryTimer);
+    // Sonlandırma olayı gerçekten kaybolursa ekran yarıda kalmasın.
+    recoveryTimer=setTimeout(cancelGesture, 1200);
   }
+  function waitForSettle(){
+    const section=previewCurrentSection;
+    const finish=()=>{
+      const callback=pendingFinish;
+      pendingFinish=null;
+      if(callback) callback();
+    };
+    transitionListener=e=>{
+      if(e.target===section && e.propertyName==='transform') finish();
+    };
+    if(section) section.addEventListener('transitionend', transitionListener);
+    // Gizli sekme / iptal edilen transition için güvenlik ağı; normal bitiş olayla gelir.
+    pendingSettleTimeout=setTimeout(finish, 400);
+  }
+  function interruptGesture(){
+    touchStartX=null; dragging=false;
+    if(pendingFinish){ const finish=pendingFinish; pendingFinish=null; finish(); }
+    cleanupPreview(); releaseGesture();
+  }
+  window.addEventListener('blur', interruptGesture);
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden) interruptGesture();
+  });
 
-  document.addEventListener('touchstart', (e)=>{
-    stopWatchdog();
+  document.addEventListener('pointerdown', (e)=>{
+    if(e.pointerType!=='touch' && e.pointerType!=='pen') return;
+    if(!e.isPrimary){ cancelGesture(); return; }
+    if(pointerId!==null) cancelGesture();
     // Önceki jestin 240ms'lik yerleşme süresi bitmeden yeni bir jest başlamış olabilir (hızlı art
     // arda kaydırma). O süre boyunca alt sekme çubuğu ve başlık ZATEN yeni sekmeyi gösteriyor
     // (touchend'te hemen güncelleniyorlar) ama gerçek switchTab() — activeTab'ı ve .active
@@ -2066,29 +2139,28 @@ function switchTab(id){
     if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
     if(pendingFinish){ pendingFinish(); }
     cleanupPreview(); // her ihtimale karşı savunma amaçlı ikinci bir temizlik
-    unlockPageScroll();
-    if(e.touches.length!==1){ touchStartX=null; return; }
+    releaseGesture();
     const t = e.target;
     // Kart içi sekmesi olan bir alanda (ör. genişlemiş "Kayıtlar"/"Kitaplığım" kartındaki
     // Kulüp/Ben, Okuyorum/İstek listem/Geçmişim gibi iç sekmeler) dokunuş başlıyorsa, sayfa
     // seviyesindeki bu sekmeler-arası kaydırmayı hiç başlatma — o alan kendi kart-içi kaydırmasını
     // ayrıca yönetiyor (bkz. setupInnerPaneCarousels).
-    if(t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport') || t.closest('#discoverFeed')){
+    if(!contentCol.contains(t) || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport') || t.closest('#discoverFeed')){
       touchStartX=null; return;
     }
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
+    pointerId=e.pointerId;
+    touchStartX = e.clientX;
+    touchStartY = e.clientY;
     dragging = false;
-    velocity = 0;
-    lastMoveX = touchStartX;
-    lastMoveTime = e.timeStamp;
-    lastMoveWallTime = Date.now();
+    motionSamples=[];
+    recordMotion(e.clientX,e.timeStamp);
     containerWidth = contentCol.offsetWidth || window.innerWidth;
-  }, {passive:true});
+  }, {passive:true, capture:true});
 
-  document.addEventListener('touchmove', (e)=>{
+  document.addEventListener('pointermove', (e)=>{
+    if(e.pointerId!==pointerId) return;
     if(touchStartX===null || !myProfile) return;
-    const touch = e.touches[0];
+    const touch = e;
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
     if(!dragging){
@@ -2107,32 +2179,28 @@ function switchTab(id){
       if(!currentSection || !targetSection){ touchStartX=null; return; }
       dragging = true;
       beginPreview(currentSection, targetSection, targetIdx, goingNext);
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
-      startWatchdog();
+      // Hareket eden / yeniden çizilen kart yerine kalıcı main öğesi dokunuşu tutsun.
+      try { contentCol.setPointerCapture(e.pointerId); } catch(_) { cancelGesture(); return; }
     }
     if(dragging && e.cancelable) e.preventDefault();
-    const dt = e.timeStamp - lastMoveTime;
-    if(dt > 0) velocity = (touch.clientX - lastMoveX) / dt;
-    lastMoveX = touch.clientX;
-    lastMoveTime = e.timeStamp;
-    lastMoveWallTime = Date.now();
+    recordMotion(e.clientX,e.timeStamp);
     if(dragging){
       const goingNextNow = dx < 0;
       const canFollow = maybeFlipDirection(goingNextNow);
-      updatePreview(canFollow ? dx : 0);
+      queuePreview(canFollow ? dx : 0);
+      armRecovery();
     }
-  }, {passive:false});
+  }, {passive:false, capture:true});
 
-  document.addEventListener('touchend', (e)=>{
+  document.addEventListener('pointerup', (e)=>{
+    if(e.pointerId!==pointerId) return;
     if(touchStartX===null) return;
-    const touch = e.changedTouches[0];
+    const touch = e;
     const dx = touch.clientX - touchStartX;
     touchStartX = null;
-    if(!dragging){ return; }
+    if(!dragging){ releaseGesture(); return; }
     dragging = false;
-    unlockPageScroll();
-    stopWatchdog();
+    releaseGesture();
     const order = getTabOrder();
     const idx = order.indexOf(activeTab);
     const goingNext = dx < 0;
@@ -2140,7 +2208,8 @@ function switchTab(id){
     // kurulu olduğunu (previewGoingNext/previewTargetIdx) esas alıyoruz, dx'in çiğ işaretini değil.
     const canComplete = previewCurrentSection && goingNext===previewGoingNext && previewTargetIdx>=0;
     const distanceOk = Math.abs(dx) > containerWidth * DISTANCE_THRESHOLD_RATIO;
-    const flickOk = Math.abs(velocity) > VELOCITY_THRESHOLD && Math.sign(velocity)===Math.sign(dx);
+    const velocity = releaseVelocity(e.clientX,e.timeStamp);
+    const flickOk = Math.abs(dx)>=20 && Math.abs(velocity)>VELOCITY_THRESHOLD && Math.sign(velocity)===Math.sign(dx);
     const shouldComplete = canComplete && idx!==-1 && (distanceOk || flickOk);
     if(shouldComplete){
       const targetIdx = previewTargetIdx;
@@ -2168,33 +2237,23 @@ function switchTab(id){
       }
       pendingFinish = ()=>{
         cleanupPreview();
-        switchTab(order[targetIdx]);
+        switchTab(order[targetIdx], { animate: false });
         pendingFinish = null;
       };
-      pendingSettleTimeout = setTimeout(()=>{ pendingFinish&&pendingFinish(); pendingSettleTimeout=null; }, 240);
+      waitForSettle();
     } else {
       settlePreview(0, true);
       pendingFinish = ()=>{ cleanupPreview(); pendingFinish=null; };
-      pendingSettleTimeout = setTimeout(()=>{ pendingFinish&&pendingFinish(); pendingSettleTimeout=null; }, 240);
+      waitForSettle();
     }
-  }, {passive:true});
+  }, {passive:true, capture:true});
 
-  // Tarayıcı bazen (özellikle yavaş/uzun dokunuşlarda) dokunuş dizisini touchend yerine
-  // touchcancel ile kesiyor. Bunu dinlemezsek her şey yarım kalmış halde donup kalıyor ve
-  // tarayıcı kontrolü sessizce native kaydırmaya bırakıyor. Burada da güvenli şekilde
-  // sıfırlıyoruz (asla sekme değiştirmeyi tamamlamaya çalışmadan, sadece eski haline dönerek).
-  document.addEventListener('touchcancel', ()=>{
-    touchStartX = null;
-    if(!dragging) return;
-    dragging = false;
-    unlockPageScroll();
-    stopWatchdog();
-    if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
-    if(pendingFinish){ pendingFinish(); }
-    settlePreview(0, true);
-    pendingFinish = ()=>{ cleanupPreview(); pendingFinish=null; };
-    pendingSettleTimeout = setTimeout(()=>{ pendingFinish&&pendingFinish(); pendingSettleTimeout=null; }, 240);
-  }, {passive:true});
+  document.addEventListener('pointercancel', e=>{
+    if(e.pointerId===pointerId) cancelGesture();
+  }, {capture:true});
+  contentCol.addEventListener('lostpointercapture', e=>{
+    if(e.target===contentCol && e.pointerId===pointerId) cancelGesture();
+  });
 })();
 
 function renderTab(id){

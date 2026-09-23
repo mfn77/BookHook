@@ -56,7 +56,9 @@ p{margin-bottom:14px}small{font-size:12px}.muted,.page-subtitle{color:var(--ink-
    piksel gerçek taşması olmasını garantileyerek bu sınır-durumdan kaçınıyoruz. */
 .app-shell{min-height:calc(100svh + 20px)}.content-col{margin-left:var(--rail);min-width:0;touch-action:pan-y}
 main{width:100%;max-width:840px;margin:auto;padding:16px 28px 112px;position:relative}
-section.tab{display:none}section.tab.active{display:block;animation:screen-in .2s var(--ease)}
+/* Aktif sekme de fixed swipe önizlemesi gibi kendi yerleşim alanını oluşturur.
+   İlk/son çocuk margin'leri section dışına taşmaz; geçiş sonunda üst konum değişmez. */
+section.tab{display:none}section.tab.active{display:flow-root;animation:screen-in .2s var(--ease)}
 @keyframes screen-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .sidebar{position:fixed;inset:0 auto 0 0;width:var(--rail);background:var(--paper-2);display:flex;flex-direction:column;align-items:center;padding:20px 6px;z-index:80}
 .sidebar-header{margin-bottom:24px}.brand-button{width:56px;height:56px;border-radius:20px;background:var(--primary-container);color:var(--gold)}.brand-button svg{width:30px;height:30px}
@@ -281,3 +283,7 @@ svg.hub-illustration{position:absolute;right:8px;bottom:8px;width:56px;height:48
    clip yeni bir scroll container oluşturmaz; dikey kaydırma ve fixed nav korunur.
    Her iki kökte de tanımlı olması body overflow'unun viewport'a aktarılmasını önler. */
 html, body { overflow-x: clip; }
+
+/* Sekme sürüklemesi iptal edildiğinde aşağı taşan hareket tarayıcının
+   pull-to-refresh davranışına geçmesin. Normal dikey kaydırma korunur. */
+html, body { overscroll-behavior-y: contain; }
