@@ -131,6 +131,15 @@ textarea{resize:vertical;min-height:100px;line-height:1.6}input[type=checkbox]{a
 .hub-item .destination-row>.hub-chevron{position:absolute;right:20px;top:22px;transition:top .3s var(--ease)}
 .hub-item.expanded .destination-row>.hub-chevron{top:14px}
 .hub-item .destination-row small{font-size:12px}
+/* Hub kartı dönüşümlü önizleme: açmadan kısa, canlı bir özet — birkaç durum arasında ~3sn'de bir
+   hızlı bir crossfade ile geçiş yapar. Tik/çizgi/çarpı renkleri weekhist-icon ile aynı (temaya
+   uygun, uygulamanın her yerinde aynı anlama gelsin diye). */
+.hub-preview{display:flex;align-items:center;gap:6px;transition:opacity .15s var(--ease)}
+.hub-preview.fade-out{opacity:0}
+.hub-preview-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;font-size:9px;font-weight:700;flex:0 0 auto;line-height:1}
+.hub-preview-icon.wh-read{background:var(--primary-container);color:var(--gold-dark)}
+.hub-preview-icon.wh-pas{background:var(--secondary-container);color:var(--secondary-ink)}
+.hub-preview-icon.wh-penalty{background:var(--error-container);color:var(--cloth-dark)}
 .hub-item .destination-row:has(svg.hub-illustration) small{max-width:calc(100% - 54px)}
 svg.hub-illustration{position:absolute;right:8px;bottom:8px;width:56px;height:48px;pointer-events:none}
 .hub-item .hub-chevron{transition:transform .25s var(--ease),opacity .2s var(--ease)}

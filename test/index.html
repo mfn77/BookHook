@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-34-overscroll" />
+<link rel="stylesheet" href="./style.css?v=material-35-hubpreview" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -1849,7 +1849,9 @@ function setTabTitleAnimated(newText){
   // güvenilir değil — bunun yerine son hedeflenen metni ayrıca saklayıp ona göre kısa devre
   // yapıyoruz, yoksa ikinci çağrı yarım kalan animasyonu yeniden başlatıp metni birbirine katardı.
   const currentTarget = el._titleTarget!==undefined ? el._titleTarget : el.textContent;
-  if(currentTarget===newText) return;
+  // Sadece _titleTarget'a değil, GÖRÜNEN metne de bakıyoruz — biri diğerinden saparsa (ör. başka
+  // bir kod yolu el.textContent'i doğrudan değiştirmişse) kısa devre yapıp görünmez kalmasın diye.
+  if(currentTarget===newText && el.textContent===newText) return;
   if(el._titleAnimTimeout){ clearTimeout(el._titleAnimTimeout); el._titleAnimTimeout=null; }
   const oldText = currentTarget;
   el._titleTarget = newText;
@@ -9553,6 +9555,38 @@ function materialHubLink(hubId,targetId,label,description,icon,noAccordion){
  HUB_PARENT[targetId] = hubId;
  if(noAccordion) HUB_NO_ACCORDION.add(targetId);
  return `<div class="hub-item" data-hub-target="${targetId}"><button type="button" class="destination-row hub-item-toggle"><div class="hub-item-summary">${HUB_ILLUSTRATIONS[icon]||''}<span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span></div><span class="hub-chevron" aria-hidden="true">›</span></button><div class="hub-item-panel"><div class="hub-item-panel-inner"></div></div><button type="button" class="hub-item-close-btn icon-button" aria-label="Kapat"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button></div>`;
+}
+// ============ HUB KARTI DÖNÜŞÜMLÜ ÖNİZLEME ============
+// Kulüp/Kitaplık kartlarını hiç açmadan kısa, canlı bir özet gösterir — birkaç durum arasında
+// ~3sn'de bir hızlı (150ms) bir crossfade ile döner. materialClubGrid/materialLibraryGrid SADECE
+// materialInit()'te (girişte, en fazla iki kez) kuruluyor, sekme değiştirmede yeniden kurulmuyor
+// — o yüzden rotator'ları burada bir kere başlatmak yeterli. id, materialHubLink'e verilen
+// hedefin ÇÖZÜLMEMİŞ (rol'e göre değişmeyen) hali olabilir ('records','badges' gibi) —
+// materialRoute() ile data-hub-target'taki gerçek id'ye çevriliyor.
+const HUB_PREVIEW_INTERVAL_MS = 3000;
+const HUB_PREVIEW_FADE_MS = 150;
+function setHubCardPreview(id, states){
+ if(!states || !states.length) return;
+ const targetId = (typeof materialRoute==='function') ? materialRoute(id) : id;
+ const item = document.querySelector(`.hub-item[data-hub-target="${targetId}"]`);
+ const small = item && item.querySelector('.hub-item-summary small');
+ if(!small) return;
+ if(item._hubPreviewTimer){ clearInterval(item._hubPreviewTimer); item._hubPreviewTimer=null; }
+ function paint(state){
+  const iconHtml = state.icon ? `<span class="hub-preview-icon ${state.cls||''}">${escapeHtml(state.icon)}</span>` : '';
+  small.innerHTML = `<span class="hub-preview">${iconHtml}<span>${escapeHtml(state.text)}</span></span>`;
+ }
+ let i = 0;
+ paint(states[0]);
+ if(states.length<2) return;
+ item._hubPreviewTimer = setInterval(()=>{
+  const preview = small.querySelector(':scope>.hub-preview');
+  if(preview) preview.classList.add('fade-out');
+  setTimeout(()=>{
+   i = (i+1) % states.length;
+   paint(states[i]);
+  }, HUB_PREVIEW_FADE_MS);
+ }, HUB_PREVIEW_INTERVAL_MS);
 }
 function materialExpandHubItem(item, targetId){
  const inner = item.querySelector('.hub-item-panel-inner');
