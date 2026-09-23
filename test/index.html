@@ -1950,13 +1950,40 @@ function switchTab(id, { animate = true } = {}){
    gibi mesafe + hız kombinasyonuyla karar verir ============ */
 (function setupSwipeNav(){
   let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, pendingSettleTimeout=null, pendingFinish=null;
-  let lastMoveX=0, lastMoveTime=0, velocity=0;
+  let motionSamples=[];
   let previewCurrentSection=null, previewTargetSection=null, previewGoingNext=false, previewTargetIdx=-1, previewGap=0, previewWidth=0;
   let moveFrame=null, queuedDx=0, previewRect=null, transitionListener=null;
   let pointerId=null, recoveryTimer=null;
   const contentCol = document.querySelector('.content-col > main');
   const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
   const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
+
+  // Son iki olay yerine kısa bir hareket penceresi: parmak kalkmadan önce gelen
+  // aynı konumlu son olay hızlı fiskenin hızını sıfırlamasın.
+  function recordMotion(x, time){
+    const last=motionSamples[motionSamples.length-1];
+    if(last && time===last.time) last.x=x;
+    else motionSamples.push({x,time});
+    while(motionSamples.length>2 && motionSamples[1].time < time-120) motionSamples.shift();
+  }
+  function releaseVelocity(x, time){
+    recordMotion(x,time);
+    const cutoff=time-100;
+    let start=motionSamples[0];
+    for(let i=1;i<motionSamples.length;i++){
+      const next=motionSamples[i];
+      if(next.time>=cutoff){
+        if(start.time<cutoff && next.time>start.time){
+          const fraction=(cutoff-start.time)/(next.time-start.time);
+          start={x:start.x+(next.x-start.x)*fraction,time:cutoff};
+        }
+        break;
+      }
+      start=next;
+    }
+    const dt=time-start.time;
+    return dt>0 ? (x-start.x)/dt : 0;
+  }
 
   function resetSection(section, hide){
     if(!section) return;
@@ -2125,9 +2152,8 @@ function switchTab(id, { animate = true } = {}){
     touchStartX = e.clientX;
     touchStartY = e.clientY;
     dragging = false;
-    velocity = 0;
-    lastMoveX = touchStartX;
-    lastMoveTime = e.timeStamp;
+    motionSamples=[];
+    recordMotion(e.clientX,e.timeStamp);
     containerWidth = contentCol.offsetWidth || window.innerWidth;
   }, {passive:true, capture:true});
 
@@ -2157,10 +2183,7 @@ function switchTab(id, { animate = true } = {}){
       try { contentCol.setPointerCapture(e.pointerId); } catch(_) { cancelGesture(); return; }
     }
     if(dragging && e.cancelable) e.preventDefault();
-    const dt = e.timeStamp - lastMoveTime;
-    if(dt > 0) velocity = (touch.clientX - lastMoveX) / dt;
-    lastMoveX = touch.clientX;
-    lastMoveTime = e.timeStamp;
+    recordMotion(e.clientX,e.timeStamp);
     if(dragging){
       const goingNextNow = dx < 0;
       const canFollow = maybeFlipDirection(goingNextNow);
@@ -2185,7 +2208,8 @@ function switchTab(id, { animate = true } = {}){
     // kurulu olduğunu (previewGoingNext/previewTargetIdx) esas alıyoruz, dx'in çiğ işaretini değil.
     const canComplete = previewCurrentSection && goingNext===previewGoingNext && previewTargetIdx>=0;
     const distanceOk = Math.abs(dx) > containerWidth * DISTANCE_THRESHOLD_RATIO;
-    const flickOk = e.timeStamp-lastMoveTime < 120 && Math.abs(velocity) > VELOCITY_THRESHOLD && Math.sign(velocity)===Math.sign(dx);
+    const velocity = releaseVelocity(e.clientX,e.timeStamp);
+    const flickOk = Math.abs(dx)>=20 && Math.abs(velocity)>VELOCITY_THRESHOLD && Math.sign(velocity)===Math.sign(dx);
     const shouldComplete = canComplete && idx!==-1 && (distanceOk || flickOk);
     if(shouldComplete){
       const targetIdx = previewTargetIdx;
