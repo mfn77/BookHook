@@ -283,3 +283,7 @@ svg.hub-illustration{position:absolute;right:8px;bottom:8px;width:56px;height:48
    clip yeni bir scroll container oluşturmaz; dikey kaydırma ve fixed nav korunur.
    Her iki kökte de tanımlı olması body overflow'unun viewport'a aktarılmasını önler. */
 html, body { overflow-x: clip; }
+
+/* Sekme sürüklemesi iptal edildiğinde aşağı taşan hareket tarayıcının
+   pull-to-refresh davranışına geçmesin. Normal dikey kaydırma korunur. */
+html, body { overscroll-behavior-y: contain; }
