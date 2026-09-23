@@ -9661,7 +9661,7 @@ async function initHubCardPreviews(){
  const sampledBooks = shuffle(allBooks).slice(0,5);
  setHubCardPreview('bookhistory', sampledBooks.map(b=>({text: `${b.t} — ${b.a}`})));
 
- // --- Kitaplığım: okumak istediklerin, sonra şu an okuduklarınğ — tek seferlik hafif sorgu
+ // --- Kitaplığım: okumak istediklerin, sonra şu an okuduklarım — tek seferlik hafif sorgu
  Promise.all([
   getDocs(query(collection(db,'users',currentUid,'wantToRead'), orderBy('addedAt','desc'), limit(4))).catch(()=>null),
   getDocs(query(collection(db,'users',currentUid,'readBooks'), orderBy('addedAt','desc'), limit(4))).catch(()=>null)
