@@ -1848,19 +1848,30 @@ function setTabTitleAnimated(newText){
   // Animasyon sürerken el.textContent, iki <span>'in birleşimi (ör. "BugünAkış") olduğu için
   // güvenilir değil — bunun yerine son hedeflenen metni ayrıca saklayıp ona göre kısa devre
   // yapıyoruz, yoksa ikinci çağrı yarım kalan animasyonu yeniden başlatıp metni birbirine katardı.
+  // Sadece _titleTarget'a değil, GÖRÜNEN metne de bakıyoruz — biri diğerinden saparsa (ör. başka
+  // bir kod yolu el.textContent'i doğrudan değiştirmişse) kısa devre yapıp görünmez kalmasın diye.
   const currentTarget = el._titleTarget!==undefined ? el._titleTarget : el.textContent;
-  if(currentTarget===newText) return;
+  if(currentTarget===newText && el.textContent===newText) return;
   if(el._titleAnimTimeout){ clearTimeout(el._titleAnimTimeout); el._titleAnimTimeout=null; }
+  if(el._titleAnimCleanup){ el.removeEventListener('transitionend', el._titleAnimCleanup); el._titleAnimCleanup=null; }
   const oldText = currentTarget;
   el._titleTarget = newText;
   el.classList.add('title-animating');
   el.innerHTML = `<span class="tab-title-piece tab-title-out">${escapeHtml(oldText)}</span><span class="tab-title-piece tab-title-in">${escapeHtml(newText)}</span>`;
   requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ el.classList.add('title-animate-run'); }); });
-  el._titleAnimTimeout = setTimeout(()=>{
+  // Sabit 260ms'lik setTimeout, açılışta (buildNav ilk çalıştığında) ana iş parçacığı yoğunken
+  // çift rAF gecikip animasyon sınıfı hiç uygulanmadan bu süre dolabiliyordu — bu durumda yazı
+  // hiç animasyonsuz, doğrudan son haliyle beliriyordu. transitionend'i asıl bitiş sinyali
+  // yapıp setTimeout'u sadece güvenlik ağı (transition hiç tetiklenmezse) olarak bırakıyoruz.
+  const finishTitleAnim = ()=>{
+    if(el._titleAnimTimeout){ clearTimeout(el._titleAnimTimeout); el._titleAnimTimeout=null; }
+    if(el._titleAnimCleanup){ el.removeEventListener('transitionend', el._titleAnimCleanup); el._titleAnimCleanup=null; }
     el.classList.remove('title-animating','title-animate-run');
     el.textContent = newText;
-    el._titleAnimTimeout = null;
-  }, 260);
+  };
+  el._titleAnimCleanup = (e)=>{ if(e.target.classList && e.target.classList.contains('tab-title-in')) finishTitleAnim(); };
+  el.addEventListener('transitionend', el._titleAnimCleanup);
+  el._titleAnimTimeout = setTimeout(finishTitleAnim, 400);
 }
 // switchTab() ve kaydırma jestinin parmak-kalkar-kalkmaz senkronizasyonu aynı etiket kaynağını
 // kullansın diye — materialSyncNavigation()'daki names haritası yalnızca hub-kökü olan
