@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-35-hubpreview" />
+<link rel="stylesheet" href="./style.css?v=material-36-hubpreview-badge" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -9566,34 +9566,41 @@ function materialHubLink(hubId,targetId,label,description,icon,noAccordion){
  return `<div class="hub-item" data-hub-target="${targetId}"><button type="button" class="destination-row hub-item-toggle"><div class="hub-item-summary">${HUB_ILLUSTRATIONS[icon]||''}<span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span></div><span class="hub-chevron" aria-hidden="true">›</span></button><div class="hub-item-panel"><div class="hub-item-panel-inner"></div></div><button type="button" class="hub-item-close-btn icon-button" aria-label="Kapat"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button></div>`;
 }
 // ============ HUB KARTI DÖNÜŞÜMLÜ ÖNİZLEME ============
-// Kulüp/Kitaplık kartlarını hiç açmadan kısa, canlı bir özet gösterir — birkaç durum arasında
-// ~3sn'de bir hızlı (150ms) bir crossfade ile döner. materialClubGrid/materialLibraryGrid SADECE
-// materialInit()'te (girişte, en fazla iki kez) kuruluyor, sekme değiştirmede yeniden kurulmuyor
-// — o yüzden rotator'ları burada bir kere başlatmak yeterli. id, materialHubLink'e verilen
-// hedefin ÇÖZÜLMEMİŞ (rol'e göre değişmeyen) hali olabilir ('records','badges' gibi) —
-// materialRoute() ile data-hub-target'taki gerçek id'ye çevriliyor.
+// Kulüp/Kitaplık kartlarını hiç açmadan sağ üst köşede görsel (ikon) ağırlıklı, kısa bir özet
+// gösterir — birkaç durum arasında ~3sn'de bir hızlı (150ms) bir crossfade ile döner. Rozet,
+// kartın MEVCUT açıklama metnine (<small>) DOKUNMAZ — position:absolute ayrı bir öğe olduğu için
+// .hub-item-summary'nin akışına hiç girmiyor, dolayısıyla önizleme değişse de kart boyutu asla
+// etkilenmiyor. materialClubGrid/materialLibraryGrid SADECE materialInit()'te (girişte, en fazla
+// iki kez) kuruluyor, sekme değiştirmede yeniden kurulmuyor — o yüzden rotator'ları burada bir
+// kere başlatmak yeterli. id, materialHubLink'e verilen hedefin ÇÖZÜLMEMİŞ (rol'e göre değişmeyen)
+// hali olabilir ('records','badges' gibi) — materialRoute() ile data-hub-target'taki gerçek id'ye
+// çevriliyor. Her state {icon, cls, caption} şeklinde: icon zorunlu (görsel), caption isteğe bağlı
+// kısa bir alt yazı (tek satır, taşarsa üç nokta ile kesiliyor).
 const HUB_PREVIEW_INTERVAL_MS = 3000;
 const HUB_PREVIEW_FADE_MS = 150;
 function setHubCardPreview(id, states){
  if(!states || !states.length) return;
  const targetId = (typeof materialRoute==='function') ? materialRoute(id) : id;
  const item = document.querySelector(`.hub-item[data-hub-target="${targetId}"]`);
- const small = item && item.querySelector('.hub-item-summary small');
- if(!small) return;
+ const row = item && item.querySelector('.destination-row');
+ if(!row) return;
+ let badge = row.querySelector(':scope>.hub-preview-badge');
+ if(!badge){ row.insertAdjacentHTML('beforeend', '<div class="hub-preview-badge"></div>'); badge = row.querySelector(':scope>.hub-preview-badge'); }
  if(item._hubPreviewTimer){ clearInterval(item._hubPreviewTimer); item._hubPreviewTimer=null; }
  function paint(state){
-  const iconHtml = state.icon ? `<span class="hub-preview-icon ${state.cls||''}">${escapeHtml(state.icon)}</span>` : '';
-  small.innerHTML = `<span class="hub-preview">${iconHtml}<span>${escapeHtml(state.text)}</span></span>`;
+  const iconHtml = `<span class="hub-preview-badge-icon ${state.cls||''}">${escapeHtml(state.icon||'')}</span>`;
+  const captionHtml = state.caption ? `<span class="hub-preview-badge-caption">${escapeHtml(state.caption)}</span>` : '';
+  badge.innerHTML = iconHtml + captionHtml;
  }
  let i = 0;
  paint(states[0]);
  if(states.length<2) return;
  item._hubPreviewTimer = setInterval(()=>{
-  const preview = small.querySelector(':scope>.hub-preview');
-  if(preview) preview.classList.add('fade-out');
+  badge.classList.add('fade-out');
   setTimeout(()=>{
    i = (i+1) % states.length;
    paint(states[i]);
+   requestAnimationFrame(()=>{ badge.classList.remove('fade-out'); });
   }, HUB_PREVIEW_FADE_MS);
  }, HUB_PREVIEW_INTERVAL_MS);
 }
@@ -9606,17 +9613,17 @@ function setHubCardPreview(id, states){
 async function initHubCardPreviews(){
  if(!currentUid) return;
 
- // --- Kayıtlar: önce kendi bugünkü durumun, sonra kulüp geneli bu haftaki pas/tam/ceza sayıları
+ // --- Kayıtlar: önce kendi bugünkü durumun (ikon), sonra kulüp geneli bu haftaki pas/tam/ceza
  const mine = todayAnswers[currentUid];
- const mineState = mine==='read' ? {icon:'✓', cls:'wh-read', text:'Bugün: Okudum'}
-   : mine==='skip' ? {icon:'–', cls:'wh-pas', text:'Bugün: Okumadım'}
-   : {text:'Bugün: Henüz işaretlemedin'};
+ const mineState = mine==='read' ? {icon:'✓', cls:'wh-read', caption:'Bugün'}
+   : mine==='skip' ? {icon:'–', cls:'wh-pas', caption:'Bugün'}
+   : {icon:'?', caption:'Bugün'};
  setHubCardPreview('records', [mineState]);
  computeWeekStats(getMonday(nowLogical())).then(stats=>{
   const tam = stats.filter(s=>s.marked>0 && s.miss===0).length;
   const pas = stats.filter(s=>s.miss===1).length;
   const ceza = stats.filter(s=>s.miss>=2).length;
-  setHubCardPreview('records', [mineState, {text:`Bu hafta ✓${tam} –${pas} ✕${ceza}`}]);
+  setHubCardPreview('records', [mineState, {icon:'📊', caption:`✓${tam} –${pas} ✕${ceza}`}]);
  }).catch(()=>{});
 
  // --- Rozetler: seri, o anki rozet, sıralama ve kaç kez kazanıldığı — hepsi zaten usersCache'te
@@ -9627,20 +9634,20 @@ async function initHubCardPreviews(){
  const earnedCount = myTierKey ? ((u.badgeCounts||{})[myTierKey]||0) : 0;
  const ranked = activeUids().map(uid=>({uid, streak: usersCache[uid].currentStreak||0})).sort((a,b)=>b.streak-a.streak);
  const rank = ranked.findIndex(r=>r.uid===currentUid)+1;
- const badgeStates = [{text: myStreak>0 ? `🔥 ${myStreak} gün aralıksız seri` : 'Henüz bir serin yok'}];
- if(tierDef) badgeStates.push({text: `${tierDef.icon} ${tierDef.label}`});
- if(rank>0) badgeStates.push({text: `Sıralamada #${rank}` + (earnedCount>1 ? ` · bu rozeti ${earnedCount}. kez kazandın` : '')});
+ const badgeStates = [{icon:'🔥', caption: myStreak>0 ? `${myStreak} gün` : 'Henüz yok'}];
+ if(tierDef) badgeStates.push({icon: tierDef.icon, caption: tierDef.label});
+ if(rank>0) badgeStates.push({icon:'🏆', caption: `#${rank}` + (earnedCount>1 ? ` ×${earnedCount}` : '')});
  setHubCardPreview('badges', badgeStates);
 
  // --- Hediyeler: bu haftanın kurası, kendi hediye geçmişin, kulüp toplamı — loadDraws() zaten var olan tek fonksiyon
  loadDraws().then(()=>{
   const latest = drawsCache[0];
   const myPair = latest ? (latest.pairs||[]).find(p=>p.giverUid===currentUid || p.receiverUid===currentUid) : null;
-  let weekText = 'Bu hafta kura yok';
+  let weekCaption = 'Kura yok';
   if(myPair && myPair.giverUid===currentUid && myPair.receiverUid){
-   weekText = `Bu hafta: ${usersCache[myPair.receiverUid]?.name || myPair.receiverName || '?'}'e hediye vereceksin`;
+   weekCaption = `Sen → ${usersCache[myPair.receiverUid]?.name || myPair.receiverName || '?'}`;
   } else if(myPair && myPair.receiverUid===currentUid){
-   weekText = `Bu hafta: ${usersCache[myPair.giverUid]?.name || myPair.giverName || '?'} sana hediye verecek`;
+   weekCaption = `${usersCache[myPair.giverUid]?.name || myPair.giverName || '?'} → Sen`;
   }
   const stats = {};
   let totalGifted = 0;
@@ -9650,16 +9657,16 @@ async function initHubCardPreviews(){
   }));
   const my = stats[currentUid] || {given:0, received:0};
   setHubCardPreview('gifts', [
-   {text: weekText},
-   {text: `Sen: 📥${my.received} 📤${my.given}`},
-   {text: `Kulüpte toplam ${totalGifted} kitap hediye edildi`}
+   {icon:'🎁', caption: weekCaption},
+   {icon:'📬', caption: `A${my.received} · V${my.given}`},
+   {icon:'📚', caption: `Kulüp: ${totalGifted}`}
   ]);
  }).catch(()=>{});
 
  // --- Keşfet: küratörlü kataloğdan rastgele birkaç kitap, dönüşümlü
  const allBooks = CURATED_CATALOG.flatMap(cat=>cat.books);
  const sampledBooks = shuffle(allBooks).slice(0,5);
- setHubCardPreview('bookhistory', sampledBooks.map(b=>({text: `${b.t} — ${b.a}`})));
+ setHubCardPreview('bookhistory', sampledBooks.map(b=>({icon:'📖', caption: b.t})));
 
  // --- Kitaplığım: okumak istediklerin, sonra şu an okuduklarım — tek seferlik hafif sorgu
  Promise.all([
@@ -9669,10 +9676,10 @@ async function initHubCardPreviews(){
   const wantItems = wantSnap ? wantSnap.docs.map(d=>d.data()) : [];
   const readingItems = readingSnap ? readingSnap.docs.map(d=>d.data()) : [];
   const states = [
-   ...wantItems.map(b=>({text: `Okumak istiyorsun: ${b.title}`})),
-   ...readingItems.map(b=>({text: `Şu an okuyorsun: ${b.title}`}))
+   ...wantItems.map(b=>({icon:'🔖', caption: b.title})),
+   ...readingItems.map(b=>({icon:'📗', caption: b.title}))
   ];
-  if(!states.length) states.push({text:'Henüz kitaplığına bir şey eklemedin'});
+  if(!states.length) states.push({icon:'📚', caption:'Boş'});
   setHubCardPreview('mybooks', states);
  }).catch(()=>{});
 
@@ -9690,8 +9697,8 @@ async function initHubCardPreviews(){
   personal.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
   const group = (snapGroup?snapGroup.docs:[]).map(d=>d.data());
   group.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
-  const states = [...personal, ...group].slice(0,6).map(it=> ({text: `${usersCache[it.fromUid]?.name || '?'} → ${it.bookTitle}`}));
-  if(!states.length) states.push({text:'Henüz öneri yok'});
+  const states = [...personal, ...group].slice(0,6).map(it=> ({icon:'💡', caption: it.bookTitle}));
+  if(!states.length) states.push({icon:'💡', caption:'Henüz yok'});
   setHubCardPreview('recs', states);
  }).catch(()=>{});
 }
