@@ -24,17 +24,19 @@ service cloud.firestore {
       );
       allow delete: if isAdmin() && !isOwnerUid(uid);
 
+      // Admin override (Goodreads içe aktarma aracı için): admin kendi hesabı dışında bir üyenin
+      // kütüphane koleksiyonlarına da yazabilir — users/{uid} update kuralındaki aynı desen.
       match /bookHistory/{itemId} {
         allow read: if isSignedIn();
-        allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
+        allow create, update, delete: if isSignedIn() && (request.auth.uid == uid || (isAdmin() && !isOwnerUid(uid)));
       }
       match /readBooks/{itemId} {
         allow read: if isSignedIn();
-        allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
+        allow create, update, delete: if isSignedIn() && (request.auth.uid == uid || (isAdmin() && !isOwnerUid(uid)));
       }
       match /wantToRead/{itemId} {
         allow read: if isSignedIn();
-        allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
+        allow create, update, delete: if isSignedIn() && (request.auth.uid == uid || (isAdmin() && !isOwnerUid(uid)));
       }
     }
 
