@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-37-illustrations-ios" />
+<link rel="stylesheet" href="./style.css?v=material-38-ai-card" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -566,7 +566,7 @@
       </div>
     </section>
 
-<section class="tab" id="tab-library"><h1>Kitaplar</h1><p class="page-subtitle">Keşfet, kitaplığın ve öneriler bir arada.</p><div class="card ai-rec-card" id="aiRecCard"><h2>✨ Senin İçin Seçtik</h2><div id="aiRecBody"><span class="muted">Yükleniyor…</span></div></div><div class="club-grid" id="materialLibraryGrid"></div></section>
+<section class="tab" id="tab-library"><h1>Kitaplar</h1><p class="page-subtitle">Keşfet, kitaplığın ve öneriler bir arada.</p><div class="card ai-rec-card" id="aiRecCard"><h2>Senin İçin Seçtik</h2><div id="aiRecBody"><span class="muted">Yükleniyor…</span></div></div><div class="club-grid" id="materialLibraryGrid"></div></section>
 <section class="tab" id="tab-appsettings"><h1>Ayarlar</h1><p class="page-subtitle">Kulüp yönetimi ve uygulama tercihlerin.</p><div class="club-grid" id="materialSettingsGrid"></div></section>
 <section class="tab" id="tab-club"><h1>Okumak için<br>motivasyon</h1><p class="page-subtitle">Kulübü takip et</p><button class="club-feature" data-material-route="quarterly"><span><small>Ortak kitabımız</small><b id="clubBookTitle">Ortak kitap</b><span id="clubBookMeta">Birlikte seç, birlikte oku</span></span><svg class="club-feature-illustration" viewBox="0 0 100 84" aria-hidden="true"><line x1="2" y1="70" x2="98" y2="70" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/><g fill="var(--secondary-ink)"><rect x="12" y="40" width="36" height="20" rx="9"/><path d="M38,42 L48,24 L57,27 L50,44 Z"/><path d="M46,25 L58,20 L62,27 L57,34 L47,32 Z"/><path d="M55,19 L58,12 L61,19 Z"/><path d="M13,44 C4,46 2,56 9,64" fill="none" stroke="var(--secondary-ink)" stroke-width="4.5" stroke-linecap="round"/><rect x="17" y="58" width="5.5" height="13" rx="2"/><rect x="30" y="58" width="5.5" height="13" rx="2"/><rect x="40" y="58" width="5.5" height="13" rx="2"/></g><circle cx="56" cy="26" r="1.6" fill="var(--card)"/><path d="M43,26 C47,21 51,19 55,20" fill="none" stroke="var(--gold)" stroke-width="2.8" stroke-linecap="round"/><circle cx="81" cy="57" r="13" fill="none" stroke="var(--gold-dark)" stroke-width="3.5"/><circle cx="81" cy="57" r="2.6" fill="var(--gold-dark)"/><line x1="81" y1="47" x2="81" y2="67" stroke="var(--gold-dark)" stroke-width="2"/><line x1="71" y1="57" x2="91" y2="57" stroke="var(--gold-dark)" stroke-width="2"/></svg><span>›</span></button><div class="club-grid" id="materialClubGrid"></div></section>
 <section class="tab" id="tab-quarterly"><div id="materialQpSteps" class="phase-steps"></div>      <div class="card" id="quarterlyPickCard">
@@ -5268,28 +5268,33 @@ function renderBookHistoryTab(){
 // Claude'un cevabında yok (uydurma bir link vermesi riskli olurdu) — bunun yerine, kitap
 // ekleme formunda zaten kullandığımız Google Books aramasıyla ayrıca, istemci tarafında çekiliyor.
 function aiRecItemHtml(rec, idx){
-  const coverHtml = rec.cover
-    ? `<img src="${rec.cover}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(rec.title||'').replace(/'/g,"\\'")}');" />`
-    : placeholderCoverHtml(rec.title||'');
-  return `<div class="ai-rec-item" data-ai-rec-idx="${idx}" style="cursor:pointer;">
-    <div class="ai-rec-cover">${coverHtml}</div>
-    <b>${escapeHtml(rec.title||'')}</b>
-    <div class="muted" style="font-size:12px; margin:2px 0 4px;">${escapeHtml(rec.author||'')}</div>
-    <div style="font-size:12px; line-height:1.4;">${escapeHtml(rec.reason||'')}</div>
-  </div>`;
+  let cover='';
+  try{const url=new URL(rec.cover||'',location.href);if(rec.cover && ['https:','http:'].includes(url.protocol))cover=url.href;}catch(_){}
+  const title=escapeHtml(rec.title||'İsimsiz kitap');
+  return `<span class="ai-rec-item" data-ai-rec-idx="${idx}">
+    <span class="hp-book-cover ai-preview-cover"><span>${escapeHtml((rec.title||'K').slice(0,1))}</span>${cover?`<img src="${escapeHtml(cover)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</span>
+    <b>${title}</b><span class="ai-preview-author">${escapeHtml(rec.author||'')}</span>
+  </span>`;
 }
 function aiRecHtml(items){
-  return `<div class="ai-rec-list">${items.map(aiRecItemHtml).join('')}</div>
-  <button type="button" class="secondary tiny" id="aiRecRefreshBtn" style="margin-top:14px;">🔄 Yeni öneri iste</button>`;
+  return `<details class="ai-rec-disclosure"><summary aria-label="Kitap önerilerinin açıklamalarını aç veya kapat"><span class="ai-rec-list">${items.map(aiRecItemHtml).join('')}</span></summary>
+  <div class="ai-rec-expanded">${items.map((rec,idx)=>`<div class="ai-rec-explanation"><h3>${escapeHtml(rec.title||'')}</h3><p>${escapeHtml(rec.reason||'Bu kitap için henüz açıklama yok.')}</p><button type="button" class="ai-text-action" data-ai-open="${idx}">Kitabı incele</button></div>`).join('')}</div></details>
+  <button type="button" class="ai-text-action ai-refresh-action" id="aiRecRefreshBtn">Yeni öneri iste</button>`;
 }
 function wireAiRecRefresh(){
   const btn = document.getElementById('aiRecRefreshBtn');
   if(btn) btn.addEventListener('click', fetchAiRecommendation);
 }
 function wireAiRecItems(items){
-  document.querySelectorAll('#aiRecBody .ai-rec-item').forEach(el=>{
-    const idx = Number(el.dataset.aiRecIdx);
-    el.addEventListener('click', ()=> showAiRecDetail(items[idx], items, idx));
+  document.querySelectorAll('#aiRecBody [data-ai-open]').forEach(el=>{
+    const idx=Number(el.dataset.aiOpen);
+    el.addEventListener('click',()=>showAiRecDetail(items[idx],items,idx));
+  });
+  const disclosure=document.querySelector('#aiRecBody .ai-rec-disclosure');
+  if(disclosure) disclosure.addEventListener('toggle',()=>{
+    if(disclosure.open && !matchMedia('(prefers-reduced-motion: reduce)').matches){
+      disclosure.querySelector('.ai-rec-expanded').animate([{opacity:0,transform:'translateY(-6px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,easing:'ease-out'});
+    }
   });
 }
 // Aynı oturumda aynı kitaba tekrar tıklanırsa ikna metnini yeniden istemeyelim diye basit bir
@@ -5298,9 +5303,9 @@ const aiPitchCache = {};
 async function showAiRecDetail(rec, items, idx){
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
-  const coverHtml = rec.cover
-    ? `<img src="${rec.cover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(rec.title||'').replace(/'/g,"\\'")}')+this.parentElement.innerHTML;" />`
-    : `<div style="width:100px; height:150px; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); margin:0 auto 12px;">${placeholderCoverHtml(rec.title||'')}</div>`;
+  let safeCover='';
+  try{const url=new URL(rec.cover||'',location.href);if(rec.cover && ['https:','http:'].includes(url.protocol))safeCover=url.href;}catch(_){}
+  const coverHtml=`<span class="hp-book-cover" style="width:100px;height:150px;margin:0 auto 12px;font-size:48px"><span>${escapeHtml((rec.title||'K').slice(0,1))}</span>${safeCover?`<img src="${escapeHtml(safeCover)}" alt="" onerror="this.remove()">`:''}</span>`;
   const cacheKey = `${rec.title}|${rec.author}`;
   const pitchHtml = aiPitchCache[cacheKey]
     ? escapeHtml(aiPitchCache[cacheKey])
