@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-35-previews" />
+<link rel="stylesheet" href="./style.css?v=material-36-card-swipe" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -2152,7 +2152,7 @@ function switchTab(id, { animate = true } = {}){
     // Kulüp/Ben, Okuyorum/İstek listem/Geçmişim gibi iç sekmeler) dokunuş başlıyorsa, sayfa
     // seviyesindeki bu sekmeler-arası kaydırmayı hiç başlatma — o alan kendi kart-içi kaydırmasını
     // ayrıca yönetiyor (bkz. setupInnerPaneCarousels).
-    if(!contentCol.contains(t) || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport') || t.closest('#discoverFeed')){
+    if(!contentCol.contains(t) || t.closest('.hub-item[data-preview]:not(.expanded)') || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport') || t.closest('#discoverFeed')){
       touchStartX=null; return;
     }
     pointerId=e.pointerId;
@@ -9981,7 +9981,7 @@ document.addEventListener('keydown',e=>{
 /* Kart özetleri: salt okunur veri, sabit boyut, görünürken 3 saniyelik dönüşüm. */
 const hubPreviews=(()=>{
  const states=new Map(), cache=new Map();
- let owner=null, touching=false, quietUntil=0, paused=false, observer=null;
+ let owner=null, touching=false, quietUntil=0, observer=null;
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
  const esc=v=>escapeHtml(String(v??''));
  const metric=(label,value,detail='',icon='✦',tone='')=>({label,value:String(value),detail,icon,tone});
@@ -9992,12 +9992,12 @@ const hubPreviews=(()=>{
   if(s.stats)return `<span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><span class="hp-stats">${s.stats.map(x=>`<span class="hp-stat ${x.tone}"><i>${esc(x.icon)}</i><b>${esc(x.value)}</b><small>${esc(x.label)}</small></span>`).join('')}</span><span class="hp-detail">${esc(s.detail)}</span></span>`;
   return `<span class="hp-emblem ${esc(s.tone)}">${esc(s.icon)}</span><span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-value">${esc(s.value)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;
  }
- function paint(st,animate=false){
+ function paint(st,animate=false,direction=0){
   const slide=st.slides[st.index%st.slides.length], host=st.item.querySelector('.hp-stage');if(!host)return;
   const frame=document.createElement('span');frame.className='hp-frame';frame.innerHTML=content(slide);
   frame.querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>img.remove(),{once:true}));
   host.replaceChildren(frame);
-  if(animate&&!reduced.matches)frame.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,easing:'cubic-bezier(.2,0,0,1)'});
+  if(animate&&!reduced.matches)frame.animate([{opacity:0,transform:direction?`translateX(${direction*24}px)`:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,easing:'cubic-bezier(.2,0,0,1)'});
   st.item.querySelector('.hp-position').textContent=st.slides.length>1?`${st.index+1} / ${st.slides.length}`:'Özet';
   st.at=performance.now();
  }
@@ -10006,10 +10006,6 @@ const hubPreviews=(()=>{
   if(!observer)observer=new IntersectionObserver(entries=>{for(const e of entries){const st=states.get(e.target.dataset.preview);if(st){st.visible=e.isIntersecting;st.at=performance.now();}}},{threshold:.25});
   for(const gridId of ['materialClubGrid','materialLibraryGrid']){
    const grid=document.getElementById(gridId);if(!grid)continue;
-   if(!grid.previousElementSibling?.classList.contains('hp-toolbar')){
-    const bar=document.createElement('div');bar.className='hp-toolbar';bar.innerHTML='<span>Bir bakışta <small>• 3 sn</small></span><button type="button" class="hp-pause" aria-pressed="false">Özetleri duraklat</button>';grid.before(bar);
-    bar.querySelector('button').onclick=()=>{paused=!paused;document.querySelectorAll('.hp-pause').forEach(b=>{b.setAttribute('aria-pressed',String(paused));b.textContent=paused?'Özetleri oynat':'Özetleri duraklat';});for(const st of states.values())st.at=performance.now();};
-   }
    grid.querySelectorAll('.hub-item').forEach(item=>{
     const target=item.dataset.hubTarget;
     const key=['week','mtoday'].includes(target)?'records':['worms','mworms'].includes(target)?'badges':target;
@@ -10018,11 +10014,58 @@ const hubPreviews=(()=>{
     const old=states.get(key);if(old)observer.unobserve(old.item);
     item.dataset.preview=key;
     const summary=item.querySelector('.hub-item-summary'), label=(summary.querySelector('.hp-heading')||summary.querySelector('b')).textContent;
-    summary.innerHTML=`<span class="hp-heading">${esc(label)}</span><span class="hp-stage"></span><span class="hp-footer"><span>Ayrıntıları aç ↗</span><span class="hp-position">Özet</span></span>`;
-    const st={item,slides:old?.slides||[metric('Hazırlanıyor','Birazdan burada','Güncel özetler yükleniyor.')],index:0,at:performance.now(),visible:false};states.set(key,st);observer.observe(item);paint(st);
+    summary.innerHTML=`<span class="hp-heading">${esc(label)}</span><span class="hp-stage"></span><span class="hp-footer"><span class="hp-position">Özet</span></span>`;
+    const st={item,slides:old?.slides||[metric('Hazırlanıyor','Birazdan burada','Güncel özetler yükleniyor.')],index:0,at:performance.now(),visible:false};states.set(key,st);observer.observe(item);paint(st);wireSwipe(st);
    });
   }
  }
+ function wireSwipe(st){
+  const button=st.item.querySelector('.hub-item-toggle');let gesture=null;
+  const finish=(e,cancel=false)=>{
+    if(!gesture||e.pointerId!==gesture.id)return;
+    const g=gesture;gesture=null;
+    if(button.hasPointerCapture(g.id))button.releasePointerCapture(g.id);
+    if(g.moved){
+      st.blockClickUntil=performance.now()+500;
+      if(document.activeElement===button)button.blur();
+      const dx=e.clientX-g.x;
+      if(!cancel && Math.abs(dx)>=28 && st.slides.length>1){
+        const direction=dx<0?1:-1;
+        st.index=(st.index+direction+st.slides.length)%st.slides.length;
+        paint(st,true,direction);
+      }
+    }
+    st.at=performance.now();
+  };
+  button.addEventListener('pointerdown',e=>{
+    st.blockClickUntil=0;
+    if(!e.isPrimary||e.button!==0||st.item.classList.contains('expanded'))return;
+    gesture={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false};
+  });
+  button.addEventListener('pointermove',e=>{
+    if(!gesture||gesture.id!==e.pointerId)return;
+    const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
+    if(!gesture.moved){
+      if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){gesture=null;return;}
+      if(Math.abs(dx)<8||Math.abs(dx)<Math.abs(dy)*1.3)return;
+      gesture.moved=true;
+      try{button.setPointerCapture(e.pointerId);}catch{gesture=null;return;}
+    }
+    if(e.cancelable)e.preventDefault();
+  },{passive:false});
+  button.addEventListener('pointerup',e=>finish(e));
+  button.addEventListener('pointercancel',e=>finish(e,true));
+  button.addEventListener('lostpointercapture',e=>{if(e.target===button)finish(e,true);});
+  button.addEventListener('keydown',e=>{
+    if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;
+    e.preventDefault();const direction=e.key==='ArrowRight'?1:-1;
+    st.index=(st.index+direction+st.slides.length)%st.slides.length;paint(st,true,direction);
+  });
+ }
+ document.addEventListener('click',e=>{
+  const item=e.target.closest('.hub-item[data-preview]');const st=item&&states.get(item.dataset.preview);
+  if(st&&performance.now()<st.blockClickUntil){e.preventDefault();e.stopImmediatePropagation();st.blockClickUntil=0;}
+ },true);
  function safe(key,fn,uid){return Promise.resolve().then(fn).then(slides=>{if(currentUid===uid)set(key,slides);}).catch(()=>{if(currentUid===uid)set(key,[metric('Şu an yüklenemedi','Özet hazır değil','Ayrıntıları açarak tekrar deneyebilirsin.','↻')]);});}
  async function club(uid){
   await Promise.all([
@@ -10032,9 +10075,24 @@ const hubPreviews=(()=>{
     return [status,{label:'Kulübün bu haftası',stats:[{icon:'✓',tone:'hp-ok',value:classified.filter(x=>!x.miss).length,label:'Tam okuyan'},{icon:'−',tone:'hp-pass',value:classified.filter(x=>x.miss===1).length,label:'Pas'},{icon:'×',tone:'hp-danger',value:classified.filter(x=>x.miss>=2).length,label:'Cezalı'}],detail:`${rows.length-classified.length} kişi için henüz haftalık kayıt yok`}];
    },uid),
    safe('badges',async()=>{
-    const streak=await computeStreak(uid);const def=BADGE_DEFS.find(x=>x.key===currentTierForStreak(streak));const u=usersCache[uid]||{};
+    // Aynı gün verileri tüm üyeler için bir kez okunur; üye başına 61 sorgu açılmaz.
+    const dates=Array.from({length:61},(_,i)=>toStr(addDays(nowLogical(),-i)));
+    const days=[];
+    for(let i=0;i<dates.length;i+=8) days.push(...await Promise.all(dates.slice(i,i+8).map(fetchDayAnswers)));
+    const leaders=activeUids().map(id=>{
+      let count=0,start=days[0]?.[id]?.status==='read'?0:1;
+      for(let i=start;i<days.length && days[i]?.[id]?.status==='read';i++)count++;
+      return {uid:id,streak:count,name:usersCache[id]?.name||'Kulüp üyesi'};
+    }).sort((a,b)=>b.streak-a.streak||a.name.localeCompare(b.name,'tr')||a.uid.localeCompare(b.uid));
+    const streak=leaders.find(x=>x.uid===uid)?.streak||0;const def=BADGE_DEFS.find(x=>x.key===currentTierForStreak(streak));const u=usersCache[uid]||{};
     const next=BADGE_DEFS.find(x=>x.days>streak);
-    return [metric('Okuma serin',`${streak} gün`,next?`Sonraki rozete ${next.days-streak} gün`:'En yüksek seri rozetindesin.','♨','hp-ok'),metric('Aktif rozetin',def?def.label:'Henüz rozet yok',def?'Her gün okumaya devam.':'İlk rozet için 3 gün üst üste oku.',def?.icon||'✦'),metric(def?'Bu rozetin geçmişi':'Rozet geçmişin',def?`${Number(u.badgeCounts?.[def.key]||0)+1} kez`:`${Object.values(u.badgeCounts||{}).reduce((a,b)=>a+Number(b||0),0)} rozet`,def?'Geçmiş kazanımlar + aktif serin':'Tamamlanmış serilerde kazanılan rozetler','✧')];
+    const slides=[metric('Okuma serin',`${streak} gün`,next?`Sonraki rozete ${next.days-streak} gün`:'En yüksek seri rozetindesin.','♨','hp-ok'),metric('Aktif rozetin',def?def.label:'Henüz rozet yok',def?'Her gün okumaya devam.':'İlk rozet için 3 gün üst üste oku.',def?.icon||'✦'),metric(def?'Bu rozetin geçmişi':'Rozet geçmişin',def?`${Number(u.badgeCounts?.[def.key]||0)+1} kez`:`${Object.values(u.badgeCounts||{}).reduce((a,b)=>a+Number(b||0),0)} rozet`,def?'Geçmiş kazanımlar + aktif serin':'Tamamlanmış serilerde kazanılan rozetler','✧')];
+    leaders.slice(0,3).forEach(person=>{
+      const badge=BADGE_DEFS.find(d=>d.key===currentTierForStreak(person.streak));
+      const rank=1+leaders.filter(x=>x.streak>person.streak).length;
+      slides.push(metric(`Seri liderleri · ${rank}. sıra`,person.name,`${person.streak} gün · ${badge?badge.label:'Aktif rozeti yok'}`,badge?.icon||'✦'));
+    });
+    return slides;
    },uid),
    safe('gifts',async()=>{
     const [drawSnap,receivedSnap,quarterlySnap]=await Promise.all([getDocs(query(collection(db,'draws'),orderBy('weekStart','desc'))),getDocs(query(collection(db,'giftRequests'),where('received','==',true))),getDocs(query(collection(db,'quarterlyGiftRequests'),where('received','==',true))).catch(()=>null)]);
@@ -10087,7 +10145,7 @@ const hubPreviews=(()=>{
   const now=performance.now();
   for(const st of states.values()){
    const root=st.item.closest('main > section.tab');
-   if(paused||document.hidden||touching||now<quietUntil||!st.visible||!root||root.id!=='tab-'+activeTab||root.style.transform||st.item.classList.contains('expanded')||st.item.contains(document.activeElement)){st.at=now;continue;}
+   if(document.hidden||touching||now<quietUntil||!st.visible||!root||root.id!=='tab-'+activeTab||root.style.transform||st.item.classList.contains('expanded')||st.item.contains(document.activeElement)){st.at=now;continue;}
    if(st.slides.length>1&&now-st.at>=3000){st.index=(st.index+1)%st.slides.length;paint(st,true);}
   }
  },250);
