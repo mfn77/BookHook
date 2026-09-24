@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-34-overscroll" />
+<link rel="stylesheet" href="./style.css?v=material-38-ai-card" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -566,7 +566,7 @@
       </div>
     </section>
 
-<section class="tab" id="tab-library"><h1>Kitaplar</h1><p class="page-subtitle">Keşfet, kitaplığın ve öneriler bir arada.</p><div class="card ai-rec-card" id="aiRecCard"><h2>✨ Senin İçin Seçtik</h2><div id="aiRecBody"><span class="muted">Yükleniyor…</span></div></div><div class="club-grid" id="materialLibraryGrid"></div></section>
+<section class="tab" id="tab-library"><h1>Kitaplar</h1><p class="page-subtitle">Keşfet, kitaplığın ve öneriler bir arada.</p><div class="card ai-rec-card" id="aiRecCard"><h2>Senin İçin Seçtik</h2><div id="aiRecBody"><span class="muted">Yükleniyor…</span></div></div><div class="club-grid" id="materialLibraryGrid"></div></section>
 <section class="tab" id="tab-appsettings"><h1>Ayarlar</h1><p class="page-subtitle">Kulüp yönetimi ve uygulama tercihlerin.</p><div class="club-grid" id="materialSettingsGrid"></div></section>
 <section class="tab" id="tab-club"><h1>Okumak için<br>motivasyon</h1><p class="page-subtitle">Kulübü takip et</p><button class="club-feature" data-material-route="quarterly"><span><small>Ortak kitabımız</small><b id="clubBookTitle">Ortak kitap</b><span id="clubBookMeta">Birlikte seç, birlikte oku</span></span><svg class="club-feature-illustration" viewBox="0 0 100 84" aria-hidden="true"><line x1="2" y1="70" x2="98" y2="70" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/><g fill="var(--secondary-ink)"><rect x="12" y="40" width="36" height="20" rx="9"/><path d="M38,42 L48,24 L57,27 L50,44 Z"/><path d="M46,25 L58,20 L62,27 L57,34 L47,32 Z"/><path d="M55,19 L58,12 L61,19 Z"/><path d="M13,44 C4,46 2,56 9,64" fill="none" stroke="var(--secondary-ink)" stroke-width="4.5" stroke-linecap="round"/><rect x="17" y="58" width="5.5" height="13" rx="2"/><rect x="30" y="58" width="5.5" height="13" rx="2"/><rect x="40" y="58" width="5.5" height="13" rx="2"/></g><circle cx="56" cy="26" r="1.6" fill="var(--card)"/><path d="M43,26 C47,21 51,19 55,20" fill="none" stroke="var(--gold)" stroke-width="2.8" stroke-linecap="round"/><circle cx="81" cy="57" r="13" fill="none" stroke="var(--gold-dark)" stroke-width="3.5"/><circle cx="81" cy="57" r="2.6" fill="var(--gold-dark)"/><line x1="81" y1="47" x2="81" y2="67" stroke="var(--gold-dark)" stroke-width="2"/><line x1="71" y1="57" x2="91" y2="57" stroke="var(--gold-dark)" stroke-width="2"/></svg><span>›</span></button><div class="club-grid" id="materialClubGrid"></div></section>
 <section class="tab" id="tab-quarterly"><div id="materialQpSteps" class="phase-steps"></div>      <div class="card" id="quarterlyPickCard">
@@ -1848,19 +1848,30 @@ function setTabTitleAnimated(newText){
   // Animasyon sürerken el.textContent, iki <span>'in birleşimi (ör. "BugünAkış") olduğu için
   // güvenilir değil — bunun yerine son hedeflenen metni ayrıca saklayıp ona göre kısa devre
   // yapıyoruz, yoksa ikinci çağrı yarım kalan animasyonu yeniden başlatıp metni birbirine katardı.
+  // Sadece _titleTarget'a değil, GÖRÜNEN metne de bakıyoruz — biri diğerinden saparsa (ör. başka
+  // bir kod yolu el.textContent'i doğrudan değiştirmişse) kısa devre yapıp görünmez kalmasın diye.
   const currentTarget = el._titleTarget!==undefined ? el._titleTarget : el.textContent;
-  if(currentTarget===newText) return;
+  if(currentTarget===newText && el.textContent===newText) return;
   if(el._titleAnimTimeout){ clearTimeout(el._titleAnimTimeout); el._titleAnimTimeout=null; }
+  if(el._titleAnimCleanup){ el.removeEventListener('transitionend', el._titleAnimCleanup); el._titleAnimCleanup=null; }
   const oldText = currentTarget;
   el._titleTarget = newText;
   el.classList.add('title-animating');
   el.innerHTML = `<span class="tab-title-piece tab-title-out">${escapeHtml(oldText)}</span><span class="tab-title-piece tab-title-in">${escapeHtml(newText)}</span>`;
   requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ el.classList.add('title-animate-run'); }); });
-  el._titleAnimTimeout = setTimeout(()=>{
+  // Sabit 260ms'lik setTimeout, açılışta (buildNav ilk çalıştığında) ana iş parçacığı yoğunken
+  // çift rAF gecikip animasyon sınıfı hiç uygulanmadan bu süre dolabiliyordu — bu durumda yazı
+  // hiç animasyonsuz, doğrudan son haliyle beliriyordu. transitionend'i asıl bitiş sinyali
+  // yapıp setTimeout'u sadece güvenlik ağı (transition hiç tetiklenmezse) olarak bırakıyoruz.
+  const finishTitleAnim = ()=>{
+    if(el._titleAnimTimeout){ clearTimeout(el._titleAnimTimeout); el._titleAnimTimeout=null; }
+    if(el._titleAnimCleanup){ el.removeEventListener('transitionend', el._titleAnimCleanup); el._titleAnimCleanup=null; }
     el.classList.remove('title-animating','title-animate-run');
     el.textContent = newText;
-    el._titleAnimTimeout = null;
-  }, 260);
+  };
+  el._titleAnimCleanup = (e)=>{ if(e.target.classList && e.target.classList.contains('tab-title-in')) finishTitleAnim(); };
+  el.addEventListener('transitionend', el._titleAnimCleanup);
+  el._titleAnimTimeout = setTimeout(finishTitleAnim, 400);
 }
 // switchTab() ve kaydırma jestinin parmak-kalkar-kalkmaz senkronizasyonu aynı etiket kaynağını
 // kullansın diye — materialSyncNavigation()'daki names haritası yalnızca hub-kökü olan
@@ -1923,25 +1934,24 @@ function switchTab(id, { animate = true } = {}){
   renderTab(id);
 }
 
-/* ============ ALT SEKME ÇUBUĞUNU GERÇEK GÖRÜNÜR ALANA SABİTLE ============
-   Android Chrome'un dinamik adres çubuğu VE iOS Safari, özellikle kısa/kaydırılamayan
-   sayfalarda (ör. Kulüp, Ayarlar) position:fixed;bottom:0 öğeleri "layout viewport" yerine
-   gerçekte görünen alandan farklı bir yere yerleştirebiliyor — bu da alt sekme çubuğunun aşağı
-   kayması/kaybolması ya da normalden yukarıda durması gibi kararsız, sayfaya/duruma göre değişen
-   bir davranış olarak görünüyor. CSS'in position:fixed'ine güvenmek yerine window.visualViewport
-   API'sini (tarayıcının GERÇEKTEN gösterdiği alanı, araç çubuğu durumundan bağımsız veren API)
-   kullanarak çubuğu aktif olarak hizalıyoruz — web.dev'in bu tür bug'lar için önerdiği standart
-   çözüm bu. */
+/* Alt panel: normal tarayıcıda görünür viewport farkını telafi et.
+   iOS ana ekran uygulamasında fixed + safe-area konumuna ayrıca bu farkı ekleme;
+   geçici viewport farkı paneli gereksiz yere yukarı taşıyabilir. */
 (function stabilizeBottomNav(){
   const nav = document.getElementById('sidebarNav');
   if(!nav || !window.visualViewport) return;
   const mq = window.matchMedia('(max-width:700px)');
+  const standalone = window.matchMedia('(display-mode: standalone)');
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
   function update(){
-    if(!mq.matches){ nav.style.transform = ''; return; }
+    const iosHomeScreen = navigator.standalone===true || (isIOS && standalone.matches);
+    if(!mq.matches || iosHomeScreen){ nav.style.transform = ''; return; }
     const vv = window.visualViewport;
     const gap = window.innerHeight - (vv.offsetTop + vv.height);
     nav.style.transform = gap > 0.5 ? `translateY(${-gap}px)` : '';
   }
+  window.addEventListener('pageshow', update);
+  if(standalone.addEventListener) standalone.addEventListener('change', update);
   window.visualViewport.addEventListener('resize', update);
   window.visualViewport.addEventListener('scroll', update);
   if(mq.addEventListener) mq.addEventListener('change', update); else mq.addListener(update);
@@ -2152,7 +2162,7 @@ function switchTab(id, { animate = true } = {}){
     // Kulüp/Ben, Okuyorum/İstek listem/Geçmişim gibi iç sekmeler) dokunuş başlıyorsa, sayfa
     // seviyesindeki bu sekmeler-arası kaydırmayı hiç başlatma — o alan kendi kart-içi kaydırmasını
     // ayrıca yönetiyor (bkz. setupInnerPaneCarousels).
-    if(!contentCol.contains(t) || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport') || t.closest('#discoverFeed')){
+    if(!contentCol.contains(t) || t.closest('.hub-item[data-preview]:not(.expanded) .hp-stage') || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport') || t.closest('#discoverFeed')){
       touchStartX=null; return;
     }
     pointerId=e.pointerId;
@@ -2264,6 +2274,7 @@ function switchTab(id, { animate = true } = {}){
 })();
 
 function renderTab(id){
+  if(id==='club'||id==='library') hubPreviews.sync(id);
   if(id==='club') { materialRenderClub(); return; }
   if(id==='library') { renderAiRecCard(); return; }
   if(id==='appsettings') { return; }
@@ -5268,28 +5279,33 @@ function renderBookHistoryTab(){
 // Claude'un cevabında yok (uydurma bir link vermesi riskli olurdu) — bunun yerine, kitap
 // ekleme formunda zaten kullandığımız Google Books aramasıyla ayrıca, istemci tarafında çekiliyor.
 function aiRecItemHtml(rec, idx){
-  const coverHtml = rec.cover
-    ? `<img src="${rec.cover}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(rec.title||'').replace(/'/g,"\\'")}');" />`
-    : placeholderCoverHtml(rec.title||'');
-  return `<div class="ai-rec-item" data-ai-rec-idx="${idx}" style="cursor:pointer;">
-    <div class="ai-rec-cover">${coverHtml}</div>
-    <b>${escapeHtml(rec.title||'')}</b>
-    <div class="muted" style="font-size:12px; margin:2px 0 4px;">${escapeHtml(rec.author||'')}</div>
-    <div style="font-size:12px; line-height:1.4;">${escapeHtml(rec.reason||'')}</div>
-  </div>`;
+  let cover='';
+  try{const url=new URL(rec.cover||'',location.href);if(rec.cover && ['https:','http:'].includes(url.protocol))cover=url.href;}catch(_){}
+  const title=escapeHtml(rec.title||'İsimsiz kitap');
+  return `<span class="ai-rec-item" data-ai-rec-idx="${idx}">
+    <span class="hp-book-cover ai-preview-cover"><span>${escapeHtml((rec.title||'K').slice(0,1))}</span>${cover?`<img src="${escapeHtml(cover)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</span>
+    <b>${title}</b><span class="ai-preview-author">${escapeHtml(rec.author||'')}</span>
+  </span>`;
 }
 function aiRecHtml(items){
-  return `<div class="ai-rec-list">${items.map(aiRecItemHtml).join('')}</div>
-  <button type="button" class="secondary tiny" id="aiRecRefreshBtn" style="margin-top:14px;">🔄 Yeni öneri iste</button>`;
+  return `<details class="ai-rec-disclosure"><summary aria-label="Kitap önerilerinin açıklamalarını aç veya kapat"><span class="ai-rec-list">${items.map(aiRecItemHtml).join('')}</span></summary>
+  <div class="ai-rec-expanded">${items.map((rec,idx)=>`<div class="ai-rec-explanation"><h3>${escapeHtml(rec.title||'')}</h3><p>${escapeHtml(rec.reason||'Bu kitap için henüz açıklama yok.')}</p><button type="button" class="ai-text-action" data-ai-open="${idx}">Kitabı incele</button></div>`).join('')}</div></details>
+  <button type="button" class="ai-text-action ai-refresh-action" id="aiRecRefreshBtn">Yeni öneri iste</button>`;
 }
 function wireAiRecRefresh(){
   const btn = document.getElementById('aiRecRefreshBtn');
   if(btn) btn.addEventListener('click', fetchAiRecommendation);
 }
 function wireAiRecItems(items){
-  document.querySelectorAll('#aiRecBody .ai-rec-item').forEach(el=>{
-    const idx = Number(el.dataset.aiRecIdx);
-    el.addEventListener('click', ()=> showAiRecDetail(items[idx], items, idx));
+  document.querySelectorAll('#aiRecBody [data-ai-open]').forEach(el=>{
+    const idx=Number(el.dataset.aiOpen);
+    el.addEventListener('click',()=>showAiRecDetail(items[idx],items,idx));
+  });
+  const disclosure=document.querySelector('#aiRecBody .ai-rec-disclosure');
+  if(disclosure) disclosure.addEventListener('toggle',()=>{
+    if(disclosure.open && !matchMedia('(prefers-reduced-motion: reduce)').matches){
+      disclosure.querySelector('.ai-rec-expanded').animate([{opacity:0,transform:'translateY(-6px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,easing:'ease-out'});
+    }
   });
 }
 // Aynı oturumda aynı kitaba tekrar tıklanırsa ikna metnini yeniden istemeyelim diye basit bir
@@ -5298,9 +5314,9 @@ const aiPitchCache = {};
 async function showAiRecDetail(rec, items, idx){
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
-  const coverHtml = rec.cover
-    ? `<img src="${rec.cover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(rec.title||'').replace(/'/g,"\\'")}')+this.parentElement.innerHTML;" />`
-    : `<div style="width:100px; height:150px; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); margin:0 auto 12px;">${placeholderCoverHtml(rec.title||'')}</div>`;
+  let safeCover='';
+  try{const url=new URL(rec.cover||'',location.href);if(rec.cover && ['https:','http:'].includes(url.protocol))safeCover=url.href;}catch(_){}
+  const coverHtml=`<span class="hp-book-cover" style="width:100px;height:150px;margin:0 auto 12px;font-size:48px"><span>${escapeHtml((rec.title||'K').slice(0,1))}</span>${safeCover?`<img src="${escapeHtml(safeCover)}" alt="" onerror="this.remove()">`:''}</span>`;
   const cacheKey = `${rec.title}|${rec.author}`;
   const pitchHtml = aiPitchCache[cacheKey]
     ? escapeHtml(aiPitchCache[cacheKey])
@@ -9976,6 +9992,181 @@ document.addEventListener('keydown',e=>{
  if(e.shiftKey&&document.activeElement===items[0]){items.at(-1).focus();e.preventDefault();}
  else if(!e.shiftKey&&document.activeElement===items.at(-1)){items[0].focus();e.preventDefault();}
 });
+
+/* Kart özetleri: salt okunur veri, sabit boyut, görünürken 3 saniyelik dönüşüm. */
+const hubPreviews=(()=>{
+ const states=new Map(), cache=new Map();
+ let owner=null, touching=false, quietUntil=0, observer=null;
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+ const esc=v=>escapeHtml(String(v??''));
+ const metric=(label,value,detail='',icon='✦',tone='')=>({label,value:String(value),detail,icon,tone});
+ const book=(b,label)=>({label,title:b.title||b.bookTitle||b.t||'İsimsiz kitap',detail:b.author||b.a||b.note||'',cover:b.cover||b.coverUrl||'',book:true});
+ function coverURL(url){try{const u=new URL(url,location.href);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}}
+ function content(s){
+  if(s.book){const url=coverURL(s.cover);return `<span class="hp-book-cover"><span>${esc(s.title.slice(0,1))}</span>${url?`<img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}</span><span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-book-title">${esc(s.title)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;}
+  if(s.stats)return `<span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><span class="hp-stats">${s.stats.map(x=>`<span class="hp-stat ${x.tone}"><i>${esc(x.icon)}</i><b>${esc(x.value)}</b><small>${esc(x.label)}</small></span>`).join('')}</span><span class="hp-detail">${esc(s.detail)}</span></span>`;
+  return `<span class="hp-emblem ${esc(s.tone)}">${esc(s.icon)}</span><span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-value">${esc(s.value)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;
+ }
+ function paint(st,animate=false,direction=0){
+  const slide=st.slides[st.index%st.slides.length], host=st.item.querySelector('.hp-stage');if(!host)return;
+  const frame=document.createElement('span');frame.className='hp-frame';frame.innerHTML=content(slide);
+  frame.querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>img.remove(),{once:true}));
+  host.replaceChildren(frame);
+  if(animate&&!reduced.matches)frame.animate([{opacity:0,transform:direction?`translateX(${direction*24}px)`:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,easing:'cubic-bezier(.2,0,0,1)'});
+  st.item.querySelector('.hp-position').textContent=st.slides.length>1?`${st.index+1} / ${st.slides.length}`:'Özet';
+  st.at=performance.now();
+ }
+ function set(key,slides){const st=states.get(key);if(!st)return;st.slides=slides.length?slides:[metric('Henüz kayıt yok','Yeni bir başlangıç','Ayrıntılar için kartı aç.')];st.index=0;paint(st);}
+ function mount(){
+  if(!observer)observer=new IntersectionObserver(entries=>{for(const e of entries){const st=states.get(e.target.dataset.preview);if(st){st.visible=e.isIntersecting;st.at=performance.now();}}},{threshold:.25});
+  for(const gridId of ['materialClubGrid','materialLibraryGrid']){
+   const grid=document.getElementById(gridId);if(!grid)continue;
+   grid.querySelectorAll('.hub-item').forEach(item=>{
+    const target=item.dataset.hubTarget;
+    const key=['week','mtoday'].includes(target)?'records':['worms','mworms'].includes(target)?'badges':target;
+    if(!['records','badges','gifts','bookhistory','mybooks','recs'].includes(key))return;
+    if(states.get(key)?.item===item)return;
+    const old=states.get(key);if(old)observer.unobserve(old.item);
+    item.dataset.preview=key;
+    const summary=item.querySelector('.hub-item-summary'), label=(summary.querySelector('.hp-heading')||summary.querySelector('b')).textContent;
+    const illustrationKey={records:'records',badges:'badge',gifts:'gift',bookhistory:'search',mybooks:'book',recs:'heart'}[key];
+    summary.innerHTML=`<span class="hp-illustration" aria-hidden="true">${HUB_ILLUSTRATIONS[illustrationKey]||''}</span><span class="hp-heading">${esc(label)}</span><span class="hp-stage"></span><span class="hp-footer"><span class="hp-position">Özet</span></span>`;
+    const st={item,slides:old?.slides||[metric('Hazırlanıyor','Birazdan burada','Güncel özetler yükleniyor.')],index:0,at:performance.now(),visible:false};states.set(key,st);observer.observe(item);paint(st);wireSwipe(st);
+   });
+  }
+ }
+ function wireSwipe(st){
+  const button=st.item.querySelector('.hub-item-toggle');let gesture=null;
+  const finish=(e,cancel=false)=>{
+    if(!gesture||e.pointerId!==gesture.id)return;
+    const g=gesture;gesture=null;
+    if(button.hasPointerCapture(g.id))button.releasePointerCapture(g.id);
+    if(g.moved){
+      st.blockClickUntil=performance.now()+500;
+      if(document.activeElement===button)button.blur();
+      const dx=e.clientX-g.x;
+      if(!cancel && Math.abs(dx)>=28 && st.slides.length>1){
+        const direction=dx<0?1:-1;
+        st.index=(st.index+direction+st.slides.length)%st.slides.length;
+        paint(st,true,direction);
+      }
+    }
+    st.at=performance.now();
+  };
+  button.addEventListener('pointerdown',e=>{
+    st.blockClickUntil=0;
+    if(!e.isPrimary||e.button!==0||st.item.classList.contains('expanded')||!e.target.closest('.hp-stage'))return;
+    gesture={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false};
+  });
+  button.addEventListener('pointermove',e=>{
+    if(!gesture||gesture.id!==e.pointerId)return;
+    const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
+    if(!gesture.moved){
+      if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){gesture=null;return;}
+      if(Math.abs(dx)<8||Math.abs(dx)<Math.abs(dy)*1.3)return;
+      gesture.moved=true;
+      try{button.setPointerCapture(e.pointerId);}catch{gesture=null;return;}
+    }
+    if(e.cancelable)e.preventDefault();
+  },{passive:false});
+  button.addEventListener('pointerup',e=>finish(e));
+  button.addEventListener('pointercancel',e=>finish(e,true));
+  button.addEventListener('lostpointercapture',e=>{if(e.target===button)finish(e,true);});
+  button.addEventListener('keydown',e=>{
+    if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;
+    e.preventDefault();const direction=e.key==='ArrowRight'?1:-1;
+    st.index=(st.index+direction+st.slides.length)%st.slides.length;paint(st,true,direction);
+  });
+ }
+ document.addEventListener('click',e=>{
+  const item=e.target.closest('.hub-item[data-preview]');const st=item&&states.get(item.dataset.preview);
+  if(st&&performance.now()<st.blockClickUntil){e.preventDefault();e.stopImmediatePropagation();st.blockClickUntil=0;}
+ },true);
+ function safe(key,fn,uid){return Promise.resolve().then(fn).then(slides=>{if(currentUid===uid)set(key,slides);}).catch(()=>{if(currentUid===uid)set(key,[metric('Şu an yüklenemedi','Özet hazır değil','Ayrıntıları açarak tekrar deneyebilirsin.','↻')]);});}
+ async function club(uid){
+  await Promise.all([
+   safe('records',async()=>{
+    const rows=await computeWeekStats(getMonday(nowLogical()));const me=rows.find(x=>x.uid===uid);const classified=rows.filter(x=>x.marked>0);
+    const status=!me?.marked?metric('Bu haftaki durumun','Henüz kayıt yok','İlk okumanı işaretleyebilirsin.','·'):me.miss>=2?metric('Bu haftaki durumun','Cezalı',`${me.read} okuma · ${me.miss} okunmayan gün`,'×','hp-danger'):me.miss===1?metric('Bu haftaki durumun','Pas',`${me.read} okuma · 1 pas`,'−','hp-pass'):metric('Bu haftaki durumun','Tam okuyan',`${me.read} okuma · Şu ana kadarki kayıtların`,'✓','hp-ok');
+    return [status,{label:'Kulübün bu haftası',stats:[{icon:'✓',tone:'hp-ok',value:classified.filter(x=>!x.miss).length,label:'Tam okuyan'},{icon:'−',tone:'hp-pass',value:classified.filter(x=>x.miss===1).length,label:'Pas'},{icon:'×',tone:'hp-danger',value:classified.filter(x=>x.miss>=2).length,label:'Cezalı'}],detail:`${rows.length-classified.length} kişi için henüz haftalık kayıt yok`}];
+   },uid),
+   safe('badges',async()=>{
+    // Aynı gün verileri tüm üyeler için bir kez okunur; üye başına 61 sorgu açılmaz.
+    const dates=Array.from({length:61},(_,i)=>toStr(addDays(nowLogical(),-i)));
+    const days=[];
+    for(let i=0;i<dates.length;i+=8) days.push(...await Promise.all(dates.slice(i,i+8).map(fetchDayAnswers)));
+    const leaders=activeUids().map(id=>{
+      let count=0,start=days[0]?.[id]?.status==='read'?0:1;
+      for(let i=start;i<days.length && days[i]?.[id]?.status==='read';i++)count++;
+      return {uid:id,streak:count,name:usersCache[id]?.name||'Kulüp üyesi'};
+    }).sort((a,b)=>b.streak-a.streak||a.name.localeCompare(b.name,'tr')||a.uid.localeCompare(b.uid));
+    const streak=leaders.find(x=>x.uid===uid)?.streak||0;const def=BADGE_DEFS.find(x=>x.key===currentTierForStreak(streak));const u=usersCache[uid]||{};
+    const next=BADGE_DEFS.find(x=>x.days>streak);
+    const slides=[metric('Okuma serin',`${streak} gün`,next?`Sonraki rozete ${next.days-streak} gün`:'En yüksek seri rozetindesin.','♨','hp-ok'),metric('Aktif rozetin',def?def.label:'Henüz rozet yok',def?'Her gün okumaya devam.':'İlk rozet için 3 gün üst üste oku.',def?.icon||'✦'),metric(def?'Bu rozetin geçmişi':'Rozet geçmişin',def?`${Number(u.badgeCounts?.[def.key]||0)+1} kez`:`${Object.values(u.badgeCounts||{}).reduce((a,b)=>a+Number(b||0),0)} rozet`,def?'Geçmiş kazanımlar + aktif serin':'Tamamlanmış serilerde kazanılan rozetler','✧')];
+    leaders.slice(0,3).forEach(person=>{
+      const badge=BADGE_DEFS.find(d=>d.key===currentTierForStreak(person.streak));
+      const rank=1+leaders.filter(x=>x.streak>person.streak).length;
+      slides.push(metric(`Seri liderleri · ${rank}. sıra`,person.name,`${person.streak} gün · ${badge?badge.label:'Aktif rozeti yok'}`,badge?.icon||'✦'));
+    });
+    return slides;
+   },uid),
+   safe('gifts',async()=>{
+    const [drawSnap,receivedSnap,quarterlySnap]=await Promise.all([getDocs(query(collection(db,'draws'),orderBy('weekStart','desc'))),getDocs(query(collection(db,'giftRequests'),where('received','==',true))),getDocs(query(collection(db,'quarterlyGiftRequests'),where('received','==',true))).catch(()=>null)]);
+    const draws=drawSnap.docs.map(d=>d.data());const gifts=[...receivedSnap.docs,...(quarterlySnap?.docs||[])].map(d=>d.data());
+    const latest=draws[0];const week=latest?.weekStart;
+    const pairs=(latest?.pairs||[]).filter(p=>p.giverUid&&p.receiverUid);
+    const name=id=>id===uid?'Sen':usersCache[id]?.name||'Kulüp üyesi';
+    const slides=pairs.map(p=>metric(week?`${week} haftası · son kura`:'Son kura',`${name(p.giverUid)} → ${name(p.receiverUid)}`,'Kitap hediyesi eşleşmesi','↗'));
+    if(!slides.length)slides.push(metric('Hediye eşleşmeleri','Henüz kura yok','İlk eşleşmeler burada görünecek.','↗'));
+    slides.push({label:'Senin hediye geçmişin',stats:[{icon:'↓',tone:'hp-ok',value:gifts.filter(g=>g.receiverUid===uid).length,label:'Aldığın'},{icon:'↑',tone:'',value:gifts.filter(g=>g.giverUid===uid).length,label:'Verdiğin'}],detail:quarterlySnap?'Teslim alındığı onaylanan kitaplar':'Haftalık hediyeler · ortak kitap verisi alınamadı'});
+    slides.push(metric('Kulüpte bugüne kadar',`${gifts.length} kitap`,quarterlySnap?'Haftalık + ortak kitap · teslim onaylı':'Haftalık hediyeler · ortak kitap verisi alınamadı','♡','hp-ok'));return slides;
+   },uid)
+  ]);
+ }
+ async function library(uid){
+  await ensureDiscoverCoversLoaded();
+  if(currentUid!==uid)return;
+  const catalog=CURATED_CATALOG.flatMap(c=>c.books.map(b=>({title:b.t,author:b.a,category:c.label})));
+  const unique=[...new Map(catalog.map(b=>[b.title+'|'+b.author,b])).values()];
+  for(let i=unique.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[unique[i],unique[j]]=[unique[j],unique[i]];}
+  set('bookhistory',unique.map(b=>book({...b,cover:discoverCoversCache[bookKeyFor(b)]?.cover},b.category)));
+  await Promise.all([
+   safe('mybooks',async()=>{
+    const [reading,want]=await Promise.all(['readBooks','wantToRead'].map(c=>getDocs(query(collection(db,'users',uid,c),orderBy('addedAt','desc')))));
+    const r=reading.docs.map(d=>book(d.data(),'Şu an okuyorum')),w=want.docs.map(d=>book(d.data(),'Okuyacaklarım'));
+    if(!r.length)r.push(metric('Şu an okuyorum','Listen boş','Okumaya başladığın kitabı ekle.','▤'));
+    if(!w.length)w.push(metric('Okuyacaklarım','Sırada ne var?','Okumak istediğin kitapları biriktir.','▤'));
+    const slides=[];for(let i=0;i<Math.max(r.length,w.length);i++){if(r[i])slides.push(r[i]);if(w[i])slides.push(w[i]);}return slides;
+   },uid),
+   safe('recs',async()=>{
+    const queries=[query(collection(db,'recommendations'),where('scope','==','personal'),where('fromUid','==',uid)),query(collection(db,'recommendations'),where('scope','==','personal'),where('toUid','==',uid)),query(collection(db,'recommendations'),where('scope','==','group'))];
+    const snaps=await Promise.all(queries.map(getDocs));const map=new Map();snaps.forEach(s=>s.docs.forEach(d=>map.set(d.id,d.data())));
+    return [...map.values()].sort((a,b)=>(a.scope==='personal'?0:1)-(b.scope==='personal'?0:1)||String(b.createdAt||'').localeCompare(String(a.createdAt||''))).map(r=>book({...r,note:r.note||r.fromName||''},r.scope==='personal'?(r.fromUid===uid?'Senden · '+(r.toName||'Şahsi öneri'):'Sana · '+(r.fromName||'Şahsi öneri')):'Kulüpten · '+(r.fromName||'Kitap önerisi')));
+   },uid)
+  ]);
+ }
+ function sync(id){
+  if(!['club','library'].includes(id)||!currentUid)return;
+  if(owner!==currentUid){owner=currentUid;cache.clear();for(const st of states.values()){observer?.unobserve(st.item);}states.clear();}
+  mount();const uid=currentUid,key=uid+':'+id,entry=cache.get(key);
+  if(entry&&(entry.pending||Date.now()-entry.at<60000))return;
+  const state={pending:true,at:Date.now()};cache.set(key,state);
+  (id==='club'?club(uid):library(uid)).finally(()=>{state.pending=false;});
+ }
+ document.addEventListener('pointerdown',()=>{touching=true;},true);
+ const idle=()=>{touching=false;quietUntil=performance.now()+500;};
+ document.addEventListener('pointerup',idle,true);document.addEventListener('pointercancel',idle,true);window.addEventListener('blur',idle);
+ document.addEventListener('scroll',()=>{quietUntil=performance.now()+500;},{passive:true,capture:true});
+ setInterval(()=>{
+  const now=performance.now();
+  for(const st of states.values()){
+   const root=st.item.closest('main > section.tab');
+   if(document.hidden||touching||now<quietUntil||!st.visible||!root||root.id!=='tab-'+activeTab||root.style.transform||st.item.classList.contains('expanded')||st.item.contains(document.activeElement)){st.at=now;continue;}
+   if(st.slides.length>1&&now-st.at>=3000){st.index=(st.index+1)%st.slides.length;paint(st,true);}
+  }
+ },250);
+ return {sync};
+})();
 
 onAuthStateChanged(auth, async (user)=>{
   if(unsubUsers){ unsubUsers(); unsubUsers=null; }
