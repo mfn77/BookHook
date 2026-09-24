@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-36-hubpreview-badge" />
+<link rel="stylesheet" href="./style.css?v=material-35-previews" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -1849,29 +1849,18 @@ function setTabTitleAnimated(newText){
   // güvenilir değil — bunun yerine son hedeflenen metni ayrıca saklayıp ona göre kısa devre
   // yapıyoruz, yoksa ikinci çağrı yarım kalan animasyonu yeniden başlatıp metni birbirine katardı.
   const currentTarget = el._titleTarget!==undefined ? el._titleTarget : el.textContent;
-  // Sadece _titleTarget'a değil, GÖRÜNEN metne de bakıyoruz — biri diğerinden saparsa (ör. başka
-  // bir kod yolu el.textContent'i doğrudan değiştirmişse) kısa devre yapıp görünmez kalmasın diye.
-  if(currentTarget===newText && el.textContent===newText) return;
+  if(currentTarget===newText) return;
   if(el._titleAnimTimeout){ clearTimeout(el._titleAnimTimeout); el._titleAnimTimeout=null; }
-  if(el._titleAnimCleanup){ el.removeEventListener('transitionend', el._titleAnimCleanup); el._titleAnimCleanup=null; }
   const oldText = currentTarget;
   el._titleTarget = newText;
   el.classList.add('title-animating');
   el.innerHTML = `<span class="tab-title-piece tab-title-out">${escapeHtml(oldText)}</span><span class="tab-title-piece tab-title-in">${escapeHtml(newText)}</span>`;
   requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ el.classList.add('title-animate-run'); }); });
-  // Sabit 260ms'lik setTimeout, açılışta (buildNav ilk çalıştığında) ana iş parçacığı yoğunken
-  // çift rAF gecikip animasyon sınıfı hiç uygulanmadan bu süre dolabiliyordu — bu durumda yazı
-  // hiç animasyonsuz, doğrudan son haliyle beliriyordu. transitionend'i asıl bitiş sinyali
-  // yapıp setTimeout'u sadece güvenlik ağı (transition hiç tetiklenmezse) olarak bırakıyoruz.
-  const finishTitleAnim = ()=>{
-    if(el._titleAnimTimeout){ clearTimeout(el._titleAnimTimeout); el._titleAnimTimeout=null; }
-    if(el._titleAnimCleanup){ el.removeEventListener('transitionend', el._titleAnimCleanup); el._titleAnimCleanup=null; }
+  el._titleAnimTimeout = setTimeout(()=>{
     el.classList.remove('title-animating','title-animate-run');
     el.textContent = newText;
-  };
-  el._titleAnimCleanup = (e)=>{ if(e.target.classList && e.target.classList.contains('tab-title-in')) finishTitleAnim(); };
-  el.addEventListener('transitionend', el._titleAnimCleanup);
-  el._titleAnimTimeout = setTimeout(finishTitleAnim, 400);
+    el._titleAnimTimeout = null;
+  }, 260);
 }
 // switchTab() ve kaydırma jestinin parmak-kalkar-kalkmaz senkronizasyonu aynı etiket kaynağını
 // kullansın diye — materialSyncNavigation()'daki names haritası yalnızca hub-kökü olan
@@ -2275,6 +2264,7 @@ function switchTab(id, { animate = true } = {}){
 })();
 
 function renderTab(id){
+  if(id==='club'||id==='library') hubPreviews.sync(id);
   if(id==='club') { materialRenderClub(); return; }
   if(id==='library') { renderAiRecCard(); return; }
   if(id==='appsettings') { return; }
@@ -9565,143 +9555,6 @@ function materialHubLink(hubId,targetId,label,description,icon,noAccordion){
  if(noAccordion) HUB_NO_ACCORDION.add(targetId);
  return `<div class="hub-item" data-hub-target="${targetId}"><button type="button" class="destination-row hub-item-toggle"><div class="hub-item-summary">${HUB_ILLUSTRATIONS[icon]||''}<span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span></div><span class="hub-chevron" aria-hidden="true">›</span></button><div class="hub-item-panel"><div class="hub-item-panel-inner"></div></div><button type="button" class="hub-item-close-btn icon-button" aria-label="Kapat"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button></div>`;
 }
-// ============ HUB KARTI DÖNÜŞÜMLÜ ÖNİZLEME ============
-// Kulüp/Kitaplık kartlarını hiç açmadan sağ üst köşede görsel (ikon) ağırlıklı, kısa bir özet
-// gösterir — birkaç durum arasında ~3sn'de bir hızlı (150ms) bir crossfade ile döner. Rozet,
-// kartın MEVCUT açıklama metnine (<small>) DOKUNMAZ — position:absolute ayrı bir öğe olduğu için
-// .hub-item-summary'nin akışına hiç girmiyor, dolayısıyla önizleme değişse de kart boyutu asla
-// etkilenmiyor. materialClubGrid/materialLibraryGrid SADECE materialInit()'te (girişte, en fazla
-// iki kez) kuruluyor, sekme değiştirmede yeniden kurulmuyor — o yüzden rotator'ları burada bir
-// kere başlatmak yeterli. id, materialHubLink'e verilen hedefin ÇÖZÜLMEMİŞ (rol'e göre değişmeyen)
-// hali olabilir ('records','badges' gibi) — materialRoute() ile data-hub-target'taki gerçek id'ye
-// çevriliyor. Her state {icon, cls, caption} şeklinde: icon zorunlu (görsel), caption isteğe bağlı
-// kısa bir alt yazı (tek satır, taşarsa üç nokta ile kesiliyor).
-const HUB_PREVIEW_INTERVAL_MS = 3000;
-const HUB_PREVIEW_FADE_MS = 150;
-function setHubCardPreview(id, states){
- if(!states || !states.length) return;
- const targetId = (typeof materialRoute==='function') ? materialRoute(id) : id;
- const item = document.querySelector(`.hub-item[data-hub-target="${targetId}"]`);
- const row = item && item.querySelector('.destination-row');
- if(!row) return;
- let badge = row.querySelector(':scope>.hub-preview-badge');
- if(!badge){ row.insertAdjacentHTML('beforeend', '<div class="hub-preview-badge"></div>'); badge = row.querySelector(':scope>.hub-preview-badge'); }
- if(item._hubPreviewTimer){ clearInterval(item._hubPreviewTimer); item._hubPreviewTimer=null; }
- function paint(state){
-  const iconHtml = `<span class="hub-preview-badge-icon ${state.cls||''}">${escapeHtml(state.icon||'')}</span>`;
-  const captionHtml = state.caption ? `<span class="hub-preview-badge-caption">${escapeHtml(state.caption)}</span>` : '';
-  badge.innerHTML = iconHtml + captionHtml;
- }
- let i = 0;
- paint(states[0]);
- if(states.length<2) return;
- item._hubPreviewTimer = setInterval(()=>{
-  badge.classList.add('fade-out');
-  setTimeout(()=>{
-   i = (i+1) % states.length;
-   paint(states[i]);
-   requestAnimationFrame(()=>{ badge.classList.remove('fade-out'); });
-  }, HUB_PREVIEW_FADE_MS);
- }, HUB_PREVIEW_INTERVAL_MS);
-}
-// initHubCardPreviews(): Kulüp/Kitaplık hub kartlarına (Kayıtlar, Rozetler, Hediyeler, Keşfet,
-// Kitaplığım, Kitap önerileri) dönüşümlü önizleme metinleri yükler. Zaten önbellekte olan
-// veriler (usersCache, todayAnswers, CURATED_CATALOG) anında kullanılıyor; geri kalan kartlar
-// için de yeni bir sorgu deseni icat etmek yerine uygulamanın zaten var olan fonksiyonları/sorgu
-// şekilleri (computeWeekStats, loadDraws, wantToRead/readBooks/recommendations koleksiyonları)
-// tek seferlik, hafif okumalarla kullanılıyor.
-async function initHubCardPreviews(){
- if(!currentUid) return;
-
- // --- Kayıtlar: önce kendi bugünkü durumun (ikon), sonra kulüp geneli bu haftaki pas/tam/ceza
- const mine = todayAnswers[currentUid];
- const mineState = mine==='read' ? {icon:'✓', cls:'wh-read', caption:'Bugün'}
-   : mine==='skip' ? {icon:'–', cls:'wh-pas', caption:'Bugün'}
-   : {icon:'?', caption:'Bugün'};
- setHubCardPreview('records', [mineState]);
- computeWeekStats(getMonday(nowLogical())).then(stats=>{
-  const tam = stats.filter(s=>s.marked>0 && s.miss===0).length;
-  const pas = stats.filter(s=>s.miss===1).length;
-  const ceza = stats.filter(s=>s.miss>=2).length;
-  setHubCardPreview('records', [mineState, {icon:'📊', caption:`✓${tam} –${pas} ✕${ceza}`}]);
- }).catch(()=>{});
-
- // --- Rozetler: seri, o anki rozet, sıralama ve kaç kez kazanıldığı — hepsi zaten usersCache'te
- const u = usersCache[currentUid] || {};
- const myStreak = u.currentStreak || 0;
- const myTierKey = u.currentTier || null;
- const tierDef = myTierKey ? BADGE_DEFS.find(d=>d.key===myTierKey) : null;
- const earnedCount = myTierKey ? ((u.badgeCounts||{})[myTierKey]||0) : 0;
- const ranked = activeUids().map(uid=>({uid, streak: usersCache[uid].currentStreak||0})).sort((a,b)=>b.streak-a.streak);
- const rank = ranked.findIndex(r=>r.uid===currentUid)+1;
- const badgeStates = [{icon:'🔥', caption: myStreak>0 ? `${myStreak} gün` : 'Henüz yok'}];
- if(tierDef) badgeStates.push({icon: tierDef.icon, caption: tierDef.label});
- if(rank>0) badgeStates.push({icon:'🏆', caption: `#${rank}` + (earnedCount>1 ? ` ×${earnedCount}` : '')});
- setHubCardPreview('badges', badgeStates);
-
- // --- Hediyeler: bu haftanın kurası, kendi hediye geçmişin, kulüp toplamı — loadDraws() zaten var olan tek fonksiyon
- loadDraws().then(()=>{
-  const latest = drawsCache[0];
-  const myPair = latest ? (latest.pairs||[]).find(p=>p.giverUid===currentUid || p.receiverUid===currentUid) : null;
-  let weekCaption = 'Kura yok';
-  if(myPair && myPair.giverUid===currentUid && myPair.receiverUid){
-   weekCaption = `Sen → ${usersCache[myPair.receiverUid]?.name || myPair.receiverName || '?'}`;
-  } else if(myPair && myPair.receiverUid===currentUid){
-   weekCaption = `${usersCache[myPair.giverUid]?.name || myPair.giverName || '?'} → Sen`;
-  }
-  const stats = {};
-  let totalGifted = 0;
-  drawsCache.forEach(d=>(d.pairs||[]).forEach(p=>{
-   if(p.giverUid){ stats[p.giverUid] = stats[p.giverUid] || {given:0, received:0}; stats[p.giverUid].given++; }
-   if(p.receiverUid){ stats[p.receiverUid] = stats[p.receiverUid] || {given:0, received:0}; stats[p.receiverUid].received++; totalGifted++; }
-  }));
-  const my = stats[currentUid] || {given:0, received:0};
-  setHubCardPreview('gifts', [
-   {icon:'🎁', caption: weekCaption},
-   {icon:'📬', caption: `A${my.received} · V${my.given}`},
-   {icon:'📚', caption: `Kulüp: ${totalGifted}`}
-  ]);
- }).catch(()=>{});
-
- // --- Keşfet: küratörlü kataloğdan rastgele birkaç kitap, dönüşümlü
- const allBooks = CURATED_CATALOG.flatMap(cat=>cat.books);
- const sampledBooks = shuffle(allBooks).slice(0,5);
- setHubCardPreview('bookhistory', sampledBooks.map(b=>({icon:'📖', caption: b.t})));
-
- // --- Kitaplığım: okumak istediklerin, sonra şu an okuduklarım — tek seferlik hafif sorgu
- Promise.all([
-  getDocs(query(collection(db,'users',currentUid,'wantToRead'), orderBy('addedAt','desc'), limit(4))).catch(()=>null),
-  getDocs(query(collection(db,'users',currentUid,'readBooks'), orderBy('addedAt','desc'), limit(4))).catch(()=>null)
- ]).then(([wantSnap, readingSnap])=>{
-  const wantItems = wantSnap ? wantSnap.docs.map(d=>d.data()) : [];
-  const readingItems = readingSnap ? readingSnap.docs.map(d=>d.data()) : [];
-  const states = [
-   ...wantItems.map(b=>({icon:'🔖', caption: b.title})),
-   ...readingItems.map(b=>({icon:'📗', caption: b.title}))
-  ];
-  if(!states.length) states.push({icon:'📚', caption:'Boş'});
-  setHubCardPreview('mybooks', states);
- }).catch(()=>{});
-
- // --- Kitap önerileri: şahsi (sana/senden) önce, sonra grup önerileri — mevcut recommendations sorgu deseni
- Promise.all([
-  getDocs(query(collection(db,'recommendations'), where('scope','==','personal'), where('fromUid','==',currentUid))).catch(()=>null),
-  getDocs(query(collection(db,'recommendations'), where('scope','==','personal'), where('toUid','==',currentUid))).catch(()=>null),
-  getDocs(query(collection(db,'recommendations'), where('scope','==','group'), limit(20))).catch(()=>null)
- ]).then(([snapFrom, snapTo, snapGroup])=>{
-  const seen = new Set();
-  const personal = [];
-  [...(snapFrom?snapFrom.docs:[]), ...(snapTo?snapTo.docs:[])].forEach(d=>{
-   if(!seen.has(d.id)){ seen.add(d.id); personal.push(d.data()); }
-  });
-  personal.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
-  const group = (snapGroup?snapGroup.docs:[]).map(d=>d.data());
-  group.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
-  const states = [...personal, ...group].slice(0,6).map(it=> ({icon:'💡', caption: it.bookTitle}));
-  if(!states.length) states.push({icon:'💡', caption:'Henüz yok'});
-  setHubCardPreview('recs', states);
- }).catch(()=>{});
-}
 function materialExpandHubItem(item, targetId){
  const inner = item.querySelector('.hub-item-panel-inner');
  const section = document.getElementById('tab-'+targetId);
@@ -9999,7 +9852,6 @@ function materialInit(){
  const admin=myProfile.role==='admin';
  document.getElementById('materialClubGrid').innerHTML=[[materialRoute('records'),'Kayıtlar','Haftalık okuma durumları','records'],[materialRoute('badges'),'Rozetler','Okuma serilerini kutlayalım','badge'],['gifts','Hediyeler','Kitaplaşan dostluklar','gift']].map(x=>materialHubLink('club',...x)).join('');
  document.getElementById('materialLibraryGrid').innerHTML=[['bookhistory','Keşfet','Popüler kitaplar ve öneriler','search'],['mybooks','Kitaplığım','Okuduğun ve okuyacağın kitaplar','book'],['recs','Kitap önerileri','Kulüpten ve senden gelen öneriler','heart']].map(x=>materialHubLink('library',...x)).join('');
- initHubCardPreviews();
  document.getElementById('materialSettingsGrid').innerHTML=[['rules','Grup kuralları','Birlikte daha iyi bir deneyim','rules',true],['settings','Uygulama ayarları','Bildirimler, tema, hesap','account',true],...(admin?[['admin','Yönetim','Kulüp ayarları ve üyeler','settings',true]]:[])].map(x=>materialHubLink('appsettings',...x)).join('');
  document.getElementById('materialAdminLinks').innerHTML=[['members','Üyeler','Rol, katılım tarihi, ban ve silme','club'],['whoreadtoday','Bugün kim okudu','Günlük durumları yönet','records'],['editpast','Geçmiş okumaları düzenle','Gün ve hafta kayıtları','records'],['rules','Kurallar ve öneriler','Kulüp kuralları ve gelen öneriler','book']].map(x=>materialLink(...x)).join('');
  const maintenance=document.getElementById('settingsAdminOnlyWrap');
@@ -10125,6 +9977,122 @@ document.addEventListener('keydown',e=>{
  if(e.shiftKey&&document.activeElement===items[0]){items.at(-1).focus();e.preventDefault();}
  else if(!e.shiftKey&&document.activeElement===items.at(-1)){items[0].focus();e.preventDefault();}
 });
+
+/* Kart özetleri: salt okunur veri, sabit boyut, görünürken 3 saniyelik dönüşüm. */
+const hubPreviews=(()=>{
+ const states=new Map(), cache=new Map();
+ let owner=null, touching=false, quietUntil=0, paused=false, observer=null;
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+ const esc=v=>escapeHtml(String(v??''));
+ const metric=(label,value,detail='',icon='✦',tone='')=>({label,value:String(value),detail,icon,tone});
+ const book=(b,label)=>({label,title:b.title||b.bookTitle||b.t||'İsimsiz kitap',detail:b.author||b.a||b.note||'',cover:b.cover||b.coverUrl||'',book:true});
+ function coverURL(url){try{const u=new URL(url,location.href);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}}
+ function content(s){
+  if(s.book){const url=coverURL(s.cover);return `<span class="hp-book-cover"><span>${esc(s.title.slice(0,1))}</span>${url?`<img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}</span><span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-book-title">${esc(s.title)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;}
+  if(s.stats)return `<span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><span class="hp-stats">${s.stats.map(x=>`<span class="hp-stat ${x.tone}"><i>${esc(x.icon)}</i><b>${esc(x.value)}</b><small>${esc(x.label)}</small></span>`).join('')}</span><span class="hp-detail">${esc(s.detail)}</span></span>`;
+  return `<span class="hp-emblem ${esc(s.tone)}">${esc(s.icon)}</span><span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-value">${esc(s.value)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;
+ }
+ function paint(st,animate=false){
+  const slide=st.slides[st.index%st.slides.length], host=st.item.querySelector('.hp-stage');if(!host)return;
+  const frame=document.createElement('span');frame.className='hp-frame';frame.innerHTML=content(slide);
+  frame.querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>img.remove(),{once:true}));
+  host.replaceChildren(frame);
+  if(animate&&!reduced.matches)frame.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,easing:'cubic-bezier(.2,0,0,1)'});
+  st.item.querySelector('.hp-position').textContent=st.slides.length>1?`${st.index+1} / ${st.slides.length}`:'Özet';
+  st.at=performance.now();
+ }
+ function set(key,slides){const st=states.get(key);if(!st)return;st.slides=slides.length?slides:[metric('Henüz kayıt yok','Yeni bir başlangıç','Ayrıntılar için kartı aç.')];st.index=0;paint(st);}
+ function mount(){
+  if(!observer)observer=new IntersectionObserver(entries=>{for(const e of entries){const st=states.get(e.target.dataset.preview);if(st){st.visible=e.isIntersecting;st.at=performance.now();}}},{threshold:.25});
+  for(const gridId of ['materialClubGrid','materialLibraryGrid']){
+   const grid=document.getElementById(gridId);if(!grid)continue;
+   if(!grid.previousElementSibling?.classList.contains('hp-toolbar')){
+    const bar=document.createElement('div');bar.className='hp-toolbar';bar.innerHTML='<span>Bir bakışta <small>• 3 sn</small></span><button type="button" class="hp-pause" aria-pressed="false">Özetleri duraklat</button>';grid.before(bar);
+    bar.querySelector('button').onclick=()=>{paused=!paused;document.querySelectorAll('.hp-pause').forEach(b=>{b.setAttribute('aria-pressed',String(paused));b.textContent=paused?'Özetleri oynat':'Özetleri duraklat';});for(const st of states.values())st.at=performance.now();};
+   }
+   grid.querySelectorAll('.hub-item').forEach(item=>{
+    const target=item.dataset.hubTarget;
+    const key=['week','mtoday'].includes(target)?'records':['worms','mworms'].includes(target)?'badges':target;
+    if(!['records','badges','gifts','bookhistory','mybooks','recs'].includes(key))return;
+    if(states.get(key)?.item===item)return;
+    const old=states.get(key);if(old)observer.unobserve(old.item);
+    item.dataset.preview=key;
+    const summary=item.querySelector('.hub-item-summary'), label=(summary.querySelector('.hp-heading')||summary.querySelector('b')).textContent;
+    summary.innerHTML=`<span class="hp-heading">${esc(label)}</span><span class="hp-stage"></span><span class="hp-footer"><span>Ayrıntıları aç ↗</span><span class="hp-position">Özet</span></span>`;
+    const st={item,slides:old?.slides||[metric('Hazırlanıyor','Birazdan burada','Güncel özetler yükleniyor.')],index:0,at:performance.now(),visible:false};states.set(key,st);observer.observe(item);paint(st);
+   });
+  }
+ }
+ function safe(key,fn,uid){return Promise.resolve().then(fn).then(slides=>{if(currentUid===uid)set(key,slides);}).catch(()=>{if(currentUid===uid)set(key,[metric('Şu an yüklenemedi','Özet hazır değil','Ayrıntıları açarak tekrar deneyebilirsin.','↻')]);});}
+ async function club(uid){
+  await Promise.all([
+   safe('records',async()=>{
+    const rows=await computeWeekStats(getMonday(nowLogical()));const me=rows.find(x=>x.uid===uid);const classified=rows.filter(x=>x.marked>0);
+    const status=!me?.marked?metric('Bu haftaki durumun','Henüz kayıt yok','İlk okumanı işaretleyebilirsin.','·'):me.miss>=2?metric('Bu haftaki durumun','Cezalı',`${me.read} okuma · ${me.miss} okunmayan gün`,'×','hp-danger'):me.miss===1?metric('Bu haftaki durumun','Pas',`${me.read} okuma · 1 pas`,'−','hp-pass'):metric('Bu haftaki durumun','Tam okuyan',`${me.read} okuma · Şu ana kadarki kayıtların`,'✓','hp-ok');
+    return [status,{label:'Kulübün bu haftası',stats:[{icon:'✓',tone:'hp-ok',value:classified.filter(x=>!x.miss).length,label:'Tam okuyan'},{icon:'−',tone:'hp-pass',value:classified.filter(x=>x.miss===1).length,label:'Pas'},{icon:'×',tone:'hp-danger',value:classified.filter(x=>x.miss>=2).length,label:'Cezalı'}],detail:`${rows.length-classified.length} kişi için henüz haftalık kayıt yok`}];
+   },uid),
+   safe('badges',async()=>{
+    const streak=await computeStreak(uid);const def=BADGE_DEFS.find(x=>x.key===currentTierForStreak(streak));const u=usersCache[uid]||{};
+    const next=BADGE_DEFS.find(x=>x.days>streak);
+    return [metric('Okuma serin',`${streak} gün`,next?`Sonraki rozete ${next.days-streak} gün`:'En yüksek seri rozetindesin.','♨','hp-ok'),metric('Aktif rozetin',def?def.label:'Henüz rozet yok',def?'Her gün okumaya devam.':'İlk rozet için 3 gün üst üste oku.',def?.icon||'✦'),metric(def?'Bu rozetin geçmişi':'Rozet geçmişin',def?`${Number(u.badgeCounts?.[def.key]||0)+1} kez`:`${Object.values(u.badgeCounts||{}).reduce((a,b)=>a+Number(b||0),0)} rozet`,def?'Geçmiş kazanımlar + aktif serin':'Tamamlanmış serilerde kazanılan rozetler','✧')];
+   },uid),
+   safe('gifts',async()=>{
+    const [drawSnap,receivedSnap,quarterlySnap]=await Promise.all([getDocs(query(collection(db,'draws'),orderBy('weekStart','desc'))),getDocs(query(collection(db,'giftRequests'),where('received','==',true))),getDocs(query(collection(db,'quarterlyGiftRequests'),where('received','==',true))).catch(()=>null)]);
+    const draws=drawSnap.docs.map(d=>d.data());const gifts=[...receivedSnap.docs,...(quarterlySnap?.docs||[])].map(d=>d.data());
+    const latest=draws[0];const week=latest?.weekStart;
+    const pairs=(latest?.pairs||[]).filter(p=>p.giverUid&&p.receiverUid);
+    const name=id=>id===uid?'Sen':usersCache[id]?.name||'Kulüp üyesi';
+    const slides=pairs.map(p=>metric(week?`${week} haftası · son kura`:'Son kura',`${name(p.giverUid)} → ${name(p.receiverUid)}`,'Kitap hediyesi eşleşmesi','↗'));
+    if(!slides.length)slides.push(metric('Hediye eşleşmeleri','Henüz kura yok','İlk eşleşmeler burada görünecek.','↗'));
+    slides.push({label:'Senin hediye geçmişin',stats:[{icon:'↓',tone:'hp-ok',value:gifts.filter(g=>g.receiverUid===uid).length,label:'Aldığın'},{icon:'↑',tone:'',value:gifts.filter(g=>g.giverUid===uid).length,label:'Verdiğin'}],detail:quarterlySnap?'Teslim alındığı onaylanan kitaplar':'Haftalık hediyeler · ortak kitap verisi alınamadı'});
+    slides.push(metric('Kulüpte bugüne kadar',`${gifts.length} kitap`,quarterlySnap?'Haftalık + ortak kitap · teslim onaylı':'Haftalık hediyeler · ortak kitap verisi alınamadı','♡','hp-ok'));return slides;
+   },uid)
+  ]);
+ }
+ async function library(uid){
+  await ensureDiscoverCoversLoaded();
+  if(currentUid!==uid)return;
+  const catalog=CURATED_CATALOG.flatMap(c=>c.books.map(b=>({title:b.t,author:b.a,category:c.label})));
+  const unique=[...new Map(catalog.map(b=>[b.title+'|'+b.author,b])).values()];
+  for(let i=unique.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[unique[i],unique[j]]=[unique[j],unique[i]];}
+  set('bookhistory',unique.map(b=>book({...b,cover:discoverCoversCache[bookKeyFor(b)]?.cover},b.category)));
+  await Promise.all([
+   safe('mybooks',async()=>{
+    const [reading,want]=await Promise.all(['readBooks','wantToRead'].map(c=>getDocs(query(collection(db,'users',uid,c),orderBy('addedAt','desc')))));
+    const r=reading.docs.map(d=>book(d.data(),'Şu an okuyorum')),w=want.docs.map(d=>book(d.data(),'Okuyacaklarım'));
+    if(!r.length)r.push(metric('Şu an okuyorum','Listen boş','Okumaya başladığın kitabı ekle.','▤'));
+    if(!w.length)w.push(metric('Okuyacaklarım','Sırada ne var?','Okumak istediğin kitapları biriktir.','▤'));
+    const slides=[];for(let i=0;i<Math.max(r.length,w.length);i++){if(r[i])slides.push(r[i]);if(w[i])slides.push(w[i]);}return slides;
+   },uid),
+   safe('recs',async()=>{
+    const queries=[query(collection(db,'recommendations'),where('scope','==','personal'),where('fromUid','==',uid)),query(collection(db,'recommendations'),where('scope','==','personal'),where('toUid','==',uid)),query(collection(db,'recommendations'),where('scope','==','group'))];
+    const snaps=await Promise.all(queries.map(getDocs));const map=new Map();snaps.forEach(s=>s.docs.forEach(d=>map.set(d.id,d.data())));
+    return [...map.values()].sort((a,b)=>(a.scope==='personal'?0:1)-(b.scope==='personal'?0:1)||String(b.createdAt||'').localeCompare(String(a.createdAt||''))).map(r=>book({...r,note:r.note||r.fromName||''},r.scope==='personal'?(r.fromUid===uid?'Senden · '+(r.toName||'Şahsi öneri'):'Sana · '+(r.fromName||'Şahsi öneri')):'Kulüpten · '+(r.fromName||'Kitap önerisi')));
+   },uid)
+  ]);
+ }
+ function sync(id){
+  if(!['club','library'].includes(id)||!currentUid)return;
+  if(owner!==currentUid){owner=currentUid;cache.clear();for(const st of states.values()){observer?.unobserve(st.item);}states.clear();}
+  mount();const uid=currentUid,key=uid+':'+id,entry=cache.get(key);
+  if(entry&&(entry.pending||Date.now()-entry.at<60000))return;
+  const state={pending:true,at:Date.now()};cache.set(key,state);
+  (id==='club'?club(uid):library(uid)).finally(()=>{state.pending=false;});
+ }
+ document.addEventListener('pointerdown',()=>{touching=true;},true);
+ const idle=()=>{touching=false;quietUntil=performance.now()+500;};
+ document.addEventListener('pointerup',idle,true);document.addEventListener('pointercancel',idle,true);window.addEventListener('blur',idle);
+ document.addEventListener('scroll',()=>{quietUntil=performance.now()+500;},{passive:true,capture:true});
+ setInterval(()=>{
+  const now=performance.now();
+  for(const st of states.values()){
+   const root=st.item.closest('main > section.tab');
+   if(paused||document.hidden||touching||now<quietUntil||!st.visible||!root||root.id!=='tab-'+activeTab||root.style.transform||st.item.classList.contains('expanded')||st.item.contains(document.activeElement)){st.at=now;continue;}
+   if(st.slides.length>1&&now-st.at>=3000){st.index=(st.index+1)%st.slides.length;paint(st,true);}
+  }
+ },250);
+ return {sync};
+})();
 
 onAuthStateChanged(auth, async (user)=>{
   if(unsubUsers){ unsubUsers(); unsubUsers=null; }
