@@ -335,3 +335,25 @@ html, body { overscroll-behavior-y: contain; }
 .ai-text-action{font-size:11px;line-height:1.4;font-weight:400;color:var(--ink-70);background:transparent;border:0;border-radius:0;box-shadow:none;min-height:36px;padding:8px 0;text-align:left;text-decoration:none}
 .ai-text-action:hover{text-decoration:underline}.ai-refresh-action{display:block;margin-top:12px}
 @media(max-width:360px){.ai-rec-disclosure .ai-rec-list{gap:10px}.ai-rec-disclosure .ai-preview-cover{width:52px;height:80px;font-size:34px}.ai-rec-disclosure .ai-rec-item b{font-size:13px}}
+
+/* İlk kartın yeşili korunur; diğer üç kart birbirinden ayrılır. */
+:root{--preview-lilac:var(--secondary-container);--preview-peach:#f3e4d6;--preview-blue:#deebf4}
+html[data-theme=dark]{--preview-peach:#3d3027;--preview-blue:#24333e}
+.hub-item[data-preview=records],.hub-item[data-preview=bookhistory]{background:var(--preview-lilac)}
+.hub-item[data-preview=badges],.hub-item[data-preview=mybooks]{background:var(--preview-peach)}
+.hub-item[data-preview=gifts],.hub-item[data-preview=recs]{background:var(--preview-blue)}
+.ai-card-illustration{display:block;width:64px;height:56px;margin-bottom:12px;pointer-events:none}
+.daily-stats .total-days-card{grid-column:1/-1;background:var(--paper-2)}
+
+/* Kartın tamamı ana sekme kaydırmasına açık; önizleme düğmelerle değişir. */
+.hp-controls{position:absolute;top:calc((var(--hp-height) + 74px)/2);left:3px;right:3px;display:flex;justify-content:space-between;pointer-events:none;transform:translateY(-50%);z-index:2}
+.hp-controls button{pointer-events:auto;width:32px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:999px;font-size:26px;color:var(--ink-70);background:transparent;padding:0}
+.hp-controls button:disabled{opacity:.2;cursor:default}.hub-item.expanded>.hp-controls{display:none}
+.hub-item[data-preview] .hp-stage{padding-inline:14px}
+.ai-rec-card{position:relative}.ai-card-heading{padding:0 28px 0 0;text-align:left;font-size:inherit;font-weight:inherit;width:100%}
+.ai-card-chevron{position:absolute;top:22px;right:22px;font-size:23px;font-weight:400;color:var(--ink-70);transition:transform .2s}
+.ai-card-heading[aria-expanded=true] .ai-card-chevron{transform:rotate(90deg)}
+.ai-rec-disclosure button.ai-rec-item{text-align:left;padding:0;background:transparent;border-radius:6px;justify-content:flex-start;color:var(--ink);font-weight:400}
+.ai-rec-explanation p,.ai-modal-reason{white-space:pre-line;-webkit-line-clamp:unset;overflow:visible;display:block}
+.ai-modal-reason{font-size:14px;line-height:1.6;text-align:left;color:var(--ink-70)}
+.ai-expanded-pitch{margin-top:10px!important}

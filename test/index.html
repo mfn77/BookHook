@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-38-ai-card" />
+<link rel="stylesheet" href="./style.css?v=material-40-preview-arrows" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -130,10 +130,10 @@
  <div class="daily-greeting">Merhaba, <span data-material-name></span><span class="muted">İyi ki buradasın.</span></div>
  <h1 id="aTodayHeading">Bugün biraz okuyalım.</h1>
  <div class="card daily-checkin"><div class="daily-checkin-row"><div class="daily-checkin-text"><div class="eyebrow" data-material-date></div><h2>Bugün okudun mu?</h2>
- <div class="daily-actions"><button class="stamp-btn big read" id="aSelfReadBtn" title="Okudum">✓ <span>Okudum</span></button><button class="stamp-btn big skip" id="aSelfSkipBtn" title="Okuyamam">− <span>Okuyamam</span></button></div></div>
+ <div class="daily-actions"><button class="stamp-btn big read" id="aSelfReadBtn" title="Okudum">✓ <span>Okudum</span></button></div></div>
  <svg class="daily-illustration" viewBox="0 0 120 120" aria-hidden="true"><path d="M60,102 24,92 24,76 60,84 Z" fill="var(--gold)"/><path d="M60,102 96,92 96,76 60,84 Z" fill="var(--gold-dark)"/><ellipse cx="28" cy="55" rx="11" ry="13" fill="var(--forest)"/><circle cx="24" cy="52" r="2.6" fill="var(--paper)"/><circle cx="32" cy="52" r="2.6" fill="var(--paper)"/><circle cx="62" cy="42" r="8" fill="var(--gold-dark)"/><rect x="58" y="49" width="8" height="6" rx="1.5" fill="var(--ink-70)"/><line x1="62" y1="26" x2="62" y2="20" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="52" y1="32" x2="47" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="72" y1="32" x2="77" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><polygon points="90,64 102,64 96,48" fill="var(--secondary-ink)"/><circle cx="97" cy="38" r="5" fill="var(--rust)"/><circle cx="42" cy="20" r="2" fill="var(--ink-70)"/><circle cx="55" cy="14" r="2" fill="var(--ink-70)"/><circle cx="68" cy="19" r="2" fill="var(--ink-70)"/><path d="M42,20 55,14 68,19" fill="none" stroke="var(--ink-70)" stroke-width="1.2"/></svg></div>
  <div id="aSelfStatusNote" class="muted" role="status"></div><details class="daily-help"><summary>Günün 06.00’da yenilenir</summary><p class="muted" id="aSelfDateNote"></p></details></div>
- <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="aSelfStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="totalPagesNumber">–</strong><span>Tahmini sayfa</span><span class="muted">Okunan gün × 15</span></div></div>
+ <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="aSelfStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="totalPagesNumber">–</strong><span>Tahmini sayfa</span><span class="muted">Okunan gün × 15</span></div><div class="card stat-card total-days-card"><span class="stat-icon" aria-hidden="true">✓</span><strong id="totalDaysNumber">–</strong><span>Toplam okunan gün</span><span class="muted">Şimdiye kadarki tüm okumaların</span></div></div>
  <div class="card common-today"><div id="aSelfQpBook"></div></div>
  <button class="destination-row" data-material-route="records"><span class="route-icon">▥</span><span><b>Haftalık kayıtlar</b><small>Bu haftanın detaylı görünümü</small></span><span>›</span></button>
  </section>
@@ -219,17 +219,6 @@
       </div>
     </section>
 
-    <section class="tab" id="tab-goodreadsimport">
-      <div class="card">
-        <h2>📥 Goodreads'ten İçe Aktar</h2>
-        <p class="muted">Bir üyenin Goodreads'ten dışa aktardığı CSV dosyasını yükleyip okuma geçmişini, şu an okuduklarını ve okumak istediklerini onun hesabına aktarır. Kitap ve yazar adları CSV'deki haliyle, HİÇ DEĞİŞTİRİLMEDEN kaydedilir — sadece o isimle bir kapak bulunabilirse otomatik eklenir. "did-not-finish" rafındaki kitaplar hiçbir listeye uymadığı için atlanır. Zaten hesapta olan (aynı ad+yazar) kitaplar tekrar eklenmez.</p>
-        <div class="field"><label>Üye</label><select id="griUserSelect"><option value="">Seç…</option></select></div>
-        <div class="field"><label>Goodreads CSV dosyası (goodreads_library_export.csv)</label><input type="file" id="griFileInput" accept=".csv,text/csv" /></div>
-        <button type="button" class="primary" id="griStartBtn" disabled>İçe Aktar</button>
-        <div id="griLog" style="margin-top:16px; font-size:13px; line-height:1.6; white-space:pre-wrap;"></div>
-      </div>
-    </section>
-
     <section class="tab" id="tab-members">
       <div class="card">
         <h2>Üyeler &amp; Roller</h2>
@@ -261,10 +250,10 @@
  <div class="daily-greeting">Merhaba, <span data-material-name></span><span class="muted">İyi ki buradasın.</span></div>
  <h1 id="mTodayHeading">Bugün biraz okuyalım.</h1>
  <div class="card daily-checkin"><div class="daily-checkin-row"><div class="daily-checkin-text"><div class="eyebrow" data-material-date></div><h2>Bugün okudun mu?</h2>
- <div class="daily-actions"><button class="stamp-btn big read" id="mReadBtn" title="Okudum">✓ <span>Okudum</span></button><button class="stamp-btn big skip" id="mSkipBtn" title="Okuyamam">− <span>Okuyamam</span></button></div></div>
+ <div class="daily-actions"><button class="stamp-btn big read" id="mReadBtn" title="Okudum">✓ <span>Okudum</span></button></div></div>
  <svg class="daily-illustration" viewBox="0 0 120 120" aria-hidden="true"><path d="M60,102 24,92 24,76 60,84 Z" fill="var(--gold)"/><path d="M60,102 96,92 96,76 60,84 Z" fill="var(--gold-dark)"/><ellipse cx="28" cy="55" rx="11" ry="13" fill="var(--forest)"/><circle cx="24" cy="52" r="2.6" fill="var(--paper)"/><circle cx="32" cy="52" r="2.6" fill="var(--paper)"/><circle cx="62" cy="42" r="8" fill="var(--gold-dark)"/><rect x="58" y="49" width="8" height="6" rx="1.5" fill="var(--ink-70)"/><line x1="62" y1="26" x2="62" y2="20" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="52" y1="32" x2="47" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="72" y1="32" x2="77" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><polygon points="90,64 102,64 96,48" fill="var(--secondary-ink)"/><circle cx="97" cy="38" r="5" fill="var(--rust)"/><circle cx="42" cy="20" r="2" fill="var(--ink-70)"/><circle cx="55" cy="14" r="2" fill="var(--ink-70)"/><circle cx="68" cy="19" r="2" fill="var(--ink-70)"/><path d="M42,20 55,14 68,19" fill="none" stroke="var(--ink-70)" stroke-width="1.2"/></svg></div>
  <div id="mMyStatusNote" class="muted" role="status"></div><details class="daily-help"><summary>Günün 06.00’da yenilenir</summary><p class="muted" id="mDateNote"></p></details></div>
- <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="mMyStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="mTotalPagesNumber">–</strong><span>Tahmini sayfa</span><span class="muted">Okunan gün × 15</span></div></div>
+ <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="mMyStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="mTotalPagesNumber">–</strong><span>Tahmini sayfa</span><span class="muted">Okunan gün × 15</span></div><div class="card stat-card total-days-card"><span class="stat-icon" aria-hidden="true">✓</span><strong id="mTotalDaysNumber">–</strong><span>Toplam okunan gün</span><span class="muted">Şimdiye kadarki tüm okumaların</span></div></div>
  <div class="card common-today"><div id="mMyQpBook"></div></div>
  <button class="destination-row" data-material-route="records"><span class="route-icon">▥</span><span><b>Haftalık kayıtlar</b><small>Bu haftanın detaylı görünümü</small></span><span>›</span></button>
  </section>
@@ -577,14 +566,14 @@
       </div>
     </section>
 
-<section class="tab" id="tab-library"><h1>Kitaplar</h1><p class="page-subtitle">Keşfet, kitaplığın ve öneriler bir arada.</p><div class="card ai-rec-card" id="aiRecCard"><h2>Senin İçin Seçtik</h2><div id="aiRecBody"><span class="muted">Yükleniyor…</span></div></div><div class="club-grid" id="materialLibraryGrid"></div></section>
+<section class="tab" id="tab-library"><h1>Kitaplar</h1><p class="page-subtitle">Keşfet, kitaplığın ve öneriler bir arada.</p><div class="card ai-rec-card" id="aiRecCard"><svg class="ai-card-illustration" viewBox="0 0 100 84" aria-hidden="true"><rect x="12" y="29" width="22" height="49" rx="3" fill="var(--secondary-ink)"/><rect x="38" y="20" width="22" height="58" rx="3" fill="var(--gold)"/><path d="M42 20h14v23l-7-5-7 5Z" fill="var(--primary-container)"/><path d="m77 7 5 13 13 5-13 5-5 13-5-13-13-5 13-5Z" fill="var(--rust)"/><path d="m79 54 3 8 8 3-8 3-3 8-3-8-8-3 8-3Z" fill="var(--gold)"/><path d="M18 39h10M18 45h10" stroke="var(--card)" stroke-width="2.5" stroke-linecap="round"/></svg><h2><button type="button" class="ai-card-heading" aria-expanded="false" aria-controls="aiRecDescriptions">Senin İçin Seçtik<span class="ai-card-chevron" aria-hidden="true">›</span></button></h2><div id="aiRecBody"><span class="muted">Yükleniyor…</span></div></div><div class="club-grid" id="materialLibraryGrid"></div></section>
 <section class="tab" id="tab-appsettings"><h1>Ayarlar</h1><p class="page-subtitle">Kulüp yönetimi ve uygulama tercihlerin.</p><div class="club-grid" id="materialSettingsGrid"></div></section>
 <section class="tab" id="tab-club"><h1>Okumak için<br>motivasyon</h1><p class="page-subtitle">Kulübü takip et</p><button class="club-feature" data-material-route="quarterly"><span><small>Ortak kitabımız</small><b id="clubBookTitle">Ortak kitap</b><span id="clubBookMeta">Birlikte seç, birlikte oku</span></span><svg class="club-feature-illustration" viewBox="0 0 100 84" aria-hidden="true"><line x1="2" y1="70" x2="98" y2="70" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/><g fill="var(--secondary-ink)"><rect x="12" y="40" width="36" height="20" rx="9"/><path d="M38,42 L48,24 L57,27 L50,44 Z"/><path d="M46,25 L58,20 L62,27 L57,34 L47,32 Z"/><path d="M55,19 L58,12 L61,19 Z"/><path d="M13,44 C4,46 2,56 9,64" fill="none" stroke="var(--secondary-ink)" stroke-width="4.5" stroke-linecap="round"/><rect x="17" y="58" width="5.5" height="13" rx="2"/><rect x="30" y="58" width="5.5" height="13" rx="2"/><rect x="40" y="58" width="5.5" height="13" rx="2"/></g><circle cx="56" cy="26" r="1.6" fill="var(--card)"/><path d="M43,26 C47,21 51,19 55,20" fill="none" stroke="var(--gold)" stroke-width="2.8" stroke-linecap="round"/><circle cx="81" cy="57" r="13" fill="none" stroke="var(--gold-dark)" stroke-width="3.5"/><circle cx="81" cy="57" r="2.6" fill="var(--gold-dark)"/><line x1="81" y1="47" x2="81" y2="67" stroke="var(--gold-dark)" stroke-width="2"/><line x1="71" y1="57" x2="91" y2="57" stroke="var(--gold-dark)" stroke-width="2"/></svg><span>›</span></button><div class="club-grid" id="materialClubGrid"></div></section>
 <section class="tab" id="tab-quarterly"><div id="materialQpSteps" class="phase-steps"></div>      <div class="card" id="quarterlyPickCard">
         <h2>📚 Ortak Kitap Seçimi</h2>
         <div id="quarterlyPickBody"><span class="muted">Yükleniyor…</span></div>
       </div></section>
-<section class="tab" id="tab-admin"><h2>Kulübü yönet</h2><div id="materialAdminLinks" class="settings-list"></div><h2>Araçlar</h2><div class="settings-list"><button class="destination-row" data-material-route="goodreadsimport"><span class="route-icon">📥</span><span><b>Goodreads içe aktar</b><small>Bir üyenin CSV'sinden okuma geçmişini yükle</small></span><span>›</span></button></div><h2>Deneme alanları</h2><div class="settings-list"><button class="destination-row" data-material-route="manual"><span class="route-icon">⚄</span><span><b>Manuel kura</b><small>Gerçek kayıtlardan bağımsız deneme</small></span><span>›</span></button><button class="destination-row" data-material-route="qptest"><span class="route-icon">▤</span><span><b>Ortak kitap seçimi</b><small>Ayrı deneme alanı</small></span><span>›</span></button></div><details id="materialMaintenance"><summary>Bakım araçları ve kura yönetimi</summary></details></section>
+<section class="tab" id="tab-admin"><h2>Kulübü yönet</h2><div id="materialAdminLinks" class="settings-list"></div><h2>Deneme alanları</h2><div class="settings-list"><button class="destination-row" data-material-route="manual"><span class="route-icon">⚄</span><span><b>Manuel kura</b><small>Gerçek kayıtlardan bağımsız deneme</small></span><span>›</span></button><button class="destination-row" data-material-route="qptest"><span class="route-icon">▤</span><span><b>Ortak kitap seçimi</b><small>Ayrı deneme alanı</small></span><span>›</span></button></div><details id="materialMaintenance"><summary>Bakım araçları ve kura yönetimi</summary></details></section>
       </main>
     </div>
   </div>
@@ -1767,7 +1756,6 @@ const HAMBURGER_ADMIN_EXTRA = [
   {id:'editpast', label:'Geçmiş Düzenle', icon:'✎'},
   {id:'manual', label:'Manuel Kura', icon:'⚙'},
   {id:'qptest', label:'Deneme: Ortak Kitap Seçimi', icon:'🧪'},
-  {id:'goodreadsimport', label:'Goodreads İçe Aktar', icon:'📥'},
   {id:'members', label:'Üyeler', icon:'⚈'},
   {id:'rules', label:'Grup Kuralları', icon:'§'},
   {id:'settings', label:'Ayarlar', icon:'⚒'},
@@ -1860,30 +1848,19 @@ function setTabTitleAnimated(newText){
   // Animasyon sürerken el.textContent, iki <span>'in birleşimi (ör. "BugünAkış") olduğu için
   // güvenilir değil — bunun yerine son hedeflenen metni ayrıca saklayıp ona göre kısa devre
   // yapıyoruz, yoksa ikinci çağrı yarım kalan animasyonu yeniden başlatıp metni birbirine katardı.
-  // Sadece _titleTarget'a değil, GÖRÜNEN metne de bakıyoruz — biri diğerinden saparsa (ör. başka
-  // bir kod yolu el.textContent'i doğrudan değiştirmişse) kısa devre yapıp görünmez kalmasın diye.
   const currentTarget = el._titleTarget!==undefined ? el._titleTarget : el.textContent;
-  if(currentTarget===newText && el.textContent===newText) return;
+  if(currentTarget===newText) return;
   if(el._titleAnimTimeout){ clearTimeout(el._titleAnimTimeout); el._titleAnimTimeout=null; }
-  if(el._titleAnimCleanup){ el.removeEventListener('transitionend', el._titleAnimCleanup); el._titleAnimCleanup=null; }
   const oldText = currentTarget;
   el._titleTarget = newText;
   el.classList.add('title-animating');
   el.innerHTML = `<span class="tab-title-piece tab-title-out">${escapeHtml(oldText)}</span><span class="tab-title-piece tab-title-in">${escapeHtml(newText)}</span>`;
   requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ el.classList.add('title-animate-run'); }); });
-  // Sabit 260ms'lik setTimeout, açılışta (buildNav ilk çalıştığında) ana iş parçacığı yoğunken
-  // çift rAF gecikip animasyon sınıfı hiç uygulanmadan bu süre dolabiliyordu — bu durumda yazı
-  // hiç animasyonsuz, doğrudan son haliyle beliriyordu. transitionend'i asıl bitiş sinyali
-  // yapıp setTimeout'u sadece güvenlik ağı (transition hiç tetiklenmezse) olarak bırakıyoruz.
-  const finishTitleAnim = ()=>{
-    if(el._titleAnimTimeout){ clearTimeout(el._titleAnimTimeout); el._titleAnimTimeout=null; }
-    if(el._titleAnimCleanup){ el.removeEventListener('transitionend', el._titleAnimCleanup); el._titleAnimCleanup=null; }
+  el._titleAnimTimeout = setTimeout(()=>{
     el.classList.remove('title-animating','title-animate-run');
     el.textContent = newText;
-  };
-  el._titleAnimCleanup = (e)=>{ if(e.target.classList && e.target.classList.contains('tab-title-in')) finishTitleAnim(); };
-  el.addEventListener('transitionend', el._titleAnimCleanup);
-  el._titleAnimTimeout = setTimeout(finishTitleAnim, 400);
+    el._titleAnimTimeout = null;
+  }, 260);
 }
 // switchTab() ve kaydırma jestinin parmak-kalkar-kalkmaz senkronizasyonu aynı etiket kaynağını
 // kullansın diye — materialSyncNavigation()'daki names haritası yalnızca hub-kökü olan
@@ -2174,7 +2151,7 @@ function switchTab(id, { animate = true } = {}){
     // Kulüp/Ben, Okuyorum/İstek listem/Geçmişim gibi iç sekmeler) dokunuş başlıyorsa, sayfa
     // seviyesindeki bu sekmeler-arası kaydırmayı hiç başlatma — o alan kendi kart-içi kaydırmasını
     // ayrıca yönetiyor (bkz. setupInnerPaneCarousels).
-    if(!contentCol.contains(t) || t.closest('.hub-item[data-preview]:not(.expanded) .hp-stage') || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport') || t.closest('#discoverFeed')){
+    if(!contentCol.contains(t) || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport') || t.closest('#discoverFeed')){
       touchStartX=null; return;
     }
     pointerId=e.pointerId;
@@ -2304,7 +2281,6 @@ function renderTab(id){
   }
   else if(id==='manual') renderManualTab();
   else if(id==='qptest') renderQpTestTab();
-  else if(id==='goodreadsimport') renderGoodreadsImportTab();
   else if(id==='members') renderAdminMembers();
   else if(id==='worms') renderAdminWorms();
   else if(id==='msurvey') renderMemberSurvey();
@@ -3311,11 +3287,11 @@ async function renderTotalPagesCard(elId){
   const pagesEl = document.getElementById(elId);
   if(!pagesEl) return;
   showCachedOrPlaceholder(pagesEl, '…');
-  pagesEl.style.cursor = 'pointer';
-  pagesEl.classList.add('total-pages-clickable');
+  const daysEl=document.getElementById(elId==='totalPagesNumber'?'totalDaysNumber':'mTotalDaysNumber');
+  if(daysEl) showCachedOrPlaceholder(daysEl,'…');
   const totalReadDays = await computeTotalReadDays(currentUid);
   pagesEl.textContent = (totalReadDays*15).toLocaleString('tr-TR');
-  pagesEl.dataset.days = totalReadDays;
+  if(daysEl){daysEl.textContent=totalReadDays.toLocaleString('tr-TR');markLoaded(daysEl);}
   markLoaded(pagesEl);
 }
 async function computeTotalReadDays(uid){
@@ -3369,7 +3345,6 @@ function wireSelfMarkCard(ids){
   function render(){
     const st = todayAnswers[currentUid];
     document.getElementById(ids.readBtn).classList.toggle('selected', st==='read');
-    document.getElementById(ids.skipBtn).classList.toggle('selected', st==='skip');
     if(ids.heading){
       document.getElementById(ids.heading).textContent = dailyGreetingText(st==='read'?'read':st==='skip'?'skip':'none');
     }
@@ -3380,7 +3355,7 @@ function wireSelfMarkCard(ids){
       `Bugünün okuma tarihi: ${dateLabel}. Bu işaretleme yarın sabah 06:00'a kadar geçerli; 06:00'dan sonra yaptığın işaretleme bir sonraki güne yazılır. 06:00'a kadar hiç işaretleme yapmazsan bu gün otomatik "okumadım" sayılır.`;
     document.getElementById(ids.statusNote).textContent =
       st==='read' ? 'Bugün için "Okudum" işaretledin. Harika!' :
-      st==='skip' ? 'Bugün için "Okuyamam" dedin.' :
+      st==='skip' ? 'Bugün için okuma kaydın yok.' :
       'Bugün için henüz işaretleme yapmadın.';
     computeStreak(currentUid).then(s=>{
       document.getElementById(ids.streakNote).textContent = `${s} gün`;
@@ -3399,17 +3374,6 @@ function wireSelfMarkCard(ids){
     if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', currentUid);
     const s = await computeStreak(currentUid);
     await checkAndAwardBadges(currentUid, s);
-    setTimeout(()=> stampBtnInFlight.delete(key), 1200);
-  });
-  document.getElementById(ids.skipBtn).addEventListener('click', async ()=>{
-    const key = ids.skipBtn+'|skip';
-    if(stampBtnInFlight.has(key)) return;
-    stampBtnInFlight.add(key);
-    const wasNew = todayAnswers[currentUid] !== 'skip';
-    try{ playMarkFx(document.getElementById(ids.skipBtn), 'skip'); }catch(e){}
-    await markStatus(currentUid,'skip'); render();
-    if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okumadım" işaretledi.`, 'week', currentUid);
-    if(wasNew) createPost('skip', {variantText: await pickVariantMessage('skip')});
     setTimeout(()=> stampBtnInFlight.delete(key), 1200);
   });
   return render;
@@ -3433,9 +3397,9 @@ function playMarkFx(btn, type){
   ghost.classList.add(cls);
   setTimeout(()=> ghost.remove(), 700);
 }
-const renderMemberSurvey = wireSelfMarkCard({readBtn:'mReadBtn', skipBtn:'mSkipBtn', dateNote:'mDateNote', statusNote:'mMyStatusNote', streakNote:'mMyStreakNote', pagesNumber:'mTotalPagesNumber', qpBook:'mMyQpBook', heading:'mTodayHeading'});
+const renderMemberSurvey = wireSelfMarkCard({readBtn:'mReadBtn', dateNote:'mDateNote', statusNote:'mMyStatusNote', streakNote:'mMyStreakNote', pagesNumber:'mTotalPagesNumber', qpBook:'mMyQpBook', heading:'mTodayHeading'});
 let memberWeekOffset = 0; // 0 = bu hafta, -1 = önceki hafta, ...
-const renderAdminSelfToday = wireSelfMarkCard({readBtn:'aSelfReadBtn', skipBtn:'aSelfSkipBtn', dateNote:'aSelfDateNote', statusNote:'aSelfStatusNote', streakNote:'aSelfStreakNote', pagesNumber:'totalPagesNumber', qpBook:'aSelfQpBook', heading:'aTodayHeading'});
+const renderAdminSelfToday = wireSelfMarkCard({readBtn:'aSelfReadBtn', dateNote:'aSelfDateNote', statusNote:'aSelfStatusNote', streakNote:'aSelfStreakNote', pagesNumber:'totalPagesNumber', qpBook:'aSelfQpBook', heading:'aTodayHeading'});
 
 async function renderMemberOwnWeek(){
   const baseMonday = getMonday(nowLogical());
@@ -5295,14 +5259,14 @@ function aiRecItemHtml(rec, idx){
   let cover='';
   try{const url=new URL(rec.cover||'',location.href);if(rec.cover && ['https:','http:'].includes(url.protocol))cover=url.href;}catch(_){}
   const title=escapeHtml(rec.title||'İsimsiz kitap');
-  return `<span class="ai-rec-item" data-ai-rec-idx="${idx}">
+  return `<button type="button" class="ai-rec-item" data-ai-rec-idx="${idx}" data-ai-open="${idx}">
     <span class="hp-book-cover ai-preview-cover"><span>${escapeHtml((rec.title||'K').slice(0,1))}</span>${cover?`<img src="${escapeHtml(cover)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</span>
     <b>${title}</b><span class="ai-preview-author">${escapeHtml(rec.author||'')}</span>
-  </span>`;
+  </button>`;
 }
 function aiRecHtml(items){
-  return `<details class="ai-rec-disclosure"><summary aria-label="Kitap önerilerinin açıklamalarını aç veya kapat"><span class="ai-rec-list">${items.map(aiRecItemHtml).join('')}</span></summary>
-  <div class="ai-rec-expanded">${items.map((rec,idx)=>`<div class="ai-rec-explanation"><h3>${escapeHtml(rec.title||'')}</h3><p>${escapeHtml(rec.reason||'Bu kitap için henüz açıklama yok.')}</p><button type="button" class="ai-text-action" data-ai-open="${idx}">Kitabı incele</button></div>`).join('')}</div></details>
+  return `<div class="ai-rec-disclosure"><div class="ai-rec-list">${items.map(aiRecItemHtml).join('')}</div>
+  <div class="ai-rec-expanded" id="aiRecDescriptions" hidden>${items.map((rec,idx)=>`<div class="ai-rec-explanation"><h3>${escapeHtml(rec.title||'')}</h3><p class="ai-rec-reason">${escapeHtml(rec.reason||'Bu önerinin kişisel gerekçesi kayıtta bulunmuyor.')}</p><p class="ai-expanded-pitch" data-pitch="${idx}"></p></div>`).join('')}</div></div>
   <button type="button" class="ai-text-action ai-refresh-action" id="aiRecRefreshBtn">Yeni öneri iste</button>`;
 }
 function wireAiRecRefresh(){
@@ -5314,16 +5278,38 @@ function wireAiRecItems(items){
     const idx=Number(el.dataset.aiOpen);
     el.addEventListener('click',()=>showAiRecDetail(items[idx],items,idx));
   });
-  const disclosure=document.querySelector('#aiRecBody .ai-rec-disclosure');
-  if(disclosure) disclosure.addEventListener('toggle',()=>{
-    if(disclosure.open && !matchMedia('(prefers-reduced-motion: reduce)').matches){
-      disclosure.querySelector('.ai-rec-expanded').animate([{opacity:0,transform:'translateY(-6px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,easing:'ease-out'});
-    }
-  });
+  const heading=document.querySelector('.ai-card-heading');
+  if(heading){
+    heading.setAttribute('aria-expanded','false');
+    heading.onclick=()=>{
+      const panel=document.getElementById('aiRecDescriptions');if(!panel)return;
+      panel.hidden=!panel.hidden;heading.setAttribute('aria-expanded',String(!panel.hidden));
+      if(!panel.hidden){
+        if(!matchMedia('(prefers-reduced-motion: reduce)').matches)panel.animate([{opacity:0,transform:'translateY(-6px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,easing:'ease-out'});
+        panel.querySelectorAll('[data-pitch]').forEach(async el=>{
+          if(el.dataset.loaded)return;el.dataset.loaded='true';el.textContent='Kitabın ayrıntılı anlatımı hazırlanıyor…';
+          try{el.textContent=await getAiBookPitch(items[Number(el.dataset.pitch)]);}catch{delete el.dataset.loaded;el.textContent='Ayrıntılı anlatım şu an alınamadı. Tekrar açarak deneyebilirsin.';}
+        });
+      }
+    };
+  }
 }
 // Aynı oturumda aynı kitaba tekrar tıklanırsa ikna metnini yeniden istemeyelim diye basit bir
 // önbellek — sayfa yenilenince temizlenir, Firestore'a yazılmaz (zaten ucuz/isteğe bağlı bir çağrı).
 const aiPitchCache = {};
+const aiPitchPending = new Map();
+async function getAiBookPitch(rec){
+  const key=`${rec.title}|${rec.author}`;
+  if(aiPitchCache[key])return aiPitchCache[key];
+  if(aiPitchPending.has(key))return aiPitchPending.get(key);
+  const task=(async()=>{
+    const res=await httpsCallable(cloudFunctions,'getBookPitch')({title:rec.title,author:rec.author});
+    if(typeof res.data?.text!=='string'||!res.data.text.trim())throw new Error('Açıklama alınamadı');
+    return aiPitchCache[key]=res.data.text;
+  })();
+  aiPitchPending.set(key,task);
+  try{return await task;}finally{aiPitchPending.delete(key);}
+}
 async function showAiRecDetail(rec, items, idx){
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
@@ -5338,6 +5324,7 @@ async function showAiRecDetail(rec, items, idx){
     ${coverHtml}
     <h2 style="margin:4px 0 2px;">${escapeHtml(rec.title||'')}</h2>
     <div class="muted" style="margin-bottom:10px;">${escapeHtml(rec.author||'')}</div>
+    ${rec.reason?`<p class="ai-modal-reason">${escapeHtml(rec.reason)}</p>`:''}
     <div id="aiRecPitchText" style="text-align:left; font-size:14px; line-height:1.6;">${pitchHtml}</div>
     <div class="row" style="justify-content:center; gap:8px; margin-top:16px; flex-wrap:wrap;">
       <button type="button" class="primary" id="aiRecMarkReadingBtn">📖 Okuyorum</button>
@@ -5345,17 +5332,16 @@ async function showAiRecDetail(rec, items, idx){
       <button type="button" class="secondary" id="aiRecMarkWantBtn">➕ Okumak istiyorum</button>
     </div>
   `;
+  body.dataset.aiBookKey=cacheKey;
   wireAiRecDetailActions(rec, items, idx);
   if(!aiPitchCache[cacheKey]){
     try{
-      const fn = httpsCallable(cloudFunctions, 'getBookPitch');
-      const res = await fn({ title: rec.title, author: rec.author });
-      aiPitchCache[cacheKey] = res.data.text;
+      const text = await getAiBookPitch(rec);
       const pitchEl = document.getElementById('aiRecPitchText');
-      if(pitchEl) pitchEl.textContent = res.data.text;
+      if(pitchEl && body.dataset.aiBookKey===cacheKey) pitchEl.textContent = text;
     }catch(err){
       const pitchEl = document.getElementById('aiRecPitchText');
-      if(pitchEl) pitchEl.innerHTML = `<span class="muted">${escapeHtml(err.message||'Metin alınamadı.')}</span>`;
+      if(pitchEl && body.dataset.aiBookKey===cacheKey) pitchEl.innerHTML = `<span class="muted">${escapeHtml(err.message||'Metin alınamadı.')}</span>`;
     }
   }
 }
@@ -9910,7 +9896,7 @@ function materialThemeSync(){
 // admin alt ekranları (members/manual/...) önce 'admin'e, o da HUB_PARENT üzerinden kendi
 // hub'ına (artık 'appsettings') çözülür; hub kartı id'leri (gifts/rules/bookhistory/...) zaten
 // HUB_PARENT'ta kayıtlı. Eşleşme yoksa güvenli varsayılan olarak 'club' döner.
-const ADMIN_SUB_SCREENS = ['members','manual','qptest','editpast','whoreadtoday','goodreadsimport'];
+const ADMIN_SUB_SCREENS = ['members','manual','qptest','editpast','whoreadtoday'];
 function materialHubRoot(id){
  if(ADMIN_SUB_SCREENS.includes(id)) id = 'admin';
  if(['club','library','appsettings'].includes(id)) return id;
@@ -9964,7 +9950,7 @@ function materialRenderPhase(qp){
 document.body.addEventListener('click',e=>{
  const route=e.target.closest('[data-material-route]');if(!route||!myProfile)return;
  const id=materialRoute(route.dataset.materialRoute);
- if(['admin','members','manual','qptest','editpast','whoreadtoday','goodreadsimport'].includes(id)&&myProfile.role!=='admin')return;
+ if(['admin','members','manual','qptest','editpast','whoreadtoday'].includes(id)&&myProfile.role!=='admin')return;
  switchTab(id);
 });
 // Keyboard support for dynamically rendered interactive cards without changing their actions.
@@ -10027,6 +10013,7 @@ const hubPreviews=(()=>{
   host.replaceChildren(frame);
   if(animate&&!reduced.matches)frame.animate([{opacity:0,transform:direction?`translateX(${direction*24}px)`:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,easing:'cubic-bezier(.2,0,0,1)'});
   st.item.querySelector('.hp-position').textContent=st.slides.length>1?`${st.index+1} / ${st.slides.length}`:'Özet';
+  st.item.querySelectorAll('.hp-controls button').forEach(b=>b.disabled=st.slides.length<2);
   st.at=performance.now();
  }
  function set(key,slides){const st=states.get(key);if(!st)return;st.slides=slides.length?slides:[metric('Henüz kayıt yok','Yeni bir başlangıç','Ayrıntılar için kartı aç.')];st.index=0;paint(st);}
@@ -10044,57 +10031,22 @@ const hubPreviews=(()=>{
     const summary=item.querySelector('.hub-item-summary'), label=(summary.querySelector('.hp-heading')||summary.querySelector('b')).textContent;
     const illustrationKey={records:'records',badges:'badge',gifts:'gift',bookhistory:'search',mybooks:'book',recs:'heart'}[key];
     summary.innerHTML=`<span class="hp-illustration" aria-hidden="true">${HUB_ILLUSTRATIONS[illustrationKey]||''}</span><span class="hp-heading">${esc(label)}</span><span class="hp-stage"></span><span class="hp-footer"><span class="hp-position">Özet</span></span>`;
-    const st={item,slides:old?.slides||[metric('Hazırlanıyor','Birazdan burada','Güncel özetler yükleniyor.')],index:0,at:performance.now(),visible:false};states.set(key,st);observer.observe(item);paint(st);wireSwipe(st);
+    const st={item,slides:old?.slides||[metric('Hazırlanıyor','Birazdan burada','Güncel özetler yükleniyor.')],index:0,at:performance.now(),visible:false};states.set(key,st);observer.observe(item);wirePreviewArrows(st);paint(st);
    });
   }
  }
- function wireSwipe(st){
-  const button=st.item.querySelector('.hub-item-toggle');let gesture=null;
-  const finish=(e,cancel=false)=>{
-    if(!gesture||e.pointerId!==gesture.id)return;
-    const g=gesture;gesture=null;
-    if(button.hasPointerCapture(g.id))button.releasePointerCapture(g.id);
-    if(g.moved){
-      st.blockClickUntil=performance.now()+500;
-      if(document.activeElement===button)button.blur();
-      const dx=e.clientX-g.x;
-      if(!cancel && Math.abs(dx)>=28 && st.slides.length>1){
-        const direction=dx<0?1:-1;
-        st.index=(st.index+direction+st.slides.length)%st.slides.length;
-        paint(st,true,direction);
-      }
-    }
-    st.at=performance.now();
-  };
-  button.addEventListener('pointerdown',e=>{
-    st.blockClickUntil=0;
-    if(!e.isPrimary||e.button!==0||st.item.classList.contains('expanded')||!e.target.closest('.hp-stage'))return;
-    gesture={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false};
-  });
-  button.addEventListener('pointermove',e=>{
-    if(!gesture||gesture.id!==e.pointerId)return;
-    const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
-    if(!gesture.moved){
-      if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){gesture=null;return;}
-      if(Math.abs(dx)<8||Math.abs(dx)<Math.abs(dy)*1.3)return;
-      gesture.moved=true;
-      try{button.setPointerCapture(e.pointerId);}catch{gesture=null;return;}
-    }
-    if(e.cancelable)e.preventDefault();
-  },{passive:false});
-  button.addEventListener('pointerup',e=>finish(e));
-  button.addEventListener('pointercancel',e=>finish(e,true));
-  button.addEventListener('lostpointercapture',e=>{if(e.target===button)finish(e,true);});
-  button.addEventListener('keydown',e=>{
-    if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;
-    e.preventDefault();const direction=e.key==='ArrowRight'?1:-1;
+ function wirePreviewArrows(st){
+  st.item.querySelector('.hp-controls')?.remove();
+  const controls=document.createElement('div');controls.className='hp-controls';
+  controls.innerHTML='<button type="button" data-step="-1" aria-label="Önceki önizleme">‹</button><button type="button" data-step="1" aria-label="Sonraki önizleme">›</button>';
+  controls.querySelectorAll('button').forEach(button=>button.addEventListener('click',e=>{
+    e.stopPropagation();if(st.slides.length<2)return;
+    const direction=Number(button.dataset.step);
     st.index=(st.index+direction+st.slides.length)%st.slides.length;paint(st,true,direction);
-  });
+    if(e.detail>0)button.blur();
+  }));
+  st.item.append(controls);
  }
- document.addEventListener('click',e=>{
-  const item=e.target.closest('.hub-item[data-preview]');const st=item&&states.get(item.dataset.preview);
-  if(st&&performance.now()<st.blockClickUntil){e.preventDefault();e.stopImmediatePropagation();st.blockClickUntil=0;}
- },true);
  function safe(key,fn,uid){return Promise.resolve().then(fn).then(slides=>{if(currentUid===uid)set(key,slides);}).catch(()=>{if(currentUid===uid)set(key,[metric('Şu an yüklenemedi','Özet hazır değil','Ayrıntıları açarak tekrar deneyebilirsin.','↻')]);});}
  async function club(uid){
   await Promise.all([
@@ -10180,144 +10132,6 @@ const hubPreviews=(()=>{
  },250);
  return {sync};
 })();
-
-/* ============ ADMIN: GOODREADS'TEN İÇE AKTARMA ============
-   Bir üyenin Goodreads'ten dışa aktardığı CSV'sini (goodreads_library_export.csv) okuyup
-   Exclusive Shelf'e göre doğru koleksiyona (bookHistory/readBooks/wantToRead) yazar. Kitap/yazar
-   adları CSV'deki haliyle DOKUNULMADAN kaydedilir; sadece kapak arama sorgusunda kullanılır —
-   kaydedilen title/author asla API'nin döndürdüğü isimle değiştirilmez, sadece cover doldurulur.
-   Kapak arama, seedDiscoverCovers()'daki ile aynı iki-kaynaklı (Google Books + Open Library) +
-   hız sınırlamalı deseni kullanır. firestore.rules'taki admin-override sayesinde admin başka bir
-   üyenin bookHistory/readBooks/wantToRead koleksiyonlarına yazabiliyor. */
-function parseGoodreadsCSV(text){
-  const rows = [];
-  let row = [], field = '', inQuotes = false;
-  for(let i=0;i<text.length;i++){
-    const c = text[i];
-    if(inQuotes){
-      if(c === '"'){
-        if(text[i+1] === '"'){ field += '"'; i++; }
-        else inQuotes = false;
-      } else field += c;
-    } else {
-      if(c === '"') inQuotes = true;
-      else if(c === ','){ row.push(field); field=''; }
-      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
-      else if(c === '\r'){ /* \n zaten satırı kapatıyor, atla */ }
-      else field += c;
-    }
-  }
-  if(field.length || row.length){ row.push(field); rows.push(row); }
-  if(!rows.length) return [];
-  const header = rows[0].map(h=>h.trim());
-  return rows.slice(1).filter(r=>r.some(v=>v!=='')).map(r=>{
-    const obj = {};
-    header.forEach((h,idx)=>{ obj[h] = r[idx]!==undefined ? r[idx] : ''; });
-    return obj;
-  });
-}
-const GOODREADS_SHELF_TO_COLLECTION = { 'read':'bookHistory', 'currently-reading':'readBooks', 'to-read':'wantToRead' };
-function goodreadsDateToIso(dateStr){
-  if(!dateStr) return new Date().toISOString();
-  const d = new Date(dateStr.replace(/\//g,'-'));
-  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
-}
-function bookDedupeKey(title, author){ return (title||'').trim().toLowerCase()+'|'+(author||'').trim().toLowerCase(); }
-async function findGoodreadsBookCover(title, author){
-  try{
-    const settled = await Promise.allSettled([
-      searchGoogleBooks(`${title} ${author}`),
-      searchOpenLibrary(`${title} ${author}`)
-    ]);
-    const pick = (r)=> (r.status==='fulfilled' && r.value && r.value[0]) ? r.value[0] : null;
-    const candidates = settled.map(pick).filter(Boolean);
-    const withCover = candidates.find(c=>c.cover);
-    return withCover ? withCover.cover : '';
-  }catch(e){ return ''; }
-}
-function renderGoodreadsImportTab(){
-  const select = document.getElementById('griUserSelect');
-  const fileInput = document.getElementById('griFileInput');
-  const startBtn = document.getElementById('griStartBtn');
-  const log = document.getElementById('griLog');
-  if(!select || !fileInput || !startBtn || !log) return;
-  const sortedUids = Object.keys(usersCache).filter(uid=>!usersCache[uid].deleted).sort((a,b)=> (usersCache[a].name||'').localeCompare(usersCache[b].name||'','tr'));
-  select.innerHTML = '<option value="">Seç…</option>' + sortedUids.map(uid=>{
-    const u = usersCache[uid];
-    const label = u.surname ? `${u.name||'?'} ${u.surname}` : (u.name||'?');
-    return `<option value="${uid}">${escapeHtml(label)}</option>`;
-  }).join('');
-  const updateBtn = ()=>{ startBtn.disabled = !(select.value && fileInput.files && fileInput.files[0]); };
-  select.onchange = updateBtn;
-  fileInput.onchange = updateBtn;
-  log.textContent = '';
-  startBtn.onclick = async ()=>{
-    const targetUid = select.value;
-    const file = fileInput.files && fileInput.files[0];
-    if(!targetUid || !file) return;
-    const targetName = usersCache[targetUid]?.name || targetUid;
-    if(!confirm(`${targetName} adlı üyenin hesabına CSV'deki kitaplar eklenecek. Devam edilsin mi?`)) return;
-    startBtn.disabled = true;
-    select.disabled = true;
-    fileInput.disabled = true;
-    const lines = [];
-    const print = (s)=>{ lines.push(s); log.textContent = lines.join('\n'); log.scrollTop = log.scrollHeight; };
-    try{
-      const text = await file.text();
-      const rows = parseGoodreadsCSV(text);
-      print(`${rows.length} satır okundu.`);
-      const grouped = { bookHistory:[], readBooks:[], wantToRead:[] };
-      let skippedShelf = 0;
-      rows.forEach(r=>{
-        const shelf = (r['Exclusive Shelf']||'').trim();
-        const collectionName = GOODREADS_SHELF_TO_COLLECTION[shelf];
-        const title = (r['Title']||'').trim();
-        if(!collectionName || !title){ skippedShelf++; return; }
-        grouped[collectionName].push({
-          title,
-          author: (r['Author']||'').trim() || 'Bilinmeyen Yazar',
-          addedAt: goodreadsDateToIso(shelf==='read' ? (r['Date Read']||r['Date Added']) : r['Date Added'])
-        });
-      });
-      print(`Atlanan (did-not-finish veya boş raf): ${skippedShelf}`);
-      print(`Okundu (bookHistory): ${grouped.bookHistory.length}, Şu an okunuyor (readBooks): ${grouped.readBooks.length}, Okumak istenen (wantToRead): ${grouped.wantToRead.length}`);
-
-      let totalAdded = 0, totalDup = 0, totalCoverFound = 0;
-      for(const collectionName of ['bookHistory','readBooks','wantToRead']){
-        const items = grouped[collectionName];
-        if(!items.length) continue;
-        print(`\n${collectionName}: mevcut kayıtlar kontrol ediliyor…`);
-        const existingSnap = await getDocs(collection(db,'users',targetUid,collectionName));
-        const existingKeys = new Set();
-        existingSnap.forEach(d=>{ const x=d.data(); existingKeys.add(bookDedupeKey(x.title,x.author)); });
-        let added=0, dup=0, coverFound=0, failStreak=0;
-        for(const item of items){
-          const key = bookDedupeKey(item.title, item.author);
-          if(existingKeys.has(key)){ dup++; continue; }
-          existingKeys.add(key);
-          const cover = await findGoodreadsBookCover(item.title, item.author);
-          if(cover) coverFound++; else failStreak++;
-          await addDoc(collection(db,'users',targetUid,collectionName), {
-            author: item.author, title: item.title, cover, addedAt: item.addedAt
-          });
-          added++;
-          if(added % 10 === 0) print(`  ${collectionName}: ${added} eklendi (${items.length} kitaptan)…`);
-          await sleep(failStreak > 8 ? 700 : 90);
-        }
-        print(`${collectionName}: ${added} eklendi, ${dup} zaten vardı (atlandı), ${coverFound} kapak bulundu.`);
-        totalAdded += added; totalDup += dup; totalCoverFound += coverFound;
-      }
-      print(`\nTamamlandı. Toplam ${totalAdded} kitap eklendi (${totalCoverFound} kapaklı), ${totalDup} zaten mevcuttu.`);
-      showToast(`${targetName}: ${totalAdded} kitap içe aktarıldı.`);
-    }catch(err){
-      print(`HATA: ${err.message||err}`);
-    }finally{
-      startBtn.disabled = false;
-      select.disabled = false;
-      fileInput.disabled = false;
-    }
-  };
-}
 
 onAuthStateChanged(auth, async (user)=>{
   if(unsubUsers){ unsubUsers(); unsubUsers=null; }
