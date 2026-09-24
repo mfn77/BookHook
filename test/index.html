@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-36-card-swipe" />
+<link rel="stylesheet" href="./style.css?v=material-37-illustrations-ios" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -1923,25 +1923,24 @@ function switchTab(id, { animate = true } = {}){
   renderTab(id);
 }
 
-/* ============ ALT SEKME ÇUBUĞUNU GERÇEK GÖRÜNÜR ALANA SABİTLE ============
-   Android Chrome'un dinamik adres çubuğu VE iOS Safari, özellikle kısa/kaydırılamayan
-   sayfalarda (ör. Kulüp, Ayarlar) position:fixed;bottom:0 öğeleri "layout viewport" yerine
-   gerçekte görünen alandan farklı bir yere yerleştirebiliyor — bu da alt sekme çubuğunun aşağı
-   kayması/kaybolması ya da normalden yukarıda durması gibi kararsız, sayfaya/duruma göre değişen
-   bir davranış olarak görünüyor. CSS'in position:fixed'ine güvenmek yerine window.visualViewport
-   API'sini (tarayıcının GERÇEKTEN gösterdiği alanı, araç çubuğu durumundan bağımsız veren API)
-   kullanarak çubuğu aktif olarak hizalıyoruz — web.dev'in bu tür bug'lar için önerdiği standart
-   çözüm bu. */
+/* Alt panel: normal tarayıcıda görünür viewport farkını telafi et.
+   iOS ana ekran uygulamasında fixed + safe-area konumuna ayrıca bu farkı ekleme;
+   geçici viewport farkı paneli gereksiz yere yukarı taşıyabilir. */
 (function stabilizeBottomNav(){
   const nav = document.getElementById('sidebarNav');
   if(!nav || !window.visualViewport) return;
   const mq = window.matchMedia('(max-width:700px)');
+  const standalone = window.matchMedia('(display-mode: standalone)');
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
   function update(){
-    if(!mq.matches){ nav.style.transform = ''; return; }
+    const iosHomeScreen = navigator.standalone===true || (isIOS && standalone.matches);
+    if(!mq.matches || iosHomeScreen){ nav.style.transform = ''; return; }
     const vv = window.visualViewport;
     const gap = window.innerHeight - (vv.offsetTop + vv.height);
     nav.style.transform = gap > 0.5 ? `translateY(${-gap}px)` : '';
   }
+  window.addEventListener('pageshow', update);
+  if(standalone.addEventListener) standalone.addEventListener('change', update);
   window.visualViewport.addEventListener('resize', update);
   window.visualViewport.addEventListener('scroll', update);
   if(mq.addEventListener) mq.addEventListener('change', update); else mq.addListener(update);
@@ -2152,7 +2151,7 @@ function switchTab(id, { animate = true } = {}){
     // Kulüp/Ben, Okuyorum/İstek listem/Geçmişim gibi iç sekmeler) dokunuş başlıyorsa, sayfa
     // seviyesindeki bu sekmeler-arası kaydırmayı hiç başlatma — o alan kendi kart-içi kaydırmasını
     // ayrıca yönetiyor (bkz. setupInnerPaneCarousels).
-    if(!contentCol.contains(t) || t.closest('.hub-item[data-preview]:not(.expanded)') || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport') || t.closest('#discoverFeed')){
+    if(!contentCol.contains(t) || t.closest('.hub-item[data-preview]:not(.expanded) .hp-stage') || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport') || t.closest('#discoverFeed')){
       touchStartX=null; return;
     }
     pointerId=e.pointerId;
@@ -10014,7 +10013,8 @@ const hubPreviews=(()=>{
     const old=states.get(key);if(old)observer.unobserve(old.item);
     item.dataset.preview=key;
     const summary=item.querySelector('.hub-item-summary'), label=(summary.querySelector('.hp-heading')||summary.querySelector('b')).textContent;
-    summary.innerHTML=`<span class="hp-heading">${esc(label)}</span><span class="hp-stage"></span><span class="hp-footer"><span class="hp-position">Özet</span></span>`;
+    const illustrationKey={records:'records',badges:'badge',gifts:'gift',bookhistory:'search',mybooks:'book',recs:'heart'}[key];
+    summary.innerHTML=`<span class="hp-illustration" aria-hidden="true">${HUB_ILLUSTRATIONS[illustrationKey]||''}</span><span class="hp-heading">${esc(label)}</span><span class="hp-stage"></span><span class="hp-footer"><span class="hp-position">Özet</span></span>`;
     const st={item,slides:old?.slides||[metric('Hazırlanıyor','Birazdan burada','Güncel özetler yükleniyor.')],index:0,at:performance.now(),visible:false};states.set(key,st);observer.observe(item);paint(st);wireSwipe(st);
    });
   }
@@ -10039,7 +10039,7 @@ const hubPreviews=(()=>{
   };
   button.addEventListener('pointerdown',e=>{
     st.blockClickUntil=0;
-    if(!e.isPrimary||e.button!==0||st.item.classList.contains('expanded'))return;
+    if(!e.isPrimary||e.button!==0||st.item.classList.contains('expanded')||!e.target.closest('.hp-stage'))return;
     gesture={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false};
   });
   button.addEventListener('pointermove',e=>{

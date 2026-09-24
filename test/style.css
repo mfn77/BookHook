@@ -290,8 +290,8 @@ html, body { overscroll-behavior-y: contain; }
 
 /* Dönüşümlü kart özetleri — kapalı kartların ölçüleri veriyle değişmez. */
 #materialClubGrid,#materialLibraryGrid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:14px}
-.hub-item[data-preview]{--hp-height:310px;background:var(--secondary-container);min-width:0}
-.hub-item[data-preview=records],.hub-item[data-preview=bookhistory]{grid-column:1/-1;--hp-height:250px;background:var(--primary-container)}
+.hub-item[data-preview]{--hp-height:378px;background:var(--secondary-container);min-width:0}
+.hub-item[data-preview=records],.hub-item[data-preview=bookhistory]{grid-column:1/-1;--hp-height:318px;background:var(--primary-container)}
 .hub-item[data-preview=gifts]{background:var(--paper-2)}
 .hub-item[data-preview]>.hub-item-toggle{width:100%;height:var(--hp-height);padding:20px;display:block;text-align:left;margin:0}
 .hub-item[data-preview] .hub-item-summary{display:flex;gap:0;min-height:0;max-height:none;height:100%;width:100%;overflow:hidden;opacity:1}
@@ -309,8 +309,13 @@ html, body { overscroll-behavior-y: contain; }
 .hub-item[data-preview=bookhistory] .hp-book-cover{width:66px;height:100px;font-size:42px}.hub-item[data-preview=bookhistory] .hp-book-title{font-size:24px}.hub-item[data-preview=records] .hp-emblem{width:60px;height:60px;font-size:36px}.hub-item[data-preview=records] .hp-value{font-size:30px}
 .hp-stats{display:flex;gap:12px;width:100%;justify-content:space-between}.hp-stat{display:flex;flex-direction:column;align-items:center;flex:1;gap:2px;min-width:0}.hp-stat i{font-style:normal;font-size:23px;line-height:1}.hp-stat b{font-size:26px;line-height:1.1;font-weight:600}.hp-stat small{font-size:10px!important;white-space:nowrap}
 .hub-item[data-preview].expanded{grid-column:1/-1}.hub-item[data-preview].expanded>.hub-item-toggle{height:0;padding:0;overflow:hidden;visibility:hidden}.hub-item[data-preview].expanded .hub-item-summary{min-height:0;height:0}
-@media(min-width:701px){.hub-item[data-preview]{--hp-height:280px}.hub-item[data-preview=records],.hub-item[data-preview=bookhistory]{--hp-height:250px}.hp-value{font-size:28px}.hp-book-title{font-size:21px}.hp-detail{font-size:12px}}
+@media(min-width:701px){.hub-item[data-preview]{--hp-height:348px}.hub-item[data-preview=records],.hub-item[data-preview=bookhistory]{--hp-height:318px}.hp-value{font-size:28px}.hp-book-title{font-size:21px}.hp-detail{font-size:12px}}
 @media(max-width:360px){.hub-item[data-preview]>.hub-item-toggle{padding:16px}.hp-heading{font-size:14px}.hp-value{font-size:20px}.hp-footer{font-size:9px}.hp-stats{gap:7px}.hp-toolbar{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.hub-item[data-preview],.hub-item[data-preview] *{animation:none!important;transition:none!important}}
 
 .hub-item[data-preview]>.hub-item-toggle{touch-action:pan-y;user-select:none;-webkit-user-select:none}
+
+/* Özgün kart illüstrasyonları, başlığın üstünde ve önizlemeden bağımsız. */
+.hp-illustration{display:flex;align-items:center;height:56px;min-height:56px;margin-bottom:12px;flex-shrink:0;pointer-events:none}
+.hub-item[data-preview] .hp-illustration svg.hub-illustration{position:static;width:64px;height:56px;display:block}
+.hub-item[data-preview] .destination-row:has(svg.hub-illustration) small{max-width:100%}
