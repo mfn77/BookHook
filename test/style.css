@@ -399,3 +399,30 @@ html[data-theme=dark] .badge-art{filter:brightness(1.13)}
 .daily-actions .stamp-btn.read:disabled{opacity:.45;cursor:default;box-shadow:none;pointer-events:none}
 .previous-page-count{display:block;font-size:14px;font-weight:400;opacity:.55;margin-top:5px}
 .goal-history-number{display:block;font-size:30px;line-height:1.15;font-weight:700;margin-top:12px}
+
+
+/* Sekme içinde doğrudan içerik: asıl DOM ve form olayları korunur. */
+.hub-layout-setting{display:flex;align-items:center;gap:14px;padding:18px 0;cursor:pointer;position:relative}
+.hub-layout-setting>span:first-child{flex:1}.hub-layout-setting small{display:block;color:var(--ink-70);margin-top:5px}
+.hub-layout-setting input{position:absolute;right:0;width:52px;height:32px;opacity:0;cursor:pointer}
+.layout-switch{display:block;width:52px;height:32px;border-radius:99px;background:var(--secondary-container);border:2px solid var(--ink-70);position:relative;box-sizing:border-box;flex-shrink:0}
+.layout-switch:after{content:'';position:absolute;width:20px;height:20px;top:4px;left:4px;border-radius:50%;background:var(--ink-70);transition:transform .18s}
+.hub-layout-setting input:checked+.layout-switch{background:var(--forest);border-color:var(--forest)}
+.hub-layout-setting input:checked+.layout-switch:after{transform:translateX(20px);background:var(--paper)}
+.hub-layout-setting input:focus-visible+.layout-switch{outline:3px solid var(--secondary-ink);outline-offset:4px}
+#hubLayoutSettings{margin-top:26px}#hubLayoutSettings h3{font-size:18px}
+.hub-flat>.club-grid{display:block}
+.hub-flat .hub-item,.hub-flat .hub-item-panel,.hub-flat .hub-item-panel-inner{display:contents!important}
+.hub-flat .hub-item>.hub-item-toggle,.hub-flat .hub-item>.hub-item-close-btn,.hub-flat .hub-item>.hp-controls{display:none!important}
+.hub-flat .hub-item-panel-inner>section.tab{display:block!important;animation:none!important;margin:24px 0;min-width:0}
+.hub-flat .hub-item-panel-inner>section.tab>.segmented{display:none!important}
+.hub-flat .inner-pane-viewport{display:block;height:auto!important;max-height:none!important;overflow:visible!important;touch-action:pan-y!important}
+.hub-flat .inner-pane-track{display:grid!important;grid-template-columns:minmax(0,1fr);gap:16px;transform:none!important;width:auto!important;transition:none!important}
+.hub-flat .inner-pane{display:contents!important}
+.hub-flat .inner-pane .card{margin:0!important;min-width:0}
+.hub-flat .ai-card-close,.hub-flat .ai-card-chevron{display:none!important}
+.hub-flat .ai-card-heading{cursor:default}
+@media(min-width:1000px){.hub-flat .inner-pane-track{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.hub-flat .hub-item-panel{opacity:1!important}
+.hub-flat .hub-item-panel-inner>section.tab>.card{margin-bottom:16px}
+.hub-layout-setting input{z-index:1}.layout-switch{pointer-events:none}

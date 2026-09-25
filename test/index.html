@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-43-goal-updates" />
+<link rel="stylesheet" href="./style.css?v=material-44-layout-settings" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -2168,7 +2168,7 @@ function switchTab(id, { animate = true } = {}){
     // Kulüp/Ben, Okuyorum/İstek listem/Geçmişim gibi iç sekmeler) dokunuş başlıyorsa, sayfa
     // seviyesindeki bu sekmeler-arası kaydırmayı hiç başlatma — o alan kendi kart-içi kaydırmasını
     // ayrıca yönetiyor (bkz. setupInnerPaneCarousels).
-    if(!contentCol.contains(t) || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('.inner-pane-viewport') || t.closest('#discoverFeed')){
+    if(!contentCol.contains(t) || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || (t.closest('.inner-pane-viewport')&&!t.closest('.hub-flat')) || t.closest('#discoverFeed')){
       touchStartX=null; return;
     }
     pointerId=e.pointerId;
@@ -2280,7 +2280,7 @@ function switchTab(id, { animate = true } = {}){
 })();
 
 function renderTab(id){
-  if(id==='club'||id==='library') hubPreviews.sync(id);
+  if(id==='club'||id==='library'){applyHubLayout(id,{render:true});if(!hubLayoutEnabled(id))hubPreviews.sync(id);}
   if(id==='club') { materialRenderClub(); return; }
   if(id==='library') { renderAiRecCard(); return; }
   if(id==='appsettings') { return; }
@@ -5487,6 +5487,7 @@ function wireAiRecItems(items){
     document.getElementById('aiRecCard').classList.remove('expanded');
     const toggleDescriptions=()=>{
       const panel=document.getElementById('aiRecDescriptions');if(!panel)return;
+      if(hubLayoutEnabled('library')&&!panel.hidden)return;
       panel.hidden=!panel.hidden;heading.setAttribute('aria-expanded',String(!panel.hidden));
       document.getElementById('aiRecCard').classList.toggle('expanded',!panel.hidden);
       if(closeButton)closeButton.hidden=panel.hidden;
@@ -5508,35 +5509,20 @@ function wireAiRecItems(items){
       toggleDescriptions();
     };
   }
+  syncAiHubLayout();
 }
-// Aynı oturumda aynı kitaba tekrar tıklanırsa hızlı dönsün diye bellek-içi bir önbellek (sayfa
-// yenilenince temizlenir), AMA asıl kalıcı önbellek 'bookPitches/{bookKey}' koleksiyonunda —
-// discoverCovers ile aynı desen: bir kitabın anlatım metni AI'dan bir kez alınınca herkes için
-// (kulübün tamamı için, sadece kendi cihazın için değil) kalıcı olarak saklanıyor, aynı kitabı
-// başka bir üye (ya da aynı üye uygulamayı kapatıp açtıktan sonra) tekrar açtığında AI'a tekrar
-// sorulmuyor — her açılışta baştan çekilmesi hem gecikme hem de gereksiz AI kredisi harcaması
-// demekti.
+// Aynı oturumda aynı kitaba tekrar tıklanırsa ikna metnini yeniden istemeyelim diye basit bir
+// önbellek — sayfa yenilenince temizlenir, Firestore'a yazılmaz (zaten ucuz/isteğe bağlı bir çağrı).
 const aiPitchCache = {};
 const aiPitchPending = new Map();
 async function getAiBookPitch(rec){
   const key=`${rec.title}|${rec.author}`;
   if(aiPitchCache[key])return aiPitchCache[key];
   if(aiPitchPending.has(key))return aiPitchPending.get(key);
-  const docId=bookKeyFor({title:rec.title,author:rec.author});
   const task=(async()=>{
-    try{
-      const snap=await getDoc(doc(db,'bookPitches',docId));
-      if(snap.exists()){
-        const text=snap.data().text;
-        if(typeof text==='string'&&text.trim())return aiPitchCache[key]=text;
-      }
-    }catch(e){}
     const res=await httpsCallable(cloudFunctions,'getBookPitch')({title:rec.title,author:rec.author});
     if(typeof res.data?.text!=='string'||!res.data.text.trim())throw new Error('Açıklama alınamadı');
-    const text=res.data.text;
-    aiPitchCache[key]=text;
-    setDoc(doc(db,'bookPitches',docId),{text,fetchedAt:new Date().toISOString()}).catch(()=>{});
-    return text;
+    return aiPitchCache[key]=res.data.text;
   })();
   aiPitchPending.set(key,task);
   try{return await task;}finally{aiPitchPending.delete(key);}
@@ -5821,11 +5807,6 @@ function showBhBookInfo(b, uid, gridId, collectionName){
         renderBookHistoryGrid(currentUid, gridId, true, collectionName);
         const destGridId = destCollection==='readBooks' ? 'readBooksGrid' : 'bookHistoryGrid';
         if(document.getElementById(destGridId)) renderBookHistoryGrid(currentUid, destGridId, true, destCollection);
-        // "Şu an okuyorum"dan "Okudum"a taşınan bir kitap aylık hedefe sayılabilir — "Bugün"
-        // sekmesindeki hedef kartı bu ekrandan (Kitaplığım) tetiklenmediği için kendiliğinden
-        // yenilenmiyordu, burada elle tazeliyoruz. Aktif olmayan (admin/üye) varyant no-op.
-        renderTotalPagesCard('totalPagesNumber');
-        renderTotalPagesCard('mTotalPagesNumber');
       }catch(err){ alert('Taşınamadı: '+(err.message||err)); btn.disabled = false; }
     });
   }
@@ -9805,6 +9786,7 @@ function materialHubLink(hubId,targetId,label,description,icon,noAccordion){
  return `<div class="hub-item" data-hub-target="${targetId}"><button type="button" class="destination-row hub-item-toggle"><div class="hub-item-summary">${HUB_ILLUSTRATIONS[icon]||''}<span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span></div><span class="hub-chevron" aria-hidden="true">›</span></button><div class="hub-item-panel"><div class="hub-item-panel-inner"></div></div><button type="button" class="hub-item-close-btn icon-button" aria-label="Kapat"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button></div>`;
 }
 function materialExpandHubItem(item, targetId){
+ if(item.closest(".hub-flat")){const section=document.getElementById("tab-"+targetId);if(section)section.scrollIntoView({behavior:"smooth",block:"start"});return;}
  const inner = item.querySelector('.hub-item-panel-inner');
  const section = document.getElementById('tab-'+targetId);
  if(section){ inner.appendChild(section); section.classList.add('active'); renderTab(targetId); }
@@ -9855,7 +9837,7 @@ function watchPanelHeightGrowth(inner){
   inner.style.transition = '';
  }, 2500);
 }
-function materialCollapseHubItem(item){ item.classList.remove('expanded'); }
+function materialCollapseHubItem(item){ if(!item.closest('.hub-flat'))item.classList.remove('expanded'); }
 document.body.addEventListener('click', e=>{
  const closeBtn = e.target.closest('.hub-item-close-btn');
  if(!closeBtn) return;
@@ -9904,6 +9886,7 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
  }
  function baseX(i){ return PEEK - i*(cardW+GAP); }
  function setHeight(animate){
+  if(viewport.closest(".hub-flat"))return;
   const el = panes[current];
   if(!el) return;
   const h = el.scrollHeight;
@@ -9928,6 +9911,7 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
   }
  }
  function goTo(i, animate){
+  if(viewport.closest(".hub-flat")){touchStartX=null;dragging=false;panes.forEach(p=>p.setAttribute("aria-hidden","false"));return;}
   i = Math.max(0, Math.min(panes.length-1, i));
   measure();
   current = i;
@@ -9938,6 +9922,7 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
   if(onIndexChange) onIndexChange(i);
  }
  viewport.addEventListener('touchstart', (e)=>{
+  if(viewport.closest('.hub-flat')){touchStartX=null;return;}
   if(e.touches.length!==1) return;
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
@@ -10044,7 +10029,54 @@ window.addEventListener('resize', ()=>{
   });
  }, 150);
 });
+// Görünüm tercihleri tema gibi bu cihazda, kullanıcıya özel tutulur.
+function hubLayoutEnabled(hub){
+ try{return localStorage.getItem('bookhook_layout_'+currentUid+'_'+hub)==='expanded';}catch(_){return false;}
+}
+function applyHubLayout(hub,{render=false}={}){
+ const root=document.getElementById('tab-'+hub);if(!root)return;
+ const flat=hubLayoutEnabled(hub);root.classList.toggle('hub-flat',flat);
+ root.querySelectorAll('.hub-item').forEach(item=>{
+  const section=document.getElementById('tab-'+item.dataset.hubTarget);if(!section)return;
+  if(flat){
+   item.querySelector('.hub-item-panel-inner').append(section);
+   section.classList.add('active');
+   if(render)renderTab(item.dataset.hubTarget);
+  }
+  section.querySelectorAll('.inner-pane-viewport').forEach(viewport=>{
+   if(viewport._carousel)viewport._carousel.goTo(viewport._carousel.current,false);
+  });
+ });
+ if(hub==='library')syncAiHubLayout();
+}
+function syncAiHubLayout(){
+ const heading=document.querySelector('.ai-card-heading'),panel=document.getElementById('aiRecDescriptions');
+ if(hubLayoutEnabled('library')&&heading&&panel?.hidden)heading.click();
+}
+function initHubLayoutSettings(){
+ const theme=document.getElementById('materialThemeSettings');
+ if(!document.getElementById('hubLayoutSettings'))theme.insertAdjacentHTML('beforeend',`<div id="hubLayoutSettings"><h3>Sekme görünümü</h3><p class="muted">Açtığında tüm bölümler sekmenin içinde doğrudan görünür.</p>${[['club','Kulüp'],['library','Kitaplık']].map(([id,label])=>`<label class="hub-layout-setting"><span><b>${label}</b><small>İçerikleri doğrudan göster</small></span><input type="checkbox" role="switch" data-hub-layout="${id}" aria-label="${label}: içerikleri doğrudan göster"><span class="layout-switch" aria-hidden="true"></span></label>`).join('')}</div>`);
+ document.querySelectorAll('[data-hub-layout]').forEach(input=>{
+  input.checked=hubLayoutEnabled(input.dataset.hubLayout);
+  input.onchange=()=>{
+   const hub=input.dataset.hubLayout;
+   try{localStorage.setItem('bookhook_layout_'+currentUid+'_'+hub,input.checked?'expanded':'cards');}
+   catch(_){input.checked=!input.checked;showToast('Görünüm tercihi kaydedilemedi.');return;}
+   applyHubLayout(hub,{render:activeTab===hub});
+  };
+ });
+ for(const hub of ['club','library'])applyHubLayout(hub);
+}
+// Yeniden menü kurulurken taşınmış asıl bölümler innerHTML ile silinmesin.
+function preserveHubSections(){
+ const main=document.querySelector('.content-col > main');
+ document.querySelectorAll('#materialClubGrid .hub-item-panel-inner > section.tab, #materialLibraryGrid .hub-item-panel-inner > section.tab').forEach(section=>{
+  section.classList.remove('active');main.append(section);
+ });
+}
+
 function materialInit(){
+ preserveHubSections();
  document.querySelectorAll('[data-material-name]').forEach(el=>el.textContent=myProfile.name||'');
  document.querySelectorAll('[data-material-date]').forEach(el=>el.textContent=nowLogical().toLocaleDateString('tr-TR',{day:'numeric',month:'long',weekday:'long'}));
  document.querySelectorAll('[data-panels]').forEach(control=>{
@@ -10117,6 +10149,7 @@ function materialInit(){
   button.onclick=()=>{const v=button.dataset.themeChoice;setAutoThemeEnabled(v==='auto');setTheme(v==='auto'?computeAutoTheme():v);materialThemeSync();};
  });
  materialThemeSync();
+ initHubLayoutSettings();
  const name=document.getElementById('whoamiClickable');name.setAttribute('role','button');name.tabIndex=0;name.setAttribute('aria-label','Profilim');name.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();name.click();}};
  document.querySelectorAll('button[title]').forEach(button=>{if(!button.hasAttribute('aria-label'))button.setAttribute('aria-label',button.title);});
  document.getElementById('notifBellBtn').setAttribute('aria-label','Bildirimler');
@@ -10673,3 +10706,4 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
