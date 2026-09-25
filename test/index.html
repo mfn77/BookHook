@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-44-layout-settings" />
+<link rel="stylesheet" href="./style.css?v=material-45-edit-goals" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -3407,6 +3407,49 @@ function goalHistoryCounts(goals,records,day=todayStr(),now=Date.now()){
  for(const goal of goals.monthly){if(Date.parse(goal.end)<=now)count[(goal.completed||[]).length>=goal.target?'monthlyWin':'monthlyLoss']++;}
  return count;
 }
+function goalEditButton(kind){
+ const label=kind==='daily'?'Günlük sayfa hedefini düzenle':'Aylık kitap hedefini düzenle';
+ return `<button type="button" class="goal-edit-button icon-button" data-edit-goal="${kind}" aria-label="${label}" title="${label}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 6.1A8 8 0 0 1 19.5 10M4.5 14A8 8 0 0 0 17.9 17.9"/></svg></button>`;
+}
+async function updatePersonalGoal(kind,target,expected,uid,day){
+ if(!Number.isSafeInteger(target)||target<(kind==='daily'?15:1))throw Error(kind==='daily'?'En az 15 sayfa yazmalısın.':'En az 1 kitap yazmalısın.');
+ const ref=doc(db,'users',uid);
+ await runTransaction(db,async tx=>{
+  const snapshot=await tx.get(ref),goals=personalGoals(snapshot.data()?.readingGoals);
+  if(uid!==currentUid||day!==todayStr())throw Error('Gün veya oturum değişti. Hedefi yeniden aç.');
+  const goal=kind==='daily'?dailyGoalAt(goals,day):activeMonthlyGoal(goals);
+  if(!goal||goal.start!==expected.start||goal.target!==expected.target||goal.end!==expected.end)throw Error('Hedef değişmiş veya süresi dolmuş. Kartı yeniden aç.');
+  if(goal.target===target)return;
+  if(kind==='daily'&&goal.start<day){
+   // Dünkü ve daha eski hedef sonuçları yeni hedefle yeniden hesaplanmasın.
+   const next={start:day,target,...(goal.end?{end:goal.end}:{})};
+   goal.end=day;goals.daily.push(next);
+  }else goal.target=target;
+  // Aylık hedefte başlangıç, bitiş ve bitirilen kitaplar aynen korunur.
+  tx.update(ref,{readingGoals:goals});
+ });
+}
+function openGoalEditor(kind,goal,section){
+ if(document.querySelector('.goal-edit-dialog'))return;
+ const uid=currentUid,day=todayStr(),expected={...goal};
+ const dialog=document.createElement('dialog');dialog.className='reading-pages-dialog goal-edit-dialog';
+ dialog.innerHTML=`<form novalidate><h2>${kind==='daily'?'Günlük sayfa hedefi':'Aylık kitap hedefi'}</h2><label>${kind==='daily'?'Günde kaç sayfa?':'Bu dönemde kaç kitap?'}<input name="target" type="number" inputmode="numeric" min="${kind==='daily'?15:1}" step="1" required value="${goal.target}" autofocus></label><p class="muted">${kind==='daily'?'Yeni hedef bugünden itibaren geçerli. Önceki günlerin sonuçları korunur.':'Dönem tarihleri ve bitirdiğin kitaplar korunur.'}</p><p class="goal-error" role="alert"></p><div class="row"><button type="button" data-cancel>Vazgeç</button><button type="submit" class="primary">Kaydet</button></div></form>`;
+ let busy=false;
+ const close=()=>{if(busy)return;dialog.close();dialog.remove();};
+ dialog.querySelector('[data-cancel]').onclick=close;dialog.oncancel=e=>{e.preventDefault();close();};
+ dialog.querySelector('form').onsubmit=async e=>{
+  e.preventDefault();if(busy)return;
+  busy=true;dialog.querySelectorAll('button').forEach(b=>b.disabled=true);
+  try{
+   await updatePersonalGoal(kind,Number(e.target.elements.target.value),expected,uid,day);
+   busy=false;close();
+   if(currentUid===uid)renderTotalPagesCard(section.id==='tab-today'?'totalPagesNumber':'mTotalPagesNumber');
+  }catch(err){dialog.querySelector('.goal-error').textContent=err.message||'Hedef kaydedilemedi.';}
+  finally{busy=false;dialog.querySelectorAll('button').forEach(b=>b.disabled=false);}
+ };
+ document.body.append(dialog);dialog.showModal();dialog.querySelector('input').select();
+}
+
 function goalForm(kind){return `<form class="goal-form" data-goal-form="${kind}"><label>${kind==='daily'?'Günde kaç sayfa?':'Bir ayda kaç kitap?'}<input type="number" name="target" inputmode="numeric" min="${kind==='daily'?15:1}" step="1" required placeholder="${kind==='daily'?'Örn. 30':'Örn. 2'}"></label><button class="primary" type="submit">Belirle</button><p class="goal-error" role="alert"></p></form>`;}
 function goalProgress(value,target){return `<progress value="${Math.min(value,target)}" max="${target}" aria-label="Hedef ilerlemesi"></progress>`;}
 async function renderPersonalGoals(section,totals,uid=currentUid){
@@ -3420,8 +3463,8 @@ async function renderPersonalGoals(section,totals,uid=currentUid){
   const rec=totals.records[day],pages=rec?.status==='read'?(Number.isSafeInteger(rec.pages)&&rec.pages>=15?rec.pages:15):0;
   updateSelfReadButton(section,rec,daily);
   const dailyText=pages>=daily?.target?`Bugünkü hedefini ${pages} sayfayla tamamladın.`:pages?`Bugün ${pages} sayfa okudun. Hedefine ${Math.max(0,(daily?.target||0)-pages)} sayfa kaldı.`:'Bugün henüz okuma kaydın yok.';
-  grid.innerHTML=`<div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▤</span><h2>Günlük sayfa hedefi</h2>${daily?`<strong class="goal-value">${daily.target} <small>sayfa / gün</small></strong>${goalProgress(pages,daily.target)}<p role="status">${dailyText}</p>${daily.end?'<p class="muted">Hedefin yarın 06.00’da sona erecek.</p>':'<button type="button" class="ai-text-action" data-stop-goal>Hedefi yarından itibaren bırak</button>'}`:goalForm('daily')}<p class="muted">İsteğe bağlı</p></div>
-  <div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▥</span><h2>Aylık kitap hedefi</h2>${monthly?`<strong class="goal-value">${monthly.target} <small>kitap</small></strong>${goalProgress((monthly.completed||[]).length,monthly.target)}<p role="status">Bu ay ${(monthly.completed||[]).length} kitap bitirdin.</p><p class="muted">${new Date(monthly.end).toLocaleString('tr-TR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})} tarihinde sona erer.</p>`:`${last?`<p class="goal-result" role="status">${(last.completed||[]).length>=last.target?'Son hedefinde başarılı oldun.':'Son hedefini tamamlayamadın.'} ${(last.completed||[]).length} / ${last.target} kitap.</p>`:''}${goalForm('monthly')}` }<p class="muted">İsteğe bağlı</p></div>`;
+  grid.innerHTML=`<div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▤</span><h2>Günlük sayfa hedefi</h2>${daily?goalEditButton("daily"):""}${daily?`<strong class="goal-value">${daily.target} <small>sayfa / gün</small></strong>${goalProgress(pages,daily.target)}<p role="status">${dailyText}</p>${daily.end?'<p class="muted">Hedefin yarın 06.00’da sona erecek.</p>':'<button type="button" class="ai-text-action" data-stop-goal>Hedefi yarından itibaren bırak</button>'}`:goalForm('daily')}<p class="muted">İsteğe bağlı</p></div>
+  <div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▥</span><h2>Aylık kitap hedefi</h2>${monthly?goalEditButton("monthly"):""}${monthly?`<strong class="goal-value">${monthly.target} <small>kitap</small></strong>${goalProgress((monthly.completed||[]).length,monthly.target)}<p role="status">Bu ay ${(monthly.completed||[]).length} kitap bitirdin.</p><p class="muted">${new Date(monthly.end).toLocaleString('tr-TR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})} tarihinde sona erer.</p>`:`${last?`<p class="goal-result" role="status">${(last.completed||[]).length>=last.target?'Son hedefinde başarılı oldun.':'Son hedefini tamamlayamadın.'} ${(last.completed||[]).length} / ${last.target} kitap.</p>`:''}${goalForm('monthly')}` }<p class="muted">İsteğe bağlı</p></div>`;
   const counts=goalHistoryCounts(goals,totals.records);
   history.innerHTML=`<h2>Hedef geçmişin</h2><div class="goal-history-grid"><div><b>Günlük sayfa hedefleri</b><p><span class="goal-success"><strong class="goal-history-number">${counts.dailyWin}</strong> tamamladın</span><br><strong class="goal-history-number">${counts.dailyLoss}</strong> tamamlayamadın</p></div><div><b>Aylık kitap hedefleri</b><p><span class="goal-success"><strong class="goal-history-number">${counts.monthlyWin}</strong> tamamladın</span><br><strong class="goal-history-number">${counts.monthlyLoss}</strong> tamamlayamadın</p></div></div><span class="muted">Süresi devam eden hedefler başarısız sayılmaz.</span>`;
   grid.querySelectorAll('[data-goal-form]').forEach(form=>form.onsubmit=async e=>{
@@ -3429,6 +3472,7 @@ async function renderPersonalGoals(section,totals,uid=currentUid){
    try{await savePersonalGoal(form.dataset.goalForm,Number(form.elements.target.value));await renderPersonalGoals(section,totals,uid);}
    catch(err){form.querySelector('.goal-error').textContent=err.message||'Hedef kaydedilemedi.';button.disabled=false;}
   });
+  grid.querySelectorAll('[data-edit-goal]').forEach(button=>button.onclick=()=>openGoalEditor(button.dataset.editGoal,button.dataset.editGoal==='daily'?daily:monthly,section));
   const stop=grid.querySelector('[data-stop-goal]');if(stop)stop.onclick=async()=>{
    stop.disabled=true;try{await stopDailyGoal();await renderPersonalGoals(section,totals,uid);}catch(err){showToast('Hedef değiştirilemedi. Tekrar dene.');stop.disabled=false;}
   };
@@ -10737,4 +10781,5 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
 
