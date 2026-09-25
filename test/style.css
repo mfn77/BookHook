@@ -357,3 +357,23 @@ html[data-theme=dark]{--preview-peach:#3d3027;--preview-blue:#24333e}
 .ai-rec-explanation p,.ai-modal-reason{white-space:pre-line;-webkit-line-clamp:unset;overflow:visible;display:block}
 .ai-modal-reason{font-size:14px;line-height:1.6;text-align:left;color:var(--ink-70)}
 .ai-expanded-pitch{margin-top:10px!important}
+
+/* Açılma okları aynı ölçü, renk ve konum kuralını paylaşır. */
+.ai-card-chevron,.hub-item .destination-row>.hub-chevron{position:absolute;right:20px;top:22px;font-size:15px;font-weight:400;line-height:1.5;color:var(--ink)}
+@media(max-width:700px){.ai-card-chevron,.hub-item .destination-row>.hub-chevron{right:16px;top:20px;font-size:14px}}
+.daily-stats .total-days-card,.daily-stats .completed-books-card{grid-column:auto;background:var(--secondary-container)}
+/* Bronz alev, gümüş yıldız, altın hedef, mavi elmas, mor kupa, turuncu kurt. */
+.badge-art{width:100%;height:100%;display:block;flex-shrink:0;color:var(--badge-accent)}
+.badge-art-b3{--badge-accent:#b87942;--badge-light:#ffe0ba;--badge-dark:#6f4525}
+.badge-art-b5{--badge-accent:#89969f;--badge-light:#f2f6fa;--badge-dark:#45545f}
+.badge-art-b7{--badge-accent:#c99c20;--badge-light:#fff0ac;--badge-dark:#755612}
+.badge-art-b14{--badge-accent:#299fc4;--badge-light:#c8f4ff;--badge-dark:#17617c}
+.badge-art-b21{--badge-accent:#9952bd;--badge-light:#f2d5ff;--badge-dark:#5c2d77}
+.badge-art-b30{--badge-accent:#e08032;--badge-light:#ffdfb9;--badge-dark:#7d411c}
+html[data-theme=dark] .badge-art{filter:brightness(1.13)}
+.hp-emblem:has(.badge-art){background:transparent;border-radius:0}
+.badge-shelf-coin>span:has(.badge-art){display:block;width:100%;height:100%}
+.tier-badge-icon:has(.badge-art){background:var(--paper)!important}
+.milestone>span:has(.badge-art){background:transparent;overflow:visible;padding:0}
+.milestone:not(.earned) .badge-art{opacity:.3;filter:grayscale(1)}
+.daily-stats{grid-auto-rows:1fr}

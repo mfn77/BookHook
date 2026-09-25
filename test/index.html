@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-40-preview-arrows" />
+<link rel="stylesheet" href="./style.css?v=material-41-badges-stats" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -133,7 +133,7 @@
  <div class="daily-actions"><button class="stamp-btn big read" id="aSelfReadBtn" title="Okudum">✓ <span>Okudum</span></button></div></div>
  <svg class="daily-illustration" viewBox="0 0 120 120" aria-hidden="true"><path d="M60,102 24,92 24,76 60,84 Z" fill="var(--gold)"/><path d="M60,102 96,92 96,76 60,84 Z" fill="var(--gold-dark)"/><ellipse cx="28" cy="55" rx="11" ry="13" fill="var(--forest)"/><circle cx="24" cy="52" r="2.6" fill="var(--paper)"/><circle cx="32" cy="52" r="2.6" fill="var(--paper)"/><circle cx="62" cy="42" r="8" fill="var(--gold-dark)"/><rect x="58" y="49" width="8" height="6" rx="1.5" fill="var(--ink-70)"/><line x1="62" y1="26" x2="62" y2="20" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="52" y1="32" x2="47" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="72" y1="32" x2="77" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><polygon points="90,64 102,64 96,48" fill="var(--secondary-ink)"/><circle cx="97" cy="38" r="5" fill="var(--rust)"/><circle cx="42" cy="20" r="2" fill="var(--ink-70)"/><circle cx="55" cy="14" r="2" fill="var(--ink-70)"/><circle cx="68" cy="19" r="2" fill="var(--ink-70)"/><path d="M42,20 55,14 68,19" fill="none" stroke="var(--ink-70)" stroke-width="1.2"/></svg></div>
  <div id="aSelfStatusNote" class="muted" role="status"></div><details class="daily-help"><summary>Günün 06.00’da yenilenir</summary><p class="muted" id="aSelfDateNote"></p></details></div>
- <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="aSelfStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="totalPagesNumber">–</strong><span>Tahmini sayfa</span><span class="muted">Okunan gün × 15</span></div><div class="card stat-card total-days-card"><span class="stat-icon" aria-hidden="true">✓</span><strong id="totalDaysNumber">–</strong><span>Toplam okunan gün</span><span class="muted">Şimdiye kadarki tüm okumaların</span></div></div>
+ <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="aSelfStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="totalPagesNumber">–</strong><span>Tahmini sayfa</span><span class="muted">Okunan gün × 15</span></div><div class="card stat-card total-days-card"><span class="stat-icon" aria-hidden="true">✓</span><strong id="totalDaysNumber">–</strong><span>Toplam okunan gün</span><span class="muted">Şimdiye kadarki tüm okumaların</span></div><div class="card stat-card completed-books-card"><span class="stat-icon" aria-hidden="true">▤</span><strong id="completedBooksNumber">–</strong><span>Okunan kitap sayısı</span><span class="muted">Okuduklarım listendeki kitaplar</span></div></div>
  <div class="card common-today"><div id="aSelfQpBook"></div></div>
  <button class="destination-row" data-material-route="records"><span class="route-icon">▥</span><span><b>Haftalık kayıtlar</b><small>Bu haftanın detaylı görünümü</small></span><span>›</span></button>
  </section>
@@ -253,7 +253,7 @@
  <div class="daily-actions"><button class="stamp-btn big read" id="mReadBtn" title="Okudum">✓ <span>Okudum</span></button></div></div>
  <svg class="daily-illustration" viewBox="0 0 120 120" aria-hidden="true"><path d="M60,102 24,92 24,76 60,84 Z" fill="var(--gold)"/><path d="M60,102 96,92 96,76 60,84 Z" fill="var(--gold-dark)"/><ellipse cx="28" cy="55" rx="11" ry="13" fill="var(--forest)"/><circle cx="24" cy="52" r="2.6" fill="var(--paper)"/><circle cx="32" cy="52" r="2.6" fill="var(--paper)"/><circle cx="62" cy="42" r="8" fill="var(--gold-dark)"/><rect x="58" y="49" width="8" height="6" rx="1.5" fill="var(--ink-70)"/><line x1="62" y1="26" x2="62" y2="20" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="52" y1="32" x2="47" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="72" y1="32" x2="77" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><polygon points="90,64 102,64 96,48" fill="var(--secondary-ink)"/><circle cx="97" cy="38" r="5" fill="var(--rust)"/><circle cx="42" cy="20" r="2" fill="var(--ink-70)"/><circle cx="55" cy="14" r="2" fill="var(--ink-70)"/><circle cx="68" cy="19" r="2" fill="var(--ink-70)"/><path d="M42,20 55,14 68,19" fill="none" stroke="var(--ink-70)" stroke-width="1.2"/></svg></div>
  <div id="mMyStatusNote" class="muted" role="status"></div><details class="daily-help"><summary>Günün 06.00’da yenilenir</summary><p class="muted" id="mDateNote"></p></details></div>
- <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="mMyStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="mTotalPagesNumber">–</strong><span>Tahmini sayfa</span><span class="muted">Okunan gün × 15</span></div><div class="card stat-card total-days-card"><span class="stat-icon" aria-hidden="true">✓</span><strong id="mTotalDaysNumber">–</strong><span>Toplam okunan gün</span><span class="muted">Şimdiye kadarki tüm okumaların</span></div></div>
+ <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="mMyStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="mTotalPagesNumber">–</strong><span>Tahmini sayfa</span><span class="muted">Okunan gün × 15</span></div><div class="card stat-card total-days-card"><span class="stat-icon" aria-hidden="true">✓</span><strong id="mTotalDaysNumber">–</strong><span>Toplam okunan gün</span><span class="muted">Şimdiye kadarki tüm okumaların</span></div><div class="card stat-card completed-books-card"><span class="stat-icon" aria-hidden="true">▤</span><strong id="mCompletedBooksNumber">–</strong><span>Okunan kitap sayısı</span><span class="muted">Okuduklarım listendeki kitaplar</span></div></div>
  <div class="card common-today"><div id="mMyQpBook"></div></div>
  <button class="destination-row" data-material-route="records"><span class="route-icon">▥</span><span><b>Haftalık kayıtlar</b><small>Bu haftanın detaylı görünümü</small></span><span>›</span></button>
  </section>
@@ -962,7 +962,7 @@ function avatarHtmlFromProfile(profile, size, proportionHint){
     : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--gold);color:#fff;font-size:${Math.round(proportionBase*0.5)}px;font-family:'Roboto',sans-serif;font-weight:700;">${escapeHtml(initial)}</span>`;
   const iconSize = Math.max(10, Math.round(proportionBase*0.44));
   const badgeOverlay = tierDef
-    ? `<span class="tier-badge-icon" title="${escapeHtml(tierDef.label)}" style="position:absolute; right:-2px; bottom:-2px; width:${iconSize}px; height:${iconSize}px; border-radius:50%; background:${tierDef.color}; display:flex; align-items:center; justify-content:center; font-size:${Math.round(iconSize*0.62)}px; box-shadow:0 0 0 1.5px var(--card);">${tierDef.icon}</span>`
+    ? `<span class="tier-badge-icon" title="${escapeHtml(tierDef.label)}" style="position:absolute; right:-2px; bottom:-2px; width:${iconSize}px; height:${iconSize}px; border-radius:50%; background:${tierDef.color}; display:flex; align-items:center; justify-content:center; font-size:${Math.round(iconSize*0.62)}px; box-shadow:0 0 0 1.5px var(--card);">${badgeIllustration(tierDef.key)}</span>`
     : '';
   // Dıştaki katman sabit boyutlu (size×size) ve rozet halkasını (box-shadow) taşıyor; overflow burada
   // KESİNLİKLE hidden değil, aksi halde halka kırpılırdı. Yuvarlak kırpma tamamen içteki, kendi
@@ -2555,6 +2555,20 @@ const BADGE_DEFS = [
   {key:'b21', days:21, icon:'🏆', label:'3 hafta aralıksız seri', color:'#AB47BC'},
   {key:'b30', days:30, icon:'🐺', label:'Kitap Kurdu (1 ay aralıksız seri)', color:'#FF6F00'}
 ];
+// Rozet kavramları ve eşikleri aynı; ikonlar uygulamaya ait vektör çizimler.
+function badgeIllustration(key){
+ const art={
+ b3:'<path d="M34 10c3 12-10 15-7 26 3-2 6-6 7-10 9 8 16 15 13 24-3 10-25 12-30 0-5-12 6-18 5-28 5 3 6 7 7 10 4-8 1-14 5-22Z" fill="currentColor"/><path d="M32 36c0 7-8 10-6 16 2 5 11 6 13 0 2-5-3-10-7-16Z" fill="var(--badge-light)"/>',
+ b5:'<path d="m32 9 7 15 17 3-12 12 3 17-15-8-15 8 3-17L8 27l17-3Z" fill="currentColor"/><path d="m32 9 1 26-16 21 3-17L8 27l17-3Z" fill="var(--badge-light)" opacity=".65"/><path d="m32 21 3 8 9 2-7 6 2 9-7-4-8 4 2-9-6-6 9-2Z" fill="none" stroke="var(--badge-light)" stroke-width="2"/>',
+ b7:'<circle cx="30" cy="35" r="22" fill="currentColor"/><circle cx="30" cy="35" r="15" fill="var(--badge-light)"/><circle cx="30" cy="35" r="9" fill="currentColor"/><circle cx="30" cy="35" r="3" fill="var(--badge-light)"/><path d="m31 34 20-20m-8 0h9v9" fill="none" stroke="var(--badge-dark)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+ b14:'<path d="m18 12-12 16 26 30 26-30-12-16Z" fill="currentColor"/><path d="m18 12 4 16H6Zm14 0L22 28h20Zm14 0-4 16h16Z" fill="var(--badge-light)"/><path d="M6 28h16l10 30Zm36 0h16L32 58Z" fill="var(--badge-dark)" opacity=".45"/><path d="m22 28 10 30 10-30" fill="var(--badge-light)" opacity=".6"/>',
+ b21:'<path d="M19 13H9v9c0 10 7 16 16 16m20-25h10v9c0 10-7 16-16 16" fill="none" stroke="currentColor" stroke-width="5"/><path d="M18 10h28v18c0 10-6 15-14 15s-14-5-14-15Z" fill="currentColor"/><path d="M23 14v14c0 6 3 9 7 10" fill="none" stroke="var(--badge-light)" stroke-width="4" stroke-linecap="round"/><path d="M29 42h6v10h10v6H19v-6h10Z" fill="var(--badge-dark)"/><path d="m32 18 3 5 6 1-5 4 1 6-5-3-5 3 1-6-5-4 6-1Z" fill="var(--badge-light)"/>',
+ b30:'<path d="m11 9 16 13h10L53 9l-2 30-19 20-19-20Z" fill="currentColor"/><path d="m15 17 10 10-10 5Zm34 0L39 27l10 5Z" fill="var(--badge-dark)"/><path d="m14 37 12 3 6 15 6-15 12-3-8 14-10 8-10-8Z" fill="var(--badge-light)"/><path d="m21 32 7 3m15-3-7 3" stroke="var(--badge-dark)" stroke-width="3" stroke-linecap="round"/><path d="m27 43 5-3 5 3-5 6Z" fill="var(--badge-dark)"/>'
+ };
+ if(!art[key])return '';
+ return `<svg class="badge-art badge-art-${key}" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="31" fill="currentColor" opacity=".1"/>${art[key]}</svg>`;
+}
+
 function currentTierForStreak(streak){
   let tier = null;
   BADGE_DEFS.forEach(def=>{ if(streak>=def.days) tier = def.key; });
@@ -3200,8 +3214,8 @@ function renderBadgeHistoryShelf(rows){
         ? `<div class="badge-shelf-info" style="background:linear-gradient(145deg, ${shadeHexColor(def.color,-0.28)} 0%, ${shadeHexColor(def.color,-0.62)} 100%);"><span class="badge-shelf-info-text">${escapeHtml(formatStreakDuration(def.days))}</span></div>`
         : '';
       const coinHtml = earned
-        ? `<div class="badge-shelf-coin" title="${escapeHtml(def.label)} — ${count} kere" style="background:${def.color};"><span>${def.icon}</span>${countBadge}${infoPop}</div>`
-        : `<div class="badge-shelf-coin ghost" title="${escapeHtml(def.label)} — henüz kazanılmadı"><span>${def.icon}</span></div>`;
+        ? `<div class="badge-shelf-coin" title="${escapeHtml(def.label)} — ${count} kere" style="background:${def.color};"><span>${badgeIllustration(def.key)}</span>${countBadge}${infoPop}</div>`
+        : `<div class="badge-shelf-coin ghost" title="${escapeHtml(def.label)} — henüz kazanılmadı"><span>${badgeIllustration(def.key)}</span></div>`;
       return `<div class="badge-shelf-item">${coinHtml}</div>`;
     }).join('');
     return `<div class="badge-shelf-row">
@@ -3263,7 +3277,7 @@ async function renderWormsShared(myStreakContainerId, clubStreaksContainerId, hi
   } else {
     const own = results.find(r=>r.uid===currentUid);
     const streak = own ? own.streak : 0;
-    myBox.innerHTML = `<div class="material-streak-hero"><div class="material-medal">${streak}</div><h2>${streak} gündür aralıksız</h2><p class="muted">Her gün birkaç sayfa, yeni bir alışkanlık.</p><div class="milestones">${BADGE_DEFS.map(d=>`<div class="milestone ${streak>=d.days?'earned':''}"><span>${d.days}</span><small>${d.days} gün</small></div>`).join('')}</div></div>`;
+    myBox.innerHTML = `<div class="material-streak-hero"><div class="material-medal">${streak}</div><h2>${streak} gündür aralıksız</h2><p class="muted">Her gün birkaç sayfa, yeni bir alışkanlık.</p><div class="milestones">${BADGE_DEFS.map(d=>`<div class="milestone ${streak>=d.days?'earned':''}"><span>${badgeIllustration(d.key)}</span><small>${d.days} gün</small></div>`).join('')}</div></div>`;
     clubBox.innerHTML = `<div class="streak-grid">${results.map(r=>{
       const u = usersCache[r.uid] || {};
       return `<div class="streak-card ${r.uid===currentUid?'mine':''}">${avatarHtmlFromProfile(u,52)}<b>${escapeHtml(u.name||'?')}</b><span class="streak-card-days">${r.streak} gün</span></div>`;
@@ -3286,6 +3300,7 @@ async function renderWormsShared(myStreakContainerId, clubStreaksContainerId, hi
 async function renderTotalPagesCard(elId){
   const pagesEl = document.getElementById(elId);
   if(!pagesEl) return;
+  renderCompletedBooksCount(elId==='totalPagesNumber'?'completedBooksNumber':'mCompletedBooksNumber');
   showCachedOrPlaceholder(pagesEl, '…');
   const daysEl=document.getElementById(elId==='totalPagesNumber'?'totalDaysNumber':'mTotalDaysNumber');
   if(daysEl) showCachedOrPlaceholder(daysEl,'…');
@@ -3293,6 +3308,16 @@ async function renderTotalPagesCard(elId){
   pagesEl.textContent = (totalReadDays*15).toLocaleString('tr-TR');
   if(daysEl){daysEl.textContent=totalReadDays.toLocaleString('tr-TR');markLoaded(daysEl);}
   markLoaded(pagesEl);
+}
+async function renderCompletedBooksCount(elId){
+  const el=document.getElementById(elId);if(!el||!currentUid)return;
+  const uid=currentUid;showCachedOrPlaceholder(el,'…');
+  try{
+    // bookHistory = bitirilen kitaplar; readBooks = halen okunanlar.
+    const snap=await getDocs(collection(db,'users',uid,'bookHistory'));
+    if(currentUid!==uid)return;
+    el.textContent=snap.size.toLocaleString('tr-TR');markLoaded(el);
+  }catch(_){if(currentUid===uid)el.textContent='–';}
 }
 async function computeTotalReadDays(uid){
   const joinDs = joinDateStrOf(uid);
@@ -10004,7 +10029,8 @@ const hubPreviews=(()=>{
  function content(s){
   if(s.book){const url=coverURL(s.cover);return `<span class="hp-book-cover"><span>${esc(s.title.slice(0,1))}</span>${url?`<img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}</span><span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-book-title">${esc(s.title)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;}
   if(s.stats)return `<span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><span class="hp-stats">${s.stats.map(x=>`<span class="hp-stat ${x.tone}"><i>${esc(x.icon)}</i><b>${esc(x.value)}</b><small>${esc(x.label)}</small></span>`).join('')}</span><span class="hp-detail">${esc(s.detail)}</span></span>`;
-  return `<span class="hp-emblem ${esc(s.tone)}">${esc(s.icon)}</span><span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-value">${esc(s.value)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;
+  const badge=BADGE_DEFS.find(d=>d.icon===s.icon);
+  return `<span class="hp-emblem ${esc(s.tone)}">${badge?badgeIllustration(badge.key):esc(s.icon)}</span><span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-value">${esc(s.value)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;
  }
  function paint(st,animate=false,direction=0){
   const slide=st.slides[st.index%st.slides.length], host=st.item.querySelector('.hp-stage');if(!host)return;
@@ -10081,8 +10107,8 @@ const hubPreviews=(()=>{
     const latest=draws[0];const week=latest?.weekStart;
     const pairs=(latest?.pairs||[]).filter(p=>p.giverUid&&p.receiverUid);
     const name=id=>id===uid?'Sen':usersCache[id]?.name||'Kulüp üyesi';
-    const slides=pairs.map(p=>metric(week?`${week} haftası · son kura`:'Son kura',`${name(p.giverUid)} → ${name(p.receiverUid)}`,'Kitap hediyesi eşleşmesi','↗'));
-    if(!slides.length)slides.push(metric('Hediye eşleşmeleri','Henüz kura yok','İlk eşleşmeler burada görünecek.','↗'));
+    const slides=pairs.map(p=>metric(week?`${week} haftası · son kura`:'Son kura',`${name(p.giverUid)} → ${name(p.receiverUid)}`,'Kitap hediyesi eşleşmesi','→'));
+    if(!slides.length)slides.push(metric('Hediye eşleşmeleri','Henüz kura yok','İlk eşleşmeler burada görünecek.','→'));
     slides.push({label:'Senin hediye geçmişin',stats:[{icon:'↓',tone:'hp-ok',value:gifts.filter(g=>g.receiverUid===uid).length,label:'Aldığın'},{icon:'↑',tone:'',value:gifts.filter(g=>g.giverUid===uid).length,label:'Verdiğin'}],detail:quarterlySnap?'Teslim alındığı onaylanan kitaplar':'Haftalık hediyeler · ortak kitap verisi alınamadı'});
     slides.push(metric('Kulüpte bugüne kadar',`${gifts.length} kitap`,quarterlySnap?'Haftalık + ortak kitap · teslim onaylı':'Haftalık hediyeler · ortak kitap verisi alınamadı','♡','hp-ok'));return slides;
    },uid)
