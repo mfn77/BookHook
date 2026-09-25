@@ -132,6 +132,15 @@ service cloud.firestore {
       allow write: if isSignedIn() && isAdmin();
     }
 
+    // AI'dan alınan kitap anlatım metinleri (getBookPitch) — kitap başına bir kez alınıp burada
+    // kalıcı olarak saklanıyor, kulübün tüm üyeleri aynı kayıttan yararlanıyor (gereksiz AI
+    // çağrısını önlemek için). İçerik sadece güvenilir Cloud Function'dan geliyor, discoverAdditions
+    // ile aynı izin deseni yeterli.
+    match /bookPitches/{bookKey} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+    }
+
     // 3 aylık ortak kitap seçimi (turnuva usulü oylama). Ana durum belgesi (faz, süre, turnuva
     // sonucu) sadece sunucu tarafından (Cloud Function / Admin SDK) yazılıyor — istemci sadece
     // okuyor. Öneriler ve tur eşleşmeleri (oy verme dahil) istemciden yazılabiliyor; doğruluk

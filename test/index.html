@@ -5509,18 +5509,34 @@ function wireAiRecItems(items){
     };
   }
 }
-// Aynı oturumda aynı kitaba tekrar tıklanırsa ikna metnini yeniden istemeyelim diye basit bir
-// önbellek — sayfa yenilenince temizlenir, Firestore'a yazılmaz (zaten ucuz/isteğe bağlı bir çağrı).
+// Aynı oturumda aynı kitaba tekrar tıklanırsa hızlı dönsün diye bellek-içi bir önbellek (sayfa
+// yenilenince temizlenir), AMA asıl kalıcı önbellek 'bookPitches/{bookKey}' koleksiyonunda —
+// discoverCovers ile aynı desen: bir kitabın anlatım metni AI'dan bir kez alınınca herkes için
+// (kulübün tamamı için, sadece kendi cihazın için değil) kalıcı olarak saklanıyor, aynı kitabı
+// başka bir üye (ya da aynı üye uygulamayı kapatıp açtıktan sonra) tekrar açtığında AI'a tekrar
+// sorulmuyor — her açılışta baştan çekilmesi hem gecikme hem de gereksiz AI kredisi harcaması
+// demekti.
 const aiPitchCache = {};
 const aiPitchPending = new Map();
 async function getAiBookPitch(rec){
   const key=`${rec.title}|${rec.author}`;
   if(aiPitchCache[key])return aiPitchCache[key];
   if(aiPitchPending.has(key))return aiPitchPending.get(key);
+  const docId=bookKeyFor({title:rec.title,author:rec.author});
   const task=(async()=>{
+    try{
+      const snap=await getDoc(doc(db,'bookPitches',docId));
+      if(snap.exists()){
+        const text=snap.data().text;
+        if(typeof text==='string'&&text.trim())return aiPitchCache[key]=text;
+      }
+    }catch(e){}
     const res=await httpsCallable(cloudFunctions,'getBookPitch')({title:rec.title,author:rec.author});
     if(typeof res.data?.text!=='string'||!res.data.text.trim())throw new Error('Açıklama alınamadı');
-    return aiPitchCache[key]=res.data.text;
+    const text=res.data.text;
+    aiPitchCache[key]=text;
+    setDoc(doc(db,'bookPitches',docId),{text,fetchedAt:new Date().toISOString()}).catch(()=>{});
+    return text;
   })();
   aiPitchPending.set(key,task);
   try{return await task;}finally{aiPitchPending.delete(key);}
