@@ -221,6 +221,17 @@
       </div>
     </section>
 
+    <section class="tab" id="tab-goodreadsimport">
+      <div class="card">
+        <h2>📥 Goodreads'ten İçe Aktar</h2>
+        <p class="muted">Bir üyenin Goodreads'ten dışa aktardığı CSV dosyasını yükleyip okuma geçmişini, şu an okuduklarını ve okumak istediklerini onun hesabına aktarır. Kitap ve yazar adları CSV'deki haliyle, HİÇ DEĞİŞTİRİLMEDEN kaydedilir — sadece o isimle bir kapak bulunabilirse otomatik eklenir. "did-not-finish" rafındaki kitaplar hiçbir listeye uymadığı için atlanır. Zaten hesapta olan (aynı ad+yazar) kitaplar tekrar eklenmez.</p>
+        <div class="field"><label>Üye</label><select id="griUserSelect"><option value="">Seç…</option></select></div>
+        <div class="field"><label>Goodreads CSV dosyası (goodreads_library_export.csv)</label><input type="file" id="griFileInput" accept=".csv,text/csv" /></div>
+        <button type="button" class="primary" id="griStartBtn" disabled>İçe Aktar</button>
+        <div id="griLog" style="margin-top:16px; font-size:13px; line-height:1.6; white-space:pre-wrap;"></div>
+      </div>
+    </section>
+
     <section class="tab" id="tab-members">
       <div class="card">
         <h2>Üyeler &amp; Roller</h2>
@@ -577,7 +588,7 @@
         <h2>📚 Ortak Kitap Seçimi</h2>
         <div id="quarterlyPickBody"><span class="muted">Yükleniyor…</span></div>
       </div></section>
-<section class="tab" id="tab-admin"><h2>Kulübü yönet</h2><div id="materialAdminLinks" class="settings-list"></div><h2>Deneme alanları</h2><div class="settings-list"><button class="destination-row" data-material-route="manual"><span class="route-icon">⚄</span><span><b>Manuel kura</b><small>Gerçek kayıtlardan bağımsız deneme</small></span><span>›</span></button><button class="destination-row" data-material-route="qptest"><span class="route-icon">▤</span><span><b>Ortak kitap seçimi</b><small>Ayrı deneme alanı</small></span><span>›</span></button></div><details id="materialMaintenance"><summary>Bakım araçları ve kura yönetimi</summary></details></section>
+<section class="tab" id="tab-admin"><h2>Kulübü yönet</h2><div id="materialAdminLinks" class="settings-list"></div><h2>Araçlar</h2><div class="settings-list"><button class="destination-row" data-material-route="goodreadsimport"><span class="route-icon">📥</span><span><b>Goodreads içe aktar</b><small>Bir üyenin CSV'sinden okuma geçmişini yükle</small></span><span>›</span></button></div><h2>Deneme alanları</h2><div class="settings-list"><button class="destination-row" data-material-route="manual"><span class="route-icon">⚄</span><span><b>Manuel kura</b><small>Gerçek kayıtlardan bağımsız deneme</small></span><span>›</span></button><button class="destination-row" data-material-route="qptest"><span class="route-icon">▤</span><span><b>Ortak kitap seçimi</b><small>Ayrı deneme alanı</small></span><span>›</span></button></div><details id="materialMaintenance"><summary>Bakım araçları ve kura yönetimi</summary></details></section>
       </main>
     </div>
   </div>
@@ -1760,6 +1771,7 @@ const HAMBURGER_ADMIN_EXTRA = [
   {id:'editpast', label:'Geçmiş Düzenle', icon:'✎'},
   {id:'manual', label:'Manuel Kura', icon:'⚙'},
   {id:'qptest', label:'Deneme: Ortak Kitap Seçimi', icon:'🧪'},
+  {id:'goodreadsimport', label:'Goodreads İçe Aktar', icon:'📥'},
   {id:'members', label:'Üyeler', icon:'⚈'},
   {id:'rules', label:'Grup Kuralları', icon:'§'},
   {id:'settings', label:'Ayarlar', icon:'⚒'},
@@ -2286,6 +2298,7 @@ function renderTab(id){
   }
   else if(id==='manual') renderManualTab();
   else if(id==='qptest') renderQpTestTab();
+  else if(id==='goodreadsimport') renderGoodreadsImportTab();
   else if(id==='members') renderAdminMembers();
   else if(id==='worms') renderAdminWorms();
   else if(id==='msurvey') renderMemberSurvey();
@@ -10097,7 +10110,7 @@ function materialThemeSync(){
 // admin alt ekranları (members/manual/...) önce 'admin'e, o da HUB_PARENT üzerinden kendi
 // hub'ına (artık 'appsettings') çözülür; hub kartı id'leri (gifts/rules/bookhistory/...) zaten
 // HUB_PARENT'ta kayıtlı. Eşleşme yoksa güvenli varsayılan olarak 'club' döner.
-const ADMIN_SUB_SCREENS = ['members','manual','qptest','editpast','whoreadtoday'];
+const ADMIN_SUB_SCREENS = ['members','manual','qptest','editpast','whoreadtoday','goodreadsimport'];
 function materialHubRoot(id){
  if(ADMIN_SUB_SCREENS.includes(id)) id = 'admin';
  if(['club','library','appsettings'].includes(id)) return id;
@@ -10153,7 +10166,7 @@ function materialRenderPhase(qp){
 document.body.addEventListener('click',e=>{
  const route=e.target.closest('[data-material-route]');if(!route||!myProfile)return;
  const id=materialRoute(route.dataset.materialRoute);
- if(['admin','members','manual','qptest','editpast','whoreadtoday'].includes(id)&&myProfile.role!=='admin')return;
+ if(['admin','members','manual','qptest','editpast','whoreadtoday','goodreadsimport'].includes(id)&&myProfile.role!=='admin')return;
  switchTab(id);
 });
 // Keyboard support for dynamically rendered interactive cards without changing their actions.
@@ -10336,6 +10349,144 @@ const hubPreviews=(()=>{
  },250);
  return {sync};
 })();
+
+/* ============ ADMIN: GOODREADS'TEN İÇE AKTARMA ============
+   Bir üyenin Goodreads'ten dışa aktardığı CSV'sini (goodreads_library_export.csv) okuyup
+   Exclusive Shelf'e göre doğru koleksiyona (bookHistory/readBooks/wantToRead) yazar. Kitap/yazar
+   adları CSV'deki haliyle DOKUNULMADAN kaydedilir; sadece kapak arama sorgusunda kullanılır —
+   kaydedilen title/author asla API'nin döndürdüğü isimle değiştirilmez, sadece cover doldurulur.
+   Kapak arama, seedDiscoverCovers()'daki ile aynı iki-kaynaklı (Google Books + Open Library) +
+   hız sınırlamalı deseni kullanır. firestore.rules'taki admin-override sayesinde admin başka bir
+   üyenin bookHistory/readBooks/wantToRead koleksiyonlarına yazabiliyor. */
+function parseGoodreadsCSV(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ','){ row.push(field); field=''; }
+      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else if(c === '\r'){ /* \n zaten satırı kapatıyor, atla */ }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  if(!rows.length) return [];
+  const header = rows[0].map(h=>h.trim());
+  return rows.slice(1).filter(r=>r.some(v=>v!=='')).map(r=>{
+    const obj = {};
+    header.forEach((h,idx)=>{ obj[h] = r[idx]!==undefined ? r[idx] : ''; });
+    return obj;
+  });
+}
+const GOODREADS_SHELF_TO_COLLECTION = { 'read':'bookHistory', 'currently-reading':'readBooks', 'to-read':'wantToRead' };
+function goodreadsDateToIso(dateStr){
+  if(!dateStr) return new Date().toISOString();
+  const d = new Date(dateStr.replace(/\//g,'-'));
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+function bookDedupeKey(title, author){ return (title||'').trim().toLowerCase()+'|'+(author||'').trim().toLowerCase(); }
+async function findGoodreadsBookCover(title, author){
+  try{
+    const settled = await Promise.allSettled([
+      searchGoogleBooks(`${title} ${author}`),
+      searchOpenLibrary(`${title} ${author}`)
+    ]);
+    const pick = (r)=> (r.status==='fulfilled' && r.value && r.value[0]) ? r.value[0] : null;
+    const candidates = settled.map(pick).filter(Boolean);
+    const withCover = candidates.find(c=>c.cover);
+    return withCover ? withCover.cover : '';
+  }catch(e){ return ''; }
+}
+function renderGoodreadsImportTab(){
+  const select = document.getElementById('griUserSelect');
+  const fileInput = document.getElementById('griFileInput');
+  const startBtn = document.getElementById('griStartBtn');
+  const log = document.getElementById('griLog');
+  if(!select || !fileInput || !startBtn || !log) return;
+  const sortedUids = Object.keys(usersCache).filter(uid=>!usersCache[uid].deleted).sort((a,b)=> (usersCache[a].name||'').localeCompare(usersCache[b].name||'','tr'));
+  select.innerHTML = '<option value="">Seç…</option>' + sortedUids.map(uid=>{
+    const u = usersCache[uid];
+    const label = u.surname ? `${u.name||'?'} ${u.surname}` : (u.name||'?');
+    return `<option value="${uid}">${escapeHtml(label)}</option>`;
+  }).join('');
+  const updateBtn = ()=>{ startBtn.disabled = !(select.value && fileInput.files && fileInput.files[0]); };
+  select.onchange = updateBtn;
+  fileInput.onchange = updateBtn;
+  log.textContent = '';
+  startBtn.onclick = async ()=>{
+    const targetUid = select.value;
+    const file = fileInput.files && fileInput.files[0];
+    if(!targetUid || !file) return;
+    const targetName = usersCache[targetUid]?.name || targetUid;
+    if(!confirm(`${targetName} adlı üyenin hesabına CSV'deki kitaplar eklenecek. Devam edilsin mi?`)) return;
+    startBtn.disabled = true;
+    select.disabled = true;
+    fileInput.disabled = true;
+    const lines = [];
+    const print = (s)=>{ lines.push(s); log.textContent = lines.join('\n'); log.scrollTop = log.scrollHeight; };
+    try{
+      const text = await file.text();
+      const rows = parseGoodreadsCSV(text);
+      print(`${rows.length} satır okundu.`);
+      const grouped = { bookHistory:[], readBooks:[], wantToRead:[] };
+      let skippedShelf = 0;
+      rows.forEach(r=>{
+        const shelf = (r['Exclusive Shelf']||'').trim();
+        const collectionName = GOODREADS_SHELF_TO_COLLECTION[shelf];
+        const title = (r['Title']||'').trim();
+        if(!collectionName || !title){ skippedShelf++; return; }
+        grouped[collectionName].push({
+          title,
+          author: (r['Author']||'').trim() || 'Bilinmeyen Yazar',
+          addedAt: goodreadsDateToIso(shelf==='read' ? (r['Date Read']||r['Date Added']) : r['Date Added'])
+        });
+      });
+      print(`Atlanan (did-not-finish veya boş raf): ${skippedShelf}`);
+      print(`Okundu (bookHistory): ${grouped.bookHistory.length}, Şu an okunuyor (readBooks): ${grouped.readBooks.length}, Okumak istenen (wantToRead): ${grouped.wantToRead.length}`);
+
+      let totalAdded = 0, totalDup = 0, totalCoverFound = 0;
+      for(const collectionName of ['bookHistory','readBooks','wantToRead']){
+        const items = grouped[collectionName];
+        if(!items.length) continue;
+        print(`\n${collectionName}: mevcut kayıtlar kontrol ediliyor…`);
+        const existingSnap = await getDocs(collection(db,'users',targetUid,collectionName));
+        const existingKeys = new Set();
+        existingSnap.forEach(d=>{ const x=d.data(); existingKeys.add(bookDedupeKey(x.title,x.author)); });
+        let added=0, dup=0, coverFound=0, failStreak=0;
+        for(const item of items){
+          const key = bookDedupeKey(item.title, item.author);
+          if(existingKeys.has(key)){ dup++; continue; }
+          existingKeys.add(key);
+          const cover = await findGoodreadsBookCover(item.title, item.author);
+          if(cover) coverFound++; else failStreak++;
+          await addDoc(collection(db,'users',targetUid,collectionName), {
+            author: item.author, title: item.title, cover, addedAt: item.addedAt
+          });
+          added++;
+          if(added % 10 === 0) print(`  ${collectionName}: ${added} eklendi (${items.length} kitaptan)…`);
+          await sleep(failStreak > 8 ? 700 : 90);
+        }
+        print(`${collectionName}: ${added} eklendi, ${dup} zaten vardı (atlandı), ${coverFound} kapak bulundu.`);
+        totalAdded += added; totalDup += dup; totalCoverFound += coverFound;
+      }
+      print(`\nTamamlandı. Toplam ${totalAdded} kitap eklendi (${totalCoverFound} kapaklı), ${totalDup} zaten mevcuttu.`);
+      showToast(`${targetName}: ${totalAdded} kitap içe aktarıldı.`);
+    }catch(err){
+      print(`HATA: ${err.message||err}`);
+    }finally{
+      startBtn.disabled = false;
+      select.disabled = false;
+      fileInput.disabled = false;
+    }
+  };
+}
 
 onAuthStateChanged(auth, async (user)=>{
   if(unsubUsers){ unsubUsers(); unsubUsers=null; }
