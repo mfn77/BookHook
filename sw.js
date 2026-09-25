@@ -1,5 +1,5 @@
-const CACHE = "kitap-kulubu-v18";
-const ASSETS = ["./manifest.json", "./style.css", "./icon-192.png", "./icon-512.png", "./favicon.png", "./apple-touch-icon.png"];
+const CACHE = "kitap-kulubu-v19-brand";
+const ASSETS = ["./manifest.json?v=brand-1", "./style.css?v=material-47-brand", "./logo-mark.png", "./icon-192.png?v=brand-1", "./icon-512.png?v=brand-1", "./favicon.png?v=brand-1", "./apple-touch-icon.png?v=brand-1"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -96,3 +96,4 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+

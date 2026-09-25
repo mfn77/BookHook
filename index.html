@@ -5,24 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>BookHook</title>
 <meta name="theme-color" content="#F8FAF4" />
-<link rel="manifest" href="./manifest.json" />
-<link rel="apple-touch-icon" href="./apple-touch-icon.png?v=4" />
-<link rel="icon" href="./favicon.png?v=4" />
+<link rel="manifest" href="./manifest.json?v=brand-1" />
+<link rel="apple-touch-icon" href="./apple-touch-icon.png?v=brand-1" />
+<link rel="icon" href="./favicon.png?v=brand-1" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-46-remove-goals" />
+<style>html,body{background:#dcebd7}#loadingScreen{position:fixed;inset:0;background:#dcebd7;z-index:1000}.startup-content{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}.startup-mark{display:grid;place-items:center;width:144px;height:144px;border-radius:40px;background:#42664b}.startup-name{font:600 24px system-ui;color:#294c32}.startup-status{font:14px system-ui;color:#42664b}</style>
+<link rel="stylesheet" href="./style.css?v=material-47-brand" />
+
 </head>
 <body>
 <div id="bgLayer"></div>
 
-<div id="loadingScreen" class="loading-note">Yükleniyor…</div>
+<div id="loadingScreen" class="loading-note" role="status"><div class="startup-content"><span class="startup-mark"><img src="./logo-mark.png" width="108" height="108" alt="" /></span><span class="startup-name">BookHook</span><span class="startup-status">Yükleniyor…</span></div></div>
 
 <div id="authScreen" class="auth-wrap" style="display:none;">
   <div class="center-logo">
-    <div class="center-logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5c-3-3-7-3-10-2v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/></svg></div>
+    <div class="center-logo-mark"><img src="./logo-mark.png" width="60" height="60" alt="" /></div>
     <div class="center-logo-word">BookHook</div>
   </div>
   <div id="bannedNotice" class="banned-notice" style="display:none;"></div>
@@ -60,7 +62,7 @@
 <div id="appRoot" style="display:none;">
   <div class="app-shell">
     <aside class="sidebar" id="sidebarNav">
-      <div class="sidebar-header"><button id="sidebarLogoBtn" class="brand-button" aria-label="Bugün"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5c-3-3-7-3-10-2v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/></svg></button></div>
+      <div class="sidebar-header"><button id="sidebarLogoBtn" class="brand-button" aria-label="Bugün"><img src="./logo-mark.png" width="44" height="44" alt="BookHook" /></button></div>
       <nav class="sidebar-tabs tabs" id="tabs"></nav>
       <button type="button" id="sidebarCollapseBtn" class="sidebar-collapse-btn" title="Menüyü gizle">◀</button>
     </aside>
@@ -10889,6 +10891,7 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
 
 
 
