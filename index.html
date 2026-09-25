@@ -10645,7 +10645,7 @@ function renderGoodreadsImportTab(){
 /* PWA/tarayıcı Geri: ekranlar ve geçici ayrıntılar aynı geçmişi kullanır. */
 const appBackNavigation=(()=>{
  const key='bookhookNavigation';let session='';
- let owner=null,entries=[],index=-1,applying=false,scheduled=false,dialogSequence=0,popRevision=0;
+ let owner=null,entries=[],index=-1,applying=false,scheduled=false,dialogSequence=0,popRevision=0,pendingRoot=false;
  const dialogs=new Map();
  function snapshot(){
   const root=document.getElementById('tab-'+activeTab);
@@ -10658,11 +10658,23 @@ const appBackNavigation=(()=>{
  }
  const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
  function state(){return {...(history.state||{}),[key]:{session,index}};}
+ // Ana sekmeler aynı gezinme seviyesidir; ayrı geri adımı oluşturmaz.
+ function replaceRoot(view){
+  session=Date.now().toString(36)+Math.random().toString(36).slice(2);
+  const base={...view,hubs:[],ai:false,layers:[],native:[]};
+  entries=[{view:base,y:scrollY}];index=0;history.replaceState(state(),'');
+  if(!same(base,view)){entries.push({view,y:scrollY});index=1;history.pushState(state(),'');}
+ }
  function sync(){
   scheduled=false;if(applying||!currentUid||!activeTab)return;
   const next=snapshot();
   if(owner!==currentUid||index<0){session=Date.now().toString(36)+Math.random().toString(36).slice(2);owner=currentUid;entries=[{view:next,y:scrollY}];index=0;history.replaceState(state(),'');return;}
   if(same(entries[index].view,next))return;
+  if(entries[index].view.tab!==next.tab&&getTabOrder().includes(next.tab)){
+   if(index>0){pendingRoot=true;applying=true;history.go(-index);}
+   else replaceRoot(next);
+   return;
+  }
   // X/boşluk/Vazgeç ile kapanışta boş bir "geri" adımı bırakma.
   let previous=-1;
   if(entries[index].view.tab===next.tab){
@@ -10711,6 +10723,7 @@ const appBackNavigation=(()=>{
  }
  window.addEventListener('popstate',async event=>{
   if(!currentUid||currentUid!==owner)return;
+  if(pendingRoot){pendingRoot=false;replaceRoot(snapshot());applying=false;return;}
   const target=event.state?.[key];if(!target||target.session!==session||!entries[target.index]){applying=false;return;}
   const from=index;applying=true;index=target.index;
   const accepted=await restore(entries[index],++popRevision);
@@ -10876,5 +10889,6 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
 
 
