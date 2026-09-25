@@ -396,3 +396,6 @@ html[data-theme=dark] .badge-art{filter:brightness(1.13)}
 .goal-form input:focus-visible,.reading-pages-dialog input:focus-visible{outline:2px solid var(--forest)}
 .goal-form input::-webkit-inner-spin-button{appearance:none}
 .personal-goal .muted{font-size:12px}.goal-form .goal-error:empty{display:none}
+.daily-actions .stamp-btn.read:disabled{opacity:.45;cursor:default;box-shadow:none;pointer-events:none}
+.previous-page-count{display:block;font-size:14px;font-weight:400;opacity:.55;margin-top:5px}
+.goal-history-number{display:block;font-size:30px;line-height:1.15;font-weight:700;margin-top:12px}
