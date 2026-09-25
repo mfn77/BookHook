@@ -5511,18 +5511,34 @@ function wireAiRecItems(items){
   }
   syncAiHubLayout();
 }
-// Aynı oturumda aynı kitaba tekrar tıklanırsa ikna metnini yeniden istemeyelim diye basit bir
-// önbellek — sayfa yenilenince temizlenir, Firestore'a yazılmaz (zaten ucuz/isteğe bağlı bir çağrı).
+// Aynı oturumda aynı kitaba tekrar tıklanırsa hızlı dönsün diye bellek-içi bir önbellek (sayfa
+// yenilenince temizlenir), AMA asıl kalıcı önbellek 'bookPitches/{bookKey}' koleksiyonunda —
+// discoverCovers ile aynı desen: bir kitabın anlatım metni AI'dan bir kez alınınca herkes için
+// (kulübün tamamı için, sadece kendi cihazın için değil) kalıcı olarak saklanıyor, aynı kitabı
+// başka bir üye (ya da aynı üye uygulamayı kapatıp açtıktan sonra) tekrar açtığında AI'a tekrar
+// sorulmuyor — her açılışta baştan çekilmesi hem gecikme hem de gereksiz AI kredisi harcaması
+// demekti.
 const aiPitchCache = {};
 const aiPitchPending = new Map();
 async function getAiBookPitch(rec){
   const key=`${rec.title}|${rec.author}`;
   if(aiPitchCache[key])return aiPitchCache[key];
   if(aiPitchPending.has(key))return aiPitchPending.get(key);
+  const docId=bookKeyFor({title:rec.title,author:rec.author});
   const task=(async()=>{
+    try{
+      const snap=await getDoc(doc(db,'bookPitches',docId));
+      if(snap.exists()){
+        const text=snap.data().text;
+        if(typeof text==='string'&&text.trim())return aiPitchCache[key]=text;
+      }
+    }catch(e){}
     const res=await httpsCallable(cloudFunctions,'getBookPitch')({title:rec.title,author:rec.author});
     if(typeof res.data?.text!=='string'||!res.data.text.trim())throw new Error('Açıklama alınamadı');
-    return aiPitchCache[key]=res.data.text;
+    const text=res.data.text;
+    aiPitchCache[key]=text;
+    setDoc(doc(db,'bookPitches',docId),{text,fetchedAt:new Date().toISOString()}).catch(()=>{});
+    return text;
   })();
   aiPitchPending.set(key,task);
   try{return await task;}finally{aiPitchPending.delete(key);}
@@ -5807,6 +5823,11 @@ function showBhBookInfo(b, uid, gridId, collectionName){
         renderBookHistoryGrid(currentUid, gridId, true, collectionName);
         const destGridId = destCollection==='readBooks' ? 'readBooksGrid' : 'bookHistoryGrid';
         if(document.getElementById(destGridId)) renderBookHistoryGrid(currentUid, destGridId, true, destCollection);
+        // "Şu an okuyorum"dan "Okudum"a taşınan bir kitap aylık hedefe sayılabilir — "Bugün"
+        // sekmesindeki hedef kartı bu ekrandan (Kitaplığım) tetiklenmediği için kendiliğinden
+        // yenilenmiyordu, burada elle tazeliyoruz. Aktif olmayan (admin/üye) varyant no-op.
+        renderTotalPagesCard('totalPagesNumber');
+        renderTotalPagesCard('mTotalPagesNumber');
       }catch(err){ alert('Taşınamadı: '+(err.message||err)); btn.disabled = false; }
     });
   }
@@ -10036,12 +10057,22 @@ function hubLayoutEnabled(hub){
 function applyHubLayout(hub,{render=false}={}){
  const root=document.getElementById('tab-'+hub);if(!root)return;
  const flat=hubLayoutEnabled(hub);root.classList.toggle('hub-flat',flat);
+ const main=document.querySelector('.content-col > main');
  root.querySelectorAll('.hub-item').forEach(item=>{
   const section=document.getElementById('tab-'+item.dataset.hubTarget);if(!section)return;
+  const panelInner=item.querySelector('.hub-item-panel-inner');
   if(flat){
-   item.querySelector('.hub-item-panel-inner').append(section);
+   panelInner.append(section);
    section.classList.add('active');
    if(render)renderTab(item.dataset.hubTarget);
+  }else if(main&&panelInner.contains(section)){
+   // Görünüm "doğrudan göster"den kart görünümüne geri alınırken bölüm hâlâ hub-item'ın
+   // panel-inner'ı içinde kalırsa, o panel artık .hub-flat'in display:contents kuralıyla değil
+   // normal akordeon (collapsed) CSS'iyle davranır ve item hiç 'expanded' olmadığı için içerik
+   // görünmez biçimde orada sıkışıp kalırdı — preserveHubSections()'ın materialInit()'te yaptığı
+   // taşımayı burada da (ayar her değiştirildiğinde) yapıyoruz.
+   section.classList.remove('active');
+   main.append(section);
   }
   section.querySelectorAll('.inner-pane-viewport').forEach(viewport=>{
    if(viewport._carousel)viewport._carousel.goTo(viewport._carousel.current,false);
