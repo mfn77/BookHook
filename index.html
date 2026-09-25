@@ -670,7 +670,7 @@
     <button id="notifModalClose" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-70);">✕</button>
     <h2>🔔 Bildirimler</h2>
     <p class="muted" id="pushStatusNote"></p>
-    <button class="primary" id="enablePushBtn" style="margin-bottom:10px;">📱 Telefon Bildirimlerini Aç</button>
+    <button class="primary" id="enablePushBtn" style="margin-bottom:10px;">Bildirimleri Aç</button>
     <button class="secondary tiny" id="markAllReadBtn" style="margin-bottom:10px;">Tümünü okundu yap</button>
     <div id="notifsList"></div>
   </div>
@@ -740,7 +740,7 @@
     <details class="guide-section">
       <summary>🔔 Bildirimleri Açma</summary>
       <ul class="plain">
-        <li>🔔 simgesine dokun → "📱 Telefon Bildirimlerini Aç" butonuna bas → tarayıcının izin sorusuna "İzin Ver" de.</li>
+        <li>🔔 simgesine dokun → "Bildirimleri Aç" butonuna bas → tarayıcının izin sorusuna "İzin Ver" de.</li>
         <li>Bunu <b>her cihazda ayrı ayrı</b> yapman gerekir (bilgisayarda açman telefonu etkilemez).</li>
         <li>Uygulama içi bildirimler zaten otomatik gelir, bu adım sadece telefon/ekran bildirimi için.</li>
         <li>Her gün öğlen 14:00 ve akşam 22:00'de, o gün henüz okudum/okumadım işaretlememişsen küçük bir hatırlatma bildirimi gelir.</li>
@@ -1608,7 +1608,7 @@ async function enablePushNotifications(){
       if(perm !== 'granted'){ showToast('Bildirim izni verilmedi.'); renderNotifsTab(); return; }
     }
     await registerPushToken();
-    showToast('Telefon bildirimleri açıldı! 🔔');
+    showToast('Bildirimler Açık');
     renderNotifsTab();
   }catch(e){ alert('Bildirimler açılamadı: ' + (e.message||e)); }
 }
@@ -1619,7 +1619,7 @@ async function renderNotifsTab(){
     statusNote.textContent = 'Bu tarayıcı telefon bildirimlerini desteklemiyor.';
     enableBtn.style.display = 'none';
   } else if(Notification.permission === 'granted'){
-    statusNote.textContent = '✅ Telefon bildirimleri açık.';
+    statusNote.textContent = 'Bildirimler Açık';
     enableBtn.style.display = 'none';
   } else if(Notification.permission === 'denied'){
     statusNote.textContent = '🚫 Bildirimler bu site için reddedilmiş. Adres çubuğundaki site simgesinden izni değiştirip sayfayı yenile.';
@@ -10222,7 +10222,7 @@ function materialInit(){
  const settings=document.getElementById('tab-settings');
  if(!document.getElementById('materialThemeSettings')){
   settings.insertAdjacentHTML('afterbegin',`<div class="card" id="materialThemeSettings"><h2>Görünüm</h2><p class="muted">Uygulamanın temasını seç.</p><div class="segmented" id="materialThemeChoices"><button data-theme-choice="light">Açık</button><button data-theme-choice="dark">Koyu</button><button data-theme-choice="auto">Otomatik</button></div><p class="muted">Otomatik tema günün saatine göre değişir.</p></div>`);
-  settings.insertAdjacentHTML('beforeend',`<div class="settings-list">${materialLink('profile','Profilim','Ad, iletişim ve adres bilgilerin','account')}<button class="destination-row" id="materialEnablePush">${materialIcon('gift')}<b>Bildirimleri aç</b></button><button class="destination-row" id="materialGuideBtn">${materialIcon('book')}<b>Kullanım Rehberi</b></button><button class="destination-row danger" id="materialLogout">Çıkış yap</button></div>`);
+  settings.insertAdjacentHTML('beforeend',`<div class="settings-list">${materialLink('profile','Profilim','Ad, iletişim ve adres bilgilerin','account')}<button class="destination-row" id="materialEnablePush">${materialIcon('gift')}<b>Bildirimleri Aç</b></button><button class="destination-row" id="materialGuideBtn">${materialIcon('book')}<b>Kullanım Rehberi</b></button><button class="destination-row danger" id="materialLogout">Çıkış yap</button></div>`);
   document.getElementById('materialEnablePush').onclick=enablePushNotifications;
   document.getElementById('materialGuideBtn').onclick=()=>{ document.getElementById('guideModal').style.display='flex'; };
   document.getElementById('materialLogout').onclick=()=>document.getElementById('logoutBtn').click();
@@ -10891,6 +10891,7 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
 
 
 
