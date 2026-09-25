@@ -5805,6 +5805,11 @@ function showBhBookInfo(b, uid, gridId, collectionName){
         renderBookHistoryGrid(currentUid, gridId, true, collectionName);
         const destGridId = destCollection==='readBooks' ? 'readBooksGrid' : 'bookHistoryGrid';
         if(document.getElementById(destGridId)) renderBookHistoryGrid(currentUid, destGridId, true, destCollection);
+        // "Şu an okuyorum"dan "Okudum"a taşınan bir kitap aylık hedefe sayılabilir — "Bugün"
+        // sekmesindeki hedef kartı bu ekrandan (Kitaplığım) tetiklenmediği için kendiliğinden
+        // yenilenmiyordu, burada elle tazeliyoruz. Aktif olmayan (admin/üye) varyant no-op.
+        renderTotalPagesCard('totalPagesNumber');
+        renderTotalPagesCard('mTotalPagesNumber');
       }catch(err){ alert('Taşınamadı: '+(err.message||err)); btn.disabled = false; }
     });
   }
