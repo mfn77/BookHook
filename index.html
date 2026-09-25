@@ -221,6 +221,17 @@
       </div>
     </section>
 
+    <section class="tab" id="tab-goodreadsimport">
+      <div class="card">
+        <h2>Kütüphaneyi İçe Aktar</h2>
+        <p class="muted">Başka bir kaynaktan csv uzantısında kütüphane aktarımı.</p>
+        <div class="field"><label>Üye</label><select id="griUserSelect"><option value="">Seç…</option></select></div>
+        <div class="field"><label>CSV dosyası</label><input type="file" id="griFileInput" accept=".csv,text/csv" /></div>
+        <button type="button" class="primary" id="griStartBtn" disabled>İçe Aktar</button>
+        <div id="griLog" style="margin-top:16px; font-size:13px; line-height:1.6; white-space:pre-wrap;"></div>
+      </div>
+    </section>
+
     <section class="tab" id="tab-members">
       <div class="card">
         <h2>Üyeler &amp; Roller</h2>
@@ -577,7 +588,7 @@
         <h2>📚 Ortak Kitap Seçimi</h2>
         <div id="quarterlyPickBody"><span class="muted">Yükleniyor…</span></div>
       </div></section>
-<section class="tab" id="tab-admin"><h2>Kulübü yönet</h2><div id="materialAdminLinks" class="settings-list"></div><h2>Deneme alanları</h2><div class="settings-list"><button class="destination-row" data-material-route="manual"><span class="route-icon">⚄</span><span><b>Manuel kura</b><small>Gerçek kayıtlardan bağımsız deneme</small></span><span>›</span></button><button class="destination-row" data-material-route="qptest"><span class="route-icon">▤</span><span><b>Ortak kitap seçimi</b><small>Ayrı deneme alanı</small></span><span>›</span></button></div><details id="materialMaintenance"><summary>Bakım araçları ve kura yönetimi</summary></details></section>
+<section class="tab" id="tab-admin"><h2>Kulübü yönet</h2><div id="materialAdminLinks" class="settings-list"></div><h2>Araçlar</h2><div class="settings-list"><button class="destination-row" data-material-route="goodreadsimport"><span class="route-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></span><span><b>Kütüphaneyi içe aktar</b><small>Bir üyenin CSV'sinden okuma geçmişini yükle</small></span><span>›</span></button></div><h2>Deneme alanları</h2><div class="settings-list"><button class="destination-row" data-material-route="manual"><span class="route-icon">⚄</span><span><b>Manuel kura</b><small>Gerçek kayıtlardan bağımsız deneme</small></span><span>›</span></button><button class="destination-row" data-material-route="qptest"><span class="route-icon">▤</span><span><b>Ortak kitap seçimi</b><small>Ayrı deneme alanı</small></span><span>›</span></button></div><details id="materialMaintenance"><summary>Bakım araçları ve kura yönetimi</summary></details></section>
       </main>
     </div>
   </div>
@@ -1760,6 +1771,7 @@ const HAMBURGER_ADMIN_EXTRA = [
   {id:'editpast', label:'Geçmiş Düzenle', icon:'✎'},
   {id:'manual', label:'Manuel Kura', icon:'⚙'},
   {id:'qptest', label:'Deneme: Ortak Kitap Seçimi', icon:'🧪'},
+  {id:'goodreadsimport', label:'Kütüphaneyi İçe Aktar', icon:'📥'},
   {id:'members', label:'Üyeler', icon:'⚈'},
   {id:'rules', label:'Grup Kuralları', icon:'§'},
   {id:'settings', label:'Ayarlar', icon:'⚒'},
@@ -2286,6 +2298,7 @@ function renderTab(id){
   }
   else if(id==='manual') renderManualTab();
   else if(id==='qptest') renderQpTestTab();
+  else if(id==='goodreadsimport') renderGoodreadsImportTab();
   else if(id==='members') renderAdminMembers();
   else if(id==='worms') renderAdminWorms();
   else if(id==='msurvey') renderMemberSurvey();
@@ -9730,7 +9743,7 @@ async function renderMemberWorms(){ await renderWormsShared('mWormsMyStreak','mW
 /* ============ GİRİŞ / AUTH DURUM TAKİBİ ============ */
 /* BookHook Material UI adapter. Only presentation/navigation; existing data model retained. */
 function materialIcon(kind){
- const paths={home:'<path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/>',feed:'<path d="M4 5h16M4 10h16M4 15h10M4 20h6"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',book:'<path d="M12 5C9 2 5 2 2 3v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/>',club:'<circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M3 9a3 3 0 0 0 0 6m18-6a3 3 0 0 1 0 6M2 21v-2m20 2v-2"/>',gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8H8a3 3 0 1 1 3-3Zm0 0h4a3 3 0 1 0-3-3Z"/>',badge:'<circle cx="12" cy="9" r="6"/><path d="m8 14-2 8 6-3 6 3-2-8m-6-6 2-3 2 3"/>',records:'<path d="M4 3h16v18H4ZM8 8h8M8 12h8M8 16h5"/>',settings:'<path d="m9 3-1 3-3 1v4l-2 1 2 2v4l3 1 1 3h6l1-3 3-1v-4l2-2-2-1V7l-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/>',rules:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',heart:'<path d="M12 21s-6.5-4.2-9-8.4C1.3 9 2.7 5.5 6 4.6c2-.5 3.8.3 5 2 .1.2.5.2.6 0 1.2-1.7 3-2.5 5-2 3.3.9 4.7 4.4 3 8C18.5 16.8 12 21 12 21Z"/>',account:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>'};
+ const paths={home:'<path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/>',feed:'<path d="M4 5h16M4 10h16M4 15h10M4 20h6"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',book:'<path d="M12 5C9 2 5 2 2 3v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/>',club:'<circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M3 9a3 3 0 0 0 0 6m18-6a3 3 0 0 1 0 6M2 21v-2m20 2v-2"/>',gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8H8a3 3 0 1 1 3-3Zm0 0h4a3 3 0 1 0-3-3Z"/>',badge:'<circle cx="12" cy="9" r="6"/><path d="m8 14-2 8 6-3 6 3-2-8m-6-6 2-3 2 3"/>',records:'<path d="M4 3h16v18H4ZM8 8h8M8 12h8M8 16h5"/>',settings:'<path d="m9 3-1 3-3 1v4l-2 1 2 2v4l3 1 1 3h6l1-3 3-1v-4l2-2-2-1V7l-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/>',rules:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',heart:'<path d="M12 21s-6.5-4.2-9-8.4C1.3 9 2.7 5.5 6 4.6c2-.5 3.8.3 5 2 .1.2.5.2.6 0 1.2-1.7 3-2.5 5-2 3.3.9 4.7 4.4 3 8C18.5 16.8 12 21 12 21Z"/>',account:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',import:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>'};
  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[kind]||paths.book}</svg>`;
 }
 function materialPrimaryTabs(){
@@ -10097,9 +10110,19 @@ function materialThemeSync(){
 // admin alt ekranları (members/manual/...) önce 'admin'e, o da HUB_PARENT üzerinden kendi
 // hub'ına (artık 'appsettings') çözülür; hub kartı id'leri (gifts/rules/bookhistory/...) zaten
 // HUB_PARENT'ta kayıtlı. Eşleşme yoksa güvenli varsayılan olarak 'club' döner.
-const ADMIN_SUB_SCREENS = ['members','manual','qptest','editpast','whoreadtoday'];
+const ADMIN_SUB_SCREENS = ['members','manual','qptest','editpast','whoreadtoday','goodreadsimport'];
 function materialHubRoot(id){
  if(ADMIN_SUB_SCREENS.includes(id)) id = 'admin';
+ if(['club','library','appsettings'].includes(id)) return id;
+ return HUB_PARENT[id] || 'club';
+}
+// materialHubRoot() admin alt ekranlarını (members/manual/goodreadsimport/...) İKİ seviye birden
+// çözüyor (önce 'admin'e, sonra HUB_PARENT üzerinden 'appsettings'e) — bu, alt nav'da hangi
+// birincil sekmenin vurgulanacağını bulmak için doğru, ama geri tuşu için YANLIŞ: geri tuşu bir
+// üst seviyeye (admin alt ekranından → admin'e) çıkmalı, direkt en tepeye (appsettings) değil.
+// Bu yüzden geri tuşu ayrı, TEK seviye çözen bu fonksiyonu kullanıyor.
+function materialImmediateParent(id){
+ if(ADMIN_SUB_SCREENS.includes(id)) return 'admin';
  if(['club','library','appsettings'].includes(id)) return id;
  return HUB_PARENT[id] || 'club';
 }
@@ -10130,7 +10153,7 @@ function materialSyncNavigation(id, { resetScroll = true } = {}){
  document.body.dataset.screen=id;
  document.body.classList.toggle('detail-screen',!primary.includes(id));
  const back=document.getElementById('materialBack');back.hidden=primary.includes(id);
- back.onclick=()=>switchTab((id==='profile'||id==='appsettings')?getTabOrder()[0]:materialHubRoot(id));
+ back.onclick=()=>switchTab((id==='profile'||id==='appsettings')?getTabOrder()[0]:materialImmediateParent(id));
  document.querySelectorAll('nav.tabs button').forEach(button=>{const selected=button.dataset.tab===(primary.includes(id)?id:materialHubRoot(id));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
  const names={club:'Kulüp',library:'Kitaplık',appsettings:'Ayarlar',quarterly:'Ortak kitap',admin:'Yönetim',worms:'Rozetler',mworms:'Rozetler',gifts:'Hediyeler',recs:'Kitap önerileri',rules:'Grup kuralları',settings:'Uygulama ayarları',today:'Bugün',msurvey:'Bugün'};
  if(names[id]) setTabTitleAnimated(names[id]);
@@ -10153,7 +10176,7 @@ function materialRenderPhase(qp){
 document.body.addEventListener('click',e=>{
  const route=e.target.closest('[data-material-route]');if(!route||!myProfile)return;
  const id=materialRoute(route.dataset.materialRoute);
- if(['admin','members','manual','qptest','editpast','whoreadtoday'].includes(id)&&myProfile.role!=='admin')return;
+ if(['admin','members','manual','qptest','editpast','whoreadtoday','goodreadsimport'].includes(id)&&myProfile.role!=='admin')return;
  switchTab(id);
 });
 // Keyboard support for dynamically rendered interactive cards without changing their actions.
@@ -10336,6 +10359,154 @@ const hubPreviews=(()=>{
  },250);
  return {sync};
 })();
+
+/* ============ ADMIN: GOODREADS'TEN İÇE AKTARMA ============
+   Bir üyenin Goodreads'ten dışa aktardığı CSV'sini (goodreads_library_export.csv) okuyup
+   Exclusive Shelf'e göre doğru koleksiyona (bookHistory/readBooks/wantToRead) yazar. Kitap/yazar
+   adları CSV'deki haliyle DOKUNULMADAN kaydedilir; sadece kapak arama sorgusunda kullanılır —
+   kaydedilen title/author asla API'nin döndürdüğü isimle değiştirilmez, sadece cover doldurulur.
+   Kapak arama, seedDiscoverCovers()'daki ile aynı iki-kaynaklı (Google Books + Open Library) +
+   hız sınırlamalı deseni kullanır. firestore.rules'taki admin-override sayesinde admin başka bir
+   üyenin bookHistory/readBooks/wantToRead koleksiyonlarına yazabiliyor. */
+function parseGoodreadsCSV(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ','){ row.push(field); field=''; }
+      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else if(c === '\r'){ /* \n zaten satırı kapatıyor, atla */ }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  if(!rows.length) return [];
+  const header = rows[0].map(h=>h.trim());
+  return rows.slice(1).filter(r=>r.some(v=>v!=='')).map(r=>{
+    const obj = {};
+    header.forEach((h,idx)=>{ obj[h] = r[idx]!==undefined ? r[idx] : ''; });
+    return obj;
+  });
+}
+// 'read'/'currently-reading' dışındaki her şey (to-read, did-not-finish, veya üyenin kendi
+// oluşturduğu herhangi bir özel raf) "okumak istiyorum"a düşer — sadece raf tamamen boşsa atlanır.
+function goodreadsShelfToCollection(shelf){
+  if(shelf==='read') return 'bookHistory';
+  if(shelf==='currently-reading') return 'readBooks';
+  if(!shelf) return null;
+  return 'wantToRead';
+}
+function goodreadsDateToIso(dateStr){
+  if(!dateStr) return new Date().toISOString();
+  const d = new Date(dateStr.replace(/\//g,'-'));
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+function bookDedupeKey(title, author){ return (title||'').trim().toLowerCase()+'|'+(author||'').trim().toLowerCase(); }
+async function findGoodreadsBookCover(title, author){
+  try{
+    const settled = await Promise.allSettled([
+      searchGoogleBooks(`${title} ${author}`),
+      searchOpenLibrary(`${title} ${author}`)
+    ]);
+    const pick = (r)=> (r.status==='fulfilled' && r.value && r.value[0]) ? r.value[0] : null;
+    const candidates = settled.map(pick).filter(Boolean);
+    const withCover = candidates.find(c=>c.cover);
+    return withCover ? withCover.cover : '';
+  }catch(e){ return ''; }
+}
+function renderGoodreadsImportTab(){
+  const select = document.getElementById('griUserSelect');
+  const fileInput = document.getElementById('griFileInput');
+  const startBtn = document.getElementById('griStartBtn');
+  const log = document.getElementById('griLog');
+  if(!select || !fileInput || !startBtn || !log) return;
+  const sortedUids = Object.keys(usersCache).filter(uid=>!usersCache[uid].deleted).sort((a,b)=> (usersCache[a].name||'').localeCompare(usersCache[b].name||'','tr'));
+  select.innerHTML = '<option value="">Seç…</option>' + sortedUids.map(uid=>{
+    const u = usersCache[uid];
+    const label = u.surname ? `${u.name||'?'} ${u.surname}` : (u.name||'?');
+    return `<option value="${uid}">${escapeHtml(label)}</option>`;
+  }).join('');
+  // Sekmeden çıkıp geri girildiğinde önceki seçili dosya/kayıt kalmasın diye her girişte sıfırlanıyor.
+  fileInput.value = '';
+  const updateBtn = ()=>{ startBtn.disabled = !(select.value && fileInput.files && fileInput.files[0]); };
+  select.onchange = updateBtn;
+  fileInput.onchange = updateBtn;
+  updateBtn();
+  log.textContent = '';
+  startBtn.onclick = async ()=>{
+    const targetUid = select.value;
+    const file = fileInput.files && fileInput.files[0];
+    if(!targetUid || !file) return;
+    const targetName = usersCache[targetUid]?.name || targetUid;
+    if(!confirm(`${targetName} adlı üyenin hesabına CSV'deki kitaplar eklenecek. Devam edilsin mi?`)) return;
+    startBtn.disabled = true;
+    select.disabled = true;
+    fileInput.disabled = true;
+    const lines = [];
+    const print = (s)=>{ lines.push(s); log.textContent = lines.join('\n'); log.scrollTop = log.scrollHeight; };
+    try{
+      const text = await file.text();
+      const rows = parseGoodreadsCSV(text);
+      print(`${rows.length} satır okundu.`);
+      const grouped = { bookHistory:[], readBooks:[], wantToRead:[] };
+      let skippedShelf = 0;
+      rows.forEach(r=>{
+        const shelf = (r['Exclusive Shelf']||'').trim();
+        const collectionName = goodreadsShelfToCollection(shelf);
+        const title = (r['Title']||'').trim();
+        if(!collectionName || !title){ skippedShelf++; return; }
+        grouped[collectionName].push({
+          title,
+          author: (r['Author']||'').trim() || 'Bilinmeyen Yazar',
+          addedAt: goodreadsDateToIso(shelf==='read' ? (r['Date Read']||r['Date Added']) : r['Date Added'])
+        });
+      });
+      print(`Atlanan (boş raf): ${skippedShelf}`);
+      print(`Okundu (bookHistory): ${grouped.bookHistory.length}, Şu an okunuyor (readBooks): ${grouped.readBooks.length}, Okumak istenen (wantToRead): ${grouped.wantToRead.length}`);
+
+      let totalAdded = 0, totalDup = 0, totalCoverFound = 0;
+      for(const collectionName of ['bookHistory','readBooks','wantToRead']){
+        const items = grouped[collectionName];
+        if(!items.length) continue;
+        print(`\n${collectionName}: mevcut kayıtlar kontrol ediliyor…`);
+        const existingSnap = await getDocs(collection(db,'users',targetUid,collectionName));
+        const existingKeys = new Set();
+        existingSnap.forEach(d=>{ const x=d.data(); existingKeys.add(bookDedupeKey(x.title,x.author)); });
+        let added=0, dup=0, coverFound=0, failStreak=0;
+        for(const item of items){
+          const key = bookDedupeKey(item.title, item.author);
+          if(existingKeys.has(key)){ dup++; continue; }
+          existingKeys.add(key);
+          const cover = await findGoodreadsBookCover(item.title, item.author);
+          if(cover) coverFound++; else failStreak++;
+          await addDoc(collection(db,'users',targetUid,collectionName), {
+            author: item.author, title: item.title, cover, addedAt: item.addedAt
+          });
+          added++;
+          if(added % 10 === 0) print(`  ${collectionName}: ${added} eklendi (${items.length} kitaptan)…`);
+          await sleep(failStreak > 8 ? 700 : 90);
+        }
+        print(`${collectionName}: ${added} eklendi, ${dup} zaten vardı (atlandı), ${coverFound} kapak bulundu.`);
+        totalAdded += added; totalDup += dup; totalCoverFound += coverFound;
+      }
+      print(`\nTamamlandı. Toplam ${totalAdded} kitap eklendi (${totalCoverFound} kapaklı), ${totalDup} zaten mevcuttu.`);
+      showToast(`${targetName}: ${totalAdded} kitap içe aktarıldı.`);
+    }catch(err){
+      print(`HATA: ${err.message||err}`);
+    }finally{
+      startBtn.disabled = false;
+      select.disabled = false;
+      fileInput.disabled = false;
+    }
+  };
+}
 
 onAuthStateChanged(auth, async (user)=>{
   if(unsubUsers){ unsubUsers(); unsubUsers=null; }
