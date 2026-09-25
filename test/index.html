@@ -2035,7 +2035,8 @@ function switchTab(id, { animate = true } = {}){
     targetSection.style.transition = 'none';
     targetSection.style.display = 'block';
     targetSection.style.position = 'fixed';
-    targetSection.style.top = rect.top + 'px';
+    // Hedef, geçiş sonunda scroll=0 iken duracağı yükseklikten girsin.
+    targetSection.style.top = (rect.top + window.scrollY) + 'px';
     targetSection.style.left = (rect.left + (goingNext ? rect.width+gap : -(rect.width+gap))) + 'px';
     targetSection.style.width = rect.width + 'px';
     targetSection.style.zIndex = '1';
@@ -2232,7 +2233,7 @@ function switchTab(id, { animate = true } = {}){
       // .tab-icon'daki arka plan geçişiyle (0.2s) çakışıp bir an iki sekme de vurgulanmış gibi
       // görünebiliyordu. switchTab() içeride aynı senkronizasyonu tekrar yapacak ama bu, zararsız
       // bir tekrardır (idempotent).
-      if(typeof materialSyncNavigation==='function') materialSyncNavigation(order[targetIdx]);
+      if(typeof materialSyncNavigation==='function') materialSyncNavigation(order[targetIdx], { resetScroll: false });
       // materialSyncNavigation() başlığı yalnızca hub-kökü sekmeler için değiştiriyor (ör. "Akış"
       // orada yok) — birincil sekmelerin tümünde başlık aynı anda değişsin diye ayrıca burada da
       // kesin kaynaktan (getTabLabel) çağırıyoruz; switchTab() 240ms sonra aynı metinle tekrar
@@ -5291,7 +5292,7 @@ function aiRecItemHtml(rec, idx){
 }
 function aiRecHtml(items){
   return `<div class="ai-rec-disclosure"><div class="ai-rec-list">${items.map(aiRecItemHtml).join('')}</div>
-  <div class="ai-rec-expanded" id="aiRecDescriptions" hidden>${items.map((rec,idx)=>`<div class="ai-rec-explanation"><h3>${escapeHtml(rec.title||'')}</h3><p class="ai-rec-reason">${escapeHtml(rec.reason||'Bu önerinin kişisel gerekçesi kayıtta bulunmuyor.')}</p><p class="ai-expanded-pitch" data-pitch="${idx}"></p></div>`).join('')}</div></div>
+  <div class="ai-rec-expanded" id="aiRecDescriptions" hidden>${items.map((rec,idx)=>`<div class="ai-rec-explanation"><h3>${escapeHtml(rec.title||'')}</h3><p class="ai-expanded-pitch" data-pitch="${idx}"></p></div>`).join('')}</div></div>
   <button type="button" class="ai-text-action ai-refresh-action" id="aiRecRefreshBtn">Yeni öneri iste</button>`;
 }
 function wireAiRecRefresh(){
@@ -9948,14 +9949,16 @@ function materialHubRoot(id){
 // body'yi de position:fixed yapmak Android Chrome'da "fixed içinde fixed" durumu oluşturuyor ve
 // nav birkaç kare boyunca tamamen kayboluyordu (tam olarak bu fonksiyonun her swipe/sekme
 // geçişinde iki kez çağrıldığı anlarla örtüşen bir video kaydında doğrulandı). body'nin
-// position'ına HİÇ dokunmadan, doğrudan scrollTop sıfırlamak (scroll-behavior:smooth'u da
-// tetiklemiyor, çünkü bu özellik sadece scrollTo()/scrollIntoView() çağrılarını etkiliyor) hem
-// yeterince "sessiz" hem de bu riski tamamen ortadan kaldırıyor.
+// Body'nin position değerini değiştirmeden kaydırmayı aynı karede sıfırla.
+// CSS scroll-behavior:smooth, scrollTop atamasını da yumuşatabildiği için geçici olarak kapat.
 function silentScrollToTop(){
- document.documentElement.scrollTop = 0;
- document.body.scrollTop = 0;
+ const roots=[document.documentElement,document.body];
+ const previous=roots.map(el=>[el.style.getPropertyValue('scroll-behavior'),el.style.getPropertyPriority('scroll-behavior')]);
+ roots.forEach(el=>el.style.setProperty('scroll-behavior','auto','important'));
+ roots.forEach(el=>{el.scrollTop=0;});
+ roots.forEach((el,i)=>{const [value,priority]=previous[i];if(value)el.style.setProperty('scroll-behavior',value,priority);else el.style.removeProperty('scroll-behavior');});
 }
-function materialSyncNavigation(id){
+function materialSyncNavigation(id, { resetScroll = true } = {}){
  const primary=materialPrimaryTabs().map(t=>t.id);
  document.body.dataset.screen=id;
  document.body.classList.toggle('detail-screen',!primary.includes(id));
@@ -9964,7 +9967,7 @@ function materialSyncNavigation(id){
  document.querySelectorAll('nav.tabs button').forEach(button=>{const selected=button.dataset.tab===(primary.includes(id)?id:materialHubRoot(id));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
  const names={club:'Kulüp',library:'Kitaplık',appsettings:'Ayarlar',quarterly:'Ortak kitap',admin:'Yönetim',worms:'Rozetler',mworms:'Rozetler',gifts:'Hediyeler',recs:'Kitap önerileri',rules:'Grup kuralları',settings:'Uygulama ayarları',today:'Bugün',msurvey:'Bugün'};
  if(names[id]) setTabTitleAnimated(names[id]);
- silentScrollToTop();
+ if(resetScroll) silentScrollToTop();
 }
 async function materialRenderClub(){
  try{
