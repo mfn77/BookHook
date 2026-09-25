@@ -10116,6 +10116,16 @@ function materialHubRoot(id){
  if(['club','library','appsettings'].includes(id)) return id;
  return HUB_PARENT[id] || 'club';
 }
+// materialHubRoot() admin alt ekranlarını (members/manual/goodreadsimport/...) İKİ seviye birden
+// çözüyor (önce 'admin'e, sonra HUB_PARENT üzerinden 'appsettings'e) — bu, alt nav'da hangi
+// birincil sekmenin vurgulanacağını bulmak için doğru, ama geri tuşu için YANLIŞ: geri tuşu bir
+// üst seviyeye (admin alt ekranından → admin'e) çıkmalı, direkt en tepeye (appsettings) değil.
+// Bu yüzden geri tuşu ayrı, TEK seviye çözen bu fonksiyonu kullanıyor.
+function materialImmediateParent(id){
+ if(ADMIN_SUB_SCREENS.includes(id)) return 'admin';
+ if(['club','library','appsettings'].includes(id)) return id;
+ return HUB_PARENT[id] || 'club';
+}
 // Her sekme değişiminde sayfayı en üste sıfırlamak için düz window.scrollTo(0,0) kullanmak,
 // kullanıcı önceki sekmede aşağı kaymışsa GERÇEK, tarayıcının kendisinin de fark ettiği bir
 // kaydırma sıçraması yaratıyordu — bu da (dokunuşla hiç ilgisi olmadan, sadece bu programatik
@@ -10143,7 +10153,7 @@ function materialSyncNavigation(id, { resetScroll = true } = {}){
  document.body.dataset.screen=id;
  document.body.classList.toggle('detail-screen',!primary.includes(id));
  const back=document.getElementById('materialBack');back.hidden=primary.includes(id);
- back.onclick=()=>switchTab((id==='profile'||id==='appsettings')?getTabOrder()[0]:materialHubRoot(id));
+ back.onclick=()=>switchTab((id==='profile'||id==='appsettings')?getTabOrder()[0]:materialImmediateParent(id));
  document.querySelectorAll('nav.tabs button').forEach(button=>{const selected=button.dataset.tab===(primary.includes(id)?id:materialHubRoot(id));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
  const names={club:'Kulüp',library:'Kitaplık',appsettings:'Ayarlar',quarterly:'Ortak kitap',admin:'Yönetim',worms:'Rozetler',mworms:'Rozetler',gifts:'Hediyeler',recs:'Kitap önerileri',rules:'Grup kuralları',settings:'Uygulama ayarları',today:'Bugün',msurvey:'Bugün'};
  if(names[id]) setTabTitleAnimated(names[id]);
