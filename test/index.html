@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-41-badges-stats" />
+<link rel="stylesheet" href="./style.css?v=material-42-goals" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -134,8 +134,10 @@
  <svg class="daily-illustration" viewBox="0 0 120 120" aria-hidden="true"><path d="M60,102 24,92 24,76 60,84 Z" fill="var(--gold)"/><path d="M60,102 96,92 96,76 60,84 Z" fill="var(--gold-dark)"/><ellipse cx="28" cy="55" rx="11" ry="13" fill="var(--forest)"/><circle cx="24" cy="52" r="2.6" fill="var(--paper)"/><circle cx="32" cy="52" r="2.6" fill="var(--paper)"/><circle cx="62" cy="42" r="8" fill="var(--gold-dark)"/><rect x="58" y="49" width="8" height="6" rx="1.5" fill="var(--ink-70)"/><line x1="62" y1="26" x2="62" y2="20" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="52" y1="32" x2="47" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="72" y1="32" x2="77" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><polygon points="90,64 102,64 96,48" fill="var(--secondary-ink)"/><circle cx="97" cy="38" r="5" fill="var(--rust)"/><circle cx="42" cy="20" r="2" fill="var(--ink-70)"/><circle cx="55" cy="14" r="2" fill="var(--ink-70)"/><circle cx="68" cy="19" r="2" fill="var(--ink-70)"/><path d="M42,20 55,14 68,19" fill="none" stroke="var(--ink-70)" stroke-width="1.2"/></svg></div>
  <div id="aSelfStatusNote" class="muted" role="status"></div><details class="daily-help"><summary>Günün 06.00’da yenilenir</summary><p class="muted" id="aSelfDateNote"></p></details></div>
  <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="aSelfStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="totalPagesNumber">–</strong><span class="muted">Tahmini sayfa</span></div><div class="card stat-card total-days-card"><span class="stat-icon" aria-hidden="true">✓</span><strong id="totalDaysNumber">–</strong><span class="muted">Toplam okunan gün</span></div><div class="card stat-card completed-books-card"><span class="stat-icon" aria-hidden="true">▤</span><strong id="completedBooksNumber">–</strong><span class="muted">Okunan kitap sayısı</span></div></div>
+ <div class="personal-goals" aria-label="Kişisel hedefler"></div>
  <div class="card common-today"><div id="aSelfQpBook"></div></div>
  <button class="destination-row" data-material-route="records"><span class="route-icon">▥</span><span><b>Haftalık kayıtlar</b><small>Bu haftanın detaylı görünümü</small></span><span>›</span></button>
+  <div class="card goal-history"><h2>Hedef geçmişin</h2><p class="muted">Yükleniyor…</p></div>
  </section>
 
     <section class="tab" id="tab-whoreadtoday">
@@ -254,8 +256,10 @@
  <svg class="daily-illustration" viewBox="0 0 120 120" aria-hidden="true"><path d="M60,102 24,92 24,76 60,84 Z" fill="var(--gold)"/><path d="M60,102 96,92 96,76 60,84 Z" fill="var(--gold-dark)"/><ellipse cx="28" cy="55" rx="11" ry="13" fill="var(--forest)"/><circle cx="24" cy="52" r="2.6" fill="var(--paper)"/><circle cx="32" cy="52" r="2.6" fill="var(--paper)"/><circle cx="62" cy="42" r="8" fill="var(--gold-dark)"/><rect x="58" y="49" width="8" height="6" rx="1.5" fill="var(--ink-70)"/><line x1="62" y1="26" x2="62" y2="20" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="52" y1="32" x2="47" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><line x1="72" y1="32" x2="77" y2="27" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><polygon points="90,64 102,64 96,48" fill="var(--secondary-ink)"/><circle cx="97" cy="38" r="5" fill="var(--rust)"/><circle cx="42" cy="20" r="2" fill="var(--ink-70)"/><circle cx="55" cy="14" r="2" fill="var(--ink-70)"/><circle cx="68" cy="19" r="2" fill="var(--ink-70)"/><path d="M42,20 55,14 68,19" fill="none" stroke="var(--ink-70)" stroke-width="1.2"/></svg></div>
  <div id="mMyStatusNote" class="muted" role="status"></div><details class="daily-help"><summary>Günün 06.00’da yenilenir</summary><p class="muted" id="mDateNote"></p></details></div>
  <div class="daily-stats"><div class="card stat-card"><span class="stat-icon">♨</span><div id="mMyStreakNote" class="streak-stat"></div><span class="muted">Okuma serin</span></div><div class="card stat-card"><span class="stat-icon">▤</span><strong id="mTotalPagesNumber">–</strong><span class="muted">Tahmini sayfa</span></div><div class="card stat-card total-days-card"><span class="stat-icon" aria-hidden="true">✓</span><strong id="mTotalDaysNumber">–</strong><span class="muted">Toplam okunan gün</span></div><div class="card stat-card completed-books-card"><span class="stat-icon" aria-hidden="true">▤</span><strong id="mCompletedBooksNumber">–</strong><span class="muted">Okunan kitap sayısı</span></div></div>
+ <div class="personal-goals" aria-label="Kişisel hedefler"></div>
  <div class="card common-today"><div id="mMyQpBook"></div></div>
  <button class="destination-row" data-material-route="records"><span class="route-icon">▥</span><span><b>Haftalık kayıtlar</b><small>Bu haftanın detaylı görünümü</small></span><span>›</span></button>
+  <div class="card goal-history"><h2>Hedef geçmişin</h2><p class="muted">Yükleniyor…</p></div>
  </section>
 
     <section class="tab" id="tab-mtoday"><div class="segmented" data-panels="mtoday" role="tablist"><button type="button" data-pane="0" class="active">Kulüp</button><button type="button" data-pane="1" class="">Ben</button></div>
@@ -566,7 +570,7 @@
       </div>
     </section>
 
-<section class="tab" id="tab-library"><h1>Kitaplar</h1><p class="page-subtitle">Keşfet, kitaplığın ve öneriler bir arada.</p><div class="card ai-rec-card" id="aiRecCard"><svg class="ai-card-illustration" viewBox="0 0 100 84" aria-hidden="true"><rect x="12" y="29" width="22" height="49" rx="3" fill="var(--secondary-ink)"/><rect x="38" y="20" width="22" height="58" rx="3" fill="var(--gold)"/><path d="M42 20h14v23l-7-5-7 5Z" fill="var(--primary-container)"/><path d="m77 7 5 13 13 5-13 5-5 13-5-13-13-5 13-5Z" fill="var(--rust)"/><path d="m79 54 3 8 8 3-8 3-3 8-3-8-8-3 8-3Z" fill="var(--gold)"/><path d="M18 39h10M18 45h10" stroke="var(--card)" stroke-width="2.5" stroke-linecap="round"/></svg><h2><button type="button" class="ai-card-heading" aria-expanded="false" aria-controls="aiRecDescriptions">Senin İçin Seçtik<span class="ai-card-chevron" aria-hidden="true">›</span></button></h2><div id="aiRecBody"><span class="muted">Yükleniyor…</span></div></div><div class="club-grid" id="materialLibraryGrid"></div></section>
+<section class="tab" id="tab-library"><h1>Kitaplar</h1><p class="page-subtitle">Keşfet, kitaplığın ve öneriler bir arada.</p><div class="card ai-rec-card" id="aiRecCard"><svg class="ai-card-illustration" viewBox="0 0 100 84" aria-hidden="true"><rect x="12" y="29" width="22" height="49" rx="3" fill="var(--secondary-ink)"/><rect x="38" y="20" width="22" height="58" rx="3" fill="var(--gold)"/><path d="M42 20h14v23l-7-5-7 5Z" fill="var(--primary-container)"/><path d="m77 7 5 13 13 5-13 5-5 13-5-13-13-5 13-5Z" fill="var(--rust)"/><path d="m79 54 3 8 8 3-8 3-3 8-3-8-8-3 8-3Z" fill="var(--gold)"/><path d="M18 39h10M18 45h10" stroke="var(--card)" stroke-width="2.5" stroke-linecap="round"/></svg><button type="button" class="ai-card-close hub-item-close-btn icon-button" aria-label="Daralt" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button><h2><button type="button" class="ai-card-heading" aria-expanded="false" aria-controls="aiRecDescriptions">Senin İçin Seçtik<span class="ai-card-chevron" aria-hidden="true">›</span></button></h2><div id="aiRecBody"><span class="muted">Yükleniyor…</span></div></div><div class="club-grid" id="materialLibraryGrid"></div></section>
 <section class="tab" id="tab-appsettings"><h1>Ayarlar</h1><p class="page-subtitle">Kulüp yönetimi ve uygulama tercihlerin.</p><div class="club-grid" id="materialSettingsGrid"></div></section>
 <section class="tab" id="tab-club"><h1>Okumak için<br>motivasyon</h1><p class="page-subtitle">Kulübü takip et</p><button class="club-feature" data-material-route="quarterly"><span><small>Ortak kitabımız</small><b id="clubBookTitle">Ortak kitap</b><span id="clubBookMeta">Birlikte seç, birlikte oku</span></span><svg class="club-feature-illustration" viewBox="0 0 100 84" aria-hidden="true"><line x1="2" y1="70" x2="98" y2="70" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/><g fill="var(--secondary-ink)"><rect x="12" y="40" width="36" height="20" rx="9"/><path d="M38,42 L48,24 L57,27 L50,44 Z"/><path d="M46,25 L58,20 L62,27 L57,34 L47,32 Z"/><path d="M55,19 L58,12 L61,19 Z"/><path d="M13,44 C4,46 2,56 9,64" fill="none" stroke="var(--secondary-ink)" stroke-width="4.5" stroke-linecap="round"/><rect x="17" y="58" width="5.5" height="13" rx="2"/><rect x="30" y="58" width="5.5" height="13" rx="2"/><rect x="40" y="58" width="5.5" height="13" rx="2"/></g><circle cx="56" cy="26" r="1.6" fill="var(--card)"/><path d="M43,26 C47,21 51,19 55,20" fill="none" stroke="var(--gold)" stroke-width="2.8" stroke-linecap="round"/><circle cx="81" cy="57" r="13" fill="none" stroke="var(--gold-dark)" stroke-width="3.5"/><circle cx="81" cy="57" r="2.6" fill="var(--gold-dark)"/><line x1="81" y1="47" x2="81" y2="67" stroke="var(--gold-dark)" stroke-width="2"/><line x1="71" y1="57" x2="91" y2="57" stroke="var(--gold-dark)" stroke-width="2"/></svg><span>›</span></button><div class="club-grid" id="materialClubGrid"></div></section>
 <section class="tab" id="tab-quarterly"><div id="materialQpSteps" class="phase-steps"></div>      <div class="card" id="quarterlyPickCard">
@@ -2320,14 +2324,14 @@ async function fetchDayAnswers(dateStr){
   snap.forEach(d=> map[d.id] = { status: d.data().status, auto: !!d.data().auto });
   return map;
 }
-async function markStatus(uid, status){
+async function markStatus(uid, status, pages=null){
   const t = todayStr();
   const ref = doc(db,'days',t,'answers',uid);
   const current = todayAnswers[uid];
   if(current === status){
     await deleteDoc(ref);
   } else {
-    await setDoc(ref, { status, name: usersCache[uid]?.name || '', updatedAt: new Date().toISOString() });
+    await setDoc(ref, { status, name: usersCache[uid]?.name || '', updatedAt: new Date().toISOString(), ...(status==='read'&&Number.isSafeInteger(pages)&&pages>=15?{pages}:{}) });
   }
 }
 async function computeWeekStats(monday){
@@ -3305,8 +3309,12 @@ async function renderTotalPagesCard(elId){
   showCachedOrPlaceholder(pagesEl, '…');
   const daysEl=document.getElementById(elId==='totalPagesNumber'?'totalDaysNumber':'mTotalDaysNumber');
   if(daysEl) showCachedOrPlaceholder(daysEl,'…');
-  const totalReadDays = await computeTotalReadDays(currentUid);
-  pagesEl.textContent = (totalReadDays*15).toLocaleString('tr-TR');
+  const uid=currentUid;let totals;
+  try{totals=await computeReadingTotals(uid);}catch(_){pagesEl.textContent='–';if(daysEl)daysEl.textContent='–';return;}
+  if(uid!==currentUid)return;
+  const totalReadDays=totals.days;
+  renderPersonalGoals(pagesEl.closest("section.tab"),totals,uid);
+  pagesEl.textContent = totals.pages.toLocaleString('tr-TR');
   if(daysEl){daysEl.textContent=totalReadDays.toLocaleString('tr-TR');markLoaded(daysEl);}
   markLoaded(pagesEl);
 }
@@ -3320,7 +3328,8 @@ async function renderCompletedBooksCount(elId){
     el.textContent=snap.size.toLocaleString('tr-TR');markLoaded(el);
   }catch(_){if(currentUid===uid)el.textContent='–';}
 }
-async function computeTotalReadDays(uid){
+async function computeTotalReadDays(uid){return (await computeReadingTotals(uid)).days;}
+async function computeReadingTotals(uid){
   const joinDs = joinDateStrOf(uid);
   const startDs = (joinDs && joinDs > CLUB_START_DATE) ? joinDs : CLUB_START_DATE;
   const today = nowLogical();
@@ -3329,10 +3338,121 @@ async function computeTotalReadDays(uid){
   while(toStr(cursor) <= toStr(today)){ dateStrs.push(toStr(cursor)); cursor = addDays(cursor,1); }
   // Günleri tek tek sırayla değil, hepsini aynı anda (paralel) çekiyoruz — bu, uzun
   // süredir üye olan biri için bile sonucu saniyelerden yüzlerce milisaniyeye indirir.
-  const snaps = await Promise.all(dateStrs.map(ds => getDoc(doc(db,'days',ds,'answers',uid)).catch(()=>null)));
-  return snaps.filter(snap => snap && snap.exists() && snap.data().status==='read').length;
+  const snaps = await Promise.all(dateStrs.map(ds => getDoc(doc(db,'days',ds,'answers',uid))));
+  const totals={days:0,pages:0,records:{}};
+  snaps.forEach((snap,i)=>{if(!snap.exists())return;const rec=snap.data();totals.records[dateStrs[i]]=rec;if(rec.status==='read'){totals.days++;totals.pages+=Number.isSafeInteger(rec.pages)&&rec.pages>=15?rec.pages:15;}});
+  return totals;
 }
 async function renderAdminWorms(){ await renderWormsShared('wormsMyStreak','wormsClubStreaks','wormsHistory'); }
+
+/* İsteğe bağlı kişisel hedefler. Günler mevcut 06.00 sınırını kullanır. */
+function personalGoals(data){return {daily:data?.daily||[],monthly:data?.monthly||[]};}
+function dailyGoalAt(goals,day=todayStr()){
+ return [...goals.daily].reverse().find(g=>g.start<=day&&(!g.end||day<g.end));
+}
+function activeMonthlyGoal(goals,now=Date.now()){
+ return goals.monthly.find(g=>Date.parse(g.start)<=now&&now<Date.parse(g.end));
+}
+function goalMonthEnd(start){
+ const end=new Date(start),day=end.getDate();end.setDate(1);end.setMonth(end.getMonth()+1);
+ const last=new Date(end.getFullYear(),end.getMonth()+1,0).getDate();end.setDate(Math.min(day,last));return end.toISOString();
+}
+async function loadPersonalGoals(uid=currentUid){
+ const snapshot=await getDoc(doc(db,'users',uid));return personalGoals(snapshot.data()?.readingGoals);
+}
+async function savePersonalGoal(kind,target){
+ if(!Number.isSafeInteger(target)||target<(kind==='daily'?15:1))throw Error(kind==='daily'?'En az 15 sayfa yazmalısın.':'En az 1 kitap yazmalısın.');
+ const uid=currentUid,ref=doc(db,'users',uid),day=todayStr(),now=new Date().toISOString();
+ await runTransaction(db,async tx=>{
+  const snapshot=await tx.get(ref),goals=personalGoals(snapshot.data()?.readingGoals);
+  if(kind==='daily'){
+   if(dailyGoalAt(goals,day))throw Error('Günlük hedefin zaten var.');
+   goals.daily.push({start:day,target});
+  }else{
+   if(activeMonthlyGoal(goals))throw Error('Aylık hedefin henüz bitmedi.');
+   goals.monthly.push({start:now,end:goalMonthEnd(now),target,completed:[]});
+  }
+  tx.update(ref,{readingGoals:goals});
+ });
+}
+async function stopDailyGoal(){
+ const ref=doc(db,'users',currentUid),day=todayStr();
+ await runTransaction(db,async tx=>{
+  const snap=await tx.get(ref),goals=personalGoals(snap.data()?.readingGoals),goal=dailyGoalAt(goals,day);
+  // Bugünün hedefi geçmişte korunsun; bırakma yarın 06.00'da yürürlüğe girer.
+  if(goal&&!goal.end){goal.end=toStr(addDays(fromStr(day),1));tx.update(ref,{readingGoals:goals});}
+ });
+}
+function goalHistoryCounts(goals,records,day=todayStr(),now=Date.now()){
+ const count={dailyWin:0,dailyLoss:0,monthlyWin:0,monthlyLoss:0};
+ for(const goal of goals.daily){
+  for(let ds=goal.start;ds<=day&&(!goal.end||ds<goal.end);ds=toStr(addDays(fromStr(ds),1))){
+   const rec=records[ds],pages=rec?.status==='read'?(Number.isSafeInteger(rec.pages)&&rec.pages>=15?rec.pages:15):0;
+   if(pages>=goal.target)count.dailyWin++;else if(ds<day)count.dailyLoss++;
+  }
+ }
+ for(const goal of goals.monthly){if(Date.parse(goal.end)<=now)count[(goal.completed||[]).length>=goal.target?'monthlyWin':'monthlyLoss']++;}
+ return count;
+}
+function goalForm(kind){return `<form class="goal-form" data-goal-form="${kind}"><label>${kind==='daily'?'Günde kaç sayfa?':'Bir ayda kaç kitap?'}<input type="number" name="target" inputmode="numeric" min="${kind==='daily'?15:1}" step="1" required placeholder="${kind==='daily'?'Örn. 30':'Örn. 2'}"></label><button class="primary" type="submit">Belirle</button><p class="goal-error" role="alert"></p></form>`;}
+function goalProgress(value,target){return `<progress value="${Math.min(value,target)}" max="${target}" aria-label="Hedef ilerlemesi"></progress>`;}
+async function renderPersonalGoals(section,totals,uid=currentUid){
+ const grid=section.querySelector('.personal-goals'),history=section.querySelector('.goal-history');if(!grid)return;
+ const revision=String(Number(grid.dataset.revision||0)+1);grid.dataset.revision=revision;
+ try{
+  const goals=await loadPersonalGoals(uid);if(uid!==currentUid||grid.dataset.revision!==revision)return;
+  const day=todayStr(),daily=dailyGoalAt(goals,day),monthly=activeMonthlyGoal(goals),last=goals.monthly.at(-1);
+  const nextDay=fromStr(toStr(addDays(nowLogical(),1)));nextDay.setHours(6,0,0,0);
+  section.dataset.goalRefreshAt=String(Math.min(nextDay.getTime(),monthly?Date.parse(monthly.end):Infinity));
+  const rec=totals.records[day],pages=rec?.status==='read'?(Number.isSafeInteger(rec.pages)&&rec.pages>=15?rec.pages:15):0;
+  const dailyText=pages>=daily?.target?`Bugünkü hedefini ${pages} sayfayla tamamladın.`:pages?`Bugün ${pages} sayfa okudun. Hedefine ${Math.max(0,(daily?.target||0)-pages)} sayfa kaldı.`:'Bugün henüz okuma kaydın yok.';
+  grid.innerHTML=`<div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▤</span><h2>Günlük sayfa hedefi</h2>${daily?`<strong class="goal-value">${daily.target} <small>sayfa / gün</small></strong>${goalProgress(pages,daily.target)}<p role="status">${dailyText}</p>${daily.end?'<p class="muted">Hedefin yarın 06.00’da sona erecek.</p>':'<button type="button" class="ai-text-action" data-stop-goal>Hedefi yarından itibaren bırak</button>'}`:goalForm('daily')}<p class="muted">${daily?'':'En az 15 sayfa · Her gün tekrarlanır.'}</p></div>
+  <div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▥</span><h2>Aylık kitap hedefi</h2>${monthly?`<strong class="goal-value">${monthly.target} <small>kitap</small></strong>${goalProgress((monthly.completed||[]).length,monthly.target)}<p role="status">Bu ay ${(monthly.completed||[]).length} kitap bitirdin.</p><p class="muted">${new Date(monthly.end).toLocaleString('tr-TR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})} tarihinde sona erer.</p>`:`${last?`<p class="goal-result" role="status">${(last.completed||[]).length>=last.target?'Son hedefinde başarılı oldun.':'Son hedefini tamamlayamadın.'} ${(last.completed||[]).length} / ${last.target} kitap.</p>`:''}${goalForm('monthly')}<p class="muted">Bir aylık dönem · “Okuyorum”dan bitirdiğin kitaplar.</p>`}</div>`;
+  const counts=goalHistoryCounts(goals,totals.records);
+  history.innerHTML=`<h2>Hedef geçmişin</h2><div class="goal-history-grid"><div><b>Günlük sayfa hedefleri</b><p><span class="goal-success">${counts.dailyWin} tamamladın</span><br>${counts.dailyLoss} tamamlayamadın</p></div><div><b>Aylık kitap hedefleri</b><p><span class="goal-success">${counts.monthlyWin} tamamladın</span><br>${counts.monthlyLoss} tamamlayamadın</p></div></div><span class="muted">Süresi devam eden hedefler başarısız sayılmaz.</span>`;
+  grid.querySelectorAll('[data-goal-form]').forEach(form=>form.onsubmit=async e=>{
+   e.preventDefault();const button=form.querySelector('button');if(button.disabled)return;button.disabled=true;
+   try{await savePersonalGoal(form.dataset.goalForm,Number(form.elements.target.value));await renderPersonalGoals(section,totals,uid);}
+   catch(err){form.querySelector('.goal-error').textContent=err.message||'Hedef kaydedilemedi.';button.disabled=false;}
+  });
+  const stop=grid.querySelector('[data-stop-goal]');if(stop)stop.onclick=async()=>{
+   stop.disabled=true;try{await stopDailyGoal();await renderPersonalGoals(section,totals,uid);}catch(err){showToast('Hedef değiştirilemedi. Tekrar dene.');stop.disabled=false;}
+  };
+ }catch(err){grid.innerHTML='<div class="card">Hedefler yüklenemedi. <button type="button" data-retry-goals>Tekrar dene</button></div>';grid.querySelector('button').onclick=()=>renderPersonalGoals(section,totals,uid);}
+}
+function askReadPages(){
+ return new Promise(resolve=>{
+  const dialog=document.createElement('dialog');dialog.className='reading-pages-dialog';
+  dialog.innerHTML='<form novalidate><h2>Bugün kaç sayfa okudun?</h2><label>Okuduğun sayfa sayısı<input name="pages" type="number" inputmode="numeric" min="15" step="1" required autofocus></label><p class="muted">En az 15 sayfa girmelisin.</p><div class="row"><button type="button" data-cancel>Vazgeç</button><button type="submit" class="primary">Kaydet</button></div></form>';
+  const finish=value=>{dialog.close();dialog.remove();resolve(value);};
+  dialog.querySelector('form').onsubmit=e=>{e.preventDefault();const value=Number(e.target.elements.pages.value);if(!Number.isSafeInteger(value)||value<15){showToast('En az 15 tam sayfa girmelisin. Okuma kaydedilmedi.');finish(null);}else finish(value);};
+  dialog.querySelector('[data-cancel]').onclick=()=>finish(null);dialog.oncancel=e=>{e.preventDefault();finish(null);};
+  document.body.appendChild(dialog);dialog.showModal();
+ });
+}
+async function moveBookWithGoal(b,collectionName,destCollection){
+ const uid=currentUid;
+ if(collectionName!=='readBooks'){
+  await addDoc(collection(db,'users',uid,destCollection),{title:b.title||'',author:b.author||'',cover:b.cover||'',addedAt:new Date().toISOString()});
+  await deleteDoc(doc(db,'users',uid,collectionName,b.id));return;
+ }
+ const userRef=doc(db,'users',uid),sourceRef=doc(db,'users',uid,'readBooks',b.id),destRef=doc(db,'users',uid,'bookHistory','finished_'+b.id);
+ const completedAt=new Date().toISOString();
+ await runTransaction(db,async tx=>{
+  const user=await tx.get(userRef),source=await tx.get(sourceRef);if(!source.exists())return;
+  const goals=personalGoals(user.data()?.readingGoals),monthly=activeMonthlyGoal(goals,Date.parse(completedAt));
+  const data=source.data();
+  tx.set(destRef,{title:data.title||'',author:data.author||'',cover:data.cover||'',addedAt:completedAt,completedAt,completedFromReading:true});
+  tx.delete(sourceRef);
+  if(monthly){monthly.completed=[...new Set([...(monthly.completed||[]),b.id])];tx.update(userRef,{readingGoals:goals});}
+ });
+}
+// Uygulama açık kalırsa 06.00 / aylık dönem bitişi de görünümde güncellensin.
+setInterval(()=>{
+ if(document.hidden||!currentUid)return;
+ const section=document.querySelector('#tab-today.active, #tab-msurvey.active');
+ if(section&&Date.now()>=Number(section.dataset.goalRefreshAt||Infinity))renderTotalPagesCard(section.id==='tab-today'?'totalPagesNumber':'mTotalPagesNumber');
+},60000);
 
 /* ============ ORTAK: "BUGÜN OKUDUN MU?" KENDİNİ İŞARETLEME KARTI ============ */
 // Hem üye hem yönetici "Bugün" sekmesinde aynı kendini işaretleme kartını görüyor; ikisi de aynı
@@ -3393,14 +3513,24 @@ function wireSelfMarkCard(ids){
     const key = ids.readBtn+'|read';
     if(stampBtnInFlight.has(key)) return;
     stampBtnInFlight.add(key);
-    const wasNew = todayAnswers[currentUid] !== 'read';
-    try{ playMarkFx(document.getElementById(ids.readBtn), 'read'); }catch(e){}
-    await markStatus(currentUid,'read');
-    render();
-    if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', currentUid);
-    const s = await computeStreak(currentUid);
-    await checkAndAwardBadges(currentUid, s);
-    setTimeout(()=> stampBtnInFlight.delete(key), 1200);
+    const uid=currentUid,day=todayStr(),wasNew = todayAnswers[uid] !== 'read';
+    try{
+      let pages=null;
+      if(wasNew){
+        const goals=await loadPersonalGoals(uid);
+        if(dailyGoalAt(goals,day)){
+          pages=await askReadPages();
+          if(pages===null){render();return;}
+        }
+      }
+      if(uid!==currentUid||day!==todayStr()){showToast('Gün veya oturum değişti. Lütfen yeniden işaretle.');render();return;}
+      try{playMarkFx(document.getElementById(ids.readBtn),'read');}catch(_){}
+      await markStatus(uid,'read',pages);
+      render();
+      if(wasNew) notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', uid);
+      const streak=await computeStreak(uid);await checkAndAwardBadges(uid,streak);
+    }catch(err){showToast('Okuma kaydedilemedi. Lütfen yeniden dene.');}
+    finally{setTimeout(()=>stampBtnInFlight.delete(key),1200);}
   });
   return render;
 }
@@ -5307,9 +5437,14 @@ function wireAiRecItems(items){
   const heading=document.querySelector('.ai-card-heading');
   if(heading){
     heading.setAttribute('aria-expanded','false');
+    const closeButton=document.querySelector('.ai-card-close');
+    if(closeButton)closeButton.hidden=true;
+    document.getElementById('aiRecCard').classList.remove('expanded');
     const toggleDescriptions=()=>{
       const panel=document.getElementById('aiRecDescriptions');if(!panel)return;
       panel.hidden=!panel.hidden;heading.setAttribute('aria-expanded',String(!panel.hidden));
+      document.getElementById('aiRecCard').classList.toggle('expanded',!panel.hidden);
+      if(closeButton)closeButton.hidden=panel.hidden;
       if(!panel.hidden){
         if(!matchMedia('(prefers-reduced-motion: reduce)').matches)panel.animate([{opacity:0,transform:'translateY(-6px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,easing:'ease-out'});
         panel.querySelectorAll('[data-pitch]').forEach(async el=>{
@@ -5319,10 +5454,11 @@ function wireAiRecItems(items){
       }
     };
     heading.onclick=toggleDescriptions;
+    if(closeButton)closeButton.onclick=toggleDescriptions;
     const card=document.getElementById('aiRecCard');
     if(card)card.onclick=event=>{
-      // Kitaplar kendi ayrıntı penceresini açar; metin seçimi ve yenileme bağımsızdır.
-      if(event.target.closest('button, a, input, select, textarea, .ai-rec-expanded'))return;
+      // Kitap düğmeleri ve yenileme bağımsızdır; açıklamalara dokunmak kartı daraltır.
+      if(event.target.closest('button, a, input, select, textarea'))return;
       if(window.getSelection()?.toString())return;
       toggleDescriptions();
     };
@@ -5618,8 +5754,7 @@ function showBhBookInfo(b, uid, gridId, collectionName){
       btn.disabled = true;
       const destCollection = collectionName==='wantToRead' ? 'readBooks' : 'bookHistory';
       try{
-        await addDoc(collection(db,'users',currentUid,destCollection), { title:b.title||'', author:b.author||'', cover:b.cover||'', addedAt:new Date().toISOString() });
-        await deleteDoc(doc(db,'users',currentUid,collectionName,b.id));
+        await moveBookWithGoal(b,collectionName,destCollection);
         closeModal('bookInfoModal');
         showToast(collectionName==='wantToRead' ? 'Şu An Okuduklarım\'a taşındı!' : 'Kitap Geçmişim\'e taşındı!');
         renderBookHistoryGrid(currentUid, gridId, true, collectionName);
