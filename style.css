@@ -441,9 +441,9 @@ html[data-theme=dark] .badge-art{filter:brightness(1.13)}
 
 /* App identity: original transparent logo, green theme surfaces. */
 body{background:var(--paper)}
-.brand-button{background:#42664b;display:grid;place-items:center}
+.brand-button{background:#dcebd7;display:grid;place-items:center}
 .brand-button img{display:block;width:44px;height:44px;object-fit:contain}
-.center-logo-mark{background:#42664b;padding:10px;display:grid;place-items:center}
+.center-logo-mark{background:#dcebd7;padding:10px;display:grid;place-items:center}
 .center-logo-mark img{display:block;width:60px;height:60px;object-fit:contain}
 #loadingScreen{padding:0;background:var(--primary-container);color:var(--ink)}
 #loadingScreen:before{display:none}
@@ -451,3 +451,4 @@ body{background:var(--paper)}
 .startup-mark img{display:block;object-fit:contain}
 #loadingScreen .startup-name{color:var(--ink)}
 #loadingScreen .startup-status{color:var(--ink-70)}
+
