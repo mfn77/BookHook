@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-45-edit-goals" />
+<link rel="stylesheet" href="./style.css?v=material-46-remove-goals" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -3364,7 +3364,7 @@ function dailyGoalAt(goals,day=todayStr()){
  return [...goals.daily].reverse().find(g=>g.start<=day&&(!g.end||day<g.end));
 }
 function activeMonthlyGoal(goals,now=Date.now()){
- return goals.monthly.find(g=>Date.parse(g.start)<=now&&now<Date.parse(g.end));
+ return goals.monthly.find(g=>!g.cancelledAt&&Date.parse(g.start)<=now&&now<Date.parse(g.end));
 }
 function goalMonthEnd(start){
  const end=new Date(start),day=end.getDate();end.setDate(1);end.setMonth(end.getMonth()+1);
@@ -3404,21 +3404,26 @@ function goalHistoryCounts(goals,records,day=todayStr(),now=Date.now()){
    if(pages>=goal.target)count.dailyWin++;else if(ds<day)count.dailyLoss++;
   }
  }
- for(const goal of goals.monthly){if(Date.parse(goal.end)<=now)count[(goal.completed||[]).length>=goal.target?'monthlyWin':'monthlyLoss']++;}
+ for(const goal of goals.monthly){if(!goal.cancelledAt&&Date.parse(goal.end)<=now)count[(goal.completed||[]).length>=goal.target?'monthlyWin':'monthlyLoss']++;}
  return count;
 }
 function goalEditButton(kind){
  const label=kind==='daily'?'Günlük sayfa hedefini düzenle':'Aylık kitap hedefini düzenle';
  return `<button type="button" class="goal-edit-button icon-button" data-edit-goal="${kind}" aria-label="${label}" title="${label}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 6.1A8 8 0 0 1 19.5 10M4.5 14A8 8 0 0 0 17.9 17.9"/></svg></button>`;
 }
-async function updatePersonalGoal(kind,target,expected,uid,day){
- if(!Number.isSafeInteger(target)||target<(kind==='daily'?15:1))throw Error(kind==='daily'?'En az 15 sayfa yazmalısın.':'En az 1 kitap yazmalısın.');
+async function updatePersonalGoal(kind,target,expected,uid,day,remove=false){
+ if(!remove&&(!Number.isSafeInteger(target)||target<(kind==='daily'?15:1)))throw Error(kind==='daily'?'En az 15 sayfa yazmalısın.':'En az 1 kitap yazmalısın.');
  const ref=doc(db,'users',uid);
  await runTransaction(db,async tx=>{
   const snapshot=await tx.get(ref),goals=personalGoals(snapshot.data()?.readingGoals);
   if(uid!==currentUid||day!==todayStr())throw Error('Gün veya oturum değişti. Hedefi yeniden aç.');
   const goal=kind==='daily'?dailyGoalAt(goals,day):activeMonthlyGoal(goals);
   if(!goal||goal.start!==expected.start||goal.target!==expected.target||goal.end!==expected.end)throw Error('Hedef değişmiş veya süresi dolmuş. Kartı yeniden aç.');
+  if(remove){
+   if(kind==='daily')goal.end=day;
+   else goal.cancelledAt=new Date().toISOString();
+   tx.update(ref,{readingGoals:goals});return;
+  }
   if(goal.target===target)return;
   if(kind==='daily'&&goal.start<day){
    // Dünkü ve daha eski hedef sonuçları yeni hedefle yeniden hesaplanmasın.
@@ -3433,7 +3438,7 @@ function openGoalEditor(kind,goal,section){
  if(document.querySelector('.goal-edit-dialog'))return;
  const uid=currentUid,day=todayStr(),expected={...goal};
  const dialog=document.createElement('dialog');dialog.className='reading-pages-dialog goal-edit-dialog';
- dialog.innerHTML=`<form novalidate><h2>${kind==='daily'?'Günlük sayfa hedefi':'Aylık kitap hedefi'}</h2><label>${kind==='daily'?'Günde kaç sayfa?':'Bu dönemde kaç kitap?'}<input name="target" type="number" inputmode="numeric" min="${kind==='daily'?15:1}" step="1" required value="${goal.target}" autofocus></label><p class="muted">${kind==='daily'?'Yeni hedef bugünden itibaren geçerli. Önceki günlerin sonuçları korunur.':'Dönem tarihleri ve bitirdiğin kitaplar korunur.'}</p><p class="goal-error" role="alert"></p><div class="row"><button type="button" data-cancel>Vazgeç</button><button type="submit" class="primary">Kaydet</button></div></form>`;
+ dialog.innerHTML=`<form novalidate><h2>${kind==='daily'?'Günlük sayfa hedefi':'Aylık kitap hedefi'}</h2><label>${kind==='daily'?'Günde kaç sayfa?':'Bu dönemde kaç kitap?'}<input name="target" type="number" inputmode="numeric" min="${kind==='daily'?15:1}" step="1" required value="${goal.target}" autofocus></label><p class="muted">${kind==='daily'?'Yeni hedef bugünden itibaren geçerli. Önceki günlerin sonuçları korunur.':'Dönem tarihleri ve bitirdiğin kitaplar korunur.'}</p><p class="goal-error" role="alert"></p><div class="row"><button type="button" data-cancel>Vazgeç</button><button type="submit" class="primary">Kaydet</button></div><button type="submit" name="remove" class="goal-remove-button">Hedefi kaldır</button></form>`;
  let busy=false;
  const close=()=>{if(busy)return;dialog.close();dialog.remove();};
  dialog.querySelector('[data-cancel]').onclick=close;dialog.oncancel=e=>{e.preventDefault();close();};
@@ -3441,7 +3446,7 @@ function openGoalEditor(kind,goal,section){
   e.preventDefault();if(busy)return;
   busy=true;dialog.querySelectorAll('button').forEach(b=>b.disabled=true);
   try{
-   await updatePersonalGoal(kind,Number(e.target.elements.target.value),expected,uid,day);
+   await updatePersonalGoal(kind,Number(e.target.elements.target.value),expected,uid,day,e.submitter?.name==='remove');
    busy=false;close();
    if(currentUid===uid)renderTotalPagesCard(section.id==='tab-today'?'totalPagesNumber':'mTotalPagesNumber');
   }catch(err){dialog.querySelector('.goal-error').textContent=err.message||'Hedef kaydedilemedi.';}
@@ -3457,7 +3462,7 @@ async function renderPersonalGoals(section,totals,uid=currentUid){
  const revision=String(Number(grid.dataset.revision||0)+1);grid.dataset.revision=revision;
  try{
   const goals=await loadPersonalGoals(uid);if(uid!==currentUid||grid.dataset.revision!==revision)return;
-  const day=todayStr(),daily=dailyGoalAt(goals,day),monthly=activeMonthlyGoal(goals),last=goals.monthly.at(-1);
+  const day=todayStr(),daily=dailyGoalAt(goals,day),monthly=activeMonthlyGoal(goals),last=goals.monthly.filter(g=>!g.cancelledAt).at(-1);
   const nextDay=fromStr(toStr(addDays(nowLogical(),1)));nextDay.setHours(6,0,0,0);
   section.dataset.goalRefreshAt=String(Math.min(nextDay.getTime(),monthly?Date.parse(monthly.end):Infinity));
   const rec=totals.records[day],pages=rec?.status==='read'?(Number.isSafeInteger(rec.pages)&&rec.pages>=15?rec.pages:15):0;
@@ -10637,6 +10642,96 @@ function renderGoodreadsImportTab(){
   };
 }
 
+/* PWA/tarayıcı Geri: ekranlar ve geçici ayrıntılar aynı geçmişi kullanır. */
+const appBackNavigation=(()=>{
+ const key='bookhookNavigation';let session='';
+ let owner=null,entries=[],index=-1,applying=false,scheduled=false,dialogSequence=0,popRevision=0;
+ const dialogs=new Map();
+ function snapshot(){
+  const root=document.getElementById('tab-'+activeTab);
+  const layers=[...document.querySelectorAll('.modal-overlay-anim')].filter(el=>el.style.display==='flex'&&!el.classList.contains('closing')).sort((a,b)=>Number(getComputedStyle(a).zIndex)-Number(getComputedStyle(b).zIndex)).map(el=>el.id);
+  const native=[...document.querySelectorAll('dialog[open]')].map(el=>{
+   if(!el.dataset.backDialog)el.dataset.backDialog='dialog-'+(++dialogSequence);
+   dialogs.set(el.dataset.backDialog,el);return el.dataset.backDialog;
+  });
+  return {tab:activeTab,hubs:root?.classList.contains('hub-flat')?[]:[...(root?.querySelectorAll('.hub-item.expanded')||[])].map(el=>el.dataset.hubTarget),ai:activeTab==='library'&&!hubLayoutEnabled('library')&&document.getElementById('aiRecCard').classList.contains('expanded'),layers,native};
+ }
+ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+ function state(){return {...(history.state||{}),[key]:{session,index}};}
+ function sync(){
+  scheduled=false;if(applying||!currentUid||!activeTab)return;
+  const next=snapshot();
+  if(owner!==currentUid||index<0){session=Date.now().toString(36)+Math.random().toString(36).slice(2);owner=currentUid;entries=[{view:next,y:scrollY}];index=0;history.replaceState(state(),'');return;}
+  if(same(entries[index].view,next))return;
+  // X/boşluk/Vazgeç ile kapanışta boş bir "geri" adımı bırakma.
+  let previous=-1;
+  if(entries[index].view.tab===next.tab){
+   for(let i=index-1;i>=0&&entries[i].view.tab===next.tab;i--)if(same(entries[i].view,next)){previous=i;break;}
+  }
+  if(previous>=0){applying=true;history.go(previous-index);return;}
+  entries=entries.slice(0,index+1);entries.push({view:next,y:scrollY});index++;
+  history.pushState(state(),'');
+ }
+ function schedule(){if(!scheduled){scheduled=true;queueMicrotask(sync);}}
+ function closeLayer(id){
+  const el=document.getElementById(id);if(!el)return;
+  const close=document.getElementById(id+'Close');
+  if(close)close.click();else closeModal(id);
+ }
+ async function restore(entry,revision){
+  const desired=entry.view;
+  for(const dialog of document.querySelectorAll('dialog[open]')){
+   if(desired.native.includes(dialog.dataset.backDialog))continue;
+   dialog.dispatchEvent(new Event('cancel',{cancelable:true}));
+   // Kaydetme sürerken pencere kapatılmıyorsa geçişi de beklet.
+   if(dialog.open)return false;
+  }
+  const current=snapshot();
+  for(const id of current.layers.slice().reverse())if(!desired.layers.includes(id))closeLayer(id);
+  if(activeTab!==desired.tab)switchTab(desired.tab,{animate:false});
+  const root=document.getElementById('tab-'+desired.tab);
+  if(!root?.classList.contains('hub-flat')){
+   root?.querySelectorAll('.hub-item').forEach(item=>{
+    if(desired.hubs.includes(item.dataset.hubTarget)){
+     if(!item.classList.contains('expanded'))materialExpandHubItem(item,item.dataset.hubTarget);
+    }else materialCollapseHubItem(item);
+   });
+  }
+  if(desired.tab==='library'&&!hubLayoutEnabled('library')){
+   const card=document.getElementById('aiRecCard');
+   if(card.classList.contains('expanded')!==desired.ai)card.querySelector('.ai-card-heading').click();
+  }
+  // İleri gezinmede eldeki modal içeriği yeniden kullanılabilir; silinmiş form yeniden yaratılmaz.
+  for(const id of desired.layers){const el=document.getElementById(id);if(el&&!el.classList.contains('closing'))el.style.display='flex';}
+  await new Promise(resolve=>setTimeout(resolve,150));
+  if(revision!==popRevision)return null;
+  const previous=document.documentElement.style.scrollBehavior;
+  document.documentElement.style.scrollBehavior='auto';window.scrollTo(0,entry.y);document.documentElement.style.scrollBehavior=previous;
+  return true;
+ }
+ window.addEventListener('popstate',async event=>{
+  if(!currentUid||currentUid!==owner)return;
+  const target=event.state?.[key];if(!target||target.session!==session||!entries[target.index]){applying=false;return;}
+  const from=index;applying=true;index=target.index;
+  const accepted=await restore(entries[index],++popRevision);
+  if(accepted===null)return;
+  if(!accepted){index=from;history.go(from-target.index);return;}
+  entries[index].view=snapshot();history.replaceState(state(),'');applying=false;
+ });
+ window.addEventListener('scroll',()=>{
+  if(!applying&&entries[index]&&document.body.dataset.screen===entries[index].view.tab)entries[index].y=scrollY;
+ },{passive:true});
+ const relevant='.modal-overlay-anim,dialog,.hub-item,#aiRecCard,section.tab';
+ new MutationObserver(records=>{
+  if(records.some(r=>r.type==='attributes'?r.target.matches(relevant):[...r.addedNodes,...r.removedNodes].some(n=>n.nodeType===1&&(n.matches('dialog')||n.querySelector?.('dialog')))))schedule();
+ }).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class','open']});
+ // Başlıktaki ok, donanım Geri ile aynı geçmiş adımını kullanır.
+ document.getElementById('materialBack').addEventListener('click',event=>{
+  if(index>0){event.preventDefault();event.stopImmediatePropagation();if(!applying)history.back();}
+ },true);
+ return {schedule};
+})();
+
 onAuthStateChanged(auth, async (user)=>{
   if(unsubUsers){ unsubUsers(); unsubUsers=null; }
   if(unsubToday){ unsubToday(); unsubToday=null; subscribedTodayKey=null; }
@@ -10725,7 +10820,7 @@ onAuthStateChanged(auth, async (user)=>{
     switchTab(notifTabParam);
     if(notifPostParam) setTimeout(()=> openPostModal(notifPostParam), 250);
     if(notifIdParam) markNotifReadById(notifIdParam);
-    history.replaceState(null, '', location.pathname);
+    history.replaceState(history.state, '', location.pathname);
   }
 
   if(myProfile.role==='admin'){
