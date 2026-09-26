@@ -5590,6 +5590,7 @@ async function showAiRecDetail(rec, items, idx){
       <button type="button" class="secondary" id="aiRecMarkReadBtn">Okudum</button>
       <button type="button" class="secondary" id="aiRecMarkWantBtn">Okumak istiyorum</button>
     </div>
+    <button type="button" class="ai-text-action" id="aiRecReplaceBtn" style="display:block;margin:16px auto 0;min-height:44px;">Yeniden öner</button>
   `;
   body.dataset.aiBookKey=cacheKey;
   wireAiRecDetailActions(rec, items, idx);
@@ -5609,6 +5610,7 @@ function wireAiRecDetailActions(rec, items, idx){
     const btn = document.getElementById(btnId);
     if(!btn) return;
     btn.addEventListener('click', async ()=>{
+      if(aiRecFetchInFlight){showToast('Devam eden öneri tamamlanıyor.');return;}
       document.querySelectorAll('#bookInfoModalBody button').forEach(b=>b.disabled=true);
       try{
         await addDoc(collection(db,'users',currentUid,collectionName), { title:rec.title||'', author:rec.author||'', cover:rec.cover||'', addedAt:new Date().toISOString() });
@@ -5625,6 +5627,43 @@ function wireAiRecDetailActions(rec, items, idx){
   wire('aiRecMarkReadingBtn', 'readBooks', 'Şu An Okuduklarım\'a eklendi!');
   wire('aiRecMarkReadBtn', 'bookHistory', 'Kitap Geçmişim\'e eklendi!');
   wire('aiRecMarkWantBtn', 'wantToRead', 'Okumak İstediklerim\'e eklendi!');
+  const replaceBtn=document.getElementById('aiRecReplaceBtn');
+  if(replaceBtn)replaceBtn.onclick=()=>refreshSingleAiRecommendation(rec,items,idx);
+
+}
+// Sadece seçilen öneriyi değiştir; yeni kitap kaydedilene kadar eskisini koru.
+async function refreshSingleAiRecommendation(rec,items,idx){
+ if(aiRecFetchInFlight){showToast('Devam eden öneri tamamlanıyor.');return;}
+ if(!Array.isArray(items)||items[idx]!==rec)return;
+ const uid=currentUid,modal=document.getElementById('bookInfoModalBody');
+ const bookKey=`${rec.title}|${rec.author}`;
+ const buttons=[...modal.querySelectorAll('button')];
+ const refresh=document.getElementById('aiRecRefreshBtn');
+ const button=document.getElementById('aiRecReplaceBtn');
+ aiRecFetchInFlight=true;buttons.forEach(b=>b.disabled=true);if(refresh)refresh.disabled=true;
+ if(button)button.textContent='Yeni kitap seçiliyor…';
+ try{
+  const res=await httpsCallable(cloudFunctions,'getBookRecommendation')({count:1,exclude:items.map(({title,author})=>({title,author}))});
+  const replacement=res.data?.items?.[0];
+  if(!replacement?.title)throw new Error('Yeni öneri alınamadı.');
+  await attachCoversToRecs([replacement]);
+  if(currentUid!==uid)return;
+  const next=items.slice();next[idx]=replacement;
+  const saved={...myProfile.aiRecommendations,...res.data,items:next,generatedAt:new Date().toISOString()};
+  await updateDoc(doc(db,'users',uid),{aiRecommendations:saved});
+  if(currentUid!==uid)return;
+  myProfile.aiRecommendations=saved;
+  items.splice(idx,1,replacement);
+  const body=document.getElementById('aiRecBody');
+  if(body){body.innerHTML=aiRecHtml(next);wireAiRecRefresh();wireAiRecItems(next);}
+  if(modal.dataset.aiBookKey===bookKey)closeModal('bookInfoModal');
+  showToast('Bu kitap için yeni öneri hazır.');
+ }catch(err){
+  if(currentUid===uid)showToast((err.message||'Yeni öneri alınamadı.')+' Mevcut önerin korundu.');
+ }finally{
+  aiRecFetchInFlight=false;buttons.forEach(b=>b.disabled=false);if(refresh)refresh.disabled=false;
+  if(button)button.textContent='Yeniden öner';
+ }
 }
 // Bir öneri "okuyorum/okudum/okumak istiyorum" ile kartından kaldırılınca, o TEK boşluk için tek
 // bir yeni öneri isteyip aynı konuma yerleştiriyoruz — diğer iki öneri yerinde kalıyor, tüm liste
@@ -10877,6 +10916,7 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
 
 
 
