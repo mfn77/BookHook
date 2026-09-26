@@ -5539,8 +5539,8 @@ function wireAiRecItems(items){
       if(!panel.hidden){
         if(!matchMedia('(prefers-reduced-motion: reduce)').matches)panel.animate([{opacity:0,transform:'translateY(-6px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,easing:'ease-out'});
         panel.querySelectorAll('[data-pitch]').forEach(async el=>{
-          if(el.dataset.loaded)return;el.dataset.loaded='true';el.textContent='Kitabın ayrıntılı anlatımı hazırlanıyor…';
-          try{el.textContent=await getAiBookPitch(items[Number(el.dataset.pitch)]);}catch{delete el.dataset.loaded;el.textContent='Ayrıntılı anlatım şu an alınamadı. Tekrar açarak deneyebilirsin.';}
+          el.textContent='Sana özel açıklama hazırlanıyor…';
+          try{el.textContent=await getAiBookPitch(items[Number(el.dataset.pitch)]);}catch{el.textContent='Ayrıntılı anlatım şu an alınamadı. Tekrar açarak deneyebilirsin.';}
         });
       }
     };
@@ -5556,37 +5556,20 @@ function wireAiRecItems(items){
   }
   syncAiHubLayout();
 }
-// Aynı oturumda aynı kitaba tekrar tıklanırsa hızlı dönsün diye bellek-içi bir önbellek (sayfa
-// yenilenince temizlenir), AMA asıl kalıcı önbellek 'bookPitches/{bookKey}' koleksiyonunda —
-// discoverCovers ile aynı desen: bir kitabın anlatım metni AI'dan bir kez alınınca herkes için
-// (kulübün tamamı için, sadece kendi cihazın için değil) kalıcı olarak saklanıyor, aynı kitabı
-// başka bir üye (ya da aynı üye uygulamayı kapatıp açtıktan sonra) tekrar açtığında AI'a tekrar
-// sorulmuyor — her açılışta baştan çekilmesi hem gecikme hem de gereksiz AI kredisi harcaması
-// demekti.
-const aiPitchCache = {};
+// Kişisel açıklamalar yalnız sunucunun kullanıcıya özel, kitaplık sürümlü önbelleğinde.
+// Ortak bookPitches koleksiyonu bu akışta kullanılmaz.
 const aiPitchPending = new Map();
 async function getAiBookPitch(rec){
-  const key=`${rec.title}|${rec.author}`;
-  if(aiPitchCache[key])return aiPitchCache[key];
-  if(aiPitchPending.has(key))return aiPitchPending.get(key);
-  const docId=bookKeyFor({title:rec.title,author:rec.author});
-  const task=(async()=>{
-    try{
-      const snap=await getDoc(doc(db,'bookPitches',docId));
-      if(snap.exists()){
-        const text=snap.data().text;
-        if(typeof text==='string'&&text.trim())return aiPitchCache[key]=text;
-      }
-    }catch(e){}
-    const res=await httpsCallable(cloudFunctions,'getBookPitch')({title:rec.title,author:rec.author});
-    if(typeof res.data?.text!=='string'||!res.data.text.trim())throw new Error('Açıklama alınamadı');
-    const text=res.data.text;
-    aiPitchCache[key]=text;
-    setDoc(doc(db,'bookPitches',docId),{text,fetchedAt:new Date().toISOString()}).catch(()=>{});
-    return text;
-  })();
-  aiPitchPending.set(key,task);
-  try{return await task;}finally{aiPitchPending.delete(key);}
+ const uid=currentUid,key=`${uid}|${rec.title}|${rec.author}`;
+ if(aiPitchPending.has(key))return aiPitchPending.get(key);
+ const task=(async()=>{
+  const res=await httpsCallable(cloudFunctions,'getBookPitch')({title:rec.title,author:rec.author});
+  if(currentUid!==uid)throw new Error('Oturum değişti');
+  if(typeof res.data?.text!=='string'||!res.data.text.trim())throw new Error('Açıklama alınamadı');
+  return res.data.text;
+ })();
+ aiPitchPending.set(key,task);
+ try{return await task;}finally{aiPitchPending.delete(key);}
 }
 async function showAiRecDetail(rec, items, idx){
   const body = document.getElementById('bookInfoModalBody');
@@ -5595,9 +5578,7 @@ async function showAiRecDetail(rec, items, idx){
   try{const url=new URL(rec.cover||'',location.href);if(rec.cover && ['https:','http:'].includes(url.protocol))safeCover=url.href;}catch(_){}
   const coverHtml=materialBookCover(rec.title,safeCover,'book-cover-detail');
   const cacheKey = `${rec.title}|${rec.author}`;
-  const pitchHtml = aiPitchCache[cacheKey]
-    ? escapeHtml(aiPitchCache[cacheKey])
-    : `<span class="muted">Neden bu kitabı okumalısın, bakalım…</span>`;
+  const pitchHtml = `<span class="muted">Sana özel açıklama hazırlanıyor…</span>`;
   body.innerHTML = `
     ${coverHtml}
     <h2 style="margin:4px 0 2px;">${escapeHtml(rec.title||'')}</h2>
@@ -5612,7 +5593,7 @@ async function showAiRecDetail(rec, items, idx){
   `;
   body.dataset.aiBookKey=cacheKey;
   wireAiRecDetailActions(rec, items, idx);
-  if(!aiPitchCache[cacheKey]){
+  {
     try{
       const text = await getAiBookPitch(rec);
       const pitchEl = document.getElementById('aiRecPitchText');
@@ -5654,16 +5635,17 @@ async function replaceAiRecSlot(items, idx){
   items.splice(idx, 1);
   const body = document.getElementById('aiRecBody');
   if(body){ body.innerHTML = aiRecHtml(items); wireAiRecRefresh(); wireAiRecItems(items); }
-  myProfile.aiRecommendations = { items: items.slice(), generatedAt: (myProfile.aiRecommendations && myProfile.aiRecommendations.generatedAt) || new Date().toISOString() };
+  myProfile.aiRecommendations = { ...myProfile.aiRecommendations, items: items.slice(), generatedAt: (myProfile.aiRecommendations && myProfile.aiRecommendations.generatedAt) || new Date().toISOString() };
   try{
-    const exclude = [...items, removed].map(r=> r.author ? `${r.title} (${r.author})` : r.title);
+    await updateDoc(doc(db,'users',currentUid), {aiRecommendations:myProfile.aiRecommendations});
+    const exclude = [...items, removed].map(({title,author})=>({title,author}));
     const fn = httpsCallable(cloudFunctions, 'getBookRecommendation');
     const res = await fn({ count:1, exclude });
     const newItem = res.data && res.data.items && res.data.items[0];
     if(newItem){
       await attachCoversToRecs([newItem]);
       items.splice(idx, 0, newItem);
-      myProfile.aiRecommendations = { items: items.slice(), generatedAt: new Date().toISOString() };
+      myProfile.aiRecommendations = { ...res.data, items: items.slice(), generatedAt: new Date().toISOString() };
       await updateDoc(doc(db,'users',currentUid), { aiRecommendations: myProfile.aiRecommendations }).catch(()=>{});
       const bodyNow = document.getElementById('aiRecBody');
       if(bodyNow){ bodyNow.innerHTML = aiRecHtml(items); wireAiRecRefresh(); wireAiRecItems(items); }
@@ -5695,10 +5677,12 @@ async function fetchAiRecommendation(){
   const body = document.getElementById('aiRecBody');
   if(!body) return;
   aiRecFetchInFlight = true;
+  const previousRecommendations=myProfile.aiRecommendations;
   body.innerHTML = `<span class="muted">Senin için kitaplar seçiliyor…</span>`;
   try{
     const fn = httpsCallable(cloudFunctions, 'getBookRecommendation');
-    const res = await fn();
+    const previousItems=myProfile.aiRecommendations?.items||[];
+    const res = await fn({exclude:previousItems.map(({title,author})=>({title,author}))});
     const items = res.data.items || [];
     myProfile.aiRecommendations = res.data;
     await attachCoversToRecs(items);
@@ -5708,7 +5692,13 @@ async function fetchAiRecommendation(){
     body.innerHTML = aiRecHtml(items);
     wireAiRecItems(items);
   }catch(err){
-    body.innerHTML = `<span class="muted">${escapeHtml(err.message||'Öneri alınamadı.')}</span><div style="margin-top:10px;"><button type="button" class="secondary tiny" id="aiRecRefreshBtn">Tekrar dene</button></div>`;
+    if(previousRecommendations?.items?.length){
+      myProfile.aiRecommendations=previousRecommendations;
+      body.innerHTML=aiRecHtml(previousRecommendations.items);wireAiRecItems(previousRecommendations.items);
+      showToast(err.message||'Yeni öneri alınamadı. Önceki önerilerin korundu.');
+    }else{
+      body.innerHTML=`<span class="muted">${escapeHtml(err.message||'Öneri alınamadı.')}</span><button type="button" class="secondary tiny" id="aiRecRefreshBtn">Tekrar dene</button>`;
+    }
   }
   wireAiRecRefresh();
   aiRecFetchInFlight = false;
@@ -5719,7 +5709,7 @@ async function renderAiRecCard(){
   if(aiRecFetchInFlight) return;
   if(document.querySelector('#aiRecBody .ai-rec-item')) return; // zaten ekranda öneri var, ilgisiz bir profil güncellemesi yüzünden yeniden çizmeye gerek yok
   const cached = myProfile.aiRecommendations;
-  if(cached && cached.items && cached.items.length){
+  if(cached && cached.items && cached.items.length && cached.version===2){
     const missingCovers = cached.items.some(it=>!it.cover);
     if(missingCovers){
       body.innerHTML = `<span class="muted">Yükleniyor…</span>`;
