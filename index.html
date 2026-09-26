@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>html,body{background:#dcebd7}#loadingScreen{position:fixed;inset:0;background:#dcebd7;z-index:1000}.startup-content{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}.startup-mark{display:grid;place-items:center;width:144px;height:144px;border-radius:40px;background:#dcebd7}.startup-name{font:600 24px system-ui;color:#294c32}.startup-status{font:14px system-ui;color:#42664b}</style>
-<link rel="stylesheet" href="./style.css?v=material-48-light-brand" />
+<link rel="stylesheet" href="./style.css?v=material-49-consistent-ui" />
 
 </head>
 <body>
@@ -363,7 +363,7 @@
     <!-- ORTAK: GRUP KURALLARI -->
     <section class="tab" id="tab-rules">
       <div class="card">
-        <h2>📋 Grup Kuralları</h2>
+        <h2>Grup kuralları</h2>
         <div id="rulesDisplay" class="muted" style="white-space:pre-wrap;"></div>
         <div id="rulesAdminEdit" style="display:none; margin-top:14px;">
           <div class="field"><label>Kuralları düzenle</label>
@@ -398,14 +398,14 @@
         <button class="secondary" id="settingsChangePasswordBtn">Şifreyi Değiştir</button>
       </div>
       <div class="card">
-        <h2>🔔 Bildirim Ayarları</h2>
+        <h2>Bildirimler</h2>
         <p class="muted" style="font-size:12.5px; margin-bottom:10px;">Hangi bildirimleri almak istediğini seçebilirsin.</p>
         <div class="member-row" style="justify-content:space-between; align-items:center;">
-          <span>🎁 Hediye bildirimleri</span>
+          <span data-setting-icon="gift">Hediye bildirimleri</span>
           <input type="checkbox" id="notifPrefGifts" style="width:20px; height:20px;" />
         </div>
         <div class="member-row" style="justify-content:space-between; align-items:center;">
-          <span>📰 Sosyal (Akış, Öneriler) bildirimleri</span>
+          <span data-setting-icon="feed">Akış ve öneriler</span>
           <input type="checkbox" id="notifPrefSocial" style="width:20px; height:20px;" />
         </div>
       </div>
@@ -1622,7 +1622,7 @@ async function renderNotifsTab(){
     statusNote.textContent = 'Bildirimler Açık';
     enableBtn.style.display = 'none';
   } else if(Notification.permission === 'denied'){
-    statusNote.textContent = '🚫 Bildirimler bu site için reddedilmiş. Adres çubuğundaki site simgesinden izni değiştirip sayfayı yenile.';
+    statusNote.textContent = 'Bildirimler bu site için reddedilmiş. Adres çubuğundaki site simgesinden izni değiştirip sayfayı yenile.';
     enableBtn.style.display = 'none';
   } else {
     statusNote.textContent = 'Telefon bildirimleri henüz açık değil.';
@@ -4004,7 +4004,7 @@ async function renderQpGiftCard(){
       if(req.shipped){
         html += `<div class="receipt">
           <div class="rweek"><span class="giver">${userChipHtml(p.giverUid)}</span> kitabını gönderdi 📮</div>
-          <div class="muted" style="display:flex; align-items:center; gap:8px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:32px;height:48px;object-fit:cover;border-radius:4px;box-shadow:var(--shadow);cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
+          <div class="muted" style="display:flex; align-items:center; gap:8px;"><span class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover||'')}" style="display:block;flex:0 0 auto;width:32px;height:48px;cursor:pointer;">${materialBookCover(req.bookTitle,req.bookCover)}</span><span>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
           <button class="primary qp-gift-received" data-reqid="${reqId}" data-giver="${p.giverUid}" style="margin-top:8px;">📬 Kitabı Aldım</button>
         </div>`;
       } else {
@@ -4018,7 +4018,7 @@ async function renderQpGiftCard(){
         html += `<div class="receipt"><div class="rweek">${userChipHtml(p.receiverUid)}'e gönderdiğini işaretledin</div><div class="empty-note">📬 Alıcı onayı bekleniyor.</div></div>`;
       } else {
         html += `<div class="receipt"><div class="rweek">${userChipHtml(p.receiverUid)}'e kitap hediye edeceksin</div>
-          <div class="muted" style="display:flex; gap:10px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:40px;height:60px;object-fit:cover;border-radius:5px;box-shadow:var(--shadow); flex:0 0 auto;cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b><br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>
+          <div class="muted" style="display:flex; gap:10px;"><span class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover||'')}" style="display:block;flex:0 0 auto;width:40px;height:60px;cursor:pointer;">${materialBookCover(req.bookTitle,req.bookCover)}</span><span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b><br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>
           <button class="secondary qp-gift-shipped" data-reqid="${reqId}" data-receiver="${p.receiverUid}" style="margin-top:8px;">📮 Kitabı Gönderdim</button>
         </div>`;
       }
@@ -4151,13 +4151,13 @@ function buildPersonalGiftHtml(draw, myPairAsReceiver, myPairAsGiver, reqForRece
     } else if(req && req.shipped){
       html += `<div class="receipt">
         <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${userChipHtml(p.giverUid)}</span> kitabını gönderdi 📮</div>
-        <div class="muted" style="display:flex; align-items:center; gap:8px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:32px;height:48px;object-fit:cover;border-radius:4px;box-shadow:var(--shadow);cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
+        <div class="muted" style="display:flex; align-items:center; gap:8px;"><span class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover||'')}" style="display:block;flex:0 0 auto;width:32px;height:48px;cursor:pointer;">${materialBookCover(req.bookTitle,req.bookCover)}</span><span>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
         <button class="primary gf-received" data-reqid="${reqId}" data-giver="${p.giverUid}" style="margin-top:8px;">📬 Kitabı Aldım</button>
       </div>`;
     } else if(req){
       html += `<div class="receipt">
         <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${userChipHtml(p.giverUid)}</span> sana kitap hediye edecek</div>
-        <div class="muted" style="display:flex; align-items:center; gap:8px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:32px;height:48px;object-fit:cover;border-radius:4px;box-shadow:var(--shadow);cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>İstediğin kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
+        <div class="muted" style="display:flex; align-items:center; gap:8px;"><span class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover||'')}" style="display:block;flex:0 0 auto;width:32px;height:48px;cursor:pointer;">${materialBookCover(req.bookTitle,req.bookCover)}</span><span>İstediğin kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
         <button type="button" class="secondary gf-edit-toggle" style="margin-top:8px;">Güncelle</button>
         <div class="gift-form" data-week="${latest.weekStart}" data-giver="${p.giverUid}" data-receiver="${p.receiverUid}" style="display:none; margin-top:12px;">
           <div class="field"><label>Ad Soyad</label><input type="text" class="gf-name" value="${escapeHtml(req.recipientName||'')}" /></div>
@@ -4199,7 +4199,7 @@ function buildPersonalGiftHtml(draw, myPairAsReceiver, myPairAsGiver, reqForRece
       html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${userChipHtml(p.receiverUid)}'e gönderdiğini işaretledin</div><div class="empty-note">📬 Alıcı onayı bekleniyor.</div></div>`;
     } else if(req){
       html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${userChipHtml(p.receiverUid)}'e kitap hediye edeceksin</div>
-        <div class="muted" style="display:flex; gap:10px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:40px;height:60px;object-fit:cover;border-radius:5px;box-shadow:var(--shadow); flex:0 0 auto;cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>İstediği kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>
+        <div class="muted" style="display:flex; gap:10px;"><span class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover||'')}" style="display:block;flex:0 0 auto;width:40px;height:60px;cursor:pointer;">${materialBookCover(req.bookTitle,req.bookCover)}</span><span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>İstediği kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>
         <button class="secondary gf-shipped" data-reqid="${reqId}" data-receiver="${p.receiverUid}" style="margin-top:8px;">📮 Kitabı Gönderdim</button>
       </div>`;
     } else {
@@ -4223,7 +4223,7 @@ function buildAdminPendingHtml(reqMap){
       if(req && req.shipped){
         html += `<div class="empty-note">📮 Gönderildi, alıcı onayı bekleniyor.</div>`;
       } else if(req){
-        html += `<div class="muted" style="display:flex; gap:10px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:40px;height:60px;object-fit:cover;border-radius:5px;box-shadow:var(--shadow); flex:0 0 auto;cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>`;
+        html += `<div class="muted" style="display:flex; gap:10px;"><span class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover||'')}" style="display:block;flex:0 0 auto;width:40px;height:60px;cursor:pointer;">${materialBookCover(req.bookTitle,req.bookCover)}</span><span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>`;
       } else {
         html += `<div class="empty-note">Alıcı henüz istek formunu doldurmadı.</div>`;
       }
@@ -4335,7 +4335,7 @@ async function renderGiftBooksGrid(){
   if(!items.length){ host.innerHTML = `<p class="muted">Henüz tamamlanmış hediye yok.</p>`; markLoaded(host); return; }
   giftBooksGridCache = items;
   host.innerHTML = `<div class="discover-grid">${items.map((it,idx)=>{
-    const coverHtml = it.bookCover ? `<img src="${it.bookCover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(it.bookTitle).replace(/'/g,"\\'")}');" />` : placeholderCoverHtml(it.bookTitle);
+    const coverHtml = materialBookCover(it.bookTitle,it.bookCover);
     return `<div class="discover-book-card" data-gift-book-idx="${idx}">
       <div class="discover-book-cover-wrap">${coverHtml}</div>
       <div class="discover-book-title">${escapeHtml(it.bookTitle)}</div>
@@ -4420,7 +4420,7 @@ let qpNomCache = {};
 function qpNomRowHtml(n, extraHtml){
   qpNomCache[n.id] = n;
   return `<div class="qp-nom-row" data-qp-nom-id="${n.id}">
-    <div class="qp-nom-cover-ph">${n.bookCover?`<img src="${n.bookCover}" class="qp-nom-cover" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(n.bookTitle).replace(/'/g,"\\'")}');" />`:placeholderCoverHtml(n.bookTitle)}</div>
+    <div class="qp-nom-cover-ph">${materialBookCover(n.bookTitle,n.bookCover)}</div>
     <div class="qp-nom-info">
       <div class="qp-nom-title">${escapeHtml(n.bookTitle)}</div>
       <div class="qp-nom-meta">${escapeHtml(n.bookAuthor||'')} &middot; öneren: ${escapeHtml(n.name||'')}</div>
@@ -4432,9 +4432,7 @@ function showQpNominationInfo(nom){
   if(!nom) return;
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
-  const coverHtml = nom.bookCover
-    ? `<img src="${nom.bookCover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(nom.bookTitle).replace(/'/g,"\\'")}')+this.parentElement.innerHTML;" />`
-    : `<div style="width:100px; height:150px; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); margin:0 auto 12px;">${placeholderCoverHtml(nom.bookTitle)}</div>`;
+  const coverHtml = materialBookCover(nom.bookTitle,nom.bookCover,'book-cover-detail');
   body.innerHTML = `
     ${coverHtml}
     <h2 style="margin:4px 0 2px;">${escapeHtml(nom.bookTitle)}</h2>
@@ -4623,7 +4621,7 @@ async function renderQpVoting(body, qp){
   const roundLabel = qp.round===qp.totalRounds ? 'Final' : (qp.round===qp.totalRounds-1 ? 'Yarı Final' : `${qp.round}. Tur`);
   const cardHtml = (matchId, slot, book, votes, voted)=> `
     <div class="qp-vs-card${voted?' voted':''}" data-qp-vote="${matchId}" data-qp-slot="${slot}">
-      ${book.bookCover?`<img src="${book.bookCover}" class="qp-vs-cover" alt="" onerror="this.style.display='none';" />`:''}
+      ${materialBookCover(book.bookTitle,book.bookCover,'qp-vs-cover')}
       <div class="qp-vs-title">${escapeHtml(book.bookTitle)}</div>
       <div class="qp-vs-author">${escapeHtml(book.bookAuthor||'')}</div>
       <div class="qp-vs-votes" data-vote-count>${votes} oy</div>
@@ -4664,9 +4662,7 @@ async function renderQpVoting(body, qp){
   });
 }
 function qpWinnerBigCardHtml(cover, title, author){
-  const coverInner = cover
-    ? `<img src="${cover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(title).replace(/'/g,"\\'")}');" />`
-    : placeholderCoverHtml(title);
+  const coverInner = materialBookCover(title,cover);
   return `<div class="bh-grid-inner" style="max-width:140px; margin:0 auto 10px;">
     <div class="bh-card">
       <div class="bh-cover-wrap">${coverInner}</div>
@@ -4693,14 +4689,12 @@ async function renderQpBookInBugun(containerId){
   }
   if(containerId==='aSelfQpBook' || containerId==='mMyQpBook'){
     const days = Math.max(0,Math.ceil((new Date(qp.readingEndsAt)-Date.now())/86400000));
-    el.innerHTML = `<h2>Ortak kitabımız</h2><div class="daily-book">${qp.winnerCover?`<img src="${qp.winnerCover}" alt="" />`:`<div class="daily-book-placeholder">${escapeHtml(qp.winnerTitle||'Ortak kitap')}</div>`}<div><span class="chip ok">${days} gün kaldı</span><h3>${escapeHtml(qp.winnerTitle||'')}</h3><p class="muted">${escapeHtml(qp.winnerAuthor||'')}</p><button class="primary" data-material-route="quarterly">Kitaba git →</button></div></div>`;
+    el.innerHTML = `<h2>Ortak kitabımız</h2><div class="daily-book">${materialBookCover(qp.winnerTitle,qp.winnerCover,'daily-book-jacket')}<div><span class="chip ok">${days} gün kaldı</span><h3>${escapeHtml(qp.winnerTitle||'')}</h3><p class="muted">${escapeHtml(qp.winnerAuthor||'')}</p><button class="primary" data-material-route="quarterly">Kitaba git →</button></div></div>`;
     return;
   }
   const finished = (qp.finishedBy||[]).includes(currentUid);
   const daysLeft = Math.max(0, Math.ceil((new Date(qp.readingEndsAt) - Date.now())/(24*60*60*1000)));
-  const coverHtml = qp.winnerCover
-    ? `<img src="${qp.winnerCover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(qp.winnerTitle||'').replace(/'/g,"\\'")}');" />`
-    : placeholderCoverHtml(qp.winnerTitle||'');
+  const coverHtml = materialBookCover(qp.winnerTitle,qp.winnerCover);
   el.innerHTML = `
     <h2>📚 Ortak Kitap</h2>
     <div class="qp-bugun-row">
@@ -5136,7 +5130,7 @@ async function renderQpTestVoting(body, qp){
   const roundLabel = qp.round===qp.totalRounds ? 'Final' : (qp.round===qp.totalRounds-1 ? 'Yarı Final' : `${qp.round}. Tur`);
   const cardHtml = (matchId, slot, book, votes, voted)=> `
     <div class="qp-vs-card${voted?' voted':''}" data-qp-vote="${matchId}" data-qp-slot="${slot}">
-      ${book.bookCover?`<img src="${book.bookCover}" class="qp-vs-cover" alt="" onerror="this.style.display='none';" />`:''}
+      ${materialBookCover(book.bookTitle,book.bookCover,'qp-vs-cover')}
       <div class="qp-vs-title">${escapeHtml(book.bookTitle)}</div>
       <div class="qp-vs-author">${escapeHtml(book.bookAuthor||'')}</div>
       <div class="qp-vs-votes" data-vote-count>${votes} oy</div>
@@ -5512,7 +5506,7 @@ function aiRecItemHtml(rec, idx){
   try{const url=new URL(rec.cover||'',location.href);if(rec.cover && ['https:','http:'].includes(url.protocol))cover=url.href;}catch(_){}
   const title=escapeHtml(rec.title||'İsimsiz kitap');
   return `<button type="button" class="ai-rec-item" data-ai-rec-idx="${idx}" data-ai-open="${idx}">
-    <span class="hp-book-cover ai-preview-cover"><span>${escapeHtml((rec.title||'K').slice(0,1))}</span>${cover?`<img src="${escapeHtml(cover)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</span>
+    ${materialBookCover(rec.title,cover,'hp-book-cover ai-preview-cover')}
     <b>${title}</b><span class="ai-preview-author">${escapeHtml(rec.author||'')}</span>
   </button>`;
 }
@@ -5599,7 +5593,7 @@ async function showAiRecDetail(rec, items, idx){
   document.getElementById('bookInfoModal').style.display='flex';
   let safeCover='';
   try{const url=new URL(rec.cover||'',location.href);if(rec.cover && ['https:','http:'].includes(url.protocol))safeCover=url.href;}catch(_){}
-  const coverHtml=`<span class="hp-book-cover" style="width:100px;height:150px;margin:0 auto 12px;font-size:48px"><span>${escapeHtml((rec.title||'K').slice(0,1))}</span>${safeCover?`<img src="${escapeHtml(safeCover)}" alt="" onerror="this.remove()">`:''}</span>`;
+  const coverHtml=materialBookCover(rec.title,safeCover,'book-cover-detail');
   const cacheKey = `${rec.title}|${rec.author}`;
   const pitchHtml = aiPitchCache[cacheKey]
     ? escapeHtml(aiPitchCache[cacheKey])
@@ -5802,9 +5796,7 @@ async function renderBookHistoryGrid(uid, gridId, editable, collectionName){
     </div>` : '';
 
   const cardsHtml = pageItems.map(b=>{
-    const coverHtml = b.cover
-      ? `<img src="${b.cover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(b.title||'').replace(/'/g,"\\'")}');" />`
-      : placeholderCoverHtml(b.title||'');
+    const coverHtml = materialBookCover(b.title,b.cover);
     const delBtn = editable ? `<button class="bh-delete" data-id="${b.id}" title="Kaldır">✕</button>` : '';
     return `<div class="bh-card" data-bh-id="${b.id}" style="cursor:pointer;">
       <div class="bh-cover-wrap">${coverHtml}</div>
@@ -5848,9 +5840,7 @@ async function renderBookHistoryGrid(uid, gridId, editable, collectionName){
 function showBhBookInfo(b, uid, gridId, collectionName){
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
-  const coverHtml = b.cover
-    ? `<img src="${b.cover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(b.title||'').replace(/'/g,"\\'")}')+this.parentElement.innerHTML;" />`
-    : `<div style="width:100px; height:150px; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); margin:0 auto 12px;">${placeholderCoverHtml(b.title||'')}</div>`;
+  const coverHtml = materialBookCover(b.title,b.cover,'book-cover-detail');
   let actionBtn = '';
   if(uid===currentUid){
     if(collectionName==='wantToRead') actionBtn = `<button type="button" class="primary" id="bhMoveBtn" style="margin-top:10px;">📖 Okuyorum</button>`;
@@ -6355,7 +6345,7 @@ function postBodyHtml(p, expanded){
       if(sub==='nomination_made'){
         const cover = p.bookCover
           ? `<img src="${p.bookCover}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml(p.bookTitle||'')}" data-book-cover="${escapeHtml(p.bookCover)}" />`
-          : `<span class="post-book-cover" style="display:inline-block; overflow:hidden; border-radius:6px;">${placeholderCoverHtml(p.bookTitle||'')}</span>`;
+          : `<span class="post-book-cover" style="display:inline-block; overflow:hidden; border-radius:6px;">${materialBookCover(p.bookTitle,'')}</span>`;
         return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div><b>${escapeHtml(p.name||'')}</b> bir kitap önerdi: <b>${escapeHtml(p.bookTitle||'')}</b>${p.bookAuthor?` (${escapeHtml(p.bookAuthor)})`:''}</div></div>`;
       }
       if(sub==='round_start'){
@@ -9037,39 +9027,16 @@ CURATED_CATALOG.forEach(cat=>{
 });
 const LEVEL_COLORS = { baslangic:'#26A269', orta:'#D4A017', ileri:'#E01B24' };
 const LEVEL_LABELS = { baslangic:'🟢 Başlangıç', orta:'🟡 Orta', ileri:'🔴 İleri' };
-const PLACEHOLDER_COVER_PALETTE = [
-  {light:'#7a5233', base:'#5c3d24', dark:'#2e1f13'},
-  {light:'#8a2332', base:'#5e161f', dark:'#320c11'},
-  {light:'#2f6b52', base:'#1a4534', dark:'#0e281f'},
-  {light:'#a9822a', base:'#7a611a', dark:'#453609'},
-  {light:'#3d5680', base:'#25355a', dark:'#141d30'},
-  {light:'#7a4f7a', base:'#4f3350', dark:'#2b1c2c'},
-  {light:'#6b5c47', base:'#42392a', dark:'#231d15'},
-  {light:'#43584f', base:'#26362f', dark:'#141e19'}
-];
+const PLACEHOLDER_COVER_PALETTE = ['#CEC4E1','#C8DDC4','#F0D5B9','#C5DAE8','#E8C9D2','#E5DFB9'];
 function placeholderCoverHtml(title){
-  const t = (title||'').trim();
-  let hash = 0;
-  for(let i=0;i<t.length;i++) hash = (hash*31 + t.charCodeAt(i)) & 0xffffffff;
-  const pal = PLACEHOLDER_COVER_PALETTE[Math.abs(hash) % PLACEHOLDER_COVER_PALETTE.length];
-  const firstLetter = t.charAt(0).toUpperCase();
-  const rest = t.slice(1);
-  const gold = '#cdaa61';
-  return `<div style="width:100%; height:100%; position:relative; overflow:hidden; box-sizing:border-box;
-      background:
-        repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px),
-        radial-gradient(ellipse at 30% 15%, rgba(255,255,255,0.14), transparent 55%),
-        linear-gradient(160deg, ${pal.light}, ${pal.base} 45%, ${pal.dark} 100%);">
-    <div style="position:absolute; inset:6%; border:1px solid ${gold}; opacity:0.85;"></div>
-    <div style="position:absolute; inset:11%; border:1px solid ${gold}; opacity:0.6;"></div>
-    <div style="position:absolute; top:11%; left:11%; width:10px; height:10px; border-top:1px solid ${gold}; border-left:1px solid ${gold};"></div>
-    <div style="position:absolute; top:11%; right:11%; width:10px; height:10px; border-top:1px solid ${gold}; border-right:1px solid ${gold};"></div>
-    <div style="position:absolute; bottom:11%; left:11%; width:10px; height:10px; border-bottom:1px solid ${gold}; border-left:1px solid ${gold};"></div>
-    <div style="position:absolute; bottom:11%; right:11%; width:10px; height:10px; border-bottom:1px solid ${gold}; border-right:1px solid ${gold};"></div>
-    <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:18% 15%; text-align:center;">
-      <div style="font-family:'Pirata One',Georgia,serif; color:${gold}; line-height:1.25; word-break:break-word; text-shadow:0 1px 3px rgba(0,0,0,0.55);"><span style="font-size:1.5em;">${escapeHtml(firstLetter)}</span><span style="font-size:1.05em;">${escapeHtml(rest)}</span></div>
-    </div>
-  </div>`;
+ const t=String(title||'Kitap').trim()||'Kitap';
+ let hash=0;for(const ch of t)hash=(Math.imul(hash,31)+ch.codePointAt(0))|0;
+ const color=PLACEHOLDER_COVER_PALETTE[(hash>>>0)%PLACEHOLDER_COVER_PALETTE.length];
+ return `<span class="book-cover-template" style="--cover-paper:${color}" aria-hidden="true"><span class="book-cover-letter">${escapeHtml(Array.from(t)[0].toLocaleUpperCase('tr-TR'))}</span><span class="book-cover-name">${escapeHtml(t)}</span></span>`;
+}
+function materialBookCover(title,cover,extraClass=''){
+ let url='';try{const u=new URL(cover||'',location.href);if(cover&&['http:','https:'].includes(u.protocol))url=u.href;}catch(_){}
+ return `<span class="material-book-cover ${extraClass}">${placeholderCoverHtml(title)}${url?`<img src="${escapeHtml(url)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</span>`;
 }
 let discoverCoversCache = {};
 let discoverCoversLoaded = false;
@@ -9313,6 +9280,7 @@ async function renderSettingsTab(){
   document.getElementById('settingsPasswordError').textContent = '';
   const pwCard = document.getElementById('settingsChangePasswordBtn').closest('.card');
   pwCard.style.display = isGoogleUser() ? 'none' : 'block';
+  if(pwCard.parentElement.classList.contains('settings-group'))pwCard.parentElement.hidden=isGoogleUser();
   const adminWrap = document.getElementById('settingsAdminOnlyWrap');
   adminWrap.style.display = myProfile.role==='admin' ? 'block' : 'none';
   if(myProfile.role==='admin'){
@@ -9339,6 +9307,7 @@ async function renderSettingsTab(){
       });
     });
   }
+  materialSettingsPresentation();
   const prefs = myProfile.notifPrefs || {};
   const giftsChk = document.getElementById('notifPrefGifts');
   const socialChk = document.getElementById('notifPrefSocial');
@@ -9506,7 +9475,7 @@ async function renderDiscoverCategoryGrid(slug){
     const level = b.level || (curated && curated.level);
     const borderColor = LEVEL_COLORS[level] || 'var(--line)';
     const coverInfo = discoverCoversCache[key];
-    const coverHtml = (coverInfo && coverInfo.cover) ? `<img src="${coverInfo.cover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(b.title).replace(/'/g,"\\'")}');" />` : placeholderCoverHtml(b.title);
+    const coverHtml = materialBookCover(b.title,coverInfo?.cover);
     const ratingLabel = isGroup ? `⭐ ${groupAvg(b.ratings).toFixed(1)} &middot; Grupta ${Object.keys(b.ratings||{}).length}` : '';
     return `<div class="discover-book-card" data-idx="${idx}">
       <div class="discover-book-cover-wrap" style="border:2px solid ${borderColor};">${coverHtml}${isGroup?'<span class="discover-group-badge">Grupta</span>':''}</div>
@@ -9563,7 +9532,7 @@ async function openBookDiscoverModal(book){
   const why = book.why || curated.why;
   const coverInfo = discoverCoversCache[bookKey];
   const safeTitleJs = book.title.replace(/'/g, "\\'");
-  const coverHtml = (coverInfo && coverInfo.cover) ? `<img src="${coverInfo.cover}" alt="" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${safeTitleJs}');" />` : placeholderCoverHtml(book.title);
+  const coverHtml = materialBookCover(book.title,coverInfo?.cover);
   let groupDoc = null;
   try{
     const snap = await getDoc(doc(db,'groupBookRatings',bookKey));
@@ -9664,7 +9633,7 @@ async function renderRecCard(it, isGroup){
     </div>`;
   };
   const commentsHtml = topComments.map(c=> renderComment(c,false) + repliesOf(c.id).map(r=>renderComment(r,true)).join('')).join('');
-  const coverHtml = `<span style="width:52px; height:78px; border-radius:6px; overflow:hidden; box-shadow:var(--shadow); flex:0 0 auto; display:inline-block;">${it.coverUrl ? `<img src="${it.coverUrl}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(it.bookTitle)}" data-book-cover="${escapeHtml(it.coverUrl)}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(it.bookTitle).replace(/'/g,"\\'")}');" />` : placeholderCoverHtml(it.bookTitle)}</span>`;
+  const coverHtml = `<span class="recommendation-cover book-cover-clickable" data-book-title="${escapeHtml(it.bookTitle)}" data-book-cover="${escapeHtml(it.coverUrl||'')}">${materialBookCover(it.bookTitle,it.coverUrl)}</span>`;
   return `<div class="receipt" data-rec-id="${it.id}">
     <div class="rweek"><span>${directionLabel} &middot; ${dtLabel}</span>${canDelete?`<button class="secondary tiny" data-del-rec="${it.id}">Sil</button>`:''}</div>
     <div style="display:flex; gap:12px; align-items:flex-start;">
@@ -9817,7 +9786,7 @@ async function renderMemberWorms(){ await renderWormsShared('mWormsMyStreak','mW
 /* ============ GİRİŞ / AUTH DURUM TAKİBİ ============ */
 /* BookHook Material UI adapter. Only presentation/navigation; existing data model retained. */
 function materialIcon(kind){
- const paths={home:'<path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/>',feed:'<path d="M4 5h16M4 10h16M4 15h10M4 20h6"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',book:'<path d="M12 5C9 2 5 2 2 3v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/>',club:'<circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M3 9a3 3 0 0 0 0 6m18-6a3 3 0 0 1 0 6M2 21v-2m20 2v-2"/>',gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8H8a3 3 0 1 1 3-3Zm0 0h4a3 3 0 1 0-3-3Z"/>',badge:'<circle cx="12" cy="9" r="6"/><path d="m8 14-2 8 6-3 6 3-2-8m-6-6 2-3 2 3"/>',records:'<path d="M4 3h16v18H4ZM8 8h8M8 12h8M8 16h5"/>',settings:'<path d="m9 3-1 3-3 1v4l-2 1 2 2v4l3 1 1 3h6l1-3 3-1v-4l2-2-2-1V7l-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/>',rules:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',heart:'<path d="M12 21s-6.5-4.2-9-8.4C1.3 9 2.7 5.5 6 4.6c2-.5 3.8.3 5 2 .1.2.5.2.6 0 1.2-1.7 3-2.5 5-2 3.3.9 4.7 4.4 3 8C18.5 16.8 12 21 12 21Z"/>',account:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',import:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>'};
+ const paths={bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',logout:'<path d="M9 4H4v16h5M10 12h11m-4-4 4 4-4 4"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',home:'<path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/>',feed:'<path d="M4 5h16M4 10h16M4 15h10M4 20h6"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',book:'<path d="M12 5C9 2 5 2 2 3v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/>',club:'<circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M3 9a3 3 0 0 0 0 6m18-6a3 3 0 0 1 0 6M2 21v-2m20 2v-2"/>',gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8H8a3 3 0 1 1 3-3Zm0 0h4a3 3 0 1 0-3-3Z"/>',badge:'<circle cx="12" cy="9" r="6"/><path d="m8 14-2 8 6-3 6 3-2-8m-6-6 2-3 2 3"/>',records:'<path d="M4 3h16v18H4ZM8 8h8M8 12h8M8 16h5"/>',settings:'<path d="m9 3-1 3-3 1v4l-2 1 2 2v4l3 1 1 3h6l1-3 3-1v-4l2-2-2-1V7l-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/>',rules:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',heart:'<path d="M12 21s-6.5-4.2-9-8.4C1.3 9 2.7 5.5 6 4.6c2-.5 3.8.3 5 2 .1.2.5.2.6 0 1.2-1.7 3-2.5 5-2 3.3.9 4.7 4.4 3 8C18.5 16.8 12 21 12 21Z"/>',account:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',import:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>'};
  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[kind]||paths.book}</svg>`;
 }
 function materialPrimaryTabs(){
@@ -10225,7 +10194,7 @@ function materialInit(){
  const settings=document.getElementById('tab-settings');
  if(!document.getElementById('materialThemeSettings')){
   settings.insertAdjacentHTML('afterbegin',`<div class="card" id="materialThemeSettings"><h2>Görünüm</h2><p class="muted">Uygulamanın temasını seç.</p><div class="segmented" id="materialThemeChoices"><button data-theme-choice="light">Açık</button><button data-theme-choice="dark">Koyu</button><button data-theme-choice="auto">Otomatik</button></div><p class="muted">Otomatik tema günün saatine göre değişir.</p></div>`);
-  settings.insertAdjacentHTML('beforeend',`<div class="settings-list">${materialLink('profile','Profilim','Ad, iletişim ve adres bilgilerin','account')}<button class="destination-row" id="materialEnablePush">${materialIcon('gift')}<b>Bildirimleri Aç</b></button><button class="destination-row" id="materialGuideBtn">${materialIcon('book')}<b>Kullanım Rehberi</b></button><button class="destination-row danger" id="materialLogout">Çıkış yap</button></div>`);
+  settings.insertAdjacentHTML('beforeend',`<div class="settings-list">${materialLink('profile','Profilim','Ad, iletişim ve adres bilgilerin','account')}<button class="destination-row" id="materialEnablePush"><span class="route-icon">${materialIcon('bell')}</span><span><b>Bildirimleri Aç</b><small>Bu cihazdaki bildirim izni</small></span><span aria-hidden="true">›</span></button><button class="destination-row" id="materialGuideBtn"><span class="route-icon">${materialIcon('book')}</span><span><b>Kullanım rehberi</b><small>BookHook nasıl çalışır?</small></span><span aria-hidden="true">›</span></button><button class="destination-row danger" id="materialLogout"><span class="route-icon">${materialIcon('logout')}</span><span><b>Çıkış yap</b></span><span aria-hidden="true">›</span></button></div>`);
   document.getElementById('materialEnablePush').onclick=enablePushNotifications;
   document.getElementById('materialGuideBtn').onclick=()=>{ document.getElementById('guideModal').style.display='flex'; };
   document.getElementById('materialLogout').onclick=()=>document.getElementById('logoutBtn').click();
@@ -10235,10 +10204,34 @@ function materialInit(){
  });
  materialThemeSync();
  initHubLayoutSettings();
+ materialSettingsPresentation();
  const name=document.getElementById('whoamiClickable');name.setAttribute('role','button');name.tabIndex=0;name.setAttribute('aria-label','Profilim');name.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();name.click();}};
  document.querySelectorAll('button[title]').forEach(button=>{if(!button.hasAttribute('aria-label'))button.setAttribute('aria-label',button.title);});
  document.getElementById('notifBellBtn').setAttribute('aria-label','Bildirimler');
  document.getElementById('hamburgerBtn').setAttribute('aria-label','Hesap ve ayarlar');
+}
+function materialSettingsPresentation(){
+ const settings=document.getElementById('tab-settings');
+ for(const card of settings.querySelectorAll(':scope > .card')){
+  const heading=card.querySelector(':scope > h2');if(!heading)continue;
+  const group=document.createElement('div');group.className='settings-group';
+  card.before(group);group.append(heading,card);card.classList.add('settings-surface');
+ }
+ settings.querySelectorAll('[data-setting-icon]').forEach(label=>{
+  if(label.querySelector('svg'))return;
+  label.insertAdjacentHTML('afterbegin',`<span class="route-icon">${materialIcon(label.dataset.settingIcon)}</span>`);
+  const row=label.closest('.member-row'),input=row.querySelector('input');
+  row.classList.add('notification-setting');input.setAttribute('role','switch');input.setAttribute('aria-label',label.textContent.trim());
+  const text=document.createElement('label');text.htmlFor=input.id;label.replaceWith(text);text.append(label);
+  const knob=document.createElement('span');knob.className='layout-switch';knob.setAttribute('aria-hidden','true');input.after(knob);
+ });
+ const push=document.getElementById('materialEnablePush');
+ if(push)push.querySelector('b').textContent=('Notification' in window&&Notification.permission==='granted')?'Bildirimler Açık':'Bildirimleri Aç';
+ const rules=document.getElementById('tab-rules');
+ for(const card of rules.querySelectorAll(':scope > .card')){
+  const heading=card.querySelector(':scope > h2');if(!heading)continue;
+  const group=document.createElement('div');group.className='settings-group';card.before(group);group.append(heading,card);card.classList.add('settings-surface');
+ }
 }
 function materialThemeSync(){
  const selected=getAutoThemeEnabled()?'auto':document.documentElement.getAttribute('data-theme')||'light';
@@ -10367,7 +10360,7 @@ const hubPreviews=(()=>{
  const book=(b,label)=>({label,title:b.title||b.bookTitle||b.t||'İsimsiz kitap',detail:b.author||b.a||b.note||'',cover:b.cover||b.coverUrl||'',book:true});
  function coverURL(url){try{const u=new URL(url,location.href);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}}
  function content(s){
-  if(s.book){const url=coverURL(s.cover);return `<span class="hp-book-cover"><span>${esc(s.title.slice(0,1))}</span>${url?`<img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}</span><span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-book-title">${esc(s.title)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;}
+  if(s.book){const url=coverURL(s.cover);return `${materialBookCover(s.title,url,'hp-book-cover')}<span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-book-title">${esc(s.title)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;}
   if(s.stats)return `<span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><span class="hp-stats">${s.stats.map(x=>`<span class="hp-stat ${x.tone}"><i>${esc(x.icon)}</i><b>${esc(x.value)}</b><small>${esc(x.label)}</small></span>`).join('')}</span><span class="hp-detail">${esc(s.detail)}</span></span>`;
   const badge=BADGE_DEFS.find(d=>d.icon===s.icon);
   return `<span class="hp-emblem ${esc(s.tone)}">${badge?badgeIllustration(badge.key):esc(s.icon)}</span><span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-value">${esc(s.value)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;

@@ -452,3 +452,46 @@ body{background:var(--paper)}
 #loadingScreen .startup-name{color:var(--ink)}
 #loadingScreen .startup-status{color:var(--ink-70)}
 
+
+
+/* Shared book jackets: one treatment for previews, shelves and book details. */
+.material-book-cover{display:block;position:relative;width:100%;height:100%;min-width:0;overflow:hidden;container-type:inline-size;flex-shrink:0;border-radius:3px 11px 11px 3px;background:#CEC4E1;border:0;border-left:4px solid rgba(255,255,255,.35);box-shadow:4px 5px 0 color-mix(in srgb,var(--ink) 12%,transparent);box-sizing:border-box}
+.material-book-cover>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:0}
+.book-cover-template{display:flex;width:100%;height:100%;box-sizing:border-box;flex-direction:column;justify-content:center;align-items:center;gap:6%;padding:12% 9%;background:var(--cover-paper,#CEC4E1);color:#273129;text-align:center;overflow:hidden}
+.book-cover-letter{font:normal 54px/.95 Georgia,serif;font-size:60cqi;flex-shrink:0}
+.book-cover-name{font:600 10px/1.2 'Roboto',sans-serif;font-size:clamp(6px,10cqi,15px);overflow-wrap:anywhere;text-wrap:balance;max-width:100%}
+.material-book-cover.hp-book-cover{display:block;width:48px;height:70px}
+.material-book-cover.ai-preview-cover{width:76px;height:116px}
+.material-book-cover.book-cover-detail{width:100px;height:150px;margin:0 auto 16px}
+.bh-cover-wrap,.discover-book-cover-wrap,.qp-nom-cover-ph{overflow:visible;border-radius:3px 11px 11px 3px;background:transparent}
+.recommendation-cover{display:block;width:58px;height:87px;flex:0 0 auto;cursor:pointer}
+.bh-cover-wrap>.material-book-cover,.discover-book-cover-wrap>.material-book-cover{width:100%;height:100%}
+/* Section headings and grouped surfaces match the management screen. */
+.settings-group{margin:0 0 28px;min-width:0}
+.settings-group>h2{font-size:20px;font-weight:600;margin:22px 0 12px}
+.settings-group>.settings-surface{background:var(--card);border:0;border-radius:24px;padding:22px;margin:0;box-shadow:none}
+#tab-settings .settings-list .destination-row{min-height:76px}
+#tab-settings .settings-list .destination-row>span:nth-child(2){flex:1;min-width:0;text-align:left}
+#tab-settings .settings-list .destination-row>span:last-child{color:var(--ink-70)}
+#materialThemeSettings>.muted{font-size:14px;line-height:1.5}
+#tab-settings .notification-setting{display:flex;position:relative;gap:16px;min-height:64px;padding:12px 0;border-bottom:1px solid var(--line)}
+#tab-settings .notification-setting:last-child{border-bottom:0;padding-bottom:0}
+.notification-setting>label{flex:1;min-width:0;cursor:pointer}
+.notification-setting [data-setting-icon]{display:flex;align-items:center;gap:14px;font-size:15px;color:var(--ink)}
+.notification-setting .route-icon{display:flex;align-items:center;justify-content:center;width:36px;height:36px;color:var(--gold);flex-shrink:0}
+.notification-setting .route-icon svg{width:24px;height:24px}
+#tab-settings .notification-setting>input{position:absolute;right:0;width:52px!important;height:36px!important;opacity:0;z-index:1;cursor:pointer;margin:0}
+.notification-setting>.layout-switch{position:relative;width:48px;height:28px;flex:0 0 auto;background:var(--line);border:2px solid var(--outline);border-radius:99px;pointer-events:none;box-sizing:border-box}
+.notification-setting>.layout-switch:after{content:'';position:absolute;left:4px;top:4px;width:16px;height:16px;border-radius:50%;background:var(--ink-70);transition:transform .18s}
+.notification-setting>input:checked+.layout-switch{background:var(--gold);border-color:var(--gold)}
+.notification-setting>input:checked+.layout-switch:after{transform:translateX(20px);background:var(--on-primary)}
+.notification-setting>input:focus-visible+.layout-switch{outline:3px solid var(--gold);outline-offset:4px}
+#tab-rules #rulesDisplay{font-size:15px;line-height:1.85;color:var(--ink);overflow-wrap:anywhere}
+#tab-rules textarea{background:var(--paper)!important;border:1px solid var(--line)!important;border-radius:16px!important;padding:16px!important;line-height:1.6;box-sizing:border-box;resize:vertical}
+#tab-rules .member-row{padding:16px 0;border-bottom:1px solid var(--line)}
+#tab-rules .settings-surface>button{margin-top:8px}
+@media(min-width:700px){.material-book-cover.ai-preview-cover{width:88px;height:132px}}
+@media(max-width:420px){.settings-group>.settings-surface{padding:18px}.notification-setting [data-setting-icon]{gap:10px;font-size:14px}}
+.daily-book>.daily-book-jacket{width:90px;height:136px}
+.qp-bugun-cover{overflow:visible;background:transparent;border-radius:3px 11px 11px 3px}
+@media(max-width:420px){.daily-book>.daily-book-jacket{width:76px;height:114px}}
