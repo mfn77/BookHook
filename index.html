@@ -5605,9 +5605,9 @@ async function showAiRecDetail(rec, items, idx){
     ${rec.reason?`<p class="ai-modal-reason">${escapeHtml(rec.reason)}</p>`:''}
     <div id="aiRecPitchText" style="text-align:left; font-size:14px; line-height:1.6;">${pitchHtml}</div>
     <div class="row" style="justify-content:center; gap:8px; margin-top:16px; flex-wrap:wrap;">
-      <button type="button" class="primary" id="aiRecMarkReadingBtn">📖 Okuyorum</button>
-      <button type="button" class="secondary" id="aiRecMarkReadBtn">✓ Okudum</button>
-      <button type="button" class="secondary" id="aiRecMarkWantBtn">➕ Okumak istiyorum</button>
+      <button type="button" class="primary" id="aiRecMarkReadingBtn">Okuyorum</button>
+      <button type="button" class="secondary" id="aiRecMarkReadBtn">Okudum</button>
+      <button type="button" class="secondary" id="aiRecMarkWantBtn">Okumak istiyorum</button>
     </div>
   `;
   body.dataset.aiBookKey=cacheKey;
@@ -10887,6 +10887,7 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
 
 
 
