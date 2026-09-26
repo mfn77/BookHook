@@ -10116,7 +10116,10 @@ function applyHubLayout(hub,{render=false}={}){
    panelInner.append(section);
    section.classList.add('active');
    if(render)renderTab(item.dataset.hubTarget);
-  }else if(main&&panelInner.contains(section)){
+  }else if(main&&panelInner.contains(section)&&!item.classList.contains('expanded')){
+   // Canlı veri yenilemesi ve ekran boyutu değişimleri de buraya gelir. Açık kartın
+   // içeriğini taşımak, expanded durumunu koruyup paneli boş bir şeride düşürür.
+   // Yalnızca kapalı kartların bölümlerini ana alana geri taşı.
    // Görünüm "doğrudan göster"den kart görünümüne geri alınırken bölüm hâlâ hub-item'ın
    // panel-inner'ı içinde kalırsa, o panel artık .hub-flat'in display:contents kuralıyla değil
    // normal akordeon (collapsed) CSS'iyle davranır ve item hiç 'expanded' olmadığı için içerik
