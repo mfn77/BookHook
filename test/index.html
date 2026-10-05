@@ -871,7 +871,7 @@ function turkishAccusativeName(name){
 }
 
 /* ============ ORTAK KURA ALGORİTMASI ============ */
-// statsArr: [{uid,name,miss,read,marked}]
+// statsArr: [{uid,name,miss,read,marked,joinDate}]
 // Ağırlıklı havuzdan (birisinin şansını azaltmadan tamamen elemeden) rastgele birini seçip
 // havuzdan çıkarır. Ağırlığı düşük olan biri de, havuzda TEK kişi kaldığında yine seçilir
 // (payı toplam ağırlığın %100'ü olur) — yani "başka biri yoksa mecbur çıkar" kuralı doğal olarak sağlanır.
@@ -885,28 +885,42 @@ function weightedPickWithoutReplacement(pool){
   return pool.splice(pool.length-1,1)[0]; // yuvarlama hatasına karşı güvenlik ağı
 }
 // Bir kişinin bu haftaki ALICI olma ağırlığını, bugüne kadarki TÜM kura geçmişine bakarak
-// hesaplar:
-// - Hiç hediye kazanmamışsa: ağırlığı %80 ARTAR (1.8).
-// - Daha önce kazanmışsa: ağırlığı, (kişinin toplam kazandığı hediye sayısı / bugüne kadar
-//   dağıtılan TOPLAM hediye sayısı) oranının 2 KATI kadar (yüzdeye yuvarlanarak) DÜŞER. Örn.
-//   kişi 4 kere kazanmış, toplamda 12 hediye dağıtılmış: 4/12=%33, 2 katı %66 → şansı %66 düşer.
+// hesaplar. SADECE daha önce en az bir kez kazanmış kişiler için çağrılır — hiç kazanmayanlar
+// artık buildTierPools() içinde ağırlığa hiç girmeden, kesin öncelikli bir kuyruktan çıkıyor
+// (bkz. aşağısı). Ağırlık:
+// - (kişinin toplam kazandığı hediye sayısı / bugüne kadar dağıtılan TOPLAM hediye sayısı)
+//   oranının 2 KATI kadar (yüzdeye yuvarlanarak) DÜŞER. Örn. kişi 4 kere kazanmış, toplamda 12
+//   hediye dağıtılmış: 4/12=%33, 2 katı %66 → şansı %66 düşer.
 // - Bunun üstüne, eğer bir önceki hafta da kazandıysa, AYRICA %80 daha düşer (eklenerek).
 function computeReceiverWeight(uid, winCounts, totalGiftsGivenSoFar, previousWinners){
   const myWins = (winCounts && winCounts[uid]) || 0;
-  let weight;
-  if(myWins===0){
-    weight = 1.8;
-  } else {
-    const share = totalGiftsGivenSoFar>0 ? myWins/totalGiftsGivenSoFar : 0;
-    const reduction = Math.round(share*100*2)/100;
-    weight = 1 - reduction;
-  }
+  const share = totalGiftsGivenSoFar>0 ? myWins/totalGiftsGivenSoFar : 0;
+  const reduction = Math.round(share*100*2)/100;
+  let weight = 1 - reduction;
   if(previousWinners && previousWinners.has(uid)) weight -= 0.80;
   return Math.max(weight, 0.05); // sıfıra/negatife düşmesin diye güvenlik tabanı
 }
 function buildWeightedPool(list, previousWinners, winCounts, totalGiftsGivenSoFar){
   return list.map(s=>({...s, weight: computeReceiverWeight(s.uid, winCounts, totalGiftsGivenSoFar, previousWinners)}));
 }
+// Bir tier'ı (tam okuyan/paslı) ikiye ayırır:
+// - neverWonQueue: hiç hediye kazanmamış olanlar. Ağırlığa HİÇ girmiyorlar — üyelik tarihine
+//   göre KESİN sırayla (en uzun süredir üye olan, yani en uzun süredir hiç kazanmadan bekleyen,
+//   en önde) bir kuyruk. Bu kuyruk tamamen tükenmeden ağırlıklı havuza hiç geçilmiyor.
+// - everWonPool: en az bir kez kazanmış olanlar, mevcut ağırlıklı (kazandığı hediye sayısına ve
+//   bir önceki hafta kazanıp kazanmadığına göre) rastgele seçim.
+function buildTierPools(base, previousWinners, winCounts, totalGiftsGivenSoFar){
+  const neverWon = base.filter(s=>!((winCounts||{})[s.uid]));
+  const everWon = base.filter(s=>(winCounts||{})[s.uid]);
+  neverWon.sort((a,b)=> (a.joinDate||'9999-99-99').localeCompare(b.joinDate||'9999-99-99'));
+  return { neverWonQueue: neverWon, everWonPool: buildWeightedPool(everWon, previousWinners, winCounts, totalGiftsGivenSoFar) };
+}
+function pickFromTierPools(tier){
+  if(tier.neverWonQueue.length>0) return tier.neverWonQueue.shift();
+  if(tier.everWonPool.length>0) return weightedPickWithoutReplacement(tier.everWonPool);
+  return null;
+}
+function tierPoolsEmpty(tier){ return tier.neverWonQueue.length===0 && tier.everWonPool.length===0; }
 // previousWinners: bir önceki haftanın kura sonucunda hediye kazanmış kişilerin uid'lerinden
 // oluşan bir Set. winCounts/totalGiftsGivenSoFar: bugüne kadarki TÜM haftaların kura
 // sonuçlarından hesaplanan, kimin kaç kere kazandığı ve toplamda kaç hediye dağıtıldığı.
@@ -917,24 +931,24 @@ function runLottery(statsArr, previousWinners, winCounts, totalGiftsGivenSoFar){
   const tier2Base = shuffle(eligible.filter(s=>s.miss===1));
   const safeCount = tier1Base.length + tier2Base.length;
   // Alıcı havuzu: önce tüm "temiz" (tier1), sonra tüm "1 pas geçmiş" (tier2) kişiler — tier1
-  // tamamen tükenmeden tier2'ye geçilmez. Her cezalı bu havuzdan ağırlıklı rastgele bir kişi
-  // alır (aynı alıcı, o tur bitmeden ikinci kez verilmez). Cezalı sayısı, havuzdaki kişi
-  // sayısından fazlaysa yeni bir tur başlar (havuzlar aynı ağırlıklarla yeniden doldurulur) —
-  // bu yüzden ekstra hediyeler de önce "temiz" kişilere, ancak herkes en az bir kez aldıktan
-  // sonra dağılır.
-  let tier1Pool = buildWeightedPool(tier1Base, previousWinners, winCounts, totalGiftsGivenSoFar);
-  let tier2Pool = buildWeightedPool(tier2Base, previousWinners, winCounts, totalGiftsGivenSoFar);
+  // tamamen tükenmeden tier2'ye geçilmez. Her tier'ın İÇİNDE de önce hiç kazanmamışlar (üyelik
+  // süresine göre kesin sırayla), sonra ağırlıklı havuz. Her cezalı bu sıradan bir alıcı alır
+  // (aynı alıcı, o tur bitmeden ikinci kez verilmez). Cezalı sayısı, havuzdaki kişi sayısından
+  // fazlaysa yeni bir tur başlar (havuzlar aynı kurallarla yeniden doldurulur) — bu yüzden
+  // ekstra hediyeler de önce "temiz" kişilere, ancak herkes en az bir kez aldıktan sonra dağılır.
+  let tier1 = buildTierPools(tier1Base, previousWinners, winCounts, totalGiftsGivenSoFar);
+  let tier2 = buildTierPools(tier2Base, previousWinners, winCounts, totalGiftsGivenSoFar);
   const pairs = [];
   givers.forEach((g)=>{
     if(safeCount===0){
       pairs.push({giverUid:g.uid||null, giverName:g.name, receiverUid:null, receiverName:null});
       return;
     }
-    if(tier1Pool.length===0 && tier2Pool.length===0){
-      tier1Pool = buildWeightedPool(tier1Base, previousWinners, winCounts, totalGiftsGivenSoFar);
-      tier2Pool = buildWeightedPool(tier2Base, previousWinners, winCounts, totalGiftsGivenSoFar);
+    if(tierPoolsEmpty(tier1) && tierPoolsEmpty(tier2)){
+      tier1 = buildTierPools(tier1Base, previousWinners, winCounts, totalGiftsGivenSoFar);
+      tier2 = buildTierPools(tier2Base, previousWinners, winCounts, totalGiftsGivenSoFar);
     }
-    const r = tier1Pool.length>0 ? weightedPickWithoutReplacement(tier1Pool) : weightedPickWithoutReplacement(tier2Pool);
+    const r = !tierPoolsEmpty(tier1) ? pickFromTierPools(tier1) : pickFromTierPools(tier2);
     pairs.push({giverUid:g.uid||null, giverName:g.name, receiverUid:r.uid||null, receiverName:r.name});
   });
   return { giverCount: givers.length, safeCount, pairs };
@@ -2357,11 +2371,11 @@ async function computeWeekStats(monday){
     // Bir üye bu hafta içinde, Pazartesi DIŞINDA bir günde katıldıysa, sadece bu haftanın
     // kurasına dahil edilmez (marked:0 vererek eleniyor); sonraki haftalarda normal katılır.
     if(joinDs && joinDs > weekMondayStr && joinDs <= weekSundayStr){
-      return {uid, name: usersCache[uid]?.name || '?', miss:0, read:0, marked:0};
+      return {uid, name: usersCache[uid]?.name || '?', miss:0, read:0, marked:0, joinDate:joinDs||''};
     }
     let miss=0, read=0;
     perDate.forEach(map=>{ const rec=map[uid]; if(rec){ if(rec.status==='skip') miss++; else if(rec.status==='read') read++; } });
-    return {uid, name: usersCache[uid]?.name || '?', miss, read, marked: miss+read};
+    return {uid, name: usersCache[uid]?.name || '?', miss, read, marked: miss+read, joinDate:joinDs||''};
   });
 }
 // Kapanmış (geçmiş) günlerde hiç işaretleme yapılmamışsa otomatik "okumadı" yazar.
@@ -2503,6 +2517,10 @@ async function finalizeWeek(monday, force){
   let totalGiftsGivenSoFar = 0;
   const allDrawsSnap = await getDocs(collection(db,'draws'));
   allDrawsSnap.forEach(d=>{
+    // Bu haftanın (üzerine yazılacak/zorla yeniden çekilecek) ESKİ kendi sonucunu sayma — yoksa
+    // "yeniden çek" o haftanın henüz geçersiz hale gelecek sonucunu geçmişe dahil edip ağırlıkları
+    // bozardı.
+    if(d.id===wk) return;
     (d.data().pairs||[]).forEach(p=>{
       if(p.receiverUid){
         winCounts[p.receiverUid] = (winCounts[p.receiverUid]||0) + 1;
