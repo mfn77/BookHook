@@ -426,3 +426,14 @@ html[data-theme=dark] .badge-art{filter:brightness(1.13)}
 .hub-flat .hub-item-panel{opacity:1!important}
 .hub-flat .hub-item-panel-inner>section.tab>.card{margin-bottom:16px}
 .hub-layout-setting input{z-index:1}.layout-switch{pointer-events:none}
+
+
+/* Hedef düzenleme: diğer simge düğmeleriyle aynı çizgi ve renk dili. */
+.personal-goal{position:relative}
+.goal-edit-button{position:absolute;top:12px;right:12px;width:40px;height:40px;min-height:40px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%;background:transparent;color:var(--secondary-ink)}
+.goal-edit-button:hover{background:var(--card)}.goal-edit-button:focus-visible{outline:2px solid var(--secondary-ink);outline-offset:2px}
+.goal-edit-button:active{transform:scale(.94)}
+.goal-edit-dialog input{background:var(--card);color:var(--ink)}
+
+.goal-remove-button{display:block;margin:18px auto 0;background:transparent;color:var(--ink-70);font-size:14px;padding:10px 16px;border-radius:999px}
+.goal-remove-button:hover{background:var(--secondary-container)}

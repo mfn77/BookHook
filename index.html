@@ -5,24 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>BookHook</title>
 <meta name="theme-color" content="#F8FAF4" />
-<link rel="manifest" href="./manifest.json" />
-<link rel="apple-touch-icon" href="./apple-touch-icon.png?v=4" />
-<link rel="icon" href="./favicon.png?v=4" />
+<link rel="manifest" href="./manifest.json?v=brand-2" />
+<link rel="apple-touch-icon" href="./apple-touch-icon.png?v=brand-2" />
+<link rel="icon" href="./favicon.png?v=brand-2" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-44-layout-settings" />
+<style>html,body{background:#dcebd7}#loadingScreen{position:fixed;inset:0;background:#dcebd7;z-index:1000}.startup-content{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}.startup-mark{display:grid;place-items:center;width:144px;height:144px;border-radius:40px;background:#dcebd7}.startup-name{font:600 24px system-ui;color:#294c32}.startup-status{font:14px system-ui;color:#42664b}</style>
+<link rel="stylesheet" href="./style.css?v=material-49-consistent-ui" />
+
 </head>
 <body>
 <div id="bgLayer"></div>
 
-<div id="loadingScreen" class="loading-note">Yükleniyor…</div>
+<div id="loadingScreen" class="loading-note" role="status"><div class="startup-content"><span class="startup-mark"><img src="./logo-mark.png" width="108" height="108" alt="" /></span><span class="startup-name">BookHook</span><span class="startup-status">Yükleniyor…</span></div></div>
 
 <div id="authScreen" class="auth-wrap" style="display:none;">
   <div class="center-logo">
-    <div class="center-logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5c-3-3-7-3-10-2v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/></svg></div>
+    <div class="center-logo-mark"><img src="./logo-mark.png" width="60" height="60" alt="" /></div>
     <div class="center-logo-word">BookHook</div>
   </div>
   <div id="bannedNotice" class="banned-notice" style="display:none;"></div>
@@ -60,7 +62,7 @@
 <div id="appRoot" style="display:none;">
   <div class="app-shell">
     <aside class="sidebar" id="sidebarNav">
-      <div class="sidebar-header"><button id="sidebarLogoBtn" class="brand-button" aria-label="Bugün"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5c-3-3-7-3-10-2v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/></svg></button></div>
+      <div class="sidebar-header"><button id="sidebarLogoBtn" class="brand-button" aria-label="Bugün"><img src="./logo-mark.png" width="44" height="44" alt="BookHook" /></button></div>
       <nav class="sidebar-tabs tabs" id="tabs"></nav>
       <button type="button" id="sidebarCollapseBtn" class="sidebar-collapse-btn" title="Menüyü gizle">◀</button>
     </aside>
@@ -361,7 +363,7 @@
     <!-- ORTAK: GRUP KURALLARI -->
     <section class="tab" id="tab-rules">
       <div class="card">
-        <h2>📋 Grup Kuralları</h2>
+        <h2>Grup kuralları</h2>
         <div id="rulesDisplay" class="muted" style="white-space:pre-wrap;"></div>
         <div id="rulesAdminEdit" style="display:none; margin-top:14px;">
           <div class="field"><label>Kuralları düzenle</label>
@@ -396,14 +398,14 @@
         <button class="secondary" id="settingsChangePasswordBtn">Şifreyi Değiştir</button>
       </div>
       <div class="card">
-        <h2>🔔 Bildirim Ayarları</h2>
+        <h2>Bildirimler</h2>
         <p class="muted" style="font-size:12.5px; margin-bottom:10px;">Hangi bildirimleri almak istediğini seçebilirsin.</p>
         <div class="member-row" style="justify-content:space-between; align-items:center;">
-          <span>🎁 Hediye bildirimleri</span>
+          <span data-setting-icon="gift">Hediye bildirimleri</span>
           <input type="checkbox" id="notifPrefGifts" style="width:20px; height:20px;" />
         </div>
         <div class="member-row" style="justify-content:space-between; align-items:center;">
-          <span>📰 Sosyal (Akış, Öneriler) bildirimleri</span>
+          <span data-setting-icon="feed">Akış ve öneriler</span>
           <input type="checkbox" id="notifPrefSocial" style="width:20px; height:20px;" />
         </div>
       </div>
@@ -668,7 +670,7 @@
     <button id="notifModalClose" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-70);">✕</button>
     <h2>🔔 Bildirimler</h2>
     <p class="muted" id="pushStatusNote"></p>
-    <button class="primary" id="enablePushBtn" style="margin-bottom:10px;">📱 Telefon Bildirimlerini Aç</button>
+    <button class="primary" id="enablePushBtn" style="margin-bottom:10px;">Bildirimleri Aç</button>
     <button class="secondary tiny" id="markAllReadBtn" style="margin-bottom:10px;">Tümünü okundu yap</button>
     <div id="notifsList"></div>
   </div>
@@ -738,7 +740,7 @@
     <details class="guide-section">
       <summary>🔔 Bildirimleri Açma</summary>
       <ul class="plain">
-        <li>🔔 simgesine dokun → "📱 Telefon Bildirimlerini Aç" butonuna bas → tarayıcının izin sorusuna "İzin Ver" de.</li>
+        <li>🔔 simgesine dokun → "Bildirimleri Aç" butonuna bas → tarayıcının izin sorusuna "İzin Ver" de.</li>
         <li>Bunu <b>her cihazda ayrı ayrı</b> yapman gerekir (bilgisayarda açman telefonu etkilemez).</li>
         <li>Uygulama içi bildirimler zaten otomatik gelir, bu adım sadece telefon/ekran bildirimi için.</li>
         <li>Her gün öğlen 14:00 ve akşam 22:00'de, o gün henüz okudum/okumadım işaretlememişsen küçük bir hatırlatma bildirimi gelir.</li>
@@ -1606,7 +1608,7 @@ async function enablePushNotifications(){
       if(perm !== 'granted'){ showToast('Bildirim izni verilmedi.'); renderNotifsTab(); return; }
     }
     await registerPushToken();
-    showToast('Telefon bildirimleri açıldı! 🔔');
+    showToast('Bildirimler Açık');
     renderNotifsTab();
   }catch(e){ alert('Bildirimler açılamadı: ' + (e.message||e)); }
 }
@@ -1617,10 +1619,10 @@ async function renderNotifsTab(){
     statusNote.textContent = 'Bu tarayıcı telefon bildirimlerini desteklemiyor.';
     enableBtn.style.display = 'none';
   } else if(Notification.permission === 'granted'){
-    statusNote.textContent = '✅ Telefon bildirimleri açık.';
+    statusNote.textContent = 'Bildirimler Açık';
     enableBtn.style.display = 'none';
   } else if(Notification.permission === 'denied'){
-    statusNote.textContent = '🚫 Bildirimler bu site için reddedilmiş. Adres çubuğundaki site simgesinden izni değiştirip sayfayı yenile.';
+    statusNote.textContent = 'Bildirimler bu site için reddedilmiş. Adres çubuğundaki site simgesinden izni değiştirip sayfayı yenile.';
     enableBtn.style.display = 'none';
   } else {
     statusNote.textContent = 'Telefon bildirimleri henüz açık değil.';
@@ -3364,7 +3366,7 @@ function dailyGoalAt(goals,day=todayStr()){
  return [...goals.daily].reverse().find(g=>g.start<=day&&(!g.end||day<g.end));
 }
 function activeMonthlyGoal(goals,now=Date.now()){
- return goals.monthly.find(g=>Date.parse(g.start)<=now&&now<Date.parse(g.end));
+ return goals.monthly.find(g=>!g.cancelledAt&&Date.parse(g.start)<=now&&now<Date.parse(g.end));
 }
 function goalMonthEnd(start){
  const end=new Date(start),day=end.getDate();end.setDate(1);end.setMonth(end.getMonth()+1);
@@ -3404,9 +3406,57 @@ function goalHistoryCounts(goals,records,day=todayStr(),now=Date.now()){
    if(pages>=goal.target)count.dailyWin++;else if(ds<day)count.dailyLoss++;
   }
  }
- for(const goal of goals.monthly){if(Date.parse(goal.end)<=now)count[(goal.completed||[]).length>=goal.target?'monthlyWin':'monthlyLoss']++;}
+ for(const goal of goals.monthly){if(!goal.cancelledAt&&Date.parse(goal.end)<=now)count[(goal.completed||[]).length>=goal.target?'monthlyWin':'monthlyLoss']++;}
  return count;
 }
+function goalEditButton(kind){
+ const label=kind==='daily'?'Günlük sayfa hedefini düzenle':'Aylık kitap hedefini düzenle';
+ return `<button type="button" class="goal-edit-button icon-button" data-edit-goal="${kind}" aria-label="${label}" title="${label}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 6.1A8 8 0 0 1 19.5 10M4.5 14A8 8 0 0 0 17.9 17.9"/></svg></button>`;
+}
+async function updatePersonalGoal(kind,target,expected,uid,day,remove=false){
+ if(!remove&&(!Number.isSafeInteger(target)||target<(kind==='daily'?15:1)))throw Error(kind==='daily'?'En az 15 sayfa yazmalısın.':'En az 1 kitap yazmalısın.');
+ const ref=doc(db,'users',uid);
+ await runTransaction(db,async tx=>{
+  const snapshot=await tx.get(ref),goals=personalGoals(snapshot.data()?.readingGoals);
+  if(uid!==currentUid||day!==todayStr())throw Error('Gün veya oturum değişti. Hedefi yeniden aç.');
+  const goal=kind==='daily'?dailyGoalAt(goals,day):activeMonthlyGoal(goals);
+  if(!goal||goal.start!==expected.start||goal.target!==expected.target||goal.end!==expected.end)throw Error('Hedef değişmiş veya süresi dolmuş. Kartı yeniden aç.');
+  if(remove){
+   if(kind==='daily')goal.end=day;
+   else goal.cancelledAt=new Date().toISOString();
+   tx.update(ref,{readingGoals:goals});return;
+  }
+  if(goal.target===target)return;
+  if(kind==='daily'&&goal.start<day){
+   // Dünkü ve daha eski hedef sonuçları yeni hedefle yeniden hesaplanmasın.
+   const next={start:day,target,...(goal.end?{end:goal.end}:{})};
+   goal.end=day;goals.daily.push(next);
+  }else goal.target=target;
+  // Aylık hedefte başlangıç, bitiş ve bitirilen kitaplar aynen korunur.
+  tx.update(ref,{readingGoals:goals});
+ });
+}
+function openGoalEditor(kind,goal,section){
+ if(document.querySelector('.goal-edit-dialog'))return;
+ const uid=currentUid,day=todayStr(),expected={...goal};
+ const dialog=document.createElement('dialog');dialog.className='reading-pages-dialog goal-edit-dialog';
+ dialog.innerHTML=`<form novalidate><h2>${kind==='daily'?'Günlük sayfa hedefi':'Aylık kitap hedefi'}</h2><label>${kind==='daily'?'Günde kaç sayfa?':'Bu dönemde kaç kitap?'}<input name="target" type="number" inputmode="numeric" min="${kind==='daily'?15:1}" step="1" required value="${goal.target}" autofocus></label><p class="muted">${kind==='daily'?'Yeni hedef bugünden itibaren geçerli. Önceki günlerin sonuçları korunur.':'Dönem tarihleri ve bitirdiğin kitaplar korunur.'}</p><p class="goal-error" role="alert"></p><div class="row"><button type="button" data-cancel>Vazgeç</button><button type="submit" class="primary">Kaydet</button></div><button type="submit" name="remove" class="goal-remove-button">Hedefi kaldır</button></form>`;
+ let busy=false;
+ const close=()=>{if(busy)return;dialog.close();dialog.remove();};
+ dialog.querySelector('[data-cancel]').onclick=close;dialog.oncancel=e=>{e.preventDefault();close();};
+ dialog.querySelector('form').onsubmit=async e=>{
+  e.preventDefault();if(busy)return;
+  busy=true;dialog.querySelectorAll('button').forEach(b=>b.disabled=true);
+  try{
+   await updatePersonalGoal(kind,Number(e.target.elements.target.value),expected,uid,day,e.submitter?.name==='remove');
+   busy=false;close();
+   if(currentUid===uid)renderTotalPagesCard(section.id==='tab-today'?'totalPagesNumber':'mTotalPagesNumber');
+  }catch(err){dialog.querySelector('.goal-error').textContent=err.message||'Hedef kaydedilemedi.';}
+  finally{busy=false;dialog.querySelectorAll('button').forEach(b=>b.disabled=false);}
+ };
+ document.body.append(dialog);dialog.showModal();dialog.querySelector('input').select();
+}
+
 function goalForm(kind){return `<form class="goal-form" data-goal-form="${kind}"><label>${kind==='daily'?'Günde kaç sayfa?':'Bir ayda kaç kitap?'}<input type="number" name="target" inputmode="numeric" min="${kind==='daily'?15:1}" step="1" required placeholder="${kind==='daily'?'Örn. 30':'Örn. 2'}"></label><button class="primary" type="submit">Belirle</button><p class="goal-error" role="alert"></p></form>`;}
 function goalProgress(value,target){return `<progress value="${Math.min(value,target)}" max="${target}" aria-label="Hedef ilerlemesi"></progress>`;}
 async function renderPersonalGoals(section,totals,uid=currentUid){
@@ -3414,14 +3464,14 @@ async function renderPersonalGoals(section,totals,uid=currentUid){
  const revision=String(Number(grid.dataset.revision||0)+1);grid.dataset.revision=revision;
  try{
   const goals=await loadPersonalGoals(uid);if(uid!==currentUid||grid.dataset.revision!==revision)return;
-  const day=todayStr(),daily=dailyGoalAt(goals,day),monthly=activeMonthlyGoal(goals),last=goals.monthly.at(-1);
+  const day=todayStr(),daily=dailyGoalAt(goals,day),monthly=activeMonthlyGoal(goals),last=goals.monthly.filter(g=>!g.cancelledAt).at(-1);
   const nextDay=fromStr(toStr(addDays(nowLogical(),1)));nextDay.setHours(6,0,0,0);
   section.dataset.goalRefreshAt=String(Math.min(nextDay.getTime(),monthly?Date.parse(monthly.end):Infinity));
   const rec=totals.records[day],pages=rec?.status==='read'?(Number.isSafeInteger(rec.pages)&&rec.pages>=15?rec.pages:15):0;
   updateSelfReadButton(section,rec,daily);
   const dailyText=pages>=daily?.target?`Bugünkü hedefini ${pages} sayfayla tamamladın.`:pages?`Bugün ${pages} sayfa okudun. Hedefine ${Math.max(0,(daily?.target||0)-pages)} sayfa kaldı.`:'Bugün henüz okuma kaydın yok.';
-  grid.innerHTML=`<div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▤</span><h2>Günlük sayfa hedefi</h2>${daily?`<strong class="goal-value">${daily.target} <small>sayfa / gün</small></strong>${goalProgress(pages,daily.target)}<p role="status">${dailyText}</p>${daily.end?'<p class="muted">Hedefin yarın 06.00’da sona erecek.</p>':'<button type="button" class="ai-text-action" data-stop-goal>Hedefi yarından itibaren bırak</button>'}`:goalForm('daily')}<p class="muted">İsteğe bağlı</p></div>
-  <div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▥</span><h2>Aylık kitap hedefi</h2>${monthly?`<strong class="goal-value">${monthly.target} <small>kitap</small></strong>${goalProgress((monthly.completed||[]).length,monthly.target)}<p role="status">Bu ay ${(monthly.completed||[]).length} kitap bitirdin.</p><p class="muted">${new Date(monthly.end).toLocaleString('tr-TR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})} tarihinde sona erer.</p>`:`${last?`<p class="goal-result" role="status">${(last.completed||[]).length>=last.target?'Son hedefinde başarılı oldun.':'Son hedefini tamamlayamadın.'} ${(last.completed||[]).length} / ${last.target} kitap.</p>`:''}${goalForm('monthly')}` }<p class="muted">İsteğe bağlı</p></div>`;
+  grid.innerHTML=`<div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▤</span><h2>Günlük sayfa hedefi</h2>${daily?goalEditButton("daily"):""}${daily?`<strong class="goal-value">${daily.target} <small>sayfa / gün</small></strong>${goalProgress(pages,daily.target)}<p role="status">${dailyText}</p>${daily.end?'<p class="muted">Hedefin yarın 06.00’da sona erecek.</p>':'<button type="button" class="ai-text-action" data-stop-goal>Hedefi yarından itibaren bırak</button>'}`:goalForm('daily')}<p class="muted">İsteğe bağlı</p></div>
+  <div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▥</span><h2>Aylık kitap hedefi</h2>${monthly?goalEditButton("monthly"):""}${monthly?`<strong class="goal-value">${monthly.target} <small>kitap</small></strong>${goalProgress((monthly.completed||[]).length,monthly.target)}<p role="status">Bu ay ${(monthly.completed||[]).length} kitap bitirdin.</p><p class="muted">${new Date(monthly.end).toLocaleString('tr-TR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})} tarihinde sona erer.</p>`:`${last?`<p class="goal-result" role="status">${(last.completed||[]).length>=last.target?'Son hedefinde başarılı oldun.':'Son hedefini tamamlayamadın.'} ${(last.completed||[]).length} / ${last.target} kitap.</p>`:''}${goalForm('monthly')}` }<p class="muted">İsteğe bağlı</p></div>`;
   const counts=goalHistoryCounts(goals,totals.records);
   history.innerHTML=`<h2>Hedef geçmişin</h2><div class="goal-history-grid"><div><b>Günlük sayfa hedefleri</b><p><span class="goal-success"><strong class="goal-history-number">${counts.dailyWin}</strong> tamamladın</span><br><strong class="goal-history-number">${counts.dailyLoss}</strong> tamamlayamadın</p></div><div><b>Aylık kitap hedefleri</b><p><span class="goal-success"><strong class="goal-history-number">${counts.monthlyWin}</strong> tamamladın</span><br><strong class="goal-history-number">${counts.monthlyLoss}</strong> tamamlayamadın</p></div></div><span class="muted">Süresi devam eden hedefler başarısız sayılmaz.</span>`;
   grid.querySelectorAll('[data-goal-form]').forEach(form=>form.onsubmit=async e=>{
@@ -3429,6 +3479,7 @@ async function renderPersonalGoals(section,totals,uid=currentUid){
    try{await savePersonalGoal(form.dataset.goalForm,Number(form.elements.target.value));await renderPersonalGoals(section,totals,uid);}
    catch(err){form.querySelector('.goal-error').textContent=err.message||'Hedef kaydedilemedi.';button.disabled=false;}
   });
+  grid.querySelectorAll('[data-edit-goal]').forEach(button=>button.onclick=()=>openGoalEditor(button.dataset.editGoal,button.dataset.editGoal==='daily'?daily:monthly,section));
   const stop=grid.querySelector('[data-stop-goal]');if(stop)stop.onclick=async()=>{
    stop.disabled=true;try{await stopDailyGoal();await renderPersonalGoals(section,totals,uid);}catch(err){showToast('Hedef değiştirilemedi. Tekrar dene.');stop.disabled=false;}
   };
@@ -3953,7 +4004,7 @@ async function renderQpGiftCard(){
       if(req.shipped){
         html += `<div class="receipt">
           <div class="rweek"><span class="giver">${userChipHtml(p.giverUid)}</span> kitabını gönderdi 📮</div>
-          <div class="muted" style="display:flex; align-items:center; gap:8px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:32px;height:48px;object-fit:cover;border-radius:4px;box-shadow:var(--shadow);cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
+          <div class="muted" style="display:flex; align-items:center; gap:8px;"><span class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover||'')}" style="display:block;flex:0 0 auto;width:32px;height:48px;cursor:pointer;">${materialBookCover(req.bookTitle,req.bookCover)}</span><span>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
           <button class="primary qp-gift-received" data-reqid="${reqId}" data-giver="${p.giverUid}" style="margin-top:8px;">📬 Kitabı Aldım</button>
         </div>`;
       } else {
@@ -3967,7 +4018,7 @@ async function renderQpGiftCard(){
         html += `<div class="receipt"><div class="rweek">${userChipHtml(p.receiverUid)}'e gönderdiğini işaretledin</div><div class="empty-note">📬 Alıcı onayı bekleniyor.</div></div>`;
       } else {
         html += `<div class="receipt"><div class="rweek">${userChipHtml(p.receiverUid)}'e kitap hediye edeceksin</div>
-          <div class="muted" style="display:flex; gap:10px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:40px;height:60px;object-fit:cover;border-radius:5px;box-shadow:var(--shadow); flex:0 0 auto;cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b><br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>
+          <div class="muted" style="display:flex; gap:10px;"><span class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover||'')}" style="display:block;flex:0 0 auto;width:40px;height:60px;cursor:pointer;">${materialBookCover(req.bookTitle,req.bookCover)}</span><span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b><br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>
           <button class="secondary qp-gift-shipped" data-reqid="${reqId}" data-receiver="${p.receiverUid}" style="margin-top:8px;">📮 Kitabı Gönderdim</button>
         </div>`;
       }
@@ -4100,13 +4151,13 @@ function buildPersonalGiftHtml(draw, myPairAsReceiver, myPairAsGiver, reqForRece
     } else if(req && req.shipped){
       html += `<div class="receipt">
         <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${userChipHtml(p.giverUid)}</span> kitabını gönderdi 📮</div>
-        <div class="muted" style="display:flex; align-items:center; gap:8px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:32px;height:48px;object-fit:cover;border-radius:4px;box-shadow:var(--shadow);cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
+        <div class="muted" style="display:flex; align-items:center; gap:8px;"><span class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover||'')}" style="display:block;flex:0 0 auto;width:32px;height:48px;cursor:pointer;">${materialBookCover(req.bookTitle,req.bookCover)}</span><span>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
         <button class="primary gf-received" data-reqid="${reqId}" data-giver="${p.giverUid}" style="margin-top:8px;">📬 Kitabı Aldım</button>
       </div>`;
     } else if(req){
       html += `<div class="receipt">
         <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${userChipHtml(p.giverUid)}</span> sana kitap hediye edecek</div>
-        <div class="muted" style="display:flex; align-items:center; gap:8px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:32px;height:48px;object-fit:cover;border-radius:4px;box-shadow:var(--shadow);cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>İstediğin kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
+        <div class="muted" style="display:flex; align-items:center; gap:8px;"><span class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover||'')}" style="display:block;flex:0 0 auto;width:32px;height:48px;cursor:pointer;">${materialBookCover(req.bookTitle,req.bookCover)}</span><span>İstediğin kitap: <b>${escapeHtml(req.bookTitle||'-')}</b></span></div>
         <button type="button" class="secondary gf-edit-toggle" style="margin-top:8px;">Güncelle</button>
         <div class="gift-form" data-week="${latest.weekStart}" data-giver="${p.giverUid}" data-receiver="${p.receiverUid}" style="display:none; margin-top:12px;">
           <div class="field"><label>Ad Soyad</label><input type="text" class="gf-name" value="${escapeHtml(req.recipientName||'')}" /></div>
@@ -4148,7 +4199,7 @@ function buildPersonalGiftHtml(draw, myPairAsReceiver, myPairAsGiver, reqForRece
       html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${userChipHtml(p.receiverUid)}'e gönderdiğini işaretledin</div><div class="empty-note">📬 Alıcı onayı bekleniyor.</div></div>`;
     } else if(req){
       html += `<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${userChipHtml(p.receiverUid)}'e kitap hediye edeceksin</div>
-        <div class="muted" style="display:flex; gap:10px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:40px;height:60px;object-fit:cover;border-radius:5px;box-shadow:var(--shadow); flex:0 0 auto;cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>İstediği kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>
+        <div class="muted" style="display:flex; gap:10px;"><span class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover||'')}" style="display:block;flex:0 0 auto;width:40px;height:60px;cursor:pointer;">${materialBookCover(req.bookTitle,req.bookCover)}</span><span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>İstediği kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>
         <button class="secondary gf-shipped" data-reqid="${reqId}" data-receiver="${p.receiverUid}" style="margin-top:8px;">📮 Kitabı Gönderdim</button>
       </div>`;
     } else {
@@ -4172,7 +4223,7 @@ function buildAdminPendingHtml(reqMap){
       if(req && req.shipped){
         html += `<div class="empty-note">📮 Gönderildi, alıcı onayı bekleniyor.</div>`;
       } else if(req){
-        html += `<div class="muted" style="display:flex; gap:10px;">${req.bookCover?`<img src="${req.bookCover}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover)}" style="width:40px;height:60px;object-fit:cover;border-radius:5px;box-shadow:var(--shadow); flex:0 0 auto;cursor:pointer;" onerror="this.style.display='none';" />`:''}<span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>`;
+        html += `<div class="muted" style="display:flex; gap:10px;"><span class="book-cover-clickable" data-book-title="${escapeHtml(req.bookTitle||'')}" data-book-cover="${escapeHtml(req.bookCover||'')}" style="display:block;flex:0 0 auto;width:40px;height:60px;cursor:pointer;">${materialBookCover(req.bookTitle,req.bookCover)}</span><span>Alıcı: <b>${escapeHtml(req.recipientName||p.receiverName)}</b><br/>Kitap: <b>${escapeHtml(req.bookTitle||'-')}</b>${req.site?` &middot; Site: ${escapeHtml(req.site)}`:''}<br/>Adres: ${escapeHtml(req.address||'-')}<br/>Telefon: ${escapeHtml(req.phone||'-')}</span></div>`;
       } else {
         html += `<div class="empty-note">Alıcı henüz istek formunu doldurmadı.</div>`;
       }
@@ -4284,7 +4335,7 @@ async function renderGiftBooksGrid(){
   if(!items.length){ host.innerHTML = `<p class="muted">Henüz tamamlanmış hediye yok.</p>`; markLoaded(host); return; }
   giftBooksGridCache = items;
   host.innerHTML = `<div class="discover-grid">${items.map((it,idx)=>{
-    const coverHtml = it.bookCover ? `<img src="${it.bookCover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(it.bookTitle).replace(/'/g,"\\'")}');" />` : placeholderCoverHtml(it.bookTitle);
+    const coverHtml = materialBookCover(it.bookTitle,it.bookCover);
     return `<div class="discover-book-card" data-gift-book-idx="${idx}">
       <div class="discover-book-cover-wrap">${coverHtml}</div>
       <div class="discover-book-title">${escapeHtml(it.bookTitle)}</div>
@@ -4369,7 +4420,7 @@ let qpNomCache = {};
 function qpNomRowHtml(n, extraHtml){
   qpNomCache[n.id] = n;
   return `<div class="qp-nom-row" data-qp-nom-id="${n.id}">
-    <div class="qp-nom-cover-ph">${n.bookCover?`<img src="${n.bookCover}" class="qp-nom-cover" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(n.bookTitle).replace(/'/g,"\\'")}');" />`:placeholderCoverHtml(n.bookTitle)}</div>
+    <div class="qp-nom-cover-ph">${materialBookCover(n.bookTitle,n.bookCover)}</div>
     <div class="qp-nom-info">
       <div class="qp-nom-title">${escapeHtml(n.bookTitle)}</div>
       <div class="qp-nom-meta">${escapeHtml(n.bookAuthor||'')} &middot; öneren: ${escapeHtml(n.name||'')}</div>
@@ -4381,9 +4432,7 @@ function showQpNominationInfo(nom){
   if(!nom) return;
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
-  const coverHtml = nom.bookCover
-    ? `<img src="${nom.bookCover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(nom.bookTitle).replace(/'/g,"\\'")}')+this.parentElement.innerHTML;" />`
-    : `<div style="width:100px; height:150px; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); margin:0 auto 12px;">${placeholderCoverHtml(nom.bookTitle)}</div>`;
+  const coverHtml = materialBookCover(nom.bookTitle,nom.bookCover,'book-cover-detail');
   body.innerHTML = `
     ${coverHtml}
     <h2 style="margin:4px 0 2px;">${escapeHtml(nom.bookTitle)}</h2>
@@ -4572,7 +4621,7 @@ async function renderQpVoting(body, qp){
   const roundLabel = qp.round===qp.totalRounds ? 'Final' : (qp.round===qp.totalRounds-1 ? 'Yarı Final' : `${qp.round}. Tur`);
   const cardHtml = (matchId, slot, book, votes, voted)=> `
     <div class="qp-vs-card${voted?' voted':''}" data-qp-vote="${matchId}" data-qp-slot="${slot}">
-      ${book.bookCover?`<img src="${book.bookCover}" class="qp-vs-cover" alt="" onerror="this.style.display='none';" />`:''}
+      ${materialBookCover(book.bookTitle,book.bookCover,'qp-vs-cover')}
       <div class="qp-vs-title">${escapeHtml(book.bookTitle)}</div>
       <div class="qp-vs-author">${escapeHtml(book.bookAuthor||'')}</div>
       <div class="qp-vs-votes" data-vote-count>${votes} oy</div>
@@ -4613,9 +4662,7 @@ async function renderQpVoting(body, qp){
   });
 }
 function qpWinnerBigCardHtml(cover, title, author){
-  const coverInner = cover
-    ? `<img src="${cover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(title).replace(/'/g,"\\'")}');" />`
-    : placeholderCoverHtml(title);
+  const coverInner = materialBookCover(title,cover);
   return `<div class="bh-grid-inner" style="max-width:140px; margin:0 auto 10px;">
     <div class="bh-card">
       <div class="bh-cover-wrap">${coverInner}</div>
@@ -4642,14 +4689,12 @@ async function renderQpBookInBugun(containerId){
   }
   if(containerId==='aSelfQpBook' || containerId==='mMyQpBook'){
     const days = Math.max(0,Math.ceil((new Date(qp.readingEndsAt)-Date.now())/86400000));
-    el.innerHTML = `<h2>Ortak kitabımız</h2><div class="daily-book">${qp.winnerCover?`<img src="${qp.winnerCover}" alt="" />`:`<div class="daily-book-placeholder">${escapeHtml(qp.winnerTitle||'Ortak kitap')}</div>`}<div><span class="chip ok">${days} gün kaldı</span><h3>${escapeHtml(qp.winnerTitle||'')}</h3><p class="muted">${escapeHtml(qp.winnerAuthor||'')}</p><button class="primary" data-material-route="quarterly">Kitaba git →</button></div></div>`;
+    el.innerHTML = `<h2>Ortak kitabımız</h2><div class="daily-book">${materialBookCover(qp.winnerTitle,qp.winnerCover,'daily-book-jacket')}<div><span class="chip ok">${days} gün kaldı</span><h3>${escapeHtml(qp.winnerTitle||'')}</h3><p class="muted">${escapeHtml(qp.winnerAuthor||'')}</p><button class="primary" data-material-route="quarterly">Kitaba git →</button></div></div>`;
     return;
   }
   const finished = (qp.finishedBy||[]).includes(currentUid);
   const daysLeft = Math.max(0, Math.ceil((new Date(qp.readingEndsAt) - Date.now())/(24*60*60*1000)));
-  const coverHtml = qp.winnerCover
-    ? `<img src="${qp.winnerCover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(qp.winnerTitle||'').replace(/'/g,"\\'")}');" />`
-    : placeholderCoverHtml(qp.winnerTitle||'');
+  const coverHtml = materialBookCover(qp.winnerTitle,qp.winnerCover);
   el.innerHTML = `
     <h2>📚 Ortak Kitap</h2>
     <div class="qp-bugun-row">
@@ -5085,7 +5130,7 @@ async function renderQpTestVoting(body, qp){
   const roundLabel = qp.round===qp.totalRounds ? 'Final' : (qp.round===qp.totalRounds-1 ? 'Yarı Final' : `${qp.round}. Tur`);
   const cardHtml = (matchId, slot, book, votes, voted)=> `
     <div class="qp-vs-card${voted?' voted':''}" data-qp-vote="${matchId}" data-qp-slot="${slot}">
-      ${book.bookCover?`<img src="${book.bookCover}" class="qp-vs-cover" alt="" onerror="this.style.display='none';" />`:''}
+      ${materialBookCover(book.bookTitle,book.bookCover,'qp-vs-cover')}
       <div class="qp-vs-title">${escapeHtml(book.bookTitle)}</div>
       <div class="qp-vs-author">${escapeHtml(book.bookAuthor||'')}</div>
       <div class="qp-vs-votes" data-vote-count>${votes} oy</div>
@@ -5461,7 +5506,7 @@ function aiRecItemHtml(rec, idx){
   try{const url=new URL(rec.cover||'',location.href);if(rec.cover && ['https:','http:'].includes(url.protocol))cover=url.href;}catch(_){}
   const title=escapeHtml(rec.title||'İsimsiz kitap');
   return `<button type="button" class="ai-rec-item" data-ai-rec-idx="${idx}" data-ai-open="${idx}">
-    <span class="hp-book-cover ai-preview-cover"><span>${escapeHtml((rec.title||'K').slice(0,1))}</span>${cover?`<img src="${escapeHtml(cover)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</span>
+    ${materialBookCover(rec.title,cover,'hp-book-cover ai-preview-cover')}
     <b>${title}</b><span class="ai-preview-author">${escapeHtml(rec.author||'')}</span>
   </button>`;
 }
@@ -5494,8 +5539,8 @@ function wireAiRecItems(items){
       if(!panel.hidden){
         if(!matchMedia('(prefers-reduced-motion: reduce)').matches)panel.animate([{opacity:0,transform:'translateY(-6px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,easing:'ease-out'});
         panel.querySelectorAll('[data-pitch]').forEach(async el=>{
-          if(el.dataset.loaded)return;el.dataset.loaded='true';el.textContent='Kitabın ayrıntılı anlatımı hazırlanıyor…';
-          try{el.textContent=await getAiBookPitch(items[Number(el.dataset.pitch)]);}catch{delete el.dataset.loaded;el.textContent='Ayrıntılı anlatım şu an alınamadı. Tekrar açarak deneyebilirsin.';}
+          el.textContent='Sana özel açıklama hazırlanıyor…';
+          try{el.textContent=await getAiBookPitch(items[Number(el.dataset.pitch)]);}catch{el.textContent='Ayrıntılı anlatım şu an alınamadı. Tekrar açarak deneyebilirsin.';}
         });
       }
     };
@@ -5511,48 +5556,29 @@ function wireAiRecItems(items){
   }
   syncAiHubLayout();
 }
-// Aynı oturumda aynı kitaba tekrar tıklanırsa hızlı dönsün diye bellek-içi bir önbellek (sayfa
-// yenilenince temizlenir), AMA asıl kalıcı önbellek 'bookPitches/{bookKey}' koleksiyonunda —
-// discoverCovers ile aynı desen: bir kitabın anlatım metni AI'dan bir kez alınınca herkes için
-// (kulübün tamamı için, sadece kendi cihazın için değil) kalıcı olarak saklanıyor, aynı kitabı
-// başka bir üye (ya da aynı üye uygulamayı kapatıp açtıktan sonra) tekrar açtığında AI'a tekrar
-// sorulmuyor — her açılışta baştan çekilmesi hem gecikme hem de gereksiz AI kredisi harcaması
-// demekti.
-const aiPitchCache = {};
+// Kişisel açıklamalar yalnız sunucunun kullanıcıya özel, kitaplık sürümlü önbelleğinde.
+// Ortak bookPitches koleksiyonu bu akışta kullanılmaz.
 const aiPitchPending = new Map();
 async function getAiBookPitch(rec){
-  const key=`${rec.title}|${rec.author}`;
-  if(aiPitchCache[key])return aiPitchCache[key];
-  if(aiPitchPending.has(key))return aiPitchPending.get(key);
-  const docId=bookKeyFor({title:rec.title,author:rec.author});
-  const task=(async()=>{
-    try{
-      const snap=await getDoc(doc(db,'bookPitches',docId));
-      if(snap.exists()){
-        const text=snap.data().text;
-        if(typeof text==='string'&&text.trim())return aiPitchCache[key]=text;
-      }
-    }catch(e){}
-    const res=await httpsCallable(cloudFunctions,'getBookPitch')({title:rec.title,author:rec.author});
-    if(typeof res.data?.text!=='string'||!res.data.text.trim())throw new Error('Açıklama alınamadı');
-    const text=res.data.text;
-    aiPitchCache[key]=text;
-    setDoc(doc(db,'bookPitches',docId),{text,fetchedAt:new Date().toISOString()}).catch(()=>{});
-    return text;
-  })();
-  aiPitchPending.set(key,task);
-  try{return await task;}finally{aiPitchPending.delete(key);}
+ const uid=currentUid,key=`${uid}|${rec.title}|${rec.author}`;
+ if(aiPitchPending.has(key))return aiPitchPending.get(key);
+ const task=(async()=>{
+  const res=await httpsCallable(cloudFunctions,'getBookPitch')({title:rec.title,author:rec.author});
+  if(currentUid!==uid)throw new Error('Oturum değişti');
+  if(typeof res.data?.text!=='string'||!res.data.text.trim())throw new Error('Açıklama alınamadı');
+  return res.data.text;
+ })();
+ aiPitchPending.set(key,task);
+ try{return await task;}finally{aiPitchPending.delete(key);}
 }
 async function showAiRecDetail(rec, items, idx){
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
   let safeCover='';
   try{const url=new URL(rec.cover||'',location.href);if(rec.cover && ['https:','http:'].includes(url.protocol))safeCover=url.href;}catch(_){}
-  const coverHtml=`<span class="hp-book-cover" style="width:100px;height:150px;margin:0 auto 12px;font-size:48px"><span>${escapeHtml((rec.title||'K').slice(0,1))}</span>${safeCover?`<img src="${escapeHtml(safeCover)}" alt="" onerror="this.remove()">`:''}</span>`;
+  const coverHtml=materialBookCover(rec.title,safeCover,'book-cover-detail');
   const cacheKey = `${rec.title}|${rec.author}`;
-  const pitchHtml = aiPitchCache[cacheKey]
-    ? escapeHtml(aiPitchCache[cacheKey])
-    : `<span class="muted">Neden bu kitabı okumalısın, bakalım…</span>`;
+  const pitchHtml = `<span class="muted">Sana özel açıklama hazırlanıyor…</span>`;
   body.innerHTML = `
     ${coverHtml}
     <h2 style="margin:4px 0 2px;">${escapeHtml(rec.title||'')}</h2>
@@ -5560,14 +5586,15 @@ async function showAiRecDetail(rec, items, idx){
     ${rec.reason?`<p class="ai-modal-reason">${escapeHtml(rec.reason)}</p>`:''}
     <div id="aiRecPitchText" style="text-align:left; font-size:14px; line-height:1.6;">${pitchHtml}</div>
     <div class="row" style="justify-content:center; gap:8px; margin-top:16px; flex-wrap:wrap;">
-      <button type="button" class="primary" id="aiRecMarkReadingBtn">📖 Okuyorum</button>
-      <button type="button" class="secondary" id="aiRecMarkReadBtn">✓ Okudum</button>
-      <button type="button" class="secondary" id="aiRecMarkWantBtn">➕ Okumak istiyorum</button>
+      <button type="button" class="primary" id="aiRecMarkReadingBtn">Okuyorum</button>
+      <button type="button" class="secondary" id="aiRecMarkReadBtn">Okudum</button>
+      <button type="button" class="secondary" id="aiRecMarkWantBtn">Okumak istiyorum</button>
     </div>
+    <button type="button" class="ai-text-action" id="aiRecReplaceBtn" style="display:block;margin:16px auto 0;min-height:44px;">Yeniden öner</button>
   `;
   body.dataset.aiBookKey=cacheKey;
   wireAiRecDetailActions(rec, items, idx);
-  if(!aiPitchCache[cacheKey]){
+  {
     try{
       const text = await getAiBookPitch(rec);
       const pitchEl = document.getElementById('aiRecPitchText');
@@ -5583,6 +5610,7 @@ function wireAiRecDetailActions(rec, items, idx){
     const btn = document.getElementById(btnId);
     if(!btn) return;
     btn.addEventListener('click', async ()=>{
+      if(aiRecFetchInFlight){showToast('Devam eden öneri tamamlanıyor.');return;}
       document.querySelectorAll('#bookInfoModalBody button').forEach(b=>b.disabled=true);
       try{
         await addDoc(collection(db,'users',currentUid,collectionName), { title:rec.title||'', author:rec.author||'', cover:rec.cover||'', addedAt:new Date().toISOString() });
@@ -5599,6 +5627,43 @@ function wireAiRecDetailActions(rec, items, idx){
   wire('aiRecMarkReadingBtn', 'readBooks', 'Şu An Okuduklarım\'a eklendi!');
   wire('aiRecMarkReadBtn', 'bookHistory', 'Kitap Geçmişim\'e eklendi!');
   wire('aiRecMarkWantBtn', 'wantToRead', 'Okumak İstediklerim\'e eklendi!');
+  const replaceBtn=document.getElementById('aiRecReplaceBtn');
+  if(replaceBtn)replaceBtn.onclick=()=>refreshSingleAiRecommendation(rec,items,idx);
+
+}
+// Sadece seçilen öneriyi değiştir; yeni kitap kaydedilene kadar eskisini koru.
+async function refreshSingleAiRecommendation(rec,items,idx){
+ if(aiRecFetchInFlight){showToast('Devam eden öneri tamamlanıyor.');return;}
+ if(!Array.isArray(items)||items[idx]!==rec)return;
+ const uid=currentUid,modal=document.getElementById('bookInfoModalBody');
+ const bookKey=`${rec.title}|${rec.author}`;
+ const buttons=[...modal.querySelectorAll('button')];
+ const refresh=document.getElementById('aiRecRefreshBtn');
+ const button=document.getElementById('aiRecReplaceBtn');
+ aiRecFetchInFlight=true;buttons.forEach(b=>b.disabled=true);if(refresh)refresh.disabled=true;
+ if(button)button.textContent='Yeni kitap seçiliyor…';
+ try{
+  const res=await httpsCallable(cloudFunctions,'getBookRecommendation')({count:1,exclude:items.map(({title,author})=>({title,author}))});
+  const replacement=res.data?.items?.[0];
+  if(!replacement?.title)throw new Error('Yeni öneri alınamadı.');
+  await attachCoversToRecs([replacement]);
+  if(currentUid!==uid)return;
+  const next=items.slice();next[idx]=replacement;
+  const saved={...myProfile.aiRecommendations,...res.data,items:next,generatedAt:new Date().toISOString()};
+  await updateDoc(doc(db,'users',uid),{aiRecommendations:saved});
+  if(currentUid!==uid)return;
+  myProfile.aiRecommendations=saved;
+  items.splice(idx,1,replacement);
+  const body=document.getElementById('aiRecBody');
+  if(body){body.innerHTML=aiRecHtml(next);wireAiRecRefresh();wireAiRecItems(next);}
+  if(modal.dataset.aiBookKey===bookKey)closeModal('bookInfoModal');
+  showToast('Bu kitap için yeni öneri hazır.');
+ }catch(err){
+  if(currentUid===uid)showToast((err.message||'Yeni öneri alınamadı.')+' Mevcut önerin korundu.');
+ }finally{
+  aiRecFetchInFlight=false;buttons.forEach(b=>b.disabled=false);if(refresh)refresh.disabled=false;
+  if(button)button.textContent='Yeniden öner';
+ }
 }
 // Bir öneri "okuyorum/okudum/okumak istiyorum" ile kartından kaldırılınca, o TEK boşluk için tek
 // bir yeni öneri isteyip aynı konuma yerleştiriyoruz — diğer iki öneri yerinde kalıyor, tüm liste
@@ -5609,16 +5674,17 @@ async function replaceAiRecSlot(items, idx){
   items.splice(idx, 1);
   const body = document.getElementById('aiRecBody');
   if(body){ body.innerHTML = aiRecHtml(items); wireAiRecRefresh(); wireAiRecItems(items); }
-  myProfile.aiRecommendations = { items: items.slice(), generatedAt: (myProfile.aiRecommendations && myProfile.aiRecommendations.generatedAt) || new Date().toISOString() };
+  myProfile.aiRecommendations = { ...myProfile.aiRecommendations, items: items.slice(), generatedAt: (myProfile.aiRecommendations && myProfile.aiRecommendations.generatedAt) || new Date().toISOString() };
   try{
-    const exclude = [...items, removed].map(r=> r.author ? `${r.title} (${r.author})` : r.title);
+    await updateDoc(doc(db,'users',currentUid), {aiRecommendations:myProfile.aiRecommendations});
+    const exclude = [...items, removed].map(({title,author})=>({title,author}));
     const fn = httpsCallable(cloudFunctions, 'getBookRecommendation');
     const res = await fn({ count:1, exclude });
     const newItem = res.data && res.data.items && res.data.items[0];
     if(newItem){
       await attachCoversToRecs([newItem]);
       items.splice(idx, 0, newItem);
-      myProfile.aiRecommendations = { items: items.slice(), generatedAt: new Date().toISOString() };
+      myProfile.aiRecommendations = { ...res.data, items: items.slice(), generatedAt: new Date().toISOString() };
       await updateDoc(doc(db,'users',currentUid), { aiRecommendations: myProfile.aiRecommendations }).catch(()=>{});
       const bodyNow = document.getElementById('aiRecBody');
       if(bodyNow){ bodyNow.innerHTML = aiRecHtml(items); wireAiRecRefresh(); wireAiRecItems(items); }
@@ -5650,10 +5716,12 @@ async function fetchAiRecommendation(){
   const body = document.getElementById('aiRecBody');
   if(!body) return;
   aiRecFetchInFlight = true;
+  const previousRecommendations=myProfile.aiRecommendations;
   body.innerHTML = `<span class="muted">Senin için kitaplar seçiliyor…</span>`;
   try{
     const fn = httpsCallable(cloudFunctions, 'getBookRecommendation');
-    const res = await fn();
+    const previousItems=myProfile.aiRecommendations?.items||[];
+    const res = await fn({exclude:previousItems.map(({title,author})=>({title,author}))});
     const items = res.data.items || [];
     myProfile.aiRecommendations = res.data;
     await attachCoversToRecs(items);
@@ -5663,7 +5731,13 @@ async function fetchAiRecommendation(){
     body.innerHTML = aiRecHtml(items);
     wireAiRecItems(items);
   }catch(err){
-    body.innerHTML = `<span class="muted">${escapeHtml(err.message||'Öneri alınamadı.')}</span><div style="margin-top:10px;"><button type="button" class="secondary tiny" id="aiRecRefreshBtn">Tekrar dene</button></div>`;
+    if(previousRecommendations?.items?.length){
+      myProfile.aiRecommendations=previousRecommendations;
+      body.innerHTML=aiRecHtml(previousRecommendations.items);wireAiRecItems(previousRecommendations.items);
+      showToast(err.message||'Yeni öneri alınamadı. Önceki önerilerin korundu.');
+    }else{
+      body.innerHTML=`<span class="muted">${escapeHtml(err.message||'Öneri alınamadı.')}</span><button type="button" class="secondary tiny" id="aiRecRefreshBtn">Tekrar dene</button>`;
+    }
   }
   wireAiRecRefresh();
   aiRecFetchInFlight = false;
@@ -5674,7 +5748,7 @@ async function renderAiRecCard(){
   if(aiRecFetchInFlight) return;
   if(document.querySelector('#aiRecBody .ai-rec-item')) return; // zaten ekranda öneri var, ilgisiz bir profil güncellemesi yüzünden yeniden çizmeye gerek yok
   const cached = myProfile.aiRecommendations;
-  if(cached && cached.items && cached.items.length){
+  if(cached && cached.items && cached.items.length && cached.version===2){
     const missingCovers = cached.items.some(it=>!it.cover);
     if(missingCovers){
       body.innerHTML = `<span class="muted">Yükleniyor…</span>`;
@@ -5751,9 +5825,7 @@ async function renderBookHistoryGrid(uid, gridId, editable, collectionName){
     </div>` : '';
 
   const cardsHtml = pageItems.map(b=>{
-    const coverHtml = b.cover
-      ? `<img src="${b.cover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(b.title||'').replace(/'/g,"\\'")}');" />`
-      : placeholderCoverHtml(b.title||'');
+    const coverHtml = materialBookCover(b.title,b.cover);
     const delBtn = editable ? `<button class="bh-delete" data-id="${b.id}" title="Kaldır">✕</button>` : '';
     return `<div class="bh-card" data-bh-id="${b.id}" style="cursor:pointer;">
       <div class="bh-cover-wrap">${coverHtml}</div>
@@ -5797,9 +5869,7 @@ async function renderBookHistoryGrid(uid, gridId, editable, collectionName){
 function showBhBookInfo(b, uid, gridId, collectionName){
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
-  const coverHtml = b.cover
-    ? `<img src="${b.cover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(b.title||'').replace(/'/g,"\\'")}')+this.parentElement.innerHTML;" />`
-    : `<div style="width:100px; height:150px; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); margin:0 auto 12px;">${placeholderCoverHtml(b.title||'')}</div>`;
+  const coverHtml = materialBookCover(b.title,b.cover,'book-cover-detail');
   let actionBtn = '';
   if(uid===currentUid){
     if(collectionName==='wantToRead') actionBtn = `<button type="button" class="primary" id="bhMoveBtn" style="margin-top:10px;">📖 Okuyorum</button>`;
@@ -6304,7 +6374,7 @@ function postBodyHtml(p, expanded){
       if(sub==='nomination_made'){
         const cover = p.bookCover
           ? `<img src="${p.bookCover}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml(p.bookTitle||'')}" data-book-cover="${escapeHtml(p.bookCover)}" />`
-          : `<span class="post-book-cover" style="display:inline-block; overflow:hidden; border-radius:6px;">${placeholderCoverHtml(p.bookTitle||'')}</span>`;
+          : `<span class="post-book-cover" style="display:inline-block; overflow:hidden; border-radius:6px;">${materialBookCover(p.bookTitle,'')}</span>`;
         return `<div style="display:flex; gap:10px; align-items:center;">${cover}<div><b>${escapeHtml(p.name||'')}</b> bir kitap önerdi: <b>${escapeHtml(p.bookTitle||'')}</b>${p.bookAuthor?` (${escapeHtml(p.bookAuthor)})`:''}</div></div>`;
       }
       if(sub==='round_start'){
@@ -8986,39 +9056,16 @@ CURATED_CATALOG.forEach(cat=>{
 });
 const LEVEL_COLORS = { baslangic:'#26A269', orta:'#D4A017', ileri:'#E01B24' };
 const LEVEL_LABELS = { baslangic:'🟢 Başlangıç', orta:'🟡 Orta', ileri:'🔴 İleri' };
-const PLACEHOLDER_COVER_PALETTE = [
-  {light:'#7a5233', base:'#5c3d24', dark:'#2e1f13'},
-  {light:'#8a2332', base:'#5e161f', dark:'#320c11'},
-  {light:'#2f6b52', base:'#1a4534', dark:'#0e281f'},
-  {light:'#a9822a', base:'#7a611a', dark:'#453609'},
-  {light:'#3d5680', base:'#25355a', dark:'#141d30'},
-  {light:'#7a4f7a', base:'#4f3350', dark:'#2b1c2c'},
-  {light:'#6b5c47', base:'#42392a', dark:'#231d15'},
-  {light:'#43584f', base:'#26362f', dark:'#141e19'}
-];
+const PLACEHOLDER_COVER_PALETTE = ['#CEC4E1','#C8DDC4','#F0D5B9','#C5DAE8','#E8C9D2','#E5DFB9'];
 function placeholderCoverHtml(title){
-  const t = (title||'').trim();
-  let hash = 0;
-  for(let i=0;i<t.length;i++) hash = (hash*31 + t.charCodeAt(i)) & 0xffffffff;
-  const pal = PLACEHOLDER_COVER_PALETTE[Math.abs(hash) % PLACEHOLDER_COVER_PALETTE.length];
-  const firstLetter = t.charAt(0).toUpperCase();
-  const rest = t.slice(1);
-  const gold = '#cdaa61';
-  return `<div style="width:100%; height:100%; position:relative; overflow:hidden; box-sizing:border-box;
-      background:
-        repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px),
-        radial-gradient(ellipse at 30% 15%, rgba(255,255,255,0.14), transparent 55%),
-        linear-gradient(160deg, ${pal.light}, ${pal.base} 45%, ${pal.dark} 100%);">
-    <div style="position:absolute; inset:6%; border:1px solid ${gold}; opacity:0.85;"></div>
-    <div style="position:absolute; inset:11%; border:1px solid ${gold}; opacity:0.6;"></div>
-    <div style="position:absolute; top:11%; left:11%; width:10px; height:10px; border-top:1px solid ${gold}; border-left:1px solid ${gold};"></div>
-    <div style="position:absolute; top:11%; right:11%; width:10px; height:10px; border-top:1px solid ${gold}; border-right:1px solid ${gold};"></div>
-    <div style="position:absolute; bottom:11%; left:11%; width:10px; height:10px; border-bottom:1px solid ${gold}; border-left:1px solid ${gold};"></div>
-    <div style="position:absolute; bottom:11%; right:11%; width:10px; height:10px; border-bottom:1px solid ${gold}; border-right:1px solid ${gold};"></div>
-    <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:18% 15%; text-align:center;">
-      <div style="font-family:'Pirata One',Georgia,serif; color:${gold}; line-height:1.25; word-break:break-word; text-shadow:0 1px 3px rgba(0,0,0,0.55);"><span style="font-size:1.5em;">${escapeHtml(firstLetter)}</span><span style="font-size:1.05em;">${escapeHtml(rest)}</span></div>
-    </div>
-  </div>`;
+ const t=String(title||'Kitap').trim()||'Kitap';
+ let hash=0;for(const ch of t)hash=(Math.imul(hash,31)+ch.codePointAt(0))|0;
+ const color=PLACEHOLDER_COVER_PALETTE[(hash>>>0)%PLACEHOLDER_COVER_PALETTE.length];
+ return `<span class="book-cover-template" style="--cover-paper:${color}" aria-hidden="true"><span class="book-cover-letter">${escapeHtml(Array.from(t)[0].toLocaleUpperCase('tr-TR'))}</span><span class="book-cover-name">${escapeHtml(t)}</span></span>`;
+}
+function materialBookCover(title,cover,extraClass=''){
+ let url='';try{const u=new URL(cover||'',location.href);if(cover&&['http:','https:'].includes(u.protocol))url=u.href;}catch(_){}
+ return `<span class="material-book-cover ${extraClass}">${placeholderCoverHtml(title)}${url?`<img src="${escapeHtml(url)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</span>`;
 }
 let discoverCoversCache = {};
 let discoverCoversLoaded = false;
@@ -9262,6 +9309,7 @@ async function renderSettingsTab(){
   document.getElementById('settingsPasswordError').textContent = '';
   const pwCard = document.getElementById('settingsChangePasswordBtn').closest('.card');
   pwCard.style.display = isGoogleUser() ? 'none' : 'block';
+  if(pwCard.parentElement.classList.contains('settings-group'))pwCard.parentElement.hidden=isGoogleUser();
   const adminWrap = document.getElementById('settingsAdminOnlyWrap');
   adminWrap.style.display = myProfile.role==='admin' ? 'block' : 'none';
   if(myProfile.role==='admin'){
@@ -9288,6 +9336,7 @@ async function renderSettingsTab(){
       });
     });
   }
+  materialSettingsPresentation();
   const prefs = myProfile.notifPrefs || {};
   const giftsChk = document.getElementById('notifPrefGifts');
   const socialChk = document.getElementById('notifPrefSocial');
@@ -9455,7 +9504,7 @@ async function renderDiscoverCategoryGrid(slug){
     const level = b.level || (curated && curated.level);
     const borderColor = LEVEL_COLORS[level] || 'var(--line)';
     const coverInfo = discoverCoversCache[key];
-    const coverHtml = (coverInfo && coverInfo.cover) ? `<img src="${coverInfo.cover}" alt="" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(b.title).replace(/'/g,"\\'")}');" />` : placeholderCoverHtml(b.title);
+    const coverHtml = materialBookCover(b.title,coverInfo?.cover);
     const ratingLabel = isGroup ? `⭐ ${groupAvg(b.ratings).toFixed(1)} &middot; Grupta ${Object.keys(b.ratings||{}).length}` : '';
     return `<div class="discover-book-card" data-idx="${idx}">
       <div class="discover-book-cover-wrap" style="border:2px solid ${borderColor};">${coverHtml}${isGroup?'<span class="discover-group-badge">Grupta</span>':''}</div>
@@ -9512,7 +9561,7 @@ async function openBookDiscoverModal(book){
   const why = book.why || curated.why;
   const coverInfo = discoverCoversCache[bookKey];
   const safeTitleJs = book.title.replace(/'/g, "\\'");
-  const coverHtml = (coverInfo && coverInfo.cover) ? `<img src="${coverInfo.cover}" alt="" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${safeTitleJs}');" />` : placeholderCoverHtml(book.title);
+  const coverHtml = materialBookCover(book.title,coverInfo?.cover);
   let groupDoc = null;
   try{
     const snap = await getDoc(doc(db,'groupBookRatings',bookKey));
@@ -9613,7 +9662,7 @@ async function renderRecCard(it, isGroup){
     </div>`;
   };
   const commentsHtml = topComments.map(c=> renderComment(c,false) + repliesOf(c.id).map(r=>renderComment(r,true)).join('')).join('');
-  const coverHtml = `<span style="width:52px; height:78px; border-radius:6px; overflow:hidden; box-shadow:var(--shadow); flex:0 0 auto; display:inline-block;">${it.coverUrl ? `<img src="${it.coverUrl}" alt="" class="book-cover-clickable" data-book-title="${escapeHtml(it.bookTitle)}" data-book-cover="${escapeHtml(it.coverUrl)}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onerror="this.parentElement.innerHTML=placeholderCoverHtml('${escapeHtml(it.bookTitle).replace(/'/g,"\\'")}');" />` : placeholderCoverHtml(it.bookTitle)}</span>`;
+  const coverHtml = `<span class="recommendation-cover book-cover-clickable" data-book-title="${escapeHtml(it.bookTitle)}" data-book-cover="${escapeHtml(it.coverUrl||'')}">${materialBookCover(it.bookTitle,it.coverUrl)}</span>`;
   return `<div class="receipt" data-rec-id="${it.id}">
     <div class="rweek"><span>${directionLabel} &middot; ${dtLabel}</span>${canDelete?`<button class="secondary tiny" data-del-rec="${it.id}">Sil</button>`:''}</div>
     <div style="display:flex; gap:12px; align-items:flex-start;">
@@ -9766,7 +9815,7 @@ async function renderMemberWorms(){ await renderWormsShared('mWormsMyStreak','mW
 /* ============ GİRİŞ / AUTH DURUM TAKİBİ ============ */
 /* BookHook Material UI adapter. Only presentation/navigation; existing data model retained. */
 function materialIcon(kind){
- const paths={home:'<path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/>',feed:'<path d="M4 5h16M4 10h16M4 15h10M4 20h6"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',book:'<path d="M12 5C9 2 5 2 2 3v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/>',club:'<circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M3 9a3 3 0 0 0 0 6m18-6a3 3 0 0 1 0 6M2 21v-2m20 2v-2"/>',gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8H8a3 3 0 1 1 3-3Zm0 0h4a3 3 0 1 0-3-3Z"/>',badge:'<circle cx="12" cy="9" r="6"/><path d="m8 14-2 8 6-3 6 3-2-8m-6-6 2-3 2 3"/>',records:'<path d="M4 3h16v18H4ZM8 8h8M8 12h8M8 16h5"/>',settings:'<path d="m9 3-1 3-3 1v4l-2 1 2 2v4l3 1 1 3h6l1-3 3-1v-4l2-2-2-1V7l-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/>',rules:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',heart:'<path d="M12 21s-6.5-4.2-9-8.4C1.3 9 2.7 5.5 6 4.6c2-.5 3.8.3 5 2 .1.2.5.2.6 0 1.2-1.7 3-2.5 5-2 3.3.9 4.7 4.4 3 8C18.5 16.8 12 21 12 21Z"/>',account:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',import:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>'};
+ const paths={bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',logout:'<path d="M9 4H4v16h5M10 12h11m-4-4 4 4-4 4"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',home:'<path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/>',feed:'<path d="M4 5h16M4 10h16M4 15h10M4 20h6"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',book:'<path d="M12 5C9 2 5 2 2 3v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/>',club:'<circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M3 9a3 3 0 0 0 0 6m18-6a3 3 0 0 1 0 6M2 21v-2m20 2v-2"/>',gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8H8a3 3 0 1 1 3-3Zm0 0h4a3 3 0 1 0-3-3Z"/>',badge:'<circle cx="12" cy="9" r="6"/><path d="m8 14-2 8 6-3 6 3-2-8m-6-6 2-3 2 3"/>',records:'<path d="M4 3h16v18H4ZM8 8h8M8 12h8M8 16h5"/>',settings:'<path d="m9 3-1 3-3 1v4l-2 1 2 2v4l3 1 1 3h6l1-3 3-1v-4l2-2-2-1V7l-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/>',rules:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',heart:'<path d="M12 21s-6.5-4.2-9-8.4C1.3 9 2.7 5.5 6 4.6c2-.5 3.8.3 5 2 .1.2.5.2.6 0 1.2-1.7 3-2.5 5-2 3.3.9 4.7 4.4 3 8C18.5 16.8 12 21 12 21Z"/>',account:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',import:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>'};
  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[kind]||paths.book}</svg>`;
 }
 function materialPrimaryTabs(){
@@ -10065,7 +10114,10 @@ function applyHubLayout(hub,{render=false}={}){
    panelInner.append(section);
    section.classList.add('active');
    if(render)renderTab(item.dataset.hubTarget);
-  }else if(main&&panelInner.contains(section)){
+  }else if(main&&panelInner.contains(section)&&!item.classList.contains('expanded')){
+   // Canlı veri yenilemesi ve ekran boyutu değişimleri de buraya gelir. Açık kartın
+   // içeriğini taşımak, expanded durumunu koruyup paneli boş bir şeride düşürür.
+   // Yalnızca kapalı kartların bölümlerini ana alana geri taşı.
    // Görünüm "doğrudan göster"den kart görünümüne geri alınırken bölüm hâlâ hub-item'ın
    // panel-inner'ı içinde kalırsa, o panel artık .hub-flat'in display:contents kuralıyla değil
    // normal akordeon (collapsed) CSS'iyle davranır ve item hiç 'expanded' olmadığı için içerik
@@ -10171,7 +10223,7 @@ function materialInit(){
  const settings=document.getElementById('tab-settings');
  if(!document.getElementById('materialThemeSettings')){
   settings.insertAdjacentHTML('afterbegin',`<div class="card" id="materialThemeSettings"><h2>Görünüm</h2><p class="muted">Uygulamanın temasını seç.</p><div class="segmented" id="materialThemeChoices"><button data-theme-choice="light">Açık</button><button data-theme-choice="dark">Koyu</button><button data-theme-choice="auto">Otomatik</button></div><p class="muted">Otomatik tema günün saatine göre değişir.</p></div>`);
-  settings.insertAdjacentHTML('beforeend',`<div class="settings-list">${materialLink('profile','Profilim','Ad, iletişim ve adres bilgilerin','account')}<button class="destination-row" id="materialEnablePush">${materialIcon('gift')}<b>Bildirimleri aç</b></button><button class="destination-row" id="materialGuideBtn">${materialIcon('book')}<b>Kullanım Rehberi</b></button><button class="destination-row danger" id="materialLogout">Çıkış yap</button></div>`);
+  settings.insertAdjacentHTML('beforeend',`<div class="settings-list">${materialLink('profile','Profilim','Ad, iletişim ve adres bilgilerin','account')}<button class="destination-row" id="materialEnablePush"><span class="route-icon">${materialIcon('bell')}</span><span><b>Bildirimleri Aç</b><small>Bu cihazdaki bildirim izni</small></span><span aria-hidden="true">›</span></button><button class="destination-row" id="materialGuideBtn"><span class="route-icon">${materialIcon('book')}</span><span><b>Kullanım rehberi</b><small>BookHook nasıl çalışır?</small></span><span aria-hidden="true">›</span></button><button class="destination-row danger" id="materialLogout"><span class="route-icon">${materialIcon('logout')}</span><span><b>Çıkış yap</b></span><span aria-hidden="true">›</span></button></div>`);
   document.getElementById('materialEnablePush').onclick=enablePushNotifications;
   document.getElementById('materialGuideBtn').onclick=()=>{ document.getElementById('guideModal').style.display='flex'; };
   document.getElementById('materialLogout').onclick=()=>document.getElementById('logoutBtn').click();
@@ -10181,10 +10233,34 @@ function materialInit(){
  });
  materialThemeSync();
  initHubLayoutSettings();
+ materialSettingsPresentation();
  const name=document.getElementById('whoamiClickable');name.setAttribute('role','button');name.tabIndex=0;name.setAttribute('aria-label','Profilim');name.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();name.click();}};
  document.querySelectorAll('button[title]').forEach(button=>{if(!button.hasAttribute('aria-label'))button.setAttribute('aria-label',button.title);});
  document.getElementById('notifBellBtn').setAttribute('aria-label','Bildirimler');
  document.getElementById('hamburgerBtn').setAttribute('aria-label','Hesap ve ayarlar');
+}
+function materialSettingsPresentation(){
+ const settings=document.getElementById('tab-settings');
+ for(const card of settings.querySelectorAll(':scope > .card')){
+  const heading=card.querySelector(':scope > h2');if(!heading)continue;
+  const group=document.createElement('div');group.className='settings-group';
+  card.before(group);group.append(heading,card);card.classList.add('settings-surface');
+ }
+ settings.querySelectorAll('[data-setting-icon]').forEach(label=>{
+  if(label.querySelector('svg'))return;
+  label.insertAdjacentHTML('afterbegin',`<span class="route-icon">${materialIcon(label.dataset.settingIcon)}</span>`);
+  const row=label.closest('.member-row'),input=row.querySelector('input');
+  row.classList.add('notification-setting');input.setAttribute('role','switch');input.setAttribute('aria-label',label.textContent.trim());
+  const text=document.createElement('label');text.htmlFor=input.id;label.replaceWith(text);text.append(label);
+  const knob=document.createElement('span');knob.className='layout-switch';knob.setAttribute('aria-hidden','true');input.after(knob);
+ });
+ const push=document.getElementById('materialEnablePush');
+ if(push)push.querySelector('b').textContent=('Notification' in window&&Notification.permission==='granted')?'Bildirimler Açık':'Bildirimleri Aç';
+ const rules=document.getElementById('tab-rules');
+ for(const card of rules.querySelectorAll(':scope > .card')){
+  const heading=card.querySelector(':scope > h2');if(!heading)continue;
+  const group=document.createElement('div');group.className='settings-group';card.before(group);group.append(heading,card);card.classList.add('settings-surface');
+ }
 }
 function materialThemeSync(){
  const selected=getAutoThemeEnabled()?'auto':document.documentElement.getAttribute('data-theme')||'light';
@@ -10313,7 +10389,7 @@ const hubPreviews=(()=>{
  const book=(b,label)=>({label,title:b.title||b.bookTitle||b.t||'İsimsiz kitap',detail:b.author||b.a||b.note||'',cover:b.cover||b.coverUrl||'',book:true});
  function coverURL(url){try{const u=new URL(url,location.href);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}}
  function content(s){
-  if(s.book){const url=coverURL(s.cover);return `<span class="hp-book-cover"><span>${esc(s.title.slice(0,1))}</span>${url?`<img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}</span><span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-book-title">${esc(s.title)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;}
+  if(s.book){const url=coverURL(s.cover);return `${materialBookCover(s.title,url,'hp-book-cover')}<span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-book-title">${esc(s.title)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;}
   if(s.stats)return `<span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><span class="hp-stats">${s.stats.map(x=>`<span class="hp-stat ${x.tone}"><i>${esc(x.icon)}</i><b>${esc(x.value)}</b><small>${esc(x.label)}</small></span>`).join('')}</span><span class="hp-detail">${esc(s.detail)}</span></span>`;
   const badge=BADGE_DEFS.find(d=>d.icon===s.icon);
   return `<span class="hp-emblem ${esc(s.tone)}">${badge?badgeIllustration(badge.key):esc(s.icon)}</span><span class="hp-copy"><small class="hp-eyebrow">${esc(s.label)}</small><strong class="hp-value">${esc(s.value)}</strong><span class="hp-detail">${esc(s.detail)}</span></span>`;
@@ -10593,6 +10669,109 @@ function renderGoodreadsImportTab(){
   };
 }
 
+/* PWA/tarayıcı Geri: ekranlar ve geçici ayrıntılar aynı geçmişi kullanır. */
+const appBackNavigation=(()=>{
+ const key='bookhookNavigation';let session='';
+ let owner=null,entries=[],index=-1,applying=false,scheduled=false,dialogSequence=0,popRevision=0,pendingRoot=false;
+ const dialogs=new Map();
+ function snapshot(){
+  const root=document.getElementById('tab-'+activeTab);
+  const layers=[...document.querySelectorAll('.modal-overlay-anim')].filter(el=>el.style.display==='flex'&&!el.classList.contains('closing')).sort((a,b)=>Number(getComputedStyle(a).zIndex)-Number(getComputedStyle(b).zIndex)).map(el=>el.id);
+  const native=[...document.querySelectorAll('dialog[open]')].map(el=>{
+   if(!el.dataset.backDialog)el.dataset.backDialog='dialog-'+(++dialogSequence);
+   dialogs.set(el.dataset.backDialog,el);return el.dataset.backDialog;
+  });
+  return {tab:activeTab,hubs:root?.classList.contains('hub-flat')?[]:[...(root?.querySelectorAll('.hub-item.expanded')||[])].map(el=>el.dataset.hubTarget),ai:activeTab==='library'&&!hubLayoutEnabled('library')&&document.getElementById('aiRecCard').classList.contains('expanded'),layers,native};
+ }
+ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+ function state(){return {...(history.state||{}),[key]:{session,index}};}
+ // Ana sekmeler aynı gezinme seviyesidir; ayrı geri adımı oluşturmaz.
+ function replaceRoot(view){
+  session=Date.now().toString(36)+Math.random().toString(36).slice(2);
+  const base={...view,hubs:[],ai:false,layers:[],native:[]};
+  entries=[{view:base,y:scrollY}];index=0;history.replaceState(state(),'');
+  if(!same(base,view)){entries.push({view,y:scrollY});index=1;history.pushState(state(),'');}
+ }
+ function sync(){
+  scheduled=false;if(applying||!currentUid||!activeTab)return;
+  const next=snapshot();
+  if(owner!==currentUid||index<0){session=Date.now().toString(36)+Math.random().toString(36).slice(2);owner=currentUid;entries=[{view:next,y:scrollY}];index=0;history.replaceState(state(),'');return;}
+  if(same(entries[index].view,next))return;
+  if(entries[index].view.tab!==next.tab&&getTabOrder().includes(next.tab)){
+   if(index>0){pendingRoot=true;applying=true;history.go(-index);}
+   else replaceRoot(next);
+   return;
+  }
+  // X/boşluk/Vazgeç ile kapanışta boş bir "geri" adımı bırakma.
+  let previous=-1;
+  if(entries[index].view.tab===next.tab){
+   for(let i=index-1;i>=0&&entries[i].view.tab===next.tab;i--)if(same(entries[i].view,next)){previous=i;break;}
+  }
+  if(previous>=0){applying=true;history.go(previous-index);return;}
+  entries=entries.slice(0,index+1);entries.push({view:next,y:scrollY});index++;
+  history.pushState(state(),'');
+ }
+ function schedule(){if(!scheduled){scheduled=true;queueMicrotask(sync);}}
+ function closeLayer(id){
+  const el=document.getElementById(id);if(!el)return;
+  const close=document.getElementById(id+'Close');
+  if(close)close.click();else closeModal(id);
+ }
+ async function restore(entry,revision){
+  const desired=entry.view;
+  for(const dialog of document.querySelectorAll('dialog[open]')){
+   if(desired.native.includes(dialog.dataset.backDialog))continue;
+   dialog.dispatchEvent(new Event('cancel',{cancelable:true}));
+   // Kaydetme sürerken pencere kapatılmıyorsa geçişi de beklet.
+   if(dialog.open)return false;
+  }
+  const current=snapshot();
+  for(const id of current.layers.slice().reverse())if(!desired.layers.includes(id))closeLayer(id);
+  if(activeTab!==desired.tab)switchTab(desired.tab,{animate:false});
+  const root=document.getElementById('tab-'+desired.tab);
+  if(!root?.classList.contains('hub-flat')){
+   root?.querySelectorAll('.hub-item').forEach(item=>{
+    if(desired.hubs.includes(item.dataset.hubTarget)){
+     if(!item.classList.contains('expanded'))materialExpandHubItem(item,item.dataset.hubTarget);
+    }else materialCollapseHubItem(item);
+   });
+  }
+  if(desired.tab==='library'&&!hubLayoutEnabled('library')){
+   const card=document.getElementById('aiRecCard');
+   if(card.classList.contains('expanded')!==desired.ai)card.querySelector('.ai-card-heading').click();
+  }
+  // İleri gezinmede eldeki modal içeriği yeniden kullanılabilir; silinmiş form yeniden yaratılmaz.
+  for(const id of desired.layers){const el=document.getElementById(id);if(el&&!el.classList.contains('closing'))el.style.display='flex';}
+  await new Promise(resolve=>setTimeout(resolve,150));
+  if(revision!==popRevision)return null;
+  const previous=document.documentElement.style.scrollBehavior;
+  document.documentElement.style.scrollBehavior='auto';window.scrollTo(0,entry.y);document.documentElement.style.scrollBehavior=previous;
+  return true;
+ }
+ window.addEventListener('popstate',async event=>{
+  if(!currentUid||currentUid!==owner)return;
+  if(pendingRoot){pendingRoot=false;replaceRoot(snapshot());applying=false;return;}
+  const target=event.state?.[key];if(!target||target.session!==session||!entries[target.index]){applying=false;return;}
+  const from=index;applying=true;index=target.index;
+  const accepted=await restore(entries[index],++popRevision);
+  if(accepted===null)return;
+  if(!accepted){index=from;history.go(from-target.index);return;}
+  entries[index].view=snapshot();history.replaceState(state(),'');applying=false;
+ });
+ window.addEventListener('scroll',()=>{
+  if(!applying&&entries[index]&&document.body.dataset.screen===entries[index].view.tab)entries[index].y=scrollY;
+ },{passive:true});
+ const relevant='.modal-overlay-anim,dialog,.hub-item,#aiRecCard,section.tab';
+ new MutationObserver(records=>{
+  if(records.some(r=>r.type==='attributes'?r.target.matches(relevant):[...r.addedNodes,...r.removedNodes].some(n=>n.nodeType===1&&(n.matches('dialog')||n.querySelector?.('dialog')))))schedule();
+ }).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class','open']});
+ // Başlıktaki ok, donanım Geri ile aynı geçmiş adımını kullanır.
+ document.getElementById('materialBack').addEventListener('click',event=>{
+  if(index>0){event.preventDefault();event.stopImmediatePropagation();if(!applying)history.back();}
+ },true);
+ return {schedule};
+})();
+
 onAuthStateChanged(auth, async (user)=>{
   if(unsubUsers){ unsubUsers(); unsubUsers=null; }
   if(unsubToday){ unsubToday(); unsubToday=null; subscribedTodayKey=null; }
@@ -10681,7 +10860,7 @@ onAuthStateChanged(auth, async (user)=>{
     switchTab(notifTabParam);
     if(notifPostParam) setTimeout(()=> openPostModal(notifPostParam), 250);
     if(notifIdParam) markNotifReadById(notifIdParam);
-    history.replaceState(null, '', location.pathname);
+    history.replaceState(history.state, '', location.pathname);
   }
 
   if(myProfile.role==='admin'){
@@ -10737,4 +10916,11 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
 
