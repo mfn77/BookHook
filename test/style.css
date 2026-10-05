@@ -396,7 +396,7 @@ html[data-theme=dark] .badge-art{filter:brightness(1.13)}
 .goal-form input:focus-visible,.reading-pages-dialog input:focus-visible{outline:2px solid var(--forest)}
 .goal-form input::-webkit-inner-spin-button{appearance:none}
 .personal-goal .muted{font-size:12px}.goal-form .goal-error:empty{display:none}
-.daily-actions .stamp-btn.read:disabled{opacity:.45;cursor:default;box-shadow:none;pointer-events:none}
+.daily-actions .stamp-btn.read:disabled{opacity:1;cursor:default;pointer-events:none}
 .previous-page-count{display:block;font-size:14px;font-weight:400;opacity:.55;margin-top:5px}
 .goal-history-number{display:block;font-size:30px;line-height:1.15;font-weight:700;margin-top:12px}
 
@@ -437,29 +437,34 @@ html[data-theme=dark] .badge-art{filter:brightness(1.13)}
 
 .goal-remove-button{display:block;margin:18px auto 0;background:transparent;color:var(--ink-70);font-size:14px;padding:10px 16px;border-radius:999px}
 .goal-remove-button:hover{background:var(--secondary-container)}
-/* "Okudum/Okumadım" damgasına basınca oynayan zıplama+renk parlaması+genişleyen halka efekti —
-   Material temasına geçerken (bkz. 00b97346) stil tanımı hiç taşınmamıştı; playMarkFx() JS'de
-   hâlâ .pop-read/.pop-skip sınıflarını ekliyordu ama karşılığı olan hiçbir CSS kuralı yoktu,
-   yani basma animasyonu görsel olarak hiç oynamıyordu. Önceki temanın efekti güncel
-   --gold/--cloth değişkenleriyle, .selected ile aynı bitiş rengine ulaşacak şekilde yeniden kuruldu.
-*/
-.stamp-btn.pop-read{animation:stampBounceRead .6s cubic-bezier(.34,1.56,.64,1);z-index:2}
-.stamp-btn.pop-skip{animation:stampShakeSkip .5s ease;z-index:2}
-@keyframes stampBounceRead{
-  0%{transform:scale(1);background:var(--paper)}
-  30%{transform:scale(1.45) rotate(8deg);background:var(--gold);color:var(--on-primary)}
-  55%{transform:scale(.92) rotate(-4deg)}
-  75%{transform:scale(1.08)}
-  100%{transform:scale(1) rotate(0deg);background:var(--gold);color:var(--on-primary)}
-}
-@keyframes stampShakeSkip{
-  0%{transform:scale(1) rotate(0deg);background:var(--paper)}
-  20%{transform:scale(1.3) rotate(-12deg);background:var(--error-container);color:var(--cloth-dark)}
-  40%{transform:scale(1.25) rotate(10deg)}
-  60%{transform:scale(1.18) rotate(-8deg)}
-  80%{transform:scale(1.06) rotate(4deg)}
-  100%{transform:scale(1) rotate(0deg);background:var(--error-container);color:var(--cloth-dark)}
-}
+/* "Okudum" düğmesi: basar basmaz (ağ beklemeden) dokunulan noktadan yayılan renk dolgusu, kendini
+   çizen tik, yukarı kayarak gelen "Bugün okudun" yazısı, yumuşak bir ışıma halkası ve küçük
+   kıvılcımlar (playReadMarkFx). Bitiş hali soluk değil, dolu ve belirgin. */
+.daily-actions .stamp-btn{position:relative;overflow:hidden;isolation:isolate;transition:background .3s var(--ease),color .3s var(--ease),transform .16s var(--ease),box-shadow .3s var(--ease)}
+.daily-actions .stamp-btn:not(:disabled):active{transform:scale(.95)}
+.daily-actions .stamp-btn::before{content:'';position:absolute;inset:0;z-index:-1;background:var(--gold);clip-path:circle(0 at var(--fx-x,50%) var(--fx-y,50%));pointer-events:none}
+.daily-actions .stamp-btn.read.selected::before{clip-path:circle(150% at var(--fx-x,50%) var(--fx-y,50%))}
+.daily-actions .stamp-btn.read.selected{box-shadow:0 3px 12px color-mix(in srgb,var(--gold) 32%,transparent)}
+.daily-actions .stamp-btn.read.selected.just-marked{background:var(--paper)}
+.daily-actions .stamp-btn.just-marked{animation:markGlow .9s .2s ease-out both}
+.daily-actions .stamp-btn.just-marked::before{animation:markInk .6s cubic-bezier(.2,0,0,1) both}
+.mark-check{width:22px;height:22px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.just-marked .mark-check{animation:markCheckPop .55s .1s cubic-bezier(.34,1.56,.64,1) both}
+.just-marked .mark-check path{stroke-dasharray:22;animation:markCheckDraw .38s .18s cubic-bezier(.65,0,.35,1) both}
+.just-marked .mark-label{animation:markLabelIn .42s .18s cubic-bezier(.2,0,0,1) both}
+@keyframes markInk{from{clip-path:circle(0 at var(--fx-x,50%) var(--fx-y,50%))}to{clip-path:circle(var(--fx-r,150%) at var(--fx-x,50%) var(--fx-y,50%))}}
+@keyframes markGlow{from{box-shadow:0 0 0 0 color-mix(in srgb,var(--gold) 45%,transparent)}to{box-shadow:0 0 0 14px color-mix(in srgb,var(--gold) 0%,transparent)}}
+@keyframes markCheckPop{from{transform:scale(.3) rotate(-25deg)}to{transform:none}}
+@keyframes markCheckDraw{from{stroke-dashoffset:22}to{stroke-dashoffset:0}}
+@keyframes markLabelIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.mark-burst{position:fixed;width:0;height:0;z-index:500;pointer-events:none}
+.mark-burst i{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%}
+.mark-burst i.streak{left:0;top:-2px;width:13px;height:4px;border-radius:2px}
+/* Yöneticinin üye listesindeki küçük ✓/✕ damgaları (playMarkFx): sallanmadan, yaylı bir büyüme. */
+.stamp-btn.pop-read{animation:stampPopRead .5s cubic-bezier(.34,1.56,.64,1);z-index:2}
+.stamp-btn.pop-skip{animation:stampPopSkip .45s cubic-bezier(.34,1.56,.64,1);z-index:2}
+@keyframes stampPopRead{0%{transform:scale(.9)}45%{transform:scale(1.18);background:var(--gold);color:var(--on-primary)}100%{transform:scale(1);background:var(--gold);color:var(--on-primary)}}
+@keyframes stampPopSkip{0%{transform:scale(.9)}35%{transform:scale(1.12) translateX(-2px);background:var(--error-container);color:var(--cloth-dark)}55%{transform:scale(1.08) translateX(3px)}75%{transform:scale(1.03) translateX(-1px)}100%{transform:scale(1);background:var(--error-container);color:var(--cloth-dark)}}
 .stamp-btn.pop-read::after{content:'';position:absolute;inset:-0.2em;border-radius:999px;border:.16em solid var(--gold);animation:ringExpand .55s ease-out forwards;pointer-events:none}
 .stamp-btn.pop-skip::after{content:'';position:absolute;inset:-0.2em;border-radius:999px;border:.16em solid var(--cloth);animation:ringExpand .5s ease-out forwards;pointer-events:none}
 @keyframes ringExpand{0%{transform:scale(.7);opacity:1}100%{transform:scale(2.1);opacity:0}}

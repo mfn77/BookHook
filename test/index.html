@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=material-46-remove-goals" />
+<link rel="stylesheet" href="./style.css?v=material-47-okudum-fx" />
 </head>
 <body>
 <div id="bgLayer"></div>
@@ -2698,12 +2698,16 @@ async function checkAndAwardBadges(uid, streak){
 }
 
 /* ============ GÜN GEÇİŞİNİ (06:00) TAKİP ET ============ */
+// "Okudum"a basınca ekran sunucuyu beklemeden anında güncelleniyor; kayıt arka planda giderken
+// başka bir üyenin işaretlemesi dinleyiciyi tetiklerse bu iyimser durum silinmesin diye tutuluyor.
+let selfReadPending = null;
 function resubscribeToday(){
   if(unsubToday) unsubToday();
   subscribedTodayKey = todayStr();
   unsubToday = onSnapshot(collection(db,'days',subscribedTodayKey,'answers'), (snap)=>{
     todayAnswers = {};
     snap.forEach(d=> todayAnswers[d.id] = d.data().status);
+    if(selfReadPending && selfReadPending.day===subscribedTodayKey) todayAnswers[selfReadPending.uid]='read';
     if(activeTab) renderTab(activeTab);
   });
 }
@@ -3493,7 +3497,8 @@ async function renderPersonalGoals(section,totals,uid=currentUid){
   const nextDay=fromStr(toStr(addDays(nowLogical(),1)));nextDay.setHours(6,0,0,0);
   section.dataset.goalRefreshAt=String(Math.min(nextDay.getTime(),monthly?Date.parse(monthly.end):Infinity));
   const rec=totals.records[day],pages=rec?.status==='read'?(Number.isSafeInteger(rec.pages)&&rec.pages>=15?rec.pages:15):0;
-  updateSelfReadButton(section,rec,daily);
+  // Toplamlar sunucudan iyimser işaretlemeden önce okunmuş olabilir; düğmeyi geri çevirmesin.
+  updateSelfReadButton(section,todayAnswers[uid]==='read'&&rec?.status!=='read'?{...rec,status:'read'}:rec,daily);
   const dailyText=pages>=daily?.target?`Bugünkü hedefini ${pages} sayfayla tamamladın.`:pages?`Bugün ${pages} sayfa okudun. Hedefine ${Math.max(0,(daily?.target||0)-pages)} sayfa kaldı.`:'Bugün henüz okuma kaydın yok.';
   grid.innerHTML=`<div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▤</span><h2>Günlük sayfa hedefi</h2>${daily?goalEditButton("daily"):""}${daily?`<strong class="goal-value">${daily.target} <small>sayfa / gün</small></strong>${goalProgress(pages,daily.target)}<p role="status">${dailyText}</p>${daily.end?'<p class="muted">Hedefin yarın 06.00’da sona erecek.</p>':'<button type="button" class="ai-text-action" data-stop-goal>Hedefi yarından itibaren bırak</button>'}`:goalForm('daily')}<p class="muted">İsteğe bağlı</p></div>
   <div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▥</span><h2>Aylık kitap hedefi</h2>${monthly?goalEditButton("monthly"):""}${monthly?`<strong class="goal-value">${monthly.target} <small>kitap</small></strong>${goalProgress((monthly.completed||[]).length,monthly.target)}<p role="status">Bu ay ${(monthly.completed||[]).length} kitap bitirdin.</p><p class="muted">${new Date(monthly.end).toLocaleString('tr-TR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})} tarihinde sona erer.</p>`:`${last?`<p class="goal-result" role="status">${(last.completed||[]).length>=last.target?'Son hedefinde başarılı oldun.':'Son hedefini tamamlayamadın.'} ${(last.completed||[]).length} / ${last.target} kitap.</p>`:''}${goalForm('monthly')}` }<p class="muted">İsteğe bağlı</p></div>`;
@@ -3517,8 +3522,38 @@ function updateSelfReadButton(section,rec,daily){
  const editable=read&&daily&&pages<daily.target;
  button.disabled=read&&!editable;button.classList.toggle('selected',read);
  button.classList.toggle('pages-editable',Boolean(editable));
- button.innerHTML=editable?`<span>Sayfa sayısını güncelle<small class="previous-page-count">${pages} sayfa</small></span>`:'✓ <span>Okudum</span>';
+ button.setAttribute('aria-pressed',String(read));
+ // İçerik sadece durum gerçekten değişince yeniden yazılıyor; aynı duruma tekrar render
+ // edilince (dinleyici, hedef kartı vb.) süren işaretleme animasyonu kesilmesin.
+ const state=editable?'edit:'+pages:read?'read':'idle';
+ if(button.dataset.markState!==state){
+  button.dataset.markState=state;
+  button.innerHTML=editable?`<span>Sayfa sayısını güncelle<small class="previous-page-count">${pages} sayfa</small></span>`:`${READ_CHECK_SVG}<span class="mark-label">${read?'Bugün okudun':'Okudum'}</span>`;
+ }
  button.title=editable?'Bugün okuduğun toplam sayfa sayısını güncelle':read?'Bugün okudun':'Okudum';
+}
+const READ_CHECK_SVG='<svg class="mark-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+// Ağ beklemeden, dokunulan noktadan yayılan dolgu + kendini çizen tik + küçük kıvılcım patlaması.
+function playReadMarkFx(btn,point){
+ try{navigator.vibrate?.(12);}catch(_){}
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const r=btn.getBoundingClientRect();
+ const x=point&&point.x?point.x-r.left:r.width/2,y=point&&point.y?point.y-r.top:r.height/2;
+ btn.style.setProperty('--fx-x',x+'px');btn.style.setProperty('--fx-y',y+'px');
+ btn.style.setProperty('--fx-r',Math.hypot(Math.max(x,r.width-x),Math.max(y,r.height-y))+'px');
+ btn.classList.remove('just-marked');void btn.offsetWidth;btn.classList.add('just-marked');
+ clearTimeout(btn._markFxTimer);btn._markFxTimer=setTimeout(()=>btn.classList.remove('just-marked'),1200);
+ const layer=document.createElement('span');layer.className='mark-burst';
+ layer.style.left=(r.left+x)+'px';layer.style.top=(r.top+y)+'px';
+ // Hem koyu yeşil dolgunun hem de açık kartın üzerinde seçilebilen kutlama renkleri.
+ const colors=['#F2B84B','#EF8A62','#9FD8A8','#B9A8E8'];
+ for(let i=0;i<14;i++){
+  const dot=document.createElement('i'),angle=(i/14)*Math.PI*2+Math.random()*.45,dist=42+Math.random()*36;
+  dot.style.background=colors[i%colors.length];if(i%3===0)dot.classList.add('streak');
+  layer.appendChild(dot);
+  dot.animate([{transform:`rotate(${angle}rad) translateX(0) scale(1)`,opacity:1},{transform:`rotate(${angle}rad) translateX(${dist}px) scale(.2)`,opacity:0}],{duration:680+Math.random()*200,delay:60,easing:'cubic-bezier(.15,.8,.3,1)',fill:'both'});
+ }
+ document.body.appendChild(layer);setTimeout(()=>layer.remove(),1000);
 }
 async function saveSelfReadTotal(uid,day,pages){
  const ref=doc(db,'days',day,'answers',uid),userRef=doc(db,'users',uid);
@@ -3628,16 +3663,23 @@ function wireSelfMarkCard(ids){
     renderTotalPagesCard(ids.pagesNumber);
     if(ids.qpBook) renderQpBookInBugun(ids.qpBook);
   }
-  document.getElementById(ids.readBtn).addEventListener('click', async ()=>{
+  document.getElementById(ids.readBtn).addEventListener('click', async (ev)=>{
     const key = ids.readBtn+'|read';
     if(stampBtnInFlight.has(key)) return;
     stampBtnInFlight.add(key);
-    const uid=currentUid,day=todayStr();
+    const btn=ev.currentTarget,point={x:ev.clientX,y:ev.clientY};
+    const uid=currentUid,day=todayStr(),prevStatus=todayAnswers[uid];
+    let optimistic=false;
     try{
-      const [goals,snapshot]=await Promise.all([loadPersonalGoals(uid),getDoc(doc(db,'days',day,'answers',uid))]);
-      const rec=snapshot.data(),daily=dailyGoalAt(goals,day),wasRead=rec?.status==='read';
-      const previousPages=wasRead?validReadPages(rec):0;
-      if(wasRead&&(!daily||previousPages>=daily.target)){render();return;}
+      // Hedefler ve bugünkü durum zaten canlı dinleyicilerle elimizde; sunucuya gidip beklemiyoruz.
+      const goals=personalGoals((usersCache[uid]||myProfile)?.readingGoals);
+      const daily=dailyGoalAt(goals,day),wasRead=prevStatus==='read';
+      let previousPages=0;
+      if(wasRead){
+        if(!daily){render();return;}
+        previousPages=validReadPages((await getDoc(doc(db,'days',day,'answers',uid))).data());
+        if(previousPages>=daily.target){render();return;}
+      }
       let pages=null;
       if(daily){
         pages=await askReadPages(previousPages);
@@ -3645,16 +3687,27 @@ function wireSelfMarkCard(ids){
         if(wasRead&&pages<previousPages){showToast('Yeni toplam önceki '+previousPages+' sayfadan az olamaz.');render();return;}
       }
       if(uid!==currentUid||day!==todayStr()){showToast('Gün veya oturum değişti. Lütfen yeniden işaretle.');render();return;}
+      if(!wasRead){
+        optimistic=true;selfReadPending={uid,day};
+        todayAnswers[uid]='read';render();playReadMarkFx(btn,point);
+      }
       const created=await saveSelfReadTotal(uid,day,pages);
+      selfReadPending=null;
       todayAnswers[uid]='read';
       hubPreviews.invalidate('club');
-      if(created){try{playMarkFx(document.getElementById(ids.readBtn),'read');}catch(_){} }
       render();
       if(created){
         notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', uid);
         const streak=await computeStreak(uid);await checkAndAwardBadges(uid,streak);
       }
-    }catch(err){showToast(err.message||'Okuma kaydedilemedi. Lütfen yeniden dene.');render();}
+    }catch(err){
+      selfReadPending=null;
+      if(optimistic){
+        if(prevStatus===undefined) delete todayAnswers[uid]; else todayAnswers[uid]=prevStatus;
+        btn.classList.remove('just-marked');
+      }
+      showToast(err.message||'Okuma kaydedilemedi. Lütfen yeniden dene.');render();
+    }
     finally{setTimeout(()=>stampBtnInFlight.delete(key),1200);}
   });
   return render;
