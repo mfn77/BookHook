@@ -1643,8 +1643,11 @@ async function renderNotifsTab(){
 
   const box = keepOrLoading('notifsList');
   let snap;
+  // Sorgu başarısız olursa (ör. ağ henüz hazır değil) ekrandaki mevcut/önbellekli görünümü
+  // "yüklenemedi" ile ezip bunu kalıcı önbelleğe yazmıyoruz — aksi halde geçici bir hata,
+  // bir sonraki başarılı yüklemeye kadar kalıcı olarak yanlış bir durumu gösterirdi.
   try{ snap = await getDocs(query(collection(db,'notifications',currentUid,'items'), orderBy('createdAt','desc'), limit(50))); }
-  catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; markLoaded(box); return; }
+  catch(e){ return; }
   const items = [];
   snap.forEach(d=> items.push({id:d.id, ref:d.ref, ...d.data()}));
   if(items.length===0){ box.innerHTML = `<div class="empty-state"><span class="big">🔔</span>Henüz bildirim yok.</div>`; markLoaded(box); return; }
@@ -2749,6 +2752,7 @@ function renderAdminToday(){
         const wasNew = isSelf && isSettingMark;
         playMarkFx(btn, btn.dataset.status);
         await markStatus(btn.dataset.uid, btn.dataset.status);
+        if(isSelf) hubPreviews.invalidate('club');
         if(wasNew && btn.dataset.status==='skip') createPost('skip', {variantText: await pickVariantMessage('skip')});
         if(isSettingMark){
           const markedName = (usersCache[btn.dataset.uid] && usersCache[btn.dataset.uid].name) || '';
@@ -3298,13 +3302,18 @@ async function renderWormsShared(myStreakContainerId, clubStreaksContainerId, hi
   // önbellek gösterilirken tıklamalar hiçbir şey yapmıyordu (asıl render bitene kadar).
   if(historyBox) bindBadgeShelfClicks(historyBox);
   const uids = activeUids();
+  let failed = false;
   const results = await Promise.all(uids.map(async uid=>{
     try{
       const streak = await computeStreak(uid);
       await checkAndAwardBadges(uid, streak);
       return {uid, streak};
-    }catch(e){ return {uid, streak:0}; }
+    }catch(e){ failed = true; return {uid, streak:0}; }
   }));
+  // Bir üyenin serisi hesaplanamazsa onu 0 gündür sanıp herkesi bu şekilde çizip önbelleğe
+  // yazarsak, geçici bir hata gerçek serileri bir süreliğine kalıcı olarak silerdi — bu durumda
+  // ekranı olduğu gibi bırakıyoruz.
+  if(failed) return;
   results.sort((a,b)=>b.streak-a.streak);
 
   if(results.length===0){
@@ -3341,7 +3350,7 @@ async function renderTotalPagesCard(elId){
   const daysEl=document.getElementById(elId==='totalPagesNumber'?'totalDaysNumber':'mTotalDaysNumber');
   if(daysEl) showCachedOrPlaceholder(daysEl,'…');
   const uid=currentUid;let totals;
-  try{totals=await computeReadingTotals(uid);}catch(_){pagesEl.textContent='–';if(daysEl)daysEl.textContent='–';return;}
+  try{totals=await computeReadingTotals(uid);}catch(_){return;}
   if(uid!==currentUid)return;
   const totalReadDays=totals.days;
   renderPersonalGoals(pagesEl.closest("section.tab"),totals,uid);
@@ -3357,7 +3366,7 @@ async function renderCompletedBooksCount(elId){
     const snap=await getDocs(collection(db,'users',uid,'bookHistory'));
     if(currentUid!==uid)return;
     el.textContent=snap.size.toLocaleString('tr-TR');markLoaded(el);
-  }catch(_){if(currentUid===uid)el.textContent='–';}
+  }catch(_){}
 }
 async function computeTotalReadDays(uid){return (await computeReadingTotals(uid)).days;}
 async function computeReadingTotals(uid){
@@ -3541,7 +3550,9 @@ async function moveBookWithGoal(b,collectionName,destCollection){
  const uid=currentUid;
  if(collectionName!=='readBooks'){
   await addDoc(collection(db,'users',uid,destCollection),{title:b.title||'',author:b.author||'',cover:b.cover||'',addedAt:new Date().toISOString()});
-  await deleteDoc(doc(db,'users',uid,collectionName,b.id));return;
+  await deleteDoc(doc(db,'users',uid,collectionName,b.id));
+  hubPreviews.invalidate('library');
+  return;
  }
  const userRef=doc(db,'users',uid),sourceRef=doc(db,'users',uid,'readBooks',b.id),destRef=doc(db,'users',uid,'bookHistory','finished_'+b.id);
  const completedAt=new Date().toISOString();
@@ -3553,6 +3564,7 @@ async function moveBookWithGoal(b,collectionName,destCollection){
   tx.delete(sourceRef);
   if(monthly){monthly.completed=[...new Set([...(monthly.completed||[]),b.id])];tx.update(userRef,{readingGoals:goals});}
  });
+ hubPreviews.invalidate('library');
 }
 // Uygulama açık kalırsa 06.00 / aylık dönem bitişi de görünümde güncellensin.
 setInterval(()=>{
@@ -3635,6 +3647,7 @@ function wireSelfMarkCard(ids){
       if(uid!==currentUid||day!==todayStr()){showToast('Gün veya oturum değişti. Lütfen yeniden işaretle.');render();return;}
       const created=await saveSelfReadTotal(uid,day,pages);
       todayAnswers[uid]='read';
+      hubPreviews.invalidate('club');
       if(created){try{playMarkFx(document.getElementById(ids.readBtn),'read');}catch(_){} }
       render();
       if(created){
@@ -3887,7 +3900,7 @@ async function renderRulesTab(){
   try{
     const snap = await getDoc(doc(db,'settings','groupRules'));
     rulesText = snap.exists() ? (snap.data().text || '') : '';
-  }catch(e){}
+  }catch(e){ return; }
   displayBox.textContent = rulesText || 'Henüz kural eklenmemiş.';
   markLoaded(displayBox);
   const editBox = document.getElementById('rulesAdminEdit');
@@ -3928,7 +3941,7 @@ async function renderRuleRequestsList(){
     } else {
       snap = await getDocs(query(collection(db,'ruleRequests'), where('uid','==',currentUid), orderBy('createdAt','desc')));
     }
-  }catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; markLoaded(box); return; }
+  }catch(e){ return; }
   const items = [];
   snap.forEach(d=> items.push({id:d.id, ...d.data()}));
   if(items.length===0){ box.innerHTML = `<p class="muted">Henüz öneri yok.</p>`; markLoaded(box); return; }
@@ -3978,7 +3991,11 @@ async function fetchAllGiftRequests(){
       if(p.receiverUid) reqIds.push(`${d.weekStart}_${p.giverUid}_${p.receiverUid}`);
     });
   });
-  const snaps = await Promise.all(reqIds.map(id=> getDoc(doc(db,'giftRequests',id)).catch(()=>null)));
+  // Sorgu gerçekten başarısız olursa (ağ/izin hatası — belge yok dönmesi zaten hata fırlatmaz)
+  // bunu "istek yok/alınmadı" sanıp zaten tamamlanmış bir hediyeyi yeniden "bekliyor" göstermeyelim
+  // ve bunu kalıcı önbelleğe yazmayalım — hata yukarı (renderGiftsTab'a) yayılsın, ekran olduğu
+  // gibi kalsın.
+  const snaps = await Promise.all(reqIds.map(id=> getDoc(doc(db,'giftRequests',id))));
   const map = {};
   reqIds.forEach((id,i)=>{
     const s = snaps[i];
@@ -3994,7 +4011,7 @@ async function renderQpGiftCard(){
   const content = document.getElementById('qpGiftContent');
   if(!wrap || !content) return;
   let pending = null;
-  try{ const snap = await getDoc(doc(db,'quarterlyGiftPending','current')); if(snap.exists()) pending = snap.data(); }catch(e){}
+  try{ const snap = await getDoc(doc(db,'quarterlyGiftPending','current')); pending = snap.exists() ? snap.data() : null; }catch(e){ return; }
   if(!pending){ wrap.style.display = 'none'; return; }
   const myPairs = (pending.pairs||[]).filter(p=> p.giverUid===currentUid || p.receiverUid===currentUid);
   if(myPairs.length===0){ wrap.style.display = 'none'; return; }
@@ -4014,7 +4031,7 @@ async function renderQpGiftCard(){
   for(const p of myPairs){
     const reqId = `${pending.sourceCycleNumber}_${p.giverUid}_${p.receiverUid}`;
     let req = null;
-    try{ const s = await getDoc(doc(db,'quarterlyGiftRequests',reqId)); if(s.exists()) req = s.data(); }catch(e){}
+    try{ const s = await getDoc(doc(db,'quarterlyGiftRequests',reqId)); req = s.exists() ? s.data() : null; }catch(e){ return; }
     if(!req || req.received) continue;
     if(p.receiverUid===currentUid){
       if(req.shipped){
@@ -4346,7 +4363,7 @@ async function renderGiftBooksGrid(){
   try{
     const snap = await getDocs(query(collection(db,'giftRequests'), where('received','==',true)));
     snap.forEach(d=> items.push(d.data()));
-  }catch(e){ host.innerHTML = `<p class="muted">Yüklenemedi.</p>`; markLoaded(host); return; }
+  }catch(e){ return; }
   items = items.filter(it=>it.bookTitle).sort((a,b)=> new Date(b.receivedAt||b.updatedAt||0) - new Date(a.receivedAt||a.updatedAt||0));
   if(!items.length){ host.innerHTML = `<p class="muted">Henüz tamamlanmış hediye yok.</p>`; markLoaded(host); return; }
   giftBooksGridCache = items;
@@ -4422,7 +4439,9 @@ async function renderQuarterlyPickCard(){
   const body = document.getElementById('quarterlyPickBody');
   if(!body) return;
   let qp = null;
-  try{ const snap = await getDoc(qpDocRef()); if(snap.exists()) qp = snap.data(); }catch(e){}
+  // Sorgu başarısız olursa "henüz başlamamış" sanıp ekranı yanlışlıkla ezmeyelim — olduğu gibi
+  // bırakıp çıkıyoruz, "belge yok" (gerçekten başlamamış) durumu zaten hata fırlatmaz.
+  try{ const snap = await getDoc(qpDocRef()); qp = snap.exists() ? snap.data() : null; }catch(e){ return; }
   qpCache = qp;
   materialRenderPhase(qp);
   if(!qp){ body.innerHTML = `<p class="muted">Henüz başlamamış, yakında başlayacak.</p>`; return; }
@@ -4528,7 +4547,7 @@ function qpWireNominationForm(idPrefix, onSubmit){
 }
 async function renderQpNominating(body, qp){
   let noms = [];
-  try{ const snap = await getDocs(qpNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){}
+  try{ const snap = await getDocs(qpNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){ return; }
   noms.sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
   const myCount = noms.filter(n=>n.uid===currentUid).length;
   const rows = noms.map(n=>{
@@ -4593,7 +4612,7 @@ async function renderQpNominating(body, qp){
 }
 async function renderQpObjecting(body, qp){
   let noms = [];
-  try{ const snap = await getDocs(qpNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){}
+  try{ const snap = await getDocs(qpNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){ return; }
   noms.sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
   const myCount = noms.filter(n=>n.uid===currentUid && (n.status==='active'||n.status==='objected')).length;
   const rows = noms.map(n=>{
@@ -4634,7 +4653,7 @@ async function renderQpObjecting(body, qp){
 }
 async function renderQpVoting(body, qp){
   let matches = [];
-  try{ const snap = await getDocs(qpMatchesCol(qp.round)); snap.forEach(d=> matches.push({id:d.id, ...d.data()})); }catch(e){}
+  try{ const snap = await getDocs(qpMatchesCol(qp.round)); snap.forEach(d=> matches.push({id:d.id, ...d.data()})); }catch(e){ return; }
   matches.sort((a,b)=> a.id.localeCompare(b.id));
   const roundLabel = qp.round===qp.totalRounds ? 'Final' : (qp.round===qp.totalRounds-1 ? 'Yarı Final' : `${qp.round}. Tur`);
   const cardHtml = (matchId, slot, book, votes, voted)=> `
@@ -4845,9 +4864,9 @@ async function renderQpDiscussion(wrapId, qp){
   const wrap = document.getElementById(wrapId);
   if(!wrap) return;
   let answers = [];
-  try{ const snap = await getDocs(qpFinishAnswersCol()); snap.forEach(d=> answers.push(d.data())); }catch(e){}
+  try{ const snap = await getDocs(qpFinishAnswersCol()); snap.forEach(d=> answers.push(d.data())); }catch(e){ return; }
   let messages = [];
-  try{ const snap = await getDocs(query(qpDiscussionMessagesCol(), orderBy('createdAt','asc'))); snap.forEach(d=> messages.push(d.data())); }catch(e){}
+  try{ const snap = await getDocs(query(qpDiscussionMessagesCol(), orderBy('createdAt','asc'))); snap.forEach(d=> messages.push(d.data())); }catch(e){ return; }
   const q1 = qp.discussionQ1 || QP_DEFAULT_Q1;
   const q2 = qp.discussionQ2 || QP_DEFAULT_Q2;
   const answerRow = (a, text)=> `<div class="qp-disc-answer">
@@ -5026,8 +5045,9 @@ async function renderQpTestTab(){
 async function renderQpTestCard(){
   const body = document.getElementById('qpTestBody');
   if(!body) return;
-  let qp = null;
-  try{ const snap = await getDoc(qpTestDocRef()); if(snap.exists()) qp = snap.data(); }catch(e){}
+  let qp = null, qpFetchFailed = false;
+  try{ const snap = await getDoc(qpTestDocRef()); qp = snap.exists() ? snap.data() : null; }catch(e){ qpFetchFailed = true; }
+  if(qpFetchFailed) return;
   if(!qp){
     body.innerHTML = `<p class="muted">Henüz başlatılmadı.</p><button class="primary" id="qpTestStartBtn" style="margin-top:8px;">Denemeyi Başlat</button>`;
     document.getElementById('qpTestStartBtn').addEventListener('click', async ()=>{
@@ -5050,7 +5070,7 @@ function qpTestWireAdvanceBtn(){
 }
 async function renderQpTestNominating(body, qp){
   let noms = [];
-  try{ const snap = await getDocs(qpTestNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){}
+  try{ const snap = await getDocs(qpTestNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){ return; }
   noms.sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
   const rows = noms.map(n=>{
     const extra = n.uid===currentUid ? `<div class="row" style="flex:0 0 auto; width:auto; gap:6px;">
@@ -5104,7 +5124,7 @@ async function renderQpTestNominating(body, qp){
 }
 async function renderQpTestObjecting(body, qp){
   let noms = [];
-  try{ const snap = await getDocs(qpTestNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){}
+  try{ const snap = await getDocs(qpTestNomsCol()); snap.forEach(d=> noms.push({id:d.id, ...d.data()})); }catch(e){ return; }
   noms.sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
   const rows = noms.map(n=>{
     if(n.status==='objected'){
@@ -5147,7 +5167,7 @@ async function renderQpTestObjecting(body, qp){
 }
 async function renderQpTestVoting(body, qp){
   let matches = [];
-  try{ const snap = await getDocs(qpTestMatchesCol(qp.round)); snap.forEach(d=> matches.push({id:d.id, ...d.data()})); }catch(e){}
+  try{ const snap = await getDocs(qpTestMatchesCol(qp.round)); snap.forEach(d=> matches.push({id:d.id, ...d.data()})); }catch(e){ return; }
   matches.sort((a,b)=> a.id.localeCompare(b.id));
   const roundLabel = qp.round===qp.totalRounds ? 'Final' : (qp.round===qp.totalRounds-1 ? 'Yarı Final' : `${qp.round}. Tur`);
   const cardHtml = (matchId, slot, book, votes, voted)=> `
@@ -5328,6 +5348,7 @@ document.getElementById('recPersonalSendBtn').addEventListener('click', async ()
     document.getElementById('recPersonalBook').value='';
     document.getElementById('recPersonalNote').value='';
     document.getElementById('recPersonalCover').value='';
+    hubPreviews.invalidate('library');
     await notifyUser(toUid, `${myProfile.name} sana bir kitap önerdi: "${bookTitle}"`, 'recs');
     createPost('rec_personal', { toName: usersCache[toUid]?.name||'' });
     showToast('Öneri gönderildi.');
@@ -5349,6 +5370,7 @@ document.getElementById('recGroupSendBtn').addEventListener('click', async ()=>{
     document.getElementById('recGroupBook').value='';
     document.getElementById('recGroupNote').value='';
     document.getElementById('recGroupCover').value='';
+    hubPreviews.invalidate('library');
     createPost('rec_group', { bookTitle, bookCover: coverUrl });
     showToast('Grup önerisi gönderildi.');
     closeAddForm('recGroupAddBtn','recGroupFormWrap');
@@ -5636,6 +5658,7 @@ function wireAiRecDetailActions(rec, items, idx){
       document.querySelectorAll('#bookInfoModalBody button').forEach(b=>b.disabled=true);
       try{
         await addDoc(collection(db,'users',currentUid,collectionName), { title:rec.title||'', author:rec.author||'', cover:rec.cover||'', addedAt:new Date().toISOString() });
+        hubPreviews.invalidate('library');
         closeModal('bookInfoModal');
         showToast(toastMsg);
         if(document.getElementById('readBooksGrid')) renderMyBooksTab();
@@ -5838,6 +5861,7 @@ async function renderBookHistoryGrid(uid, gridId, editable, collectionName){
         e.stopPropagation();
         try{
           await deleteDoc(doc(db,'users',currentUid,collectionName,btn.dataset.id));
+          hubPreviews.invalidate('library');
           renderBookHistoryGrid(currentUid, gridId, true, collectionName);
         }catch(e){ alert('Silinemedi: '+(e.message||e)); }
       });
@@ -5904,6 +5928,7 @@ document.getElementById('rbSaveBtn').addEventListener('click', async ()=>{
   if(!title){ alert('Kitap adı yaz.'); return; }
   try{
     await addDoc(collection(db,'users',currentUid,'readBooks'), { author, title, cover, addedAt: new Date().toISOString() });
+    hubPreviews.invalidate('library');
     document.getElementById('rbSearchInput').value='';
     document.getElementById('rbAuthorInput').value='';
     document.getElementById('rbTitleInput').value='';
@@ -5925,6 +5950,7 @@ document.getElementById('wtrSaveBtn').addEventListener('click', async ()=>{
   if(!title){ alert('Kitap adı yaz.'); return; }
   try{
     await addDoc(collection(db,'users',currentUid,'wantToRead'), { author, title, cover, addedAt: new Date().toISOString() });
+    hubPreviews.invalidate('library');
     document.getElementById('wtrSearchInput').value='';
     document.getElementById('wtrAuthorInput').value='';
     document.getElementById('wtrTitleInput').value='';
@@ -5946,6 +5972,7 @@ document.getElementById('bhSaveBtn').addEventListener('click', async ()=>{
   if(!title){ alert('Kitap adı yaz.'); return; }
   try{
     await addDoc(collection(db,'users',currentUid,'bookHistory'), { author, title, cover, addedAt: new Date().toISOString() });
+    hubPreviews.invalidate('library');
     createOrBatchPost('book_added', { bookTitle: title, bookAuthor: author, bookCover: cover });
     document.getElementById('bhSearchInput').value='';
     document.getElementById('bhAuthorInput').value='';
@@ -6585,7 +6612,7 @@ async function renderTimelineTab(){
   try{
     const snap = await getDocs(query(collection(db,'posts'), orderBy('createdAt','desc'), limit(60)));
     snap.forEach(d=>{ timelinePostDocs.push(d); timelineAllPosts.push({id:d.id, ...d.data()}); });
-  }catch(e){}
+  }catch(e){ return; }
   if(!timelineAllPosts.length){ feed.innerHTML = `<div class="empty-state"><span class="big">📰</span>Henüz gönderi yok. Okuma işaretlemeleri, rozetler ve hediyeler burada görünecek.</div>`; markLoaded(feed); return; }
   renderTimelineFeedHtml(feed);
   markLoaded(feed);
@@ -6702,7 +6729,7 @@ async function renderPinnedPostBar(){
   try{
     const snap = await getDocs(query(collection(db,'posts'), where('pinnedUntil','>', new Date().toISOString()), orderBy('pinnedUntil','desc'), limit(1)));
     snap.forEach(d=>{ pinned = {id:d.id, ...d.data()}; });
-  }catch(e){}
+  }catch(e){ return; }
   if(!pinned){ bar.style.display='none'; bar.innerHTML=''; document.getElementById('timelineFeed').style.marginTop=''; return; }
   const previewText = (pinned.text || postBodyHtml(pinned).replace(/<[^>]+>/g,'')).slice(0,80);
   bar.innerHTML = `<span class="pin-icon">📌</span><span class="pin-author">${escapeHtml(usersCache[pinned.uid]?.name||'')}</span><span class="pin-preview">${escapeHtml(previewText)}</span>`;
@@ -9083,8 +9110,11 @@ async function ensureDiscoverCoversLoaded(){
   try{
     const snap = await getDocs(collection(db,'discoverCovers'));
     snap.forEach(d=>{ discoverCoversCache[d.id] = d.data(); });
+    // Bayrağı sadece BAŞARILI bir yüklemeden sonra kalıcı "yüklendi" yapıyoruz — aksi halde ilk
+    // deneme (ör. ağ henüz hazır değilken) başarısız olursa kapaklar oturum boyunca bir daha hiç
+    // denenmeden boş kalırdı.
+    discoverCoversLoaded = true;
   }catch(e){}
-  discoverCoversLoaded = true;
 }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function seedDiscoverCovers(){
@@ -9311,8 +9341,8 @@ async function ensureDiscoverPageSizeLoaded(){
   try{
     const snap = await getDoc(doc(db,'settings','discover'));
     if(snap.exists() && snap.data().pageSize) discoverPageSize = snap.data().pageSize;
+    discoverPageSizeLoaded = true;
   }catch(e){}
-  discoverPageSizeLoaded = true;
 }
 async function renderSettingsTab(){
   document.getElementById('settingsPasswordError').textContent = '';
@@ -9638,11 +9668,12 @@ document.getElementById('bookDiscoverModalClose').addEventListener('click', ()=>
 document.getElementById('bookDiscoverModal').addEventListener('click', (e)=>{ if(e.target.id==='bookDiscoverModal') closeModal('bookDiscoverModal'); });
 
 async function fetchRecComments(recId){
-  let items = [];
-  try{
-    const snap = await getDocs(collection(db,'recommendations',recId,'comments'));
-    snap.forEach(d=> items.push({id:d.id, ...d.data()}));
-  }catch(e){}
+  // Hata yutulup boş yorum listesi döndürülürse, bu kartı çağıran renderPersonalRecs/
+  // renderGroupRecs sonucu "yorum yok" diye kalıcı önbelleğe yazardı — hatayı yukarı fırlatıp
+  // o render'ın tamamını iptal etmesini (ekranı olduğu gibi bırakmasını) sağlıyoruz.
+  const snap = await getDocs(collection(db,'recommendations',recId,'comments'));
+  const items = [];
+  snap.forEach(d=> items.push({id:d.id, ...d.data()}));
   items.sort((a,b)=> new Date(a.createdAt) - new Date(b.createdAt));
   return items;
 }
@@ -9714,6 +9745,7 @@ function wireRecCards(box, items, isGroup){
       if(!confirm('Bu öneri (ve tüm yorumları) silinsin mi?')) return;
       try{ await deleteDoc(doc(db,'recommendations',btn.dataset.delRec)); }
       catch(e){ alert('Silinemedi: '+(e.message||e)); return; }
+      hubPreviews.invalidate('library');
       isGroup ? renderGroupRecs() : renderPersonalRecs();
     });
   });
@@ -9791,7 +9823,7 @@ async function renderPersonalRecs(){
     [...snapFrom.docs, ...snapTo.docs].forEach(d=>{
       if(!seen.has(d.id)){ seen.add(d.id); items.push({id:d.id, ...d.data()}); }
     });
-  }catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; markLoaded(box); return; }
+  }catch(e){ return; }
   items.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
   if(items.length===0){ box.innerHTML = `<p class="muted">Henüz şahsi öneri yok.</p>`; markLoaded(box); return; }
   const cards = await Promise.all(items.map(it=>renderRecCard(it,false)));
@@ -9806,7 +9838,7 @@ async function renderGroupRecs(){
   try{
     const snap = await getDocs(query(collection(db,'recommendations'), where('scope','==','group')));
     snap.forEach(d=> items.push({id:d.id, ...d.data()}));
-  }catch(e){ box.innerHTML = `<p class="muted">Yüklenemedi.</p>`; markLoaded(box); return; }
+  }catch(e){ return; }
   items.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
   items = items.slice(0,50);
   if(items.length===0){ box.innerHTML = `<p class="muted">Henüz grup önerisi yok.</p>`; markLoaded(box); return; }
@@ -10486,6 +10518,12 @@ const hubPreviews=(()=>{
   const state={pending:true,at:Date.now()};cache.set(key,state);
   (id==='club'?club(uid):library(uid)).finally(()=>{state.pending=false;});
  }
+ // Önizlemeler normalde 60 sn boyunca önbellekten gösterilir (her sekme dönüşünde yeniden
+ // hesaplamasın) — ama kullanıcı o önbelleği besleyen veriyi (kitap ekleme/taşıma, okuma
+ // işaretleme, öneri gönderme) kendisi değiştirdiğinde, kartı bir dakika boyunca eski göstermek
+ // yerine ilgili önbelleği burada geçersiz kılıp bir sonraki sync()'in gerçekten tazelemesini
+ // sağlıyoruz.
+ function invalidate(id){ if(currentUid) cache.delete(currentUid+':'+id); }
  document.addEventListener('pointerdown',()=>{touching=true;},true);
  const idle=()=>{touching=false;quietUntil=performance.now()+500;};
  document.addEventListener('pointerup',idle,true);document.addEventListener('pointercancel',idle,true);window.addEventListener('blur',idle);
@@ -10498,7 +10536,7 @@ const hubPreviews=(()=>{
    if(st.slides.length>1&&now-st.at>=3000){st.index=(st.index+1)%st.slides.length;paint(st,true);}
   }
  },250);
- return {sync};
+ return {sync, invalidate};
 })();
 
 /* ============ ADMIN: GOODREADS'TEN İÇE AKTARMA ============
