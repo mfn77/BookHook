@@ -402,47 +402,59 @@ function weightedPickWithoutReplacementBackend(pool) {
   }
   return pool.splice(pool.length - 1, 1)[0];
 }
-// İstemcideki computeReceiverWeight ile birebir aynı: hiç kazanmayanın şansı %80 artar;
-// kazanmış olanın şansı, (toplam kazandığı / bugüne kadar dağıtılan toplam hediye) oranının
-// 2 katı kadar (yüzdeye yuvarlanarak) düşer; bir önceki hafta da kazandıysa üstüne ayrıca
-// %80 daha düşer.
+// İstemcideki computeReceiverWeight ile birebir aynı. SADECE daha önce en az bir kez kazanmış
+// kişiler için çağrılır — hiç kazanmayanlar artık buildTierPoolsBackend() içinde ağırlığa hiç
+// girmeden, kesin öncelikli bir kuyruktan çıkıyor. Kazanmış olanın şansı, (toplam kazandığı /
+// bugüne kadar dağıtılan toplam hediye) oranının 2 katı kadar (yüzdeye yuvarlanarak) düşer;
+// bir önceki hafta da kazandıysa üstüne ayrıca %80 daha düşer.
 function computeReceiverWeightBackend(uid, winCounts, totalGiftsGivenSoFar, previousWinners) {
   const myWins = (winCounts && winCounts[uid]) || 0;
-  let weight;
-  if (myWins === 0) {
-    weight = 1.8;
-  } else {
-    const share = totalGiftsGivenSoFar > 0 ? myWins / totalGiftsGivenSoFar : 0;
-    const reduction = Math.round(share * 100 * 2) / 100;
-    weight = 1 - reduction;
-  }
+  const share = totalGiftsGivenSoFar > 0 ? myWins / totalGiftsGivenSoFar : 0;
+  const reduction = Math.round(share * 100 * 2) / 100;
+  let weight = 1 - reduction;
   if (previousWinners && previousWinners.has(uid)) weight -= 0.80;
   return Math.max(weight, 0.05);
 }
 function buildWeightedPoolBackend(list, previousWinners, winCounts, totalGiftsGivenSoFar) {
   return list.map((s) => ({ ...s, weight: computeReceiverWeightBackend(s.uid, winCounts, totalGiftsGivenSoFar, previousWinners) }));
 }
+// İstemcideki buildTierPools ile birebir aynı: hiç kazanmamışlar ağırlığa hiç girmeden, üyelik
+// tarihine göre KESİN sırayla (en uzun süredir üye olan en önde) bir kuyruk; en az bir kez
+// kazanmışlar mevcut ağırlıklı havuzda.
+function buildTierPoolsBackend(base, previousWinners, winCounts, totalGiftsGivenSoFar) {
+  const neverWon = base.filter((s) => !((winCounts || {})[s.uid]));
+  const everWon = base.filter((s) => (winCounts || {})[s.uid]);
+  neverWon.sort((a, b) => (a.joinDate || "9999-99-99").localeCompare(b.joinDate || "9999-99-99"));
+  return { neverWonQueue: neverWon, everWonPool: buildWeightedPoolBackend(everWon, previousWinners, winCounts, totalGiftsGivenSoFar) };
+}
+function pickFromTierPoolsBackend(tier) {
+  if (tier.neverWonQueue.length > 0) return tier.neverWonQueue.shift();
+  if (tier.everWonPool.length > 0) return weightedPickWithoutReplacementBackend(tier.everWonPool);
+  return null;
+}
+function tierPoolsEmptyBackend(tier) { return tier.neverWonQueue.length === 0 && tier.everWonPool.length === 0; }
 // İstemcideki runLottery ile birebir aynı eşleştirme mantığı: tier1 (kusursuz) tamamen
-// tükenmeden tier2'ye (1 pas) geçilmez.
+// tükenmeden tier2'ye (1 pas) geçilmez; her tier'ın içinde de hiç kazanmamışlar (üyelik süresine
+// göre kesin sırayla) tamamen tükenmeden ağırlıklı havuza geçilmez.
 function runLotteryBackend(statsArr, previousWinners, winCounts, totalGiftsGivenSoFar) {
   const eligible = statsArr.filter((s) => s.marked > 0);
   const givers = shuffleBackend(eligible.filter((s) => s.miss >= 2));
   const tier1Base = shuffleBackend(eligible.filter((s) => s.miss === 0));
   const tier2Base = shuffleBackend(eligible.filter((s) => s.miss === 1));
   const safeCount = tier1Base.length + tier2Base.length;
-  let tier1Pool = buildWeightedPoolBackend(tier1Base, previousWinners, winCounts, totalGiftsGivenSoFar);
-  let tier2Pool = buildWeightedPoolBackend(tier2Base, previousWinners, winCounts, totalGiftsGivenSoFar);
+  let tier1 = buildTierPoolsBackend(tier1Base, previousWinners, winCounts, totalGiftsGivenSoFar);
+  let tier2 = buildTierPoolsBackend(tier2Base, previousWinners, winCounts, totalGiftsGivenSoFar);
   const pairs = [];
   givers.forEach((g) => {
     if (safeCount === 0) {
       pairs.push({ giverUid: g.uid || null, giverName: g.name, receiverUid: null, receiverName: null });
       return;
     }
-    if (tier1Pool.length === 0 && tier2Pool.length === 0) {
-      tier1Pool = buildWeightedPoolBackend(tier1Base, previousWinners, winCounts, totalGiftsGivenSoFar);
-      tier2Pool = buildWeightedPoolBackend(tier2Base, previousWinners, winCounts, totalGiftsGivenSoFar);
+    if (tierPoolsEmptyBackend(tier1) && tierPoolsEmptyBackend(tier2)) {
+      tier1 = buildTierPoolsBackend(tier1Base, previousWinners, winCounts, totalGiftsGivenSoFar);
+      tier2 = buildTierPoolsBackend(tier2Base, previousWinners, winCounts, totalGiftsGivenSoFar);
     }
-    const r = tier1Pool.length > 0 ? weightedPickWithoutReplacementBackend(tier1Pool) : weightedPickWithoutReplacementBackend(tier2Pool);
+    const r = !tierPoolsEmptyBackend(tier1) ? pickFromTierPoolsBackend(tier1) : pickFromTierPoolsBackend(tier2);
     pairs.push({ giverUid: g.uid || null, giverName: g.name, receiverUid: r.uid || null, receiverName: r.name });
   });
   return { giverCount: givers.length, safeCount, pairs };
@@ -468,7 +480,7 @@ async function computeWeekStatsBackend(mondayStr) {
     if (u.banned || u.deleted) return;
     const joinDs = logicalDateStrFromIso(u.createdAt);
     if (joinDs && joinDs > weekMondayStr && joinDs <= weekSundayStr) {
-      stats.push({ uid, name: u.name || "?", miss: 0, read: 0, marked: 0 });
+      stats.push({ uid, name: u.name || "?", miss: 0, read: 0, marked: 0, joinDate: joinDs || "" });
       return;
     }
     let miss = 0, read = 0;
@@ -476,7 +488,7 @@ async function computeWeekStatsBackend(mondayStr) {
       const rec = map[uid];
       if (rec) { if (rec.status === "skip") miss++; else if (rec.status === "read") read++; }
     });
-    stats.push({ uid, name: u.name || "?", miss, read, marked: miss + read });
+    stats.push({ uid, name: u.name || "?", miss, read, marked: miss + read, joinDate: joinDs || "" });
   });
   return stats;
 }
@@ -533,6 +545,10 @@ async function finalizeWeekBackend(mondayStr) {
   let totalGiftsGivenSoFar = 0;
   const allDrawsSnap = await db.collection("draws").get();
   allDrawsSnap.forEach((d) => {
+    // Bu haftanın (üzerine yazılacak/zorla yeniden çekilecek) ESKİ kendi sonucunu sayma — yoksa
+    // "yeniden çek" o haftanın henüz geçersiz hale gelecek sonucunu geçmişe dahil edip ağırlıkları
+    // bozardı.
+    if (d.id === mondayStr) return;
     (d.data().pairs || []).forEach((p) => {
       if (p.receiverUid) {
         winCounts[p.receiverUid] = (winCounts[p.receiverUid] || 0) + 1;
@@ -564,9 +580,14 @@ async function finalizeWeekBackend(mondayStr) {
   console.log(`[kura] ${mondayStr} haftası kapatıldı. giverCount=${giverCount} safeCount=${safeCount} pairs=${pairs.length}`);
 }
 
-// Her Pazartesi Türkiye saatiyle 06:00: bir önceki haftanın (Pazartesi-Pazar) kurasını çeker.
+// Her Pazartesi Türkiye saatiyle 06:10: bir önceki haftanın (Pazartesi-Pazar) kurasını çeker.
+// autoMarkMissedReading ile AYNI dakikada (06:00) değil, 10 dk SONRA çalışıyor — ikisi de aynı
+// anda tetiklenirse (Cloud Scheduler aralarında bir sıra garantisi vermiyor), kura o haftanın son
+// gününün ("Pazar") otomatik "okumadı" doldurması henüz yazılmadan çekilebilir; bu da o hafta için
+// gerçekte uygun alıcı varken havuzun boş/eksik görünmesine (dolayısıyla cezalıların hiç alıcı
+// bulamamasına) yol açabiliyordu.
 exports.weeklyLotteryDraw = onSchedule(
-  { schedule: "0 6 * * 1", timeZone: "Europe/Istanbul" },
+  { schedule: "10 6 * * 1", timeZone: "Europe/Istanbul" },
   async () => {
     const thisMonday = dateNDaysAgoInIstanbul(0); // fonksiyon tam Pazartesi 06:00'da çalışıyor
     const prevMonday = addDaysToDateStr(thisMonday, -7);
