@@ -5823,7 +5823,13 @@ async function renderBookHistoryGrid(uid, gridId, editable, collectionName){
   try{
     const snap = await getDocs(query(collection(db,'users',uid,collectionName), orderBy('addedAt','desc')));
     snap.forEach(d=> items.push({ id:d.id, ...d.data() }));
-  }catch(e){}
+  }catch(e){
+    // Sorgu başarısız olursa (ör. uygulama az önce açılmış, ağ henüz hazır değil) ekranda duran
+    // önbellek/placeholder'ı YANLIŞ bir "henüz kitap eklenmemiş" durumuyla ezip onu kalıcı olarak
+    // önbelleğe yazmayalım — az sonra gelecek doğru sonucu birkaç kez girip çıkana kadar
+    // göremiyordun, kök neden buydu. Mevcut görünümü olduğu gibi bırak.
+    return;
+  }
   if(!items.length){
     grid.innerHTML = `<div class="empty-state"><span class="big">📚</span>Henüz kitap eklenmemiş.</div>`;
     markLoaded(grid);
