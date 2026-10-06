@@ -296,18 +296,22 @@ function currentTierForStreakBackend(streak) {
 }
 // Bir kullanıcının DÜN akşamı itibariyle (artık kesinleşmiş, değişemeyecek) kaç gündür
 // aralıksız okuduğunu hesaplar — istemcideki computeStreak'in "dünden geriye" sunucu karşılığı.
-async function computeStreakBackend(uid, maxDays) {
-  maxDays = maxDays || 60;
+// Sabit 61 günlük pencere yerine, okunmamış ilk güne kadar 31'er günlük paketlerle geriye gidiyor
+// (istemcideki computeStreak ile aynı) — seri 60'ı geçince orada takılı kalmasın. Okuma hatası
+// "okumadı" sayılmıyor, hata fırlatılıyor: aksi halde geçici bir hata seriyi bozulmuş gösterip
+// kalıcı bir "rozet kaybedildi" gönderisi ve rozet geçmişine yanlış bir sayım yazardı.
+async function computeStreakBackend(uid) {
   const yesterday = dateNDaysAgoInIstanbul(1);
-  const dates = [];
-  for (let i = 0; i <= maxDays; i++) dates.push(addDaysToDateStr(yesterday, -i));
-  const snaps = await Promise.all(dates.map((ds) => db.collection("days").doc(ds).collection("answers").doc(uid).get().catch(() => null)));
+  const CHUNK = 31;
   let streak = 0;
-  for (const snap of snaps) {
-    if (snap && snap.exists && snap.data().status === "read") streak++;
-    else break;
+  for (let offset = 0; ; offset += CHUNK) {
+    const dates = Array.from({ length: CHUNK }, (_, i) => addDaysToDateStr(yesterday, -(offset + i)));
+    const snaps = await Promise.all(dates.map((ds) => db.collection("days").doc(ds).collection("answers").doc(uid).get()));
+    for (const snap of snaps) {
+      if (!(snap.exists && snap.data().status === "read")) return streak;
+      streak++;
+    }
   }
-  return streak;
 }
 async function backendCheckAndPostDethrone(usersMap, uid, newCount, getOthersCount, label, icon) {
   let maxUid = null, maxCount = 0;
@@ -334,7 +338,14 @@ async function settleDailyBadges() {
   for (const uid of Object.keys(usersMap)) {
     const u = usersMap[uid];
     if (u.banned || u.deleted) continue;
-    const streak = await computeStreakBackend(uid);
+    let streak;
+    try {
+      streak = await computeStreakBackend(uid);
+    } catch (e) {
+      // Bu gece bu üyeyi atla; yarın gece lastStreak ile karşılaştırma doğru şekilde yapılır.
+      console.error(`[settleDailyBadges] ${uid} serisi okunamadı, atlandı:`, e);
+      continue;
+    }
     const lastStreak = typeof u.lastStreak === "number" ? u.lastStreak : 0;
     const prevTier = u.currentTier || null;
     const newTier = currentTierForStreakBackend(streak);

@@ -2467,7 +2467,9 @@ async function recomputeUserBadgeHistory(uid){
   while(toStr(cursor) <= toStr(yesterday)){ dateStrs.push(toStr(cursor)); cursor = addDays(cursor,1); }
   // Günleri tek tek sırayla değil, hepsini aynı anda (paralel) çekiyoruz; sıralı olan artık
   // sadece hesaplama (seri/rozet sayımı) — o hâlâ sırayla ama ağ beklemeden, hafızada yapılıyor.
-  const snaps = await Promise.all(dateStrs.map(ds=> getDoc(doc(db,'days',ds,'answers',uid)).catch(()=>null)));
+  // Okunamayan bir gün "okumadı" sayılırsa rozet geçmişi yanlış yeniden yazılırdı; hata fırlatıp
+  // bu üyeyi hiç güncellemeden bırakıyoruz.
+  const snaps = await Promise.all(dateStrs.map(ds=> getDoc(doc(db,'days',ds,'answers',uid))));
   const badgeCounts = {};
   let streak = 0;
   let prevTier = null;
@@ -2492,14 +2494,13 @@ async function recomputeUserBadgeHistory(uid){
 }
 async function resetAndRecomputeAllBadges(){
   const uids = activeUids();
-  let done = 0;
+  let done = 0, failed = 0;
   for(const uid of uids){
-    await recomputeUserBadgeHistory(uid);
-    const liveStreak = await computeStreak(uid);
-    await checkAndAwardBadges(uid, liveStreak);
+    try{ await recomputeUserBadgeHistory(uid); }catch(_){ failed++; continue; }
+    try{ const liveStreak = await computeStreak(uid); await checkAndAwardBadges(uid, liveStreak); }catch(_){}
     done++;
   }
-  return done;
+  return {done, failed};
 }
 async function finalizeWeek(monday, force){
   const wk = toStr(monday);
@@ -2568,20 +2569,22 @@ async function loadDraws(){
 // HER aktif üye için çağrıldığından, uygulamanın birçok yerinde genel bir yavaşlığa yol
 // açıyordu). Artık ihtiyaç olabilecek TÜM günler tek seferde, aynı anda (Promise.all) çekiliyor;
 // sonuç ve mantık birebir aynı, sadece ağ beklemesi artık ardışık değil paralel.
-async function computeStreak(uid, maxDays){
-  maxDays = maxDays || 60;
-  const dates = [];
-  let c = nowLogical();
-  for(let i=0;i<=maxDays;i++){ dates.push(toStr(c)); c = addDays(c,-1); }
-  const snaps = await Promise.all(dates.map(ds=> getDoc(doc(db,'days',ds,'answers',uid)).catch(()=>null)));
-  const isRead = (snap)=> !!(snap && snap.exists() && snap.data().status==='read');
-  let startIdx = isRead(snaps[0]) ? 0 : 1; // bugün okunduysa bugünden başla, yoksa dünden
+// Eskiden sabit 61 günlük pencereye bakıyordu; seri 60'ı geçince orada takılı kalıyordu. Artık
+// 31'er günlük paketlerle, okunmamış ilk güne rastlayana kadar geriye gidiyor (üst sınır yok).
+// Okuma hatası "o gün okumadı" sayılmıyor, hata fırlatılıyor; yanlış kısa bir seri gösterilmesin.
+async function computeStreak(uid){
+  const isRead = (snap)=> snap.exists() && snap.data().status==='read';
+  const today = nowLogical(), CHUNK = 31;
   let streak = 0;
-  for(let i=startIdx;i<snaps.length;i++){
-    if(isRead(snaps[i])) streak++;
-    else break;
+  for(let offset=0;;offset+=CHUNK){
+    const dates = Array.from({length:CHUNK},(_,i)=> toStr(addDays(today,-(offset+i))));
+    const snaps = await Promise.all(dates.map(ds=> getDoc(doc(db,'days',ds,'answers',uid))));
+    for(let i=0;i<snaps.length;i++){
+      if(offset===0 && i===0 && !isRead(snaps[0])) continue; // bugün henüz işaretlenmediyse dünden başla
+      if(!isRead(snaps[i])) return streak;
+      streak++;
+    }
   }
-  return streak;
 }
 
 /* ============ ROZET SİSTEMİ ============ */
@@ -3121,8 +3124,8 @@ document.getElementById('cleanupBtn').addEventListener('click', async ()=>{
 document.getElementById('recomputeBadgesBtn').addEventListener('click', async ()=>{
   if(!confirm('Herkesin rozet geçmişi sıfırlanıp tüm okuma günleri yeniden taranarak baştan hesaplanacak. Bu biraz sürebilir. Devam edilsin mi?')) return;
   document.getElementById('recomputeBadgesResult').textContent = 'Hesaplanıyor, biraz sürebilir…';
-  const n = await resetAndRecomputeAllBadges();
-  document.getElementById('recomputeBadgesResult').textContent = `${n} üyenin rozet geçmişi yeniden hesaplandı.`;
+  const {done, failed} = await resetAndRecomputeAllBadges();
+  document.getElementById('recomputeBadgesResult').textContent = `${done} üyenin rozet geçmişi yeniden hesaplandı.` + (failed ? ` ${failed} üyenin verisi okunamadığı için atlandı (onlara dokunulmadı); tekrar deneyebilirsin.` : '');
   showToast('Rozetler yeniden hesaplandı.');
   if(activeTab) renderTab(activeTab);
 });
@@ -3661,7 +3664,7 @@ function wireSelfMarkCard(ids){
       'Bugün için henüz işaretleme yapmadın.';
     computeStreak(currentUid).then(s=>{
       document.getElementById(ids.streakNote).textContent = `${s} gün`;
-    });
+    }).catch(()=>{});
     renderTotalPagesCard(ids.pagesNumber);
     if(ids.qpBook) renderQpBookInBugun(ids.qpBook);
   }
@@ -3700,7 +3703,8 @@ function wireSelfMarkCard(ids){
       render();
       if(created){
         notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', uid);
-        const streak=await computeStreak(uid);await checkAndAwardBadges(uid,streak);
+        // Kayıt zaten başarılı; seri okunamazsa işaretlemeyi geri alma, rozet kontrolü sonra yapılır.
+        try{const streak=await computeStreak(uid);await checkAndAwardBadges(uid,streak);}catch(_){}
       }
     }catch(err){
       selfReadPending=null;
@@ -10561,7 +10565,11 @@ const hubPreviews=(()=>{
       let count=0,start=days[0]?.[id]?.status==='read'?0:1;
       for(let i=start;i<days.length && days[i]?.[id]?.status==='read';i++)count++;
       return {uid:id,streak:count,name:usersCache[id]?.name||'Kulüp üyesi'};
-    }).sort((a,b)=>b.streak-a.streak||a.name.localeCompare(b.name,'tr')||a.uid.localeCompare(b.uid));
+    });
+    // 61 günlük ortak pencerenin sonuna kadar dolu okuyanların serisi daha uzun olabilir; onları
+    // tek tek, sınırsız sayan computeStreak ile kesinleştir (yoksa 60'ta takılı görünürdü).
+    await Promise.all(leaders.map(async l=>{ if(l.streak>=days.length-1) l.streak=await computeStreak(l.uid); }));
+    leaders.sort((a,b)=>b.streak-a.streak||a.name.localeCompare(b.name,'tr')||a.uid.localeCompare(b.uid));
     const streak=leaders.find(x=>x.uid===uid)?.streak||0;const def=BADGE_DEFS.find(x=>x.key===currentTierForStreak(streak));const u=usersCache[uid]||{};
     const next=BADGE_DEFS.find(x=>x.days>streak);
     const slides=[metric('Okuma serin',`${streak} gün`,next?`Sonraki rozete ${next.days-streak} gün`:'En yüksek seri rozetindesin.','♨','hp-ok'),metric('Aktif rozetin',def?def.label:'Henüz rozet yok',def?'Her gün okumaya devam.':'İlk rozet için 3 gün üst üste oku.',def?.icon||'✦'),metric(def?'Bu rozetin geçmişi':'Rozet geçmişin',def?`${Number(u.badgeCounts?.[def.key]||0)+1} kez`:`${Object.values(u.badgeCounts||{}).reduce((a,b)=>a+Number(b||0),0)} rozet`,def?'Geçmiş kazanımlar + aktif serin':'Tamamlanmış serilerde kazanılan rozetler','✧')];
@@ -10984,8 +10992,7 @@ onAuthStateChanged(auth, async (user)=>{
     // Otomatik doldurma birinin serisini bozmuş olabilir; herkesin rozet/seri durumunu tazele
     // ki profil resmindeki çerçeve/rozet güncel kalsın.
     await Promise.all(activeUids().map(async uid=>{
-      const s = await computeStreak(uid);
-      await checkAndAwardBadges(uid, s);
+      try{ const s = await computeStreak(uid); await checkAndAwardBadges(uid, s); }catch(_){}
     }));
     const monday = getMonday(nowLogical());
     const prevMonday = addDays(monday,-7);
