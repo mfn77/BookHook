@@ -986,6 +986,12 @@ let manualGrid = {}; // uid -> ['', 'read', 'skip', ...] length 7
 let manualHistoryCache = [];
 
 function activeUids(){ return Object.keys(usersCache).filter(uid=>!usersCache[uid].banned && !usersCache[uid].deleted); }
+function profilePhotoHtml(profile, fontSize){
+ const initial=((profile?.name||'?').trim().charAt(0)||'?').toLocaleUpperCase('tr');
+ const url=typeof profile?.photoURL==='string'?profile.photoURL.trim():'';
+ // Keep a visible fallback beneath the photo, including during loading/network errors.
+ return `<span style="position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:inherit;overflow:hidden;background:var(--gold);color:var(--on-primary);font-size:${fontSize}px;font-weight:700;line-height:1;">${escapeHtml(initial)}${url?`<img src="${escapeHtml(url)}" alt="" referrerpolicy="no-referrer" decoding="async" style="position:absolute;inset:0;display:block;width:100%;height:100%;max-width:none;object-fit:cover;object-position:center;border-radius:inherit;" onerror="this.remove()" />`:''}</span>`;
+}
 function avatarHtmlFromProfile(profile, size, proportionHint){
   size = size || 22;
   // size normalde piksel sayısıdır; bir CSS ölçüsü/yüzdesi ("100%" gibi) de verilebilir — bu durumda
@@ -1001,13 +1007,7 @@ function avatarHtmlFromProfile(profile, size, proportionHint){
   const tierKey = profile && profile.currentTier;
   const tierDef = tierKey ? BADGE_DEFS.find(d=>d.key===tierKey) : null;
   const ringStyle = tierDef ? `box-shadow:0 0 0 2.5px ${tierDef.color};` : '';
-  // Fotoğraf <img> yerine arka plan resmi (background-image + background-size:cover) olarak
-  // basılıyor: bu, kaynağın en-boy oranı ne olursa olsun her zaman tam bir daire içinde ortalanmış/
-  // kırpılmış görünmesini garanti eder ve <img> ile bazen görülen "kırık resim ikonu" veya
-  // yüklenmeden önceki an için köşeli görünme sorununu da ortadan kaldırır.
-  const inner = (profile && profile.photoURL)
-    ? `<div role="img" aria-label="" style="width:100%;height:100%;background-image:url('${profile.photoURL.replace(/'/g,"%27")}');background-size:cover;background-position:center;background-repeat:no-repeat;background-color:var(--paper-2);"></div>`
-    : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--gold);color:#fff;font-size:${Math.round(proportionBase*0.5)}px;font-family:'Roboto',sans-serif;font-weight:700;">${escapeHtml(initial)}</span>`;
+  const inner = profilePhotoHtml(profile, Math.round(proportionBase*0.5));
   const iconSize = Math.max(10, Math.round(proportionBase*0.44));
   const badgeOverlay = tierDef
     ? `<span class="tier-badge-icon" title="${escapeHtml(tierDef.label)}" style="position:absolute; right:-2px; bottom:-2px; width:${iconSize}px; height:${iconSize}px; border-radius:50%; background:${tierDef.color}; display:flex; align-items:center; justify-content:center; font-size:${Math.round(iconSize*0.62)}px; box-shadow:0 0 0 1.5px var(--card);">${badgeIllustration(tierDef.key)}</span>`
@@ -6632,9 +6632,7 @@ function pollVoterAvatarsHtml(voters){
   const circles = shown.map((uid,i)=>{
     const u = usersCache[uid] || {};
     const name = u.name || '?';
-    const inner = u.photoURL
-      ? `<div style="width:100%;height:100%;background-image:url('${u.photoURL.replace(/'/g,"%27")}');background-size:cover;background-position:center;"></div>`
-      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--gold);color:#fff;font-size:9px;font-weight:700;">${escapeHtml(name.trim().charAt(0).toUpperCase()||'?')}</div>`;
+    const inner = profilePhotoHtml(u, 9);
     return `<span class="poll-voter-avatar" style="z-index:${maxShow-i};" title="${escapeHtml(name)}">${inner}</span>`;
   }).join('');
   const extraHtml = extra>0 ? `<span class="poll-voter-avatar poll-voter-extra">+${extra}</span>` : '';
@@ -11231,6 +11229,7 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
 
 
 
