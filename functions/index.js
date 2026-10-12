@@ -484,6 +484,7 @@ async function computeWeekStatsBackend(mondayStr) {
     })
   );
   const usersSnap = await db.collection("users").get();
+  const todayLogical = logicalDateStrFromIso(new Date().toISOString());
   const stats = [];
   usersSnap.forEach((userDoc) => {
     const uid = userDoc.id;
@@ -494,10 +495,13 @@ async function computeWeekStatsBackend(mondayStr) {
       stats.push({ uid, name: u.name || "?", miss: 0, read: 0, marked: 0, joinDate: joinDs || "" });
       return;
     }
+    // Kapanmış bir günde kayıt yoksa "okumadı" sayılır (autoMarkMissedDay ile aynı kural) — kura,
+    // Pazar gününün otomatik doldurması yazılmadan çalışsa bile o gün eksik kalmasın.
     let miss = 0, read = 0;
-    perDate.forEach((map) => {
-      const rec = map[uid];
+    perDate.forEach((map, i) => {
+      const rec = map[uid], ds = dates[i];
       if (rec) { if (rec.status === "skip") miss++; else if (rec.status === "read") read++; }
+      else if (ds < todayLogical && ds >= CLUB_START_DATE && !(joinDs && ds < joinDs)) miss++;
     });
     stats.push({ uid, name: u.name || "?", miss, read, marked: miss + read, joinDate: joinDs || "" });
   });
