@@ -549,6 +549,22 @@ body{background:var(--paper)}
 .sidebar-tabs.many-tabs{overflow-y:auto;min-height:0;scrollbar-width:none}
 .sidebar-tabs.many-tabs::-webkit-scrollbar{display:none}
 .sidebar-tabs.many-tabs button{flex-shrink:0}
-@media(max-width:700px){.sidebar-tabs.many-tabs{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;touch-action:pan-x}.sidebar-tabs.many-tabs button{flex:0 0 80px;min-width:80px}.sidebar-tabs.many-tabs button>span:last-child{line-height:1.2;max-width:78px}}
+@media(max-width:700px){
+ .sidebar-tabs.many-tabs{justify-content:space-between;overflow:hidden;touch-action:manipulation;gap:0}
+ .sidebar-tabs.many-tabs button{flex:1 1 0;min-width:0;padding:0 1px;font-size:9px;min-height:56px;gap:3px}
+ .sidebar-tabs.many-tabs .tab-icon{width:100%;max-width:42px;height:29px}
+ .sidebar-tabs.many-tabs .tab-icon svg{width:20px;height:20px}
+ .sidebar-tabs.many-tabs button>span:last-child{max-width:100%;min-height:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+}
+
 /* Badge shelves scroll vertically; keep horizontal gestures available to primary navigation. */
 :is(#tab-mworms,#tab-worms).hub-primary-section .libcard{touch-action:pan-y}
+
+
+.hub-layout-choice{display:grid;gap:10px;margin-top:20px}
+.hub-layout-choice>label{font-weight:600;color:var(--ink)}
+.hub-layout-choice>select{width:100%;min-width:0;min-height:48px;padding:12px 36px 12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--paper);color:var(--ink);font:inherit}
+.hub-layout-choice>select:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+#tab-bookhistory.hub-primary-section #discoverFeed{touch-action:pan-y}
+
+@media(max-width:350px){.sidebar-tabs.many-tabs button{font-size:8px;padding-inline:0}}

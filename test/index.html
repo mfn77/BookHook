@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>html,body{background:#dcebd7}#loadingScreen{position:fixed;inset:0;background:#dcebd7;z-index:1000}.startup-content{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}.startup-mark{display:grid;place-items:center;width:144px;height:144px;border-radius:40px;background:#dcebd7}.startup-name{font:600 24px system-ui;color:#294c32}.startup-status{font:14px system-ui;color:#42664b}</style>
-<link rel="stylesheet" href="./style.css?material-primary-sections-20261012" />
+<link rel="stylesheet" href="./style.css?test-layout-choice-20261012" />
 
 </head>
 <body>
@@ -2190,7 +2190,7 @@ function switchTab(id, { animate = true } = {}){
     // Kulüp/Ben, Okuyorum/İstek listem/Geçmişim gibi iç sekmeler) dokunuş başlıyorsa, sayfa
     // seviyesindeki bu sekmeler-arası kaydırmayı hiç başlatma — o alan kendi kart-içi kaydırmasını
     // ayrıca yönetiyor (bkz. setupInnerPaneCarousels).
-    if(!contentCol.contains(t) || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || (t.closest('.inner-pane-viewport')&&!t.closest('.hub-flat')) || t.closest('#discoverFeed')){
+    if(!contentCol.contains(t) || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || (t.closest('.inner-pane-viewport')&&!t.closest('.hub-flat')) || (t.closest('#discoverFeed')&&hubLayoutMode('library')!=='primary')){
       touchStartX=null; return;
     }
     pointerId=e.pointerId;
@@ -9403,12 +9403,14 @@ function renderDiscoverContent(){
   if(!feed) return;
   let touchStartX=null, touchStartY=0, dragging=false;
   feed.addEventListener('touchstart', (e)=>{
+    if(hubLayoutMode('library')==='primary'){touchStartX=null;dragging=false;return;}
     if(e.touches.length!==1){ touchStartX=null; return; }
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
     dragging = false;
   }, {passive:true});
   feed.addEventListener('touchmove', (e)=>{
+    if(hubLayoutMode('library')==='primary'){touchStartX=null;dragging=false;return;}
     if(touchStartX===null) return;
     const touch = e.touches[0];
     const dx = touch.clientX - touchStartX;
@@ -9419,6 +9421,7 @@ function renderDiscoverContent(){
     }
   }, {passive:true});
   feed.addEventListener('touchend', (e)=>{
+    if(hubLayoutMode('library')==='primary'){touchStartX=null;dragging=false;return;}
     if(touchStartX===null) return;
     const touch = e.changedTouches[0];
     const dx = touch.clientX - touchStartX;
@@ -10389,12 +10392,12 @@ function syncAiHubLayout(){
 }
 function initHubLayoutSettings(){
  const theme=document.getElementById('materialThemeSettings');
- if(!document.getElementById('hubLayoutSettings'))theme.insertAdjacentHTML('beforeend',`<div id="hubLayoutSettings"><h3>Sekme görünümü</h3><p class="muted">Her bölüm için bir görünüm seç. Üç seçenek de kapalıyken kartlar gösterilir.</p>${[['club','Kulüp'],['library','Kitaplık']].map(([id,label])=>`<div class="hub-layout-group"><h4>${label}</h4><label class="hub-layout-setting"><span><b>Tüm içeriği göster</b><small>Bütün bölümler aynı sayfada</small></span><input type="checkbox" role="switch" data-hub-layout="${id}" aria-label="${label}: içerikleri doğrudan göster"><span class="layout-switch" aria-hidden="true"></span></label><label class="hub-layout-setting"><span><b>Alt sekmelere ayır</b><small>${id==='club'?'Kayıtlar, Rozetler, Hediyeler':'Keşfet, Kitaplığım, Kitap önerileri'}</small></span><input type="checkbox" role="switch" data-hub-subtabs="${id}" aria-label="${label}: alt sekmelere ayır"><span class="layout-switch" aria-hidden="true"></span></label><label class="hub-layout-setting"><span><b>Ana sekmelere ayır</b><small>${label} yerine üç ayrı ana sekme</small></span><input type="checkbox" role="switch" data-hub-primary="${id}" aria-label="${label}: ana sekmelere ayır"><span class="layout-switch" aria-hidden="true"></span></label></div>`).join('')}</div>`);
- const controls=[...document.querySelectorAll('[data-hub-layout],[data-hub-subtabs],[data-hub-primary]')];
- const sync=()=>controls.forEach(input=>{const hub=input.dataset.hubLayout||input.dataset.hubSubtabs||input.dataset.hubPrimary;input.checked=hubLayoutMode(hub)===(input.hasAttribute('data-hub-primary')?'primary':input.hasAttribute('data-hub-subtabs')?'tabs':'expanded');});
+ if(!document.getElementById('hubLayoutSettings'))theme.insertAdjacentHTML('beforeend',`<div id="hubLayoutSettings"><h3>Sekme görünümü</h3>${[['club','Kulüp'],['library','Kitaplık']].map(([id,label])=>`<div class="hub-layout-choice"><label for="hub-layout-${id}">${label}</label><select id="hub-layout-${id}" data-hub-mode="${id}"><option value="cards">Kartlar — varsayılan</option><option value="expanded">Tüm içeriği göster</option><option value="tabs">Alt sekmelere ayır</option><option value="primary">Ana sekmelere ayır</option></select></div>`).join('')}</div>`);
+ const controls=[...document.querySelectorAll('[data-hub-mode]')];
+ const sync=()=>controls.forEach(input=>{input.value=hubLayoutMode(input.dataset.hubMode);});
  controls.forEach(input=>{input.onchange=()=>{
-  const hub=input.dataset.hubLayout||input.dataset.hubSubtabs||input.dataset.hubPrimary;
-  try{localStorage.setItem('bookhook_layout_'+currentUid+'_'+hub,input.checked?(input.hasAttribute('data-hub-primary')?'primary':input.hasAttribute('data-hub-subtabs')?'tabs':'expanded'):'cards');}
+  const hub=input.dataset.hubMode;
+  try{localStorage.setItem('bookhook_layout_'+currentUid+'_'+hub,input.value);}
   catch(_){sync();showToast('Görünüm tercihi kaydedilemedi.');return;}
   sync();applyHubLayout(hub,{render:activeTab===hub});renderMaterialNav();
   if(activeTab===hub&&hubLayoutMode(hub)==='primary')switchTab(hubSubtabEntries(hub)[0][0]);
@@ -10413,7 +10416,7 @@ function moveHubPrimaryExtras(hub){
 function renderMaterialNav(){
  const tabs=materialPrimaryTabs(),nav=document.getElementById('tabs');
  nav.classList.toggle('many-tabs',tabs.length>4);
- nav.innerHTML=tabs.map(t=>`<button data-tab="${t.id}" aria-label="${t.label}"><span class="tab-icon">${t.icon}</span><span>${t.label}</span></button>`).join('');
+ nav.innerHTML=tabs.map(t=>`<button data-tab="${t.id}" aria-label="${t.label}"><span class="tab-icon">${t.icon}</span><span>${tabs.length>4&&t.id==='recs'?'Öneriler':t.label}</span></button>`).join('');
  nav.querySelectorAll('button').forEach(button=>button.onclick=()=>switchTab(button.dataset.tab));
 }
 // Yeniden menü kurulurken taşınmış asıl bölümler innerHTML ile silinmesin.
@@ -11197,6 +11200,7 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
 
 
 
