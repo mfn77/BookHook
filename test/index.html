@@ -2376,9 +2376,17 @@ async function computeWeekStats(monday){
     if(joinDs && joinDs > weekMondayStr && joinDs <= weekSundayStr){
       return {uid, name: usersCache[uid]?.name || '?', miss:0, read:0, marked:0, joinDate:joinDs||''};
     }
-    let miss=0, read=0;
-    perDate.forEach(map=>{ const rec=map[uid]; if(rec){ if(rec.status==='skip') miss++; else if(rec.status==='read') read++; } });
-    return {uid, name: usersCache[uid]?.name || '?', miss, read, marked: miss+read, joinDate:joinDs||''};
+    // Kapanmış (bugünden önceki) bir günde hiç kayıt yoksa o gün "okumadı" sayılır — 06:00'daki
+    // otomatik doldurmanın yazacağıyla aynı kural. Eskiden kayıtsız gün hiç sayılmıyordu; kura
+    // otomatik doldurmadan önce çekilirse (ör. Pazar) biri cezalı yerine paslı görünebiliyordu.
+    const today = todayStr();
+    let miss=0, read=0, autoMiss=0;
+    perDate.forEach((map,i)=>{
+      const rec=map[uid], ds=dates[i];
+      if(rec){ if(rec.status==='skip') miss++; else if(rec.status==='read') read++; }
+      else if(ds<today && ds>=CLUB_START_DATE && !(joinDs && ds<joinDs)){ miss++; autoMiss++; }
+    });
+    return {uid, name: usersCache[uid]?.name || '?', miss, read, marked: miss+read, joinDate:joinDs||'', autoMiss};
   });
 }
 // Kapanmış (geçmiş) günlerde hiç işaretleme yapılmamışsa otomatik "okumadı" yazar.
@@ -3071,11 +3079,11 @@ async function toggleDrawExplanation(weekStart, scope){
   try{
     const draw = drawsCache.find(d=>d.id===weekStart);
     const stats = await computeWeekStats(getMonday(fromStr(weekStart)));
-    const winCounts = {};
-    drawsCache.forEach(d=>{ if(d.weekStart>=weekStart) return; (d.pairs||[]).forEach(p=>{ if(p.receiverUid) winCounts[p.receiverUid]=(winCounts[p.receiverUid]||0)+1; }); });
+    const winCounts = {}, winWeeks = {};
+    drawsCache.forEach(d=>{ if(d.weekStart>=weekStart) return; (d.pairs||[]).forEach(p=>{ if(p.receiverUid){ winCounts[p.receiverUid]=(winCounts[p.receiverUid]||0)+1; (winWeeks[p.receiverUid]=winWeeks[p.receiverUid]||[]).push(d.weekStart); } }); });
     const {receiverInfo, skippedNeverWon, violations} = explainDrawResult(draw, stats, winCounts);
     const name = uid=> escapeHtml(usersCache[uid]?.name || 'Eski üye');
-    const group = s=> !s ? 'artık üye değil' : s.miss===0 ? 'tam okuyan' : s.miss===1 ? 'paslı (1 gün okumadı)' : `cezalı (${s.miss} gün okumadı)`;
+    const group = s=> !s ? 'artık üye değil' : !(s.marked>0) ? 'kuraya girmedi' : s.miss===0 ? 'tam okuyan' : s.miss===1 ? 'paslı' : 'cezalı';
     const winsText = n=> n ? `daha önce ${n} kez kazanmıştı` : 'ilk hediyesi';
     let html = `<p class="muted" style="font-size:12px;">Sıra kuralı: önce tam okuyup hiç kazanmamışlar (en eski üye önce), sonra diğer tam okuyanlar (ağırlıklı kura), sonra hiç kazanmamış paslılar, en son diğer paslılar. Bu açıklama şu anki kayıtlara göre hesaplanır.</p>`;
     html += draw.algo===LOTTERY_ALGO
@@ -3087,6 +3095,15 @@ async function toggleDrawExplanation(weekStart, scope){
     }
     html += `<div style="font-size:13px;margin-top:8px;"><b>Kazananlar</b>${receiverInfo.map(r=>`<div>${name(r.uid)} — ${group(r.stat)} · ${winsText(r.wins)}</div>`).join('') || '<div class="muted">—</div>'}</div>`;
     if(skippedNeverWon.length) html += `<div style="font-size:13px;margin-top:8px;"><b>Hiç kazanmamış ama bu hafta çıkmayanlar</b>${skippedNeverWon.map(x=>`<div>${name(x.uid)} — ${escapeHtml(x.reason)}</div>`).join('')}</div>`;
+    // Herkesin bu haftaki sayımı ve kazandığı haftalar: biri "hiç almadı" diye bilinip sistemde bir
+    // kazancı kayıtlıysa ya da beklenmedik bir grupta görünüyorsa burada açıkça görülsün.
+    const order = st=> st.marked>0 ? (st.miss>=2?2:st.miss) : 3;
+    const everyone = [...stats].sort((a,b)=> order(a)-order(b) || (usersCache[a.uid]?.name||'').localeCompare(usersCache[b.uid]?.name||'','tr'));
+    html += `<details style="font-size:13px;margin-top:10px;"><summary><b>Tüm üyelerin bu haftası</b></summary>${everyone.map(st=>{
+      const weeks = (winWeeks[st.uid]||[]).map(w=>fmtShort(w)).join(', ');
+      const counts = st.marked>0 ? `${st.read} okudu · ${st.miss} okumadı${st.autoMiss?` (${st.autoMiss} günü kayıtsızdı, okumadı sayıldı)`:''}` : 'kaydı yok / hafta ortasında katıldı';
+      return `<div>${name(st.uid)} — ${group(st)} · ${counts} · ${weeks?`kazandığı haftalar: ${weeks}`:'hiç kazanmamış'}</div>`;
+    }).join('')}</details>`;
     panel.innerHTML = html;
   }catch(err){
     panel.innerHTML = '<span class="muted">Açıklama şu an hesaplanamadı. Tekrar dene.</span>';
