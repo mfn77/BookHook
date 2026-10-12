@@ -437,6 +437,64 @@ html[data-theme=dark] .badge-art{filter:brightness(1.13)}
 
 .goal-remove-button{display:block;margin:18px auto 0;background:transparent;color:var(--ink-70);font-size:14px;padding:10px 16px;border-radius:999px}
 .goal-remove-button:hover{background:var(--secondary-container)}
+
+
+/* App identity: original transparent logo, green theme surfaces. */
+body{background:var(--paper)}
+.brand-button{background:#dcebd7;display:grid;place-items:center}
+.brand-button img{display:block;width:44px;height:44px;object-fit:contain}
+.center-logo-mark{background:#dcebd7;padding:10px;display:grid;place-items:center}
+.center-logo-mark img{display:block;width:60px;height:60px;object-fit:contain}
+#loadingScreen{padding:0;background:var(--primary-container);color:var(--ink)}
+#loadingScreen:before{display:none}
+.startup-content{min-height:100svh;min-height:100dvh}
+.startup-mark img{display:block;object-fit:contain}
+#loadingScreen .startup-name{color:var(--ink)}
+#loadingScreen .startup-status{color:var(--ink-70)}
+
+
+
+/* Shared book jackets: one treatment for previews, shelves and book details. */
+.material-book-cover{display:block;position:relative;width:100%;height:100%;min-width:0;overflow:hidden;container-type:inline-size;flex-shrink:0;border-radius:3px 11px 11px 3px;background:#CEC4E1;border:0;border-left:4px solid rgba(255,255,255,.35);box-shadow:4px 5px 0 color-mix(in srgb,var(--ink) 12%,transparent);box-sizing:border-box}
+.material-book-cover>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:0}
+.book-cover-template{display:flex;width:100%;height:100%;box-sizing:border-box;flex-direction:column;justify-content:center;align-items:center;gap:6%;padding:12% 9%;background:var(--cover-paper,#CEC4E1);color:#273129;text-align:center;overflow:hidden}
+.book-cover-letter{font:normal 54px/.95 Georgia,serif;font-size:60cqi;flex-shrink:0}
+.book-cover-name{font:600 10px/1.2 'Roboto',sans-serif;font-size:clamp(6px,10cqi,15px);overflow-wrap:anywhere;text-wrap:balance;max-width:100%}
+.material-book-cover.hp-book-cover{display:block;width:48px;height:70px}
+.material-book-cover.ai-preview-cover{width:76px;height:116px}
+.material-book-cover.book-cover-detail{width:100px;height:150px;margin:0 auto 16px}
+.bh-cover-wrap,.discover-book-cover-wrap,.qp-nom-cover-ph{overflow:visible;border-radius:3px 11px 11px 3px;background:transparent}
+.recommendation-cover{display:block;width:58px;height:87px;flex:0 0 auto;cursor:pointer}
+.bh-cover-wrap>.material-book-cover,.discover-book-cover-wrap>.material-book-cover{width:100%;height:100%}
+/* Section headings and grouped surfaces match the management screen. */
+.settings-group{margin:0 0 28px;min-width:0}
+.settings-group>h2{font-size:20px;font-weight:600;margin:22px 0 12px}
+.settings-group>.settings-surface{background:var(--card);border:0;border-radius:24px;padding:22px;margin:0;box-shadow:none}
+#tab-settings .settings-list .destination-row{min-height:76px}
+#tab-settings .settings-list .destination-row>span:nth-child(2){flex:1;min-width:0;text-align:left}
+#tab-settings .settings-list .destination-row>span:last-child{color:var(--ink-70)}
+#materialThemeSettings>.muted{font-size:14px;line-height:1.5}
+#tab-settings .notification-setting{display:flex;position:relative;gap:16px;min-height:64px;padding:12px 0;border-bottom:1px solid var(--line)}
+#tab-settings .notification-setting:last-child{border-bottom:0;padding-bottom:0}
+.notification-setting>label{flex:1;min-width:0;cursor:pointer}
+.notification-setting [data-setting-icon]{display:flex;align-items:center;gap:14px;font-size:15px;color:var(--ink)}
+.notification-setting .route-icon{display:flex;align-items:center;justify-content:center;width:36px;height:36px;color:var(--gold);flex-shrink:0}
+.notification-setting .route-icon svg{width:24px;height:24px}
+#tab-settings .notification-setting>input{position:absolute;right:0;width:52px!important;height:36px!important;opacity:0;z-index:1;cursor:pointer;margin:0}
+.notification-setting>.layout-switch{position:relative;width:48px;height:28px;flex:0 0 auto;background:var(--line);border:2px solid var(--outline);border-radius:99px;pointer-events:none;box-sizing:border-box}
+.notification-setting>.layout-switch:after{content:'';position:absolute;left:4px;top:4px;width:16px;height:16px;border-radius:50%;background:var(--ink-70);transition:transform .18s}
+.notification-setting>input:checked+.layout-switch{background:var(--gold);border-color:var(--gold)}
+.notification-setting>input:checked+.layout-switch:after{transform:translateX(20px);background:var(--on-primary)}
+.notification-setting>input:focus-visible+.layout-switch{outline:3px solid var(--gold);outline-offset:4px}
+#tab-rules #rulesDisplay{font-size:15px;line-height:1.85;color:var(--ink);overflow-wrap:anywhere}
+#tab-rules textarea{background:var(--paper)!important;border:1px solid var(--line)!important;border-radius:16px!important;padding:16px!important;line-height:1.6;box-sizing:border-box;resize:vertical}
+#tab-rules .member-row{padding:16px 0;border-bottom:1px solid var(--line)}
+#tab-rules .settings-surface>button{margin-top:8px}
+@media(min-width:700px){.material-book-cover.ai-preview-cover{width:88px;height:132px}}
+@media(max-width:420px){.settings-group>.settings-surface{padding:18px}.notification-setting [data-setting-icon]{gap:10px;font-size:14px}}
+.daily-book>.daily-book-jacket{width:90px;height:136px}
+.qp-bugun-cover{overflow:visible;background:transparent;border-radius:3px 11px 11px 3px}
+@media(max-width:420px){.daily-book>.daily-book-jacket{width:76px;height:114px}}
 /* "Okudum" düğmesi: basar basmaz (ağ beklemeden) dokunulan noktadan yayılan renk dolgusu, kendini
    çizen tik, yukarı kayarak gelen "Bugün okudun" yazısı, yumuşak bir ışıma halkası ve küçük
    kıvılcımlar (playReadMarkFx). Bitiş hali soluk değil, dolu ve belirgin. */
@@ -469,3 +527,18 @@ html[data-theme=dark] .badge-art{filter:brightness(1.13)}
 .stamp-btn.pop-skip::after{content:'';position:absolute;inset:-0.2em;border-radius:999px;border:.16em solid var(--cloth);animation:ringExpand .5s ease-out forwards;pointer-events:none}
 @keyframes ringExpand{0%{transform:scale(.7);opacity:1}100%{transform:scale(2.1);opacity:0}}
 .draw-explain{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}.draw-explain>div>div{padding:3px 0}
+
+
+/* Optional hub subsections; all inner cards remain in normal vertical flow. */
+.hub-subtab-nav{display:flex;gap:4px;padding:5px;margin:0 0 24px;background:var(--secondary-container);border-radius:24px}
+.hub-subtab-nav[hidden]{display:none!important}
+.hub-subtab-nav>button{flex:1;min-width:0;min-height:48px;padding:10px 8px;border-radius:20px;font:inherit;font-size:14px;font-weight:600;color:var(--ink-70);background:transparent;line-height:1.3}
+.hub-subtab-nav>button[aria-selected=true]{background:var(--primary-container);color:var(--gold-dark)}
+.hub-subtab-nav>button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.hub-subtabs .hub-item[hidden],.hub-subtabs #aiRecCard[hidden]{display:none!important}
+.hub-subtabs .inner-pane-track{grid-template-columns:minmax(0,1fr)!important}
+.hub-subtabs .hub-item-panel-inner>section.tab{margin-top:0}
+.hub-layout-group{border-top:1px solid var(--line);margin-top:16px;padding-top:8px}
+.hub-layout-group h4{font-size:16px;margin:12px 0 0;color:var(--gold)}
+.hub-layout-group .hub-layout-setting{padding:14px 0}
+@media(max-width:380px){.hub-subtab-nav>button{font-size:12px;padding-inline:5px}}
