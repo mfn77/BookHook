@@ -14,7 +14,19 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>html,body{background:#dcebd7}#loadingScreen{position:fixed;inset:0;background:#dcebd7;z-index:1000}.startup-content{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}.startup-mark{display:grid;place-items:center;width:144px;height:144px;border-radius:40px;background:#dcebd7}.startup-name{font:600 24px system-ui;color:#294c32}.startup-status{font:14px system-ui;color:#42664b}</style>
-<link rel="stylesheet" href="./style.css?test-layout-segmented-20261012" />
+<script>
+// Restore the device's appearance before the first paint.
+try {
+ const root=document.documentElement;
+ const palette=localStorage.getItem('bookhook_palette');
+ root.dataset.palette=['green','blue','purple','rose','amber'].includes(palette)?palette:'green';
+ const auto=localStorage.getItem('bookhook_theme_auto')==='true';
+ const hour=new Date().getHours();
+ const saved=localStorage.getItem('bookhook_theme');
+ root.dataset.theme=auto?(hour>=8&&hour<20?'light':'dark'):(['light','dark'].includes(saved)?saved:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+} catch(e) {}
+</script>
+<link rel="stylesheet" href="./style.css?test-color-palettes-20261012" />
 
 </head>
 <body>
@@ -808,6 +820,7 @@ function computeAutoTheme(){
 function applyAutoThemeIfEnabled(){
   if(getAutoThemeEnabled()){
     document.documentElement.setAttribute('data-theme', computeAutoTheme());
+    materialThemeSync();
   }
 }
 function initTheme(){
@@ -10501,6 +10514,7 @@ function materialInit(){
  document.querySelectorAll('[data-theme-choice]').forEach(button=>{
   button.onclick=()=>{const v=button.dataset.themeChoice;setAutoThemeEnabled(v==='auto');setTheme(v==='auto'?computeAutoTheme():v);materialThemeSync();};
  });
+ initPaletteSettings();
  materialThemeSync();
  initHubLayoutSettings();
  materialSettingsPresentation();
@@ -10532,10 +10546,26 @@ function materialSettingsPresentation(){
   const group=document.createElement('div');group.className='settings-group';card.before(group);group.append(heading,card);card.classList.add('settings-surface');
  }
 }
+function initPaletteSettings(){
+ const host=document.getElementById('materialThemeSettings');
+ if(!host)return;
+ if(!document.getElementById('materialPaletteChoices')){
+  host.insertAdjacentHTML('beforeend',`<h3 id="materialPaletteLabel">Renk paleti</h3><div class="segmented palette-choices" id="materialPaletteChoices" role="group" aria-labelledby="materialPaletteLabel">${[['green','Yeşil','#42664b'],['blue','Mavi','#415f91'],['purple','Mor','#6750a4'],['rose','Pembe','#984061'],['amber','Amber','#805610']].map(([id,label,color])=>`<button type="button" data-palette-choice="${id}" aria-pressed="false"><span class="palette-swatch" style="--swatch:${color}" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></svg></span><span>${label}</span></button>`).join('')}</div>`);
+ }
+ host.querySelectorAll('[data-palette-choice]').forEach(button=>{
+  button.onclick=()=>{
+   document.documentElement.dataset.palette=button.dataset.paletteChoice;
+   try{localStorage.setItem('bookhook_palette',button.dataset.paletteChoice);}catch(e){}
+   materialThemeSync();
+  };
+ });
+}
 function materialThemeSync(){
  const selected=getAutoThemeEnabled()?'auto':document.documentElement.getAttribute('data-theme')||'light';
  document.querySelectorAll('[data-theme-choice]').forEach(button=>{button.classList.toggle('active',button.dataset.themeChoice===selected);button.setAttribute('aria-pressed',String(button.dataset.themeChoice===selected));});
- const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=document.documentElement.getAttribute('data-theme')==='dark'?'#131A14':'#F8FAF4';
+ const palette=document.documentElement.dataset.palette||'green';
+ document.querySelectorAll('[data-palette-choice]').forEach(button=>{const active=button.dataset.paletteChoice===palette;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
+ const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=getComputedStyle(document.documentElement).getPropertyValue('--paper').trim();
 }
 // Herhangi bir ekranın, birincil (alt gezinme) sekmelerinden hangisine ait olduğunu bulur —
 // admin alt ekranları (members/manual/...) önce 'admin'e, o da HUB_PARENT üzerinden kendi
@@ -11201,6 +11231,7 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
 
 
 
