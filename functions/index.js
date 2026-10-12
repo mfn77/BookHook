@@ -570,7 +570,8 @@ async function finalizeWeekBackend(mondayStr) {
   const stats = await computeWeekStatsBackend(mondayStr);
   const { giverCount, safeCount, pairs } = runLotteryBackend(stats, previousWinners, winCounts, totalGiftsGivenSoFar);
   const weekEnd = addDaysToDateStr(mondayStr, 6);
-  const data = { weekStart: mondayStr, weekEnd, giverCount, safeCount, pairs, generatedAt: new Date().toISOString() };
+  // algo: hangi kural sürümüyle çekildiğini kaydeder; uygulamadaki "Neden?" açıklaması bunu gösteriyor.
+  const data = { weekStart: mondayStr, weekEnd, giverCount, safeCount, pairs, generatedAt: new Date().toISOString(), algo: "hic-kazanmayan-oncelikli-v2" };
   let didWrite = false;
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(drawRef);
