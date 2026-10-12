@@ -909,10 +909,14 @@ function buildWeightedPool(list, previousWinners, winCounts, totalGiftsGivenSoFa
 //   en önde) bir kuyruk. Bu kuyruk tamamen tükenmeden ağırlıklı havuza hiç geçilmiyor.
 // - everWonPool: en az bir kez kazanmış olanlar, mevcut ağırlıklı (kazandığı hediye sayısına ve
 //   bir önceki hafta kazanıp kazanmadığına göre) rastgele seçim.
+function lotteryJoinKey(s){ return (s.joinDate||'9999-99-99')+'|'+(s.joinedAt||''); }
+function joinedAtOf(uid){ const c=usersCache[uid]?.createdAt; const t=c?new Date(c):null; return t&&!isNaN(t)?t.toISOString():''; }
 function buildTierPools(base, previousWinners, winCounts, totalGiftsGivenSoFar){
   const neverWon = base.filter(s=>!((winCounts||{})[s.uid]));
   const everWon = base.filter(s=>(winCounts||{})[s.uid]);
-  neverWon.sort((a,b)=> (a.joinDate||'9999-99-99').localeCompare(b.joinDate||'9999-99-99'));
+  // Önce üyelik günü, aynı gün katılanlar arasında da tam kayıt anı: "en uzun süredir bekleyen" kesin
+  // belli olsun (eskiden aynı gün katılanlar arasındaki sıra rastgeleydi).
+  neverWon.sort((a,b)=> lotteryJoinKey(a).localeCompare(lotteryJoinKey(b)));
   return { neverWonQueue: neverWon, everWonPool: buildWeightedPool(everWon, previousWinners, winCounts, totalGiftsGivenSoFar) };
 }
 function pickFromTierPools(tier){
@@ -2374,7 +2378,7 @@ async function computeWeekStats(monday){
     // Bir üye bu hafta içinde, Pazartesi DIŞINDA bir günde katıldıysa, sadece bu haftanın
     // kurasına dahil edilmez (marked:0 vererek eleniyor); sonraki haftalarda normal katılır.
     if(joinDs && joinDs > weekMondayStr && joinDs <= weekSundayStr){
-      return {uid, name: usersCache[uid]?.name || '?', miss:0, read:0, marked:0, joinDate:joinDs||''};
+      return {uid, name: usersCache[uid]?.name || '?', miss:0, read:0, marked:0, joinDate:joinDs||'', joinedAt: joinedAtOf(uid)};
     }
     // Kapanmış (bugünden önceki) bir günde hiç kayıt yoksa o gün "okumadı" sayılır — 06:00'daki
     // otomatik doldurmanın yazacağıyla aynı kural. Eskiden kayıtsız gün hiç sayılmıyordu; kura
@@ -2386,7 +2390,7 @@ async function computeWeekStats(monday){
       if(rec){ if(rec.status==='skip') miss++; else if(rec.status==='read') read++; }
       else if(ds<today && ds>=CLUB_START_DATE && !(joinDs && ds<joinDs)){ miss++; autoMiss++; }
     });
-    return {uid, name: usersCache[uid]?.name || '?', miss, read, marked: miss+read, joinDate:joinDs||'', autoMiss};
+    return {uid, name: usersCache[uid]?.name || '?', miss, read, marked: miss+read, joinDate:joinDs||'', joinedAt: joinedAtOf(uid), autoMiss};
   });
 }
 // Kapanmış (geçmiş) günlerde hiç işaretleme yapılmamışsa otomatik "okumadı" yazar.
@@ -3053,7 +3057,7 @@ function explainDrawResult(draw, stats, winCounts){
       for(const yUid of receivers){
         const y = byUid.get(yUid), ry = rankOf(yUid);
         if(ry===null) continue;
-        const outranked = ry>rx || (ry===rx && rx%2===0 && (y.joinDate||'9999-99-99') > (x.joinDate||'9999-99-99'));
+        const outranked = ry>rx || (ry===rx && rx%2===0 && lotteryJoinKey(y) > lotteryJoinKey(x));
         if(outranked) violations.push({shouldHave:x.uid, gotInstead:yUid});
       }
     }
@@ -3102,7 +3106,8 @@ async function toggleDrawExplanation(weekStart, scope){
     html += `<details style="font-size:13px;margin-top:10px;"><summary><b>Tüm üyelerin bu haftası</b></summary>${everyone.map(st=>{
       const weeks = (winWeeks[st.uid]||[]).map(w=>fmtShort(w)).join(', ');
       const counts = st.marked>0 ? `${st.read} okudu · ${st.miss} okumadı${st.autoMiss?` (${st.autoMiss} günü kayıtsızdı, okumadı sayıldı)`:''}` : 'kaydı yok / hafta ortasında katıldı';
-      return `<div>${name(st.uid)} — ${group(st)} · ${counts} · ${weeks?`kazandığı haftalar: ${weeks}`:'hiç kazanmamış'}</div>`;
+      const joined = st.joinedAt ? new Date(st.joinedAt).toLocaleString('tr-TR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}) : (st.joinDate?fmtShort(st.joinDate):'bilinmiyor');
+      return `<div>${name(st.uid)} — ${group(st)} · ${counts} · ${weeks?`kazandığı haftalar: ${weeks}`:'hiç kazanmamış'} · üyelik: ${escapeHtml(joined)}</div>`;
     }).join('')}</details>`;
     panel.innerHTML = html;
   }catch(err){
@@ -3164,7 +3169,7 @@ document.getElementById('manualDrawBtn').addEventListener('click', async ()=>{
     const arr = manualGrid[uid];
     const miss = arr.filter(s=>s==='skip').length;
     const read = arr.filter(s=>s==='read').length;
-    return {uid, name: usersCache[uid].name, miss, read, marked: miss+read, joinDate: joinDateStrOf(uid)||''};
+    return {uid, name: usersCache[uid].name, miss, read, marked: miss+read, joinDate: joinDateStrOf(uid)||'', joinedAt: joinedAtOf(uid)};
   });
   // Deneme kurası da gerçek kurayla aynı geçmişi kullansın (kim kaç kez kazandı, geçen hafta kim
   // kazandı, üyelik sırası); yoksa herkes "hiç kazanmamış" sayılıp sonuç gerçeği yansıtmıyordu.

@@ -435,7 +435,9 @@ function buildWeightedPoolBackend(list, previousWinners, winCounts, totalGiftsGi
 function buildTierPoolsBackend(base, previousWinners, winCounts, totalGiftsGivenSoFar) {
   const neverWon = base.filter((s) => !((winCounts || {})[s.uid]));
   const everWon = base.filter((s) => (winCounts || {})[s.uid]);
-  neverWon.sort((a, b) => (a.joinDate || "9999-99-99").localeCompare(b.joinDate || "9999-99-99"));
+  // Önce üyelik günü, aynı gün katılanlar arasında tam kayıt anı (istemcideki lotteryJoinKey ile aynı).
+  const joinKey = (s) => (s.joinDate || "9999-99-99") + "|" + (s.joinedAt || "");
+  neverWon.sort((a, b) => joinKey(a).localeCompare(joinKey(b)));
   return { neverWonQueue: neverWon, everWonPool: buildWeightedPoolBackend(everWon, previousWinners, winCounts, totalGiftsGivenSoFar) };
 }
 function pickFromTierPoolsBackend(tier) {
@@ -491,8 +493,10 @@ async function computeWeekStatsBackend(mondayStr) {
     const u = userDoc.data();
     if (u.banned || u.deleted) return;
     const joinDs = logicalDateStrFromIso(u.createdAt);
+    const joinedT = u.createdAt ? new Date(u.createdAt) : null;
+    const joinedAt = joinedT && !isNaN(joinedT) ? joinedT.toISOString() : "";
     if (joinDs && joinDs > weekMondayStr && joinDs <= weekSundayStr) {
-      stats.push({ uid, name: u.name || "?", miss: 0, read: 0, marked: 0, joinDate: joinDs || "" });
+      stats.push({ uid, name: u.name || "?", miss: 0, read: 0, marked: 0, joinDate: joinDs || "", joinedAt });
       return;
     }
     // Kapanmış bir günde kayıt yoksa "okumadı" sayılır (autoMarkMissedDay ile aynı kural) — kura,
@@ -503,7 +507,7 @@ async function computeWeekStatsBackend(mondayStr) {
       if (rec) { if (rec.status === "skip") miss++; else if (rec.status === "read") read++; }
       else if (ds < todayLogical && ds >= CLUB_START_DATE && !(joinDs && ds < joinDs)) miss++;
     });
-    stats.push({ uid, name: u.name || "?", miss, read, marked: miss + read, joinDate: joinDs || "" });
+    stats.push({ uid, name: u.name || "?", miss, read, marked: miss + read, joinDate: joinDs || "", joinedAt });
   });
   return stats;
 }
