@@ -568,3 +568,10 @@ body{background:var(--paper)}
 #tab-bookhistory.hub-primary-section #discoverFeed{touch-action:pan-y}
 
 @media(max-width:350px){.sidebar-tabs.many-tabs button{font-size:8px;padding-inline:0}}
+
+
+.hub-layout-label{font-weight:600;color:var(--ink)}
+.hub-layout-segmented{margin:0;gap:2px}
+.hub-layout-segmented button{padding:9px 4px;font-size:12px;line-height:1.25;min-height:44px}
+.hub-layout-segmented button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@media(max-width:360px){.hub-layout-segmented button{font-size:11px;padding-inline:2px}}

@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>html,body{background:#dcebd7}#loadingScreen{position:fixed;inset:0;background:#dcebd7;z-index:1000}.startup-content{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}.startup-mark{display:grid;place-items:center;width:144px;height:144px;border-radius:40px;background:#dcebd7}.startup-name{font:600 24px system-ui;color:#294c32}.startup-status{font:14px system-ui;color:#42664b}</style>
-<link rel="stylesheet" href="./style.css?test-layout-choice-20261012" />
+<link rel="stylesheet" href="./style.css?test-layout-segmented-20261012" />
 
 </head>
 <body>
@@ -10392,12 +10392,13 @@ function syncAiHubLayout(){
 }
 function initHubLayoutSettings(){
  const theme=document.getElementById('materialThemeSettings');
- if(!document.getElementById('hubLayoutSettings'))theme.insertAdjacentHTML('beforeend',`<div id="hubLayoutSettings"><h3>Sekme görünümü</h3>${[['club','Kulüp'],['library','Kitaplık']].map(([id,label])=>`<div class="hub-layout-choice"><label for="hub-layout-${id}">${label}</label><select id="hub-layout-${id}" data-hub-mode="${id}"><option value="cards">Kartlar — varsayılan</option><option value="expanded">Tüm içeriği göster</option><option value="tabs">Alt sekmelere ayır</option><option value="primary">Ana sekmelere ayır</option></select></div>`).join('')}</div>`);
+ if(!document.getElementById('hubLayoutSettings'))theme.insertAdjacentHTML('beforeend',`<div id="hubLayoutSettings"><h3>Sekme görünümü</h3>${[['club','Kulüp'],['library','Kitaplık']].map(([id,label])=>`<div class="hub-layout-choice"><span id="hub-layout-label-${id}" class="hub-layout-label">${label}</span><div class="segmented hub-layout-segmented" role="group" aria-labelledby="hub-layout-label-${id}">${[['cards','Kartlar'],['expanded','Tüm İçerik'],['tabs','Alt Sekme'],['primary','Ana Sekme']].map(([mode,text])=>`<button type="button" data-hub-mode="${id}" data-layout-value="${mode}" aria-pressed="false">${text}</button>`).join('')}</div></div>`).join('')}</div>`);
  const controls=[...document.querySelectorAll('[data-hub-mode]')];
- const sync=()=>controls.forEach(input=>{input.value=hubLayoutMode(input.dataset.hubMode);});
- controls.forEach(input=>{input.onchange=()=>{
+ const sync=()=>controls.forEach(input=>{const selected=input.dataset.layoutValue===hubLayoutMode(input.dataset.hubMode);input.classList.toggle('active',selected);input.setAttribute('aria-pressed',String(selected));});
+ controls.forEach(input=>{input.onclick=()=>{
   const hub=input.dataset.hubMode;
-  try{localStorage.setItem('bookhook_layout_'+currentUid+'_'+hub,input.value);}
+  if(hubLayoutMode(hub)===input.dataset.layoutValue)return;
+  try{localStorage.setItem('bookhook_layout_'+currentUid+'_'+hub,input.dataset.layoutValue);}
   catch(_){sync();showToast('Görünüm tercihi kaydedilemedi.');return;}
   sync();applyHubLayout(hub,{render:activeTab===hub});renderMaterialNav();
   if(activeTab===hub&&hubLayoutMode(hub)==='primary')switchTab(hubSubtabEntries(hub)[0][0]);
@@ -11200,6 +11201,7 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
 
 
 
