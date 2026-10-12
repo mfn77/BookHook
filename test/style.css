@@ -542,3 +542,13 @@ body{background:var(--paper)}
 .hub-layout-group h4{font-size:16px;margin:12px 0 0;color:var(--gold)}
 .hub-layout-group .hub-layout-setting{padding:14px 0}
 @media(max-width:380px){.hub-subtab-nav>button{font-size:12px;padding-inline:5px}}
+
+.hub-primary-section>.segmented{display:none!important}
+.hub-primary-section .inner-pane-track{grid-template-columns:minmax(0,1fr)!important}
+.hub-primary-section>.club-feature{margin-bottom:24px}
+.sidebar-tabs.many-tabs{overflow-y:auto;min-height:0;scrollbar-width:none}
+.sidebar-tabs.many-tabs::-webkit-scrollbar{display:none}
+.sidebar-tabs.many-tabs button{flex-shrink:0}
+@media(max-width:700px){.sidebar-tabs.many-tabs{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;touch-action:pan-x}.sidebar-tabs.many-tabs button{flex:0 0 80px;min-width:80px}.sidebar-tabs.many-tabs button>span:last-child{line-height:1.2;max-width:78px}}
+/* Badge shelves scroll vertically; keep horizontal gestures available to primary navigation. */
+:is(#tab-mworms,#tab-worms).hub-primary-section .libcard{touch-action:pan-y}

@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>html,body{background:#dcebd7}#loadingScreen{position:fixed;inset:0;background:#dcebd7;z-index:1000}.startup-content{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}.startup-mark{display:grid;place-items:center;width:144px;height:144px;border-radius:40px;background:#dcebd7}.startup-name{font:600 24px system-ui;color:#294c32}.startup-status{font:14px system-ui;color:#42664b}</style>
-<link rel="stylesheet" href="./style.css?material-subtabs-20261012" />
+<link rel="stylesheet" href="./style.css?material-primary-sections-20261012" />
 
 </head>
 <body>
@@ -1833,9 +1833,7 @@ document.getElementById('hamburgerBtn').addEventListener('click', (e)=>{
 
 function buildNav(){
   const tabs = materialPrimaryTabs();
-  const nav = document.getElementById('tabs');
-  nav.innerHTML = tabs.map(t=>`<button data-tab="${t.id}" aria-label="${t.label}"><span class="tab-icon">${t.icon}</span><span>${t.label}</span></button>`).join('');
-  nav.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
+  renderMaterialNav();
   materialInit();
   switchTab(profileGateActive ? 'profile' : tabs[0].id);
 }
@@ -1918,6 +1916,7 @@ function getTabLabel(id){
   return def ? def.label : '';
 }
 function switchTab(id, { animate = true } = {}){
+  if(['club','library'].includes(id)&&hubLayoutMode(id)==='primary')id=hubSubtabEntries(id)[0][0];
   lastTabSwitchTime = Date.now();
   if(typeof closeReactionDrawer==='function') closeReactionDrawer();
   if(profileGateActive && id!=='profile'){
@@ -1925,7 +1924,7 @@ function switchTab(id, { animate = true } = {}){
     showToast('Devam etmek için önce soyad, telefon ve adres bilgilerini doldurup kaydetmen gerekiyor.');
     return;
   }
-  if(typeof HUB_PARENT!=='undefined' && HUB_PARENT[id] && !(typeof HUB_NO_ACCORDION!=='undefined' && HUB_NO_ACCORDION.has(id))){
+  if(typeof HUB_PARENT!=='undefined' && HUB_PARENT[id] && hubLayoutMode(HUB_PARENT[id])!=='primary' && !(typeof HUB_NO_ACCORDION!=='undefined' && HUB_NO_ACCORDION.has(id))){
     const hubId = HUB_PARENT[id];
     switchTab(hubId);
     requestAnimationFrame(()=>{
@@ -2303,6 +2302,8 @@ function switchTab(id, { animate = true } = {}){
 })();
 
 function renderTab(id){
+  if(id==='recs'&&hubLayoutMode('library')==='primary'){renderAiRecCard();syncAiHubLayout();}
+  if(id===materialRoute('records')&&hubLayoutMode('club')==='primary')materialRenderClub();
   if(id==='club'||id==='library'){applyHubLayout(id,{render:true});if(!hubLayoutEnabled(id))hubPreviews.sync(id);}
   if(id==='club') { materialRenderClub(); return; }
   if(id==='library') { renderAiRecCard(); return; }
@@ -10038,7 +10039,12 @@ function materialIcon(kind){
 }
 function materialPrimaryTabs(){
  const admin=myProfile&&myProfile.role==='admin';
- return [{id:admin?'today':'msurvey',label:'Bugün',icon:materialIcon('home')},{id:'social',label:'Akış',icon:materialIcon('feed')},{id:'club',label:'Kulüp',icon:materialIcon('club')},{id:'library',label:'Kitaplık',icon:materialIcon('book')}];
+ const tabs=[{id:admin?'today':'msurvey',label:'Bugün',icon:materialIcon('home')},{id:'social',label:'Akış',icon:materialIcon('feed')}];
+ for(const hub of ['club','library']){
+  if(hubLayoutMode(hub)==='primary')hubSubtabEntries(hub).forEach(([id,label],i)=>tabs.push({id,label,icon:materialIcon((hub==='club'?['records','badge','gift']:['search','book','heart'])[i])}));
+  else tabs.push({id:hub,label:hub==='club'?'Kulüp':'Kitaplık',icon:materialIcon(hub==='club'?'club':'book')});
+ }
+ return tabs;
 }
 function materialRoute(id){
  if(id==='records') return myProfile.role==='admin'?'week':'mtoday';
@@ -10319,7 +10325,7 @@ window.addEventListener('resize', ()=>{
 });
 // Görünüm tercihleri tema gibi bu cihazda, kullanıcıya özel tutulur.
 function hubLayoutMode(hub){
- try{const value=localStorage.getItem('bookhook_layout_'+currentUid+'_'+hub);return ['expanded','tabs'].includes(value)?value:'cards';}catch(_){return 'cards';}
+ try{const value=localStorage.getItem('bookhook_layout_'+currentUid+'_'+hub);return ['expanded','tabs','primary'].includes(value)?value:'cards';}catch(_){return 'cards';}
 }
 function hubLayoutEnabled(hub){return hubLayoutMode(hub)!=='cards';}
 function hubSubtabEntries(hub){
@@ -10344,7 +10350,7 @@ function selectHubSubtab(hub,target,{focus=false}={}){
 }
 function applyHubLayout(hub,{render=false}={}){
  const root=document.getElementById('tab-'+hub);if(!root)return;
- const mode=hubLayoutMode(hub),flat=mode!=='cards';
+ const mode=hubLayoutMode(hub),flat=mode==='expanded'||mode==='tabs';
  root.classList.toggle('hub-flat',flat);root.classList.toggle('hub-subtabs',mode==='tabs');
  const entries=hubSubtabEntries(hub);
  let nav=root.querySelector('.hub-subtab-nav');
@@ -10367,11 +10373,14 @@ function applyHubLayout(hub,{render=false}={}){
   item.id='hub-subpanel-'+hub+'-'+item.dataset.hubTarget;
   const section=document.getElementById('tab-'+item.dataset.hubTarget);if(!section)return;
   const panelInner=item.querySelector('.hub-item-panel-inner');
-  if(flat){panelInner.append(section);section.classList.add('active');if(render)renderTab(item.dataset.hubTarget);}
+  section.classList.toggle('hub-flat',mode==='primary');section.classList.toggle('hub-primary-section',mode==='primary');
+  if(mode==='primary'){main.append(section);section.classList.toggle('active',activeTab===item.dataset.hubTarget);}
+  else if(flat){panelInner.append(section);section.classList.add('active');if(render)renderTab(item.dataset.hubTarget);}
   else if(main&&panelInner.contains(section)&&!item.classList.contains('expanded')){section.classList.remove('active');main.append(section);}
   section.querySelectorAll('.inner-pane-viewport').forEach(viewport=>{if(viewport._carousel)viewport._carousel.goTo(viewport._carousel.current,false);});
  });
  selectHubSubtab(hub,root.dataset.hubSubtab);
+ moveHubPrimaryExtras(hub);
  if(hub==='library')syncAiHubLayout();
 }
 function syncAiHubLayout(){
@@ -10380,16 +10389,32 @@ function syncAiHubLayout(){
 }
 function initHubLayoutSettings(){
  const theme=document.getElementById('materialThemeSettings');
- if(!document.getElementById('hubLayoutSettings'))theme.insertAdjacentHTML('beforeend',`<div id="hubLayoutSettings"><h3>Sekme görünümü</h3><p class="muted">Her bölüm için bir görünüm seç. İki seçenek de kapalıyken kartlar gösterilir.</p>${[['club','Kulüp'],['library','Kitaplık']].map(([id,label])=>`<div class="hub-layout-group"><h4>${label}</h4><label class="hub-layout-setting"><span><b>Tüm içeriği göster</b><small>Bütün bölümler aynı sayfada</small></span><input type="checkbox" role="switch" data-hub-layout="${id}" aria-label="${label}: içerikleri doğrudan göster"><span class="layout-switch" aria-hidden="true"></span></label><label class="hub-layout-setting"><span><b>Alt sekmelere ayır</b><small>${id==='club'?'Kayıtlar, Rozetler, Hediyeler':'Keşfet, Kitaplığım, Kitap önerileri'}</small></span><input type="checkbox" role="switch" data-hub-subtabs="${id}" aria-label="${label}: alt sekmelere ayır"><span class="layout-switch" aria-hidden="true"></span></label></div>`).join('')}</div>`);
- const controls=[...document.querySelectorAll('[data-hub-layout],[data-hub-subtabs]')];
- const sync=()=>controls.forEach(input=>{const hub=input.dataset.hubLayout||input.dataset.hubSubtabs;input.checked=hubLayoutMode(hub)===(input.hasAttribute('data-hub-subtabs')?'tabs':'expanded');});
+ if(!document.getElementById('hubLayoutSettings'))theme.insertAdjacentHTML('beforeend',`<div id="hubLayoutSettings"><h3>Sekme görünümü</h3><p class="muted">Her bölüm için bir görünüm seç. Üç seçenek de kapalıyken kartlar gösterilir.</p>${[['club','Kulüp'],['library','Kitaplık']].map(([id,label])=>`<div class="hub-layout-group"><h4>${label}</h4><label class="hub-layout-setting"><span><b>Tüm içeriği göster</b><small>Bütün bölümler aynı sayfada</small></span><input type="checkbox" role="switch" data-hub-layout="${id}" aria-label="${label}: içerikleri doğrudan göster"><span class="layout-switch" aria-hidden="true"></span></label><label class="hub-layout-setting"><span><b>Alt sekmelere ayır</b><small>${id==='club'?'Kayıtlar, Rozetler, Hediyeler':'Keşfet, Kitaplığım, Kitap önerileri'}</small></span><input type="checkbox" role="switch" data-hub-subtabs="${id}" aria-label="${label}: alt sekmelere ayır"><span class="layout-switch" aria-hidden="true"></span></label><label class="hub-layout-setting"><span><b>Ana sekmelere ayır</b><small>${label} yerine üç ayrı ana sekme</small></span><input type="checkbox" role="switch" data-hub-primary="${id}" aria-label="${label}: ana sekmelere ayır"><span class="layout-switch" aria-hidden="true"></span></label></div>`).join('')}</div>`);
+ const controls=[...document.querySelectorAll('[data-hub-layout],[data-hub-subtabs],[data-hub-primary]')];
+ const sync=()=>controls.forEach(input=>{const hub=input.dataset.hubLayout||input.dataset.hubSubtabs||input.dataset.hubPrimary;input.checked=hubLayoutMode(hub)===(input.hasAttribute('data-hub-primary')?'primary':input.hasAttribute('data-hub-subtabs')?'tabs':'expanded');});
  controls.forEach(input=>{input.onchange=()=>{
-  const hub=input.dataset.hubLayout||input.dataset.hubSubtabs;
-  try{localStorage.setItem('bookhook_layout_'+currentUid+'_'+hub,input.checked?(input.hasAttribute('data-hub-subtabs')?'tabs':'expanded'):'cards');}
+  const hub=input.dataset.hubLayout||input.dataset.hubSubtabs||input.dataset.hubPrimary;
+  try{localStorage.setItem('bookhook_layout_'+currentUid+'_'+hub,input.checked?(input.hasAttribute('data-hub-primary')?'primary':input.hasAttribute('data-hub-subtabs')?'tabs':'expanded'):'cards');}
   catch(_){sync();showToast('Görünüm tercihi kaydedilemedi.');return;}
-  sync();applyHubLayout(hub,{render:activeTab===hub});
+  sync();applyHubLayout(hub,{render:activeTab===hub});renderMaterialNav();
+  if(activeTab===hub&&hubLayoutMode(hub)==='primary')switchTab(hubSubtabEntries(hub)[0][0]);
+  else if(hubSubtabEntries(hub).some(([id])=>id===activeTab)&&hubLayoutMode(hub)!=='primary')switchTab(hub);
+  else materialSyncNavigation(activeTab,{resetScroll:false});
  };});
  sync();for(const hub of ['club','library'])applyHubLayout(hub);
+}
+function moveHubPrimaryExtras(hub){
+ const root=document.getElementById('tab-'+hub),primary=hubLayoutMode(hub)==='primary';
+ const extra=hub==='library'?document.getElementById('aiRecCard'):document.querySelector('.club-feature');
+ const target=document.getElementById('tab-'+(hub==='library'?'recs':materialRoute('records')));
+ const grid=root.querySelector('.club-grid');
+ if(extra){if(primary){target.prepend(extra);extra.hidden=false;}else{root.insertBefore(extra,grid);if(hub==='library')extra.hidden=hubLayoutMode(hub)==='tabs'&&root.dataset.hubSubtab!=='recs';}}
+}
+function renderMaterialNav(){
+ const tabs=materialPrimaryTabs(),nav=document.getElementById('tabs');
+ nav.classList.toggle('many-tabs',tabs.length>4);
+ nav.innerHTML=tabs.map(t=>`<button data-tab="${t.id}" aria-label="${t.label}"><span class="tab-icon">${t.icon}</span><span>${t.label}</span></button>`).join('');
+ nav.querySelectorAll('button').forEach(button=>button.onclick=()=>switchTab(button.dataset.tab));
 }
 // Yeniden menü kurulurken taşınmış asıl bölümler innerHTML ile silinmesin.
 function preserveHubSections(){
@@ -10557,7 +10582,13 @@ function materialSyncNavigation(id, { resetScroll = true } = {}){
  const back=document.getElementById('materialBack');back.hidden=primary.includes(id);
  back.onclick=()=>switchTab((id==='profile'||id==='appsettings')?getTabOrder()[0]:materialImmediateParent(id));
  document.querySelectorAll('nav.tabs button').forEach(button=>{const selected=button.dataset.tab===(primary.includes(id)?id:materialHubRoot(id));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
- const names={club:'Kulüp',library:'Kitaplık',appsettings:'Ayarlar',quarterly:'Ortak kitap',admin:'Yönetim',worms:'Rozetler',mworms:'Rozetler',gifts:'Hediyeler',recs:'Kitap önerileri',rules:'Grup kuralları',settings:'Uygulama ayarları',today:'Bugün',msurvey:'Bugün'};
+ const nav=document.getElementById('tabs'),selected=nav.querySelector('button.active');
+ if(selected&&nav.classList.contains('many-tabs')){
+  const n=nav.getBoundingClientRect(),r=selected.getBoundingClientRect();
+  if(r.left<n.left)nav.scrollLeft-=n.left-r.left;else if(r.right>n.right)nav.scrollLeft+=r.right-n.right;
+  if(r.top<n.top)nav.scrollTop-=n.top-r.top;else if(r.bottom>n.bottom)nav.scrollTop+=r.bottom-n.bottom;
+ }
+ const names={week:'Kayıtlar',mtoday:'Kayıtlar',bookhistory:'Keşfet',mybooks:'Kitaplığım',club:'Kulüp',library:'Kitaplık',appsettings:'Ayarlar',quarterly:'Ortak kitap',admin:'Yönetim',worms:'Rozetler',mworms:'Rozetler',gifts:'Hediyeler',recs:'Kitap önerileri',rules:'Grup kuralları',settings:'Uygulama ayarları',today:'Bugün',msurvey:'Bugün'};
  if(names[id]) setTabTitleAnimated(names[id]);
  if(resetScroll) silentScrollToTop();
 }
