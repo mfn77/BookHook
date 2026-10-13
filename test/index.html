@@ -3795,7 +3795,9 @@ function wireSelfMarkCard(ids){
     const dowLabel = DOW[ld.getDay()===0?6:ld.getDay()-1];
     const dateLabel = `${dowLabel} ${pad(ld.getDate())}.${pad(ld.getMonth()+1)}.${ld.getFullYear()}`;
     document.getElementById(ids.dateNote).textContent =
-      window.BH_I18N.template`Bugünün okuma tarihi: ${dateLabel}. Bu işaretleme yarın sabah 06:00'a kadar geçerli; 06:00'dan sonra yaptığın işaretleme bir sonraki güne yazılır. 06:00'a kadar hiç işaretleme yapmazsan bu gün otomatik "okumadım" sayılır.`;
+      (window.BH_I18N.language==='en'
+       ? `Today’s reading date: ${dateLabel}. This check-in is valid until 06:00 tomorrow morning. Check-ins after 06:00 count toward the next day. If you do not check in by 06:00, today will automatically be marked as “didn’t read”.`
+       : `Bugünün okuma tarihi: ${dateLabel}. Bu işaretleme yarın sabah 06:00'a kadar geçerli; 06:00'dan sonra yaptığın işaretleme bir sonraki güne yazılır. 06:00'a kadar hiç işaretleme yapmazsan bu gün otomatik "okumadım" sayılır.`);
     document.getElementById(ids.statusNote).textContent =
       st==='read' ? window.BH_I18N.pick("Bugün için \"Okudum\" işaretledin. Harika!","You marked today as read. Great!") :
       st==='skip' ? window.BH_I18N.pick("Bugün için okuma kaydın yok.","You haven’t recorded any reading today.") :
@@ -6533,7 +6535,64 @@ function timeAgoLabel(iso){
 // Reddit tarzı: her gönderinin kalın bir BAŞLIĞI, altında da açıklayıcı gövde metni var.
 // Kullanıcı gönderilerinde başlığı kişi kendisi giriyor (p.title); sistem gönderilerinde ve
 // anketlerde burada sabit/otomatik bir başlık üretiliyor.
+// Translate automatic activity at render time. Stored posts and user-authored text stay untouched.
+function automaticPostTitleEn(p){
+ const titles={read:'✓ Read today',skip:'😴 Missed reading',badge_gained:'🏅 Badge earned',badge_lost:'💔 Badge lost',gift_won:'🎁 Book gift won',gift_requested:'📮 Gift request',gift_completed:'🎉 Gift received',new_member:'👋 New member',book_review:'⭐ Book rated',book_review_batch:'⭐ Book ratings',book_added:'📖 Added to library',book_added_batch:'📖 Added to library',record_dethrone:'👑 New record',no_lottery:'🍀 No draw needed',rec_personal:'💡 Book recommendation',rec_group:'💡 Club recommendation'};
+ const quarterly={nominations_open:'📚 Nominations open',nominations_near_end:'⏰ Nominations closing',objecting_open:'🔎 Objections open',objecting_near_end:'⏰ Objections closing',objection_made:'🙅 Objection submitted',nomination_made:'📖 New nomination',round_start:'🗳️ Voting round started',round_near_end:'⏰ Voting closing',round_result:'📊 Round results',final_winner:'🏆 Shared book selected',gift_lottery_drawn:'🎁 Gift draw completed',gift_lottery_applied:'🎁 Shared book gifts confirmed',discussion_opened:'💬 Discussion opened'};
+ return p.type==='quarterly_pick'?(quarterly[p.subtype]||'📚 Shared book'):(titles[p.type]??null);
+}
+function automaticPostBodyEn(p){
+ const book=escapeHtml(p.bookTitle||'');
+ const cover=p.bookCover?`<img src="${escapeHtml(p.bookCover)}" alt="" class="post-book-cover book-cover-clickable" data-book-title="${escapeHtml((p.bookAuthor?p.bookAuthor+' - ':'')+(p.bookTitle||''))}" data-book-cover="${escapeHtml(p.bookCover)}" />`:'';
+ const bookRow=text=>`<div style="display:flex;gap:10px;align-items:center;">${cover}<div style="min-width:0;">${text}</div></div>`;
+ const quantity=(n,one,many)=>`${escapeHtml(String(n))} ${n===1?one:many}`;
+ const badgeDef=BADGE_DEFS.find(b=>b.key===p.badgeKey);
+ const badge=badgeDef?`${badgeDef.days}-day reading streak badge`:'reading streak badge';
+ switch(p.type){
+  case 'read':return '📖 Read today.';
+  case 'skip':return '😴 Did not read today.';
+  case 'badge_gained':return `🏅 Earned the <b>${escapeHtml(badge)}</b>!`;
+  case 'badge_lost':return `💔 Lost the <b>${escapeHtml(badge)}</b>.`;
+  case 'gift_won':return '🎁 Won a book gift in the draw!';
+  case 'gift_requested':return `📮 Requested <b>${book}</b> from ${userChipHtml(p.giverUid)}.`;
+  case 'gift_completed':return '🎉 Received their book gift!';
+  case 'new_member':return '👋 Joined the club. Welcome!';
+  case 'book_review':return bookRow(`<b>${book}</b><div style="color:var(--gold);font-size:13px;margin:2px 0;">⭐ Rated ${escapeHtml(String(p.rating??''))}/10</div>${p.reviewText?`<div class="muted" style="font-size:13px;">“${escapeHtml(p.reviewText)}”</div>`:''}`);
+  case 'book_review_batch':return `⭐ Rated ${quantity((p.items||[]).length,'book','books')}. <span class="muted" style="font-size:12px;">(tap for details)</span>`;
+  case 'book_added':return bookRow(`📖 Added <b>${book}</b> to their library.`);
+  case 'book_added_batch':return `📖 Added ${quantity((p.items||[]).length,'book','books')} to their library. <span class="muted" style="font-size:12px;">(tap for details)</span>`;
+  case 'record_dethrone':return `👑 Surpassed <b>${escapeHtml(p.dethronedName||'')}</b> in <b>${escapeHtml(window.BH_I18N.label(p.recordLabel||'record total'))}</b>: ${escapeHtml(String(p.recordCount??''))}.`;
+  case 'no_lottery':return `🍀 No penalties this week${p.weekLabel?` (${escapeHtml(p.weekLabel)})`:''}, so no draw was needed!`;
+  case 'rec_personal':return `✎ Recommended a book to <b>${escapeHtml(p.toName||'')}</b>.`;
+  case 'rec_group':return bookRow(`✎ Recommended <b>${book}</b> to the club.`);
+  case 'quarterly_pick':{
+   switch(p.subtype){
+    case 'nominations_open':return `📚 Nominations for the next shared book are open! Nominate up to 3 books over ${quantity(p.days||2,'day','days')} in the shared book selection section.`;
+    case 'nominations_near_end':return '⏰ Only 2 hours left to nominate a shared book. Add your nomination now!';
+    case 'objecting_open':return '🔎 The 1-day objection period has started. If you have recently read a nominated book, submit an objection in the shared book selection section.';
+    case 'objecting_near_end':return '⏰ The objection period ends in 2 hours.';
+    case 'objection_made':return `<b>${escapeHtml(p.name||'')}</b> objected to <b>${book}</b> because they read it recently. The book was removed from the nominations.`;
+    case 'nomination_made':return bookRow(`<b>${escapeHtml(p.name||'')}</b> nominated <b>${book}</b>${p.bookAuthor?` (${escapeHtml(p.bookAuthor)})`:''}.`);
+    case 'round_start':{
+     const round=p.round===p.totalRounds?'Final':p.round===p.totalRounds-1?'Semifinal':`Round ${escapeHtml(String(p.round??''))}`;
+     return `${round} voting has started${p.matchCount?` with ${quantity(p.matchCount,'match','matches')}`:''}! Vote in the shared book selection section.`;
+    }
+    case 'round_near_end':return '⏰ Voting in this round ends in 2 hours.';
+    case 'round_result':return `This round has ended! Advancing to the next round: ${(p.results||[]).map(r=>escapeHtml(r.title||'')).join(', ')}.`;
+    case 'final_winner':return `🏆 Our shared book is <b>${book}</b>! We will read it over the next 3 months.`;
+    case 'discussion_opened':return `💬 Discussion is open for <b>${book}</b>! Submit the completion form to see everyone’s answers and join the conversation.`;
+    case 'gift_lottery_drawn':return `🎁 The draw for members who did not finish the shared book is complete. ${quantity(p.pairCount||0,'member will','members will')} give a book. The gift book will be decided after the next shared book selection.`;
+    case 'gift_lottery_applied':return `🎁 The shared book gifts have been confirmed: <b>${book}</b>! See the Gifts section for details.`;
+    default:return 'Shared book selection updated.';
+   }
+  }
+  default:return null;
+ }
+}
+
 function postTitleFor(p){
+  if(window.BH_I18N.language==='en'){const title=automaticPostTitleEn(p);if(title!==null)return title;}
+
   if(p.type==='user_post') return p.title ? escapeHtml(p.title) : null;
   if(p.type==='poll') return `📊 ${escapeHtml(p.question||window.BH_I18N.pick("Anket","Poll"))}`;
   const T = {
@@ -6575,6 +6634,8 @@ function postTitleFor(p){
   return T[p.type] || null;
 }
 function postBodyHtml(p, expanded){
+  if(window.BH_I18N.language==='en'){const body=automaticPostBodyEn(p);if(body!==null)return body;}
+
   const name = escapeHtml(p.name||'');
   switch(p.type){
     case 'read': return `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:5px; flex:0 0 auto;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>${p.variantText ? escapeHtml(p.variantText) : window.BH_I18N.pick("Bugün okudu.","Read today.")}`;
@@ -7365,7 +7426,7 @@ async function openPostModal(postId){
     ${(c.uid===currentUid||myProfile.role==='admin')?`<button class="rec-comment-del" data-del-postcomment="${c.id}">✕</button>`:''}
   </div>`).join('');
   const batchItemsHtml = (p.type==='book_review_batch' || p.type==='book_added_batch') ? `
-    <div class="rec-comments-label" style="margin-top:2px;">📋 Kronolojik Liste</div>
+    <div class="rec-comments-label" style="margin-top:2px;">${window.BH_I18N.pick("📋 Kronolojik Liste","📋 Activity timeline")}</div>
     ${(p.items||[]).slice().sort((a,b)=> new Date(a.at)-new Date(b.at)).map(it=>`<div class="rec-comment-row">
       ${it.bookCover?`<img src="${it.bookCover}" alt="" style="width:32px;height:46px;object-fit:cover;border-radius:4px;" />`:''}
       <div class="rec-comment-body">
@@ -11267,6 +11328,7 @@ async function markNotifReadById(id){
 </script>
 </body>
 </html>
+
 
 
 
