@@ -1,5 +1,7 @@
-const CACHE = "kitap-kulubu-v22-draw-explain";
-const ASSETS = ["./manifest.json?v=brand-2", "./style.css?v=material-51-draw-explain", "./logo-mark.png", "./icon-192.png?v=brand-2", "./icon-512.png?v=brand-2", "./favicon.png?v=brand-2", "./apple-touch-icon.png?v=brand-2"];
+const CACHE = "kitap-kulubu-v23-split-js";
+// Sadece nadiren değişen dosyalar önceden önbelleğe alınır. Kod (app.js, i18n.js, style.css) ve
+// HTML burada yok: onlar her açılışta sunucuya "değişti mi?" diye sorularak alınıyor (aşağıda).
+const ASSETS = ["./manifest.json?v=brand-2", "./logo-mark.png", "./icon-192.png?v=brand-2", "./icon-512.png?v=brand-2", "./favicon.png?v=brand-2", "./apple-touch-icon.png?v=brand-2"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -18,14 +20,21 @@ self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
 
   const isHtml = e.request.mode === "navigate" || url.pathname.endsWith(".html") || url.pathname.endsWith("/");
+  const isCode = url.pathname.endsWith(".js") || url.pathname.endsWith(".css");
 
-  if (isHtml) {
-    // HTML: her zaman önce ağdan taze sürümü çekmeye çalış, sadece ağ yoksa (offline) önbelleğe düş.
+  if (isHtml || isCode) {
+    // HTML ve kod: her açılışta sunucuya "değişti mi?" diye sorulur (no-cache = yeniden doğrula).
+    // Değişmediyse sunucu çok küçük bir "304" döner ve tarayıcının elindeki kopya kullanılır;
+    // değiştiyse yenisi iner. Böylece HTML ile kod hep aynı sürümde kalır ve dosya adına sürüm
+    // numarası eklemeyi unutmak eski kodun takılı kalmasına yol açmaz. Ağ yoksa önbelleğe düşer.
     e.respondWith(
-      fetch(e.request, { cache: "no-store" })
+      fetch(e.request, { cache: "no-cache" })
         .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE).then((c) => c.put(e.request, clone));
+          // Sadece başarılı yanıtları sakla; sunucu hatası çevrimdışı yedeğin yerini almasın.
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then((c) => c.put(e.request, clone));
+          }
           return res;
         })
         .catch(() => caches.match(e.request))
@@ -33,7 +42,7 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // Statik dosyalar (ikonlar, manifest): önce önbellek, yoksa ağdan çek.
+  // Diğer statik dosyalar (ikonlar, manifest): önce önbellek, yoksa ağdan çek.
   e.respondWith(
     caches.match(e.request).then((cached) => {
       return (

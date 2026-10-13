@@ -52,7 +52,7 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 
 ## Tech Stack
 
-- **Frontend**: A vanilla HTML/CSS/JavaScript application (`index.html` + `style.css`), with no build step or framework dependency.
+- **Frontend**: A vanilla HTML/CSS/JavaScript application (`index.html` + `app.js` + `i18n.js` + `style.css`), with no build step or framework dependency.
 - **Backend**: [Firebase](https://firebase.google.com/) - Authentication, Firestore, and Cloud Functions (2nd gen) for push notifications and scheduled reminders.
 - **Hosting**: Static hosting on GitHub Pages, with a service worker (`sw.js`) handling caching and background push delivery.
 - **External data**: [Open Library API](https://openlibrary.org/developers/api) as the primary book data source, with the [Google Books API](https://developers.google.com/books) as a fallback.
@@ -61,9 +61,11 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 
 ```
 .
-├── index.html               Application source (HTML and JavaScript)
+├── index.html               Page markup (loads the files below)
+├── app.js                   Application logic (ES module)
+├── i18n.js                  English translations and the language switch (loaded before first paint)
 ├── style.css                Application styles (design tokens, components, layout)
-├── sw.js                    Service worker: asset caching and background push notifications
+├── sw.js                    Service worker: offline caching (code is revalidated on every open) and background push
 ├── manifest.json            PWA manifest (name, icons, theme color)
 ├── icon-512.png             App icon (home screen / favicon)
 ├── icon-192.png
@@ -91,7 +93,7 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 2. Under **Authentication**, enable the Email/Password provider (and Google, if desired).
 3. Under **Firestore Database**, create a database, then paste the contents of `firestore.rules` into the Rules tab and publish.
 4. Under **Cloud Messaging**, generate a Web Push certificate (VAPID key).
-5. In `index.html`, replace the Firebase configuration object (`apiKey`, `authDomain`, `projectId`, etc.) and the VAPID key with the values from your own project.
+5. In `app.js`, replace the Firebase configuration object (`apiKey`, `authDomain`, `projectId`, etc.) and the VAPID key with the values from your own project.
 
 ### Cloud Functions
 
@@ -114,11 +116,11 @@ All scheduled functions require Cloud Scheduler, which is only available on the 
 
 ### Google Books API Key (optional)
 
-Open Library is used as the primary book data source and requires no API key. If you want to configure Google Books as a more reliable fallback, add your own key to the `GOOGLE_BOOKS_API_KEY` constant in `index.html`, and restrict it to your domain in Google Cloud Console.
+Open Library is used as the primary book data source and requires no API key. If you want to configure Google Books as a more reliable fallback, add your own key to the `GOOGLE_BOOKS_API_KEY` constant in `app.js`, and restrict it to your domain in Google Cloud Console.
 
 ## Configuration
 
-All configuration lives directly in `index.html` as plain constants near the top of the script:
+All configuration lives directly in `app.js` as plain constants near the top of the file:
 
 | Constant | Purpose |
 |---|---|
