@@ -861,6 +861,9 @@ function getMonday(d){ const day=d.getDay(); const diff = day===0?-6:1-day; cons
 function weekDates(monday){ const arr=[]; for(let i=0;i<7;i++) arr.push(toStr(addDays(monday,i))); return arr; }
 const MONTHS_TR = [window.BH_I18N.pick("Ocak","January"),window.BH_I18N.pick("Şubat","February"),window.BH_I18N.pick("Mart","March"),window.BH_I18N.pick("Nisan","April"),window.BH_I18N.pick("Mayıs","May"),window.BH_I18N.pick("Haziran","June"),window.BH_I18N.pick("Temmuz","July"),window.BH_I18N.pick("Ağustos","August"),window.BH_I18N.pick("Eylül","September"),window.BH_I18N.pick("Ekim","October"),window.BH_I18N.pick("Kasım","November"),window.BH_I18N.pick("Aralık","December")];
 function isWideScreen(){ return window.matchMedia && window.matchMedia('(min-width:700px)').matches; }
+// Firestore'a kaydedilen (herkesin gördüğü) metinler için dilden ve ekran genişliğinden bağımsız
+// tarih; sunucudaki fmtShortBackend ile aynı "gg.aa" biçimi.
+function fmtStoredDate(dstr){ const d = fromStr(dstr); return pad(d.getDate())+"."+pad(d.getMonth()+1); }
 function fmtShort(dstr){
   const d = fromStr(dstr);
   if(isWideScreen()) return `${d.getDate()} ${MONTHS_TR[d.getMonth()]}`;
@@ -2590,7 +2593,8 @@ async function finalizeWeek(monday, force){
     didWrite = true;
   });
   if(didWrite){
-    const rangeLabel = `${fmtShort(data.weekStart)}–${fmtShort(data.weekEnd)}`;
+    // Bildirimlere ve gönderiye kaydedilen etiket: dil ayarından ve ekran genişliğinden bağımsız.
+    const rangeLabel = `${fmtStoredDate(data.weekStart)}–${fmtStoredDate(data.weekEnd)}`;
     if(pairs.length===0){
       createPost('no_lottery', { weekLabel: rangeLabel });
     }
@@ -2810,7 +2814,8 @@ function renderAdminToday(){
         if(wasNew && btn.dataset.status==='skip') createPost('skip', {variantText: await pickVariantMessage('skip')});
         if(isSettingMark){
           const markedName = (usersCache[btn.dataset.uid] && usersCache[btn.dataset.uid].name) || '';
-          notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?window.BH_I18N.pick("Okudum","Read"):window.BH_I18N.pick("Okumadım","Didn’t read")}" işaretledi.`, 'week', currentUid);
+          // Bildirim tüm üyelere gidip kayıtlı kalıyor; gönderenin dil ayarından bağımsız Türkçe kalmalı.
+          notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week', currentUid);
         }
       } finally {
         setTimeout(()=> stampBtnInFlight.delete(key), 1200);
