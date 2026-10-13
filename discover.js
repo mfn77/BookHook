@@ -11,11 +11,12 @@ import {
 // app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
 // açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
 import {
-  closeModal, createOrBatchPost, currentUid, db, escapeHtml, hideAnchoredPopover, hubLayoutMode,
+  closeModal, currentUid, db, escapeHtml, hideAnchoredPopover, hubLayoutMode,
   markLoaded, materialBookCover, myProfile, refreshLibraryButtons, searchGoogleBooks,
   searchOpenLibrary, showAnchoredPopover, showCachedOrPlaceholder, showSimpleInfoModal,
   showToast, sleep, userChipHtml
 } from "./app.js";
+import { createOrBatchPost } from "./feed.js";
 
 function discoverGoToOffset(offset){
   const total = DISCOVER_CATEGORIES.length;
