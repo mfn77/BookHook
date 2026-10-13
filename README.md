@@ -78,8 +78,9 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 └── functions/
     ├── package.json         Cloud Functions dependencies (firebase-admin, firebase-functions)
     ├── index.js             Cloud Functions source (push notifications and scheduled reminders)
-    └── shared/
-        └── lottery.js       Weekly gift draw rules, used by both the app (app.js) and Cloud Functions
+    └── shared/              Rules used by both the app (app.js) and Cloud Functions
+        ├── lottery.js       Weekly gift draw
+        └── streak.js        Reading streaks and badges
 ```
 
 ## Getting Started

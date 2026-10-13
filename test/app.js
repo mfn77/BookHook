@@ -23,6 +23,10 @@ import {
 import {
   LOTTERY_ALGO, runLottery, drawHistory, checkDrawRules
 } from "../functions/shared/lottery.js";
+// Seri ve rozet kuralları da sunucuyla ortak (gece 06:00 rozet kesinleştirmesi de bunu kullanıyor).
+import {
+  BADGE_DEFS as SHARED_BADGE_DEFS, currentTierForStreak, countStreak, badgeTransition, replayBadgeHistory
+} from "../functions/shared/streak.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDpRov8Qs7rPQ7lILyhs7DuRHdQpTJZWJ4",
@@ -1657,23 +1661,8 @@ async function recomputeUserBadgeHistory(uid){
   // Okunamayan bir gün "okumadı" sayılırsa rozet geçmişi yanlış yeniden yazılırdı; hata fırlatıp
   // bu üyeyi hiç güncellemeden bırakıyoruz.
   const snaps = await Promise.all(dateStrs.map(ds=> getDoc(doc(db,'days',ds,'answers',uid))));
-  const badgeCounts = {};
-  let streak = 0;
-  let prevTier = null;
-  for(let i=0;i<dateStrs.length;i++){
-    const snap = snaps[i];
-    const status = (snap && snap.exists()) ? snap.data().status : null;
-    if(status==='read'){
-      streak++;
-    } else {
-      if(prevTier){ badgeCounts[prevTier] = (badgeCounts[prevTier]||0) + 1; }
-      streak = 0;
-      prevTier = null;
-    }
-    const tierNow = currentTierForStreak(streak);
-    if(tierNow !== prevTier) prevTier = tierNow;
-  }
-  const updates = { badgeCounts, lastStreak: streak, currentTier: prevTier, currentStreak: streak };
+  const {badgeCounts, streak, tier} = replayBadgeHistory(snaps.map(snap=> snap.exists() ? snap.data().status : null));
+  const updates = { badgeCounts, lastStreak: streak, currentTier: tier, currentStreak: streak };
   try{
     await updateDoc(doc(db,'users',uid), updates);
     Object.assign(u, updates);
@@ -1731,41 +1720,19 @@ async function loadDraws(){
   drawsCache = [];
   snap.forEach(d=> drawsCache.push({id:d.id, ...d.data()}));
 }
-// Önceden gün gün, birbirini bekleyerek (sequential await) geriye gidiliyordu — uzun bir serisi
-// olan biri için bu, o kişiyi hesaplarken onlarca ardışık ağ gidiş-dönüşü demekti (bu fonksiyon
-// HER aktif üye için çağrıldığından, uygulamanın birçok yerinde genel bir yavaşlığa yol
-// açıyordu). Artık ihtiyaç olabilecek TÜM günler tek seferde, aynı anda (Promise.all) çekiliyor;
-// sonuç ve mantık birebir aynı, sadece ağ beklemesi artık ardışık değil paralel.
-// Eskiden sabit 61 günlük pencereye bakıyordu; seri 60'ı geçince orada takılı kalıyordu. Artık
-// 31'er günlük paketlerle, okunmamış ilk güne rastlayana kadar geriye gidiyor (üst sınır yok).
-// Okuma hatası "o gün okumadı" sayılmıyor, hata fırlatılıyor; yanlış kısa bir seri gösterilmesin.
-async function computeStreak(uid){
-  const isRead = (snap)=> snap.exists() && snap.data().status==='read';
-  const today = nowLogical(), CHUNK = 31;
-  let streak = 0;
-  for(let offset=0;;offset+=CHUNK){
-    const dates = Array.from({length:CHUNK},(_,i)=> toStr(addDays(today,-(offset+i))));
-    const snaps = await Promise.all(dates.map(ds=> getDoc(doc(db,'days',ds,'answers',uid))));
-    for(let i=0;i<snaps.length;i++){
-      if(offset===0 && i===0 && !isRead(snaps[0])) continue; // bugün henüz işaretlenmediyse dünden başla
-      if(!isRead(snaps[i])) return streak;
-      streak++;
-    }
-  }
+// Seri sayımı ortak dosyada (countStreak): bugünden (henüz işaretlenmediyse dünden) geriye, okunmamış
+// ilk güne kadar, üst sınırsız. Okunamayan gün hata fırlatır, "okumadı" sayılmaz.
+function computeStreak(uid){
+  return countStreak(todayStr(), ds=> getDoc(doc(db,'days',ds,'answers',uid)).then(snap=> snap.exists() ? snap.data().status : null), {startMayBeUnmarked:true});
 }
 
 /* ============ ROZET SİSTEMİ ============ */
 // Rozetler artık KALICI değil, o anki aktif seriye bağlı: seri bozulunca profil resmindeki
 // çerçeve/rozet de kayboluyor. Kaç kere kazanıldığı ayrıca badgeCounts içinde sayılıyor
 // (Kitap Kurtları sekmesindeki geçmiş tablosu için).
-const BADGE_DEFS = [
-  {key:'b3',  days:3,  icon:'🔥', label:window.BH_I18N.pick("3 gün aralıksız seri","3-day reading streak"), color:'#CD7F32'},
-  {key:'b5',  days:5,  icon:'⭐', label:window.BH_I18N.pick("5 gün aralıksız seri","5-day reading streak"), color:'#9E9E9E'},
-  {key:'b7',  days:7,  icon:'🎯', label:window.BH_I18N.pick("1 hafta aralıksız seri","1-week reading streak"), color:'#FFC107'},
-  {key:'b14', days:14, icon:'💎', label:window.BH_I18N.pick("2 hafta aralıksız seri","2-week reading streak"), color:'#29B6F6'},
-  {key:'b21', days:21, icon:'🏆', label:window.BH_I18N.pick("3 hafta aralıksız seri","3-week reading streak"), color:'#AB47BC'},
-  {key:'b30', days:30, icon:'🐺', label:window.BH_I18N.pick("Kitap Kurdu (1 ay aralıksız seri)","Bookworm (1-month reading streak)"), color:'#FF6F00'}
-];
+// Rozet tanımları ortak dosyada; ekranda üyenin diline göre ad gösteriliyor. Kayıtlara (gönderi,
+// bildirim) her zaman ortak tanımdaki Türkçe ad yazılır (bkz. checkAndAwardBadges).
+const BADGE_DEFS = SHARED_BADGE_DEFS.map(def=>({...def, label: window.BH_I18N.pick(def.label, def.labelEn)}));
 // Rozet kavramları ve eşikleri aynı; ikonlar uygulamaya ait vektör çizimler.
 function badgeIllustration(key){
  const art={
@@ -1780,11 +1747,6 @@ function badgeIllustration(key){
  return `<svg class="badge-art badge-art-${key}" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="31" fill="currentColor" opacity=".1"/>${art[key]}</svg>`;
 }
 
-function currentTierForStreak(streak){
-  let tier = null;
-  BADGE_DEFS.forEach(def=>{ if(streak>=def.days) tier = def.key; });
-  return tier;
-}
 
 const badgeCheckInFlight = new Set();
 const stampBtnInFlight = new Set();
@@ -1848,14 +1810,12 @@ async function checkAndAwardBadges(uid, streak){
     const u = usersCache[uid];
     if(!u) return;
     const lastStreak = typeof u.lastStreak==='number' ? u.lastStreak : 0;
-    const prevTier = u.currentTier || null;
-    const newTier = currentTierForStreak(streak);
-
-    if(streak < lastStreak) return; // düşüş: kesinleşme geceye bırakılıyor, burada hiçbir şey yapılmaz
-    if(!(newTier && newTier !== prevTier)) return; // değişiklik yok
-    // Aynı döngü içinde daha yüksek bir eşiğe ulaşıldı: sadece bildirim gönder,
-    // geçmişe (badgeCounts) henüz sayma — seri bitince (gece) sayılacak.
-    const notifyDef = BADGE_DEFS.find(d=>d.key===newTier);
+    const {kind, newTier} = badgeTransition(streak, lastStreak, u.currentTier || null);
+    // Düşüş: kesinleşme geceye (sunucuya) bırakılıyor. Sadece yeni bir rozete ulaşınca bildir;
+    // geçmişe (badgeCounts) henüz sayma, seri bitince (gece) sayılacak.
+    if(kind!=='rise') return;
+    // Gönderi ve bildirim herkesin gördüğü kayıt: üyenin dil ayarından bağımsız Türkçe ad.
+    const notifyDef = SHARED_BADGE_DEFS.find(d=>d.key===newTier);
 
     const updates = { lastStreak: streak, currentTier: newTier, currentStreak: streak };
     await updateDoc(doc(db,'users',uid), updates);

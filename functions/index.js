@@ -281,37 +281,14 @@ exports.autoMarkMissedReading = onSchedule(
   }
 );
 
-const BADGE_DEFS_BACKEND = [
-  { key: "b3", days: 3, icon: "🔥", label: "3 gün aralıksız seri" },
-  { key: "b5", days: 5, icon: "⭐", label: "5 gün aralıksız seri" },
-  { key: "b7", days: 7, icon: "🎯", label: "1 hafta aralıksız seri" },
-  { key: "b14", days: 14, icon: "💎", label: "2 hafta aralıksız seri" },
-  { key: "b21", days: 21, icon: "🏆", label: "3 hafta aralıksız seri" },
-  { key: "b30", days: 30, icon: "🐺", label: "Kitap Kurdu (1 ay aralıksız seri)" },
-];
-function currentTierForStreakBackend(streak) {
-  let tier = null;
-  BADGE_DEFS_BACKEND.forEach((def) => { if (streak >= def.days) tier = def.key; });
-  return tier;
-}
-// Bir kullanıcının DÜN akşamı itibariyle (artık kesinleşmiş, değişemeyecek) kaç gündür
-// aralıksız okuduğunu hesaplar — istemcideki computeStreak'in "dünden geriye" sunucu karşılığı.
-// Sabit 61 günlük pencere yerine, okunmamış ilk güne kadar 31'er günlük paketlerle geriye gidiyor
-// (istemcideki computeStreak ile aynı) — seri 60'ı geçince orada takılı kalmasın. Okuma hatası
-// "okumadı" sayılmıyor, hata fırlatılıyor: aksi halde geçici bir hata seriyi bozulmuş gösterip
-// kalıcı bir "rozet kaybedildi" gönderisi ve rozet geçmişine yanlış bir sayım yazardı.
-async function computeStreakBackend(uid) {
-  const yesterday = dateNDaysAgoInIstanbul(1);
-  const CHUNK = 31;
-  let streak = 0;
-  for (let offset = 0; ; offset += CHUNK) {
-    const dates = Array.from({ length: CHUNK }, (_, i) => addDaysToDateStr(yesterday, -(offset + i)));
-    const snaps = await Promise.all(dates.map((ds) => db.collection("days").doc(ds).collection("answers").doc(uid).get()));
-    for (const snap of snaps) {
-      if (!(snap.exists && snap.data().status === "read")) return streak;
-      streak++;
-    }
-  }
+// Seri ve rozet kuralları uygulamayla ortak tek dosyada: functions/shared/streak.js.
+const loadStreak = () => import("./shared/streak.js");
+// Bir kullanıcının DÜN akşamı itibariyle (artık kesinleşmiş) kaç gündür aralıksız okuduğu.
+// Okuma hatası "okumadı" sayılmaz, hata fırlatılır: aksi halde geçici bir hata seriyi bozulmuş
+// gösterip kalıcı bir "rozet kaybedildi" gönderisi ve rozet geçmişine yanlış bir sayım yazardı.
+async function computeStreakBackend(uid, countStreak) {
+  return countStreak(dateNDaysAgoInIstanbul(1), (ds) =>
+    db.collection("days").doc(ds).collection("answers").doc(uid).get().then((snap) => (snap.exists ? snap.data().status : null)));
 }
 async function backendCheckAndPostDethrone(usersMap, uid, newCount, getOthersCount, label, icon) {
   let maxUid = null, maxCount = 0;
@@ -332,6 +309,7 @@ async function backendCheckAndPostDethrone(usersMap, uid, newCount, getOthersCou
 // içinde bir yanlışlığı (örn. yanlışlıkla "okumadım" işaretleyip hemen düzeltmesi) düzeltirse,
 // bu hiçbir zaman kalıcı bir rozet/gönderiye dönüşmez.
 async function settleDailyBadges() {
+  const { BADGE_DEFS, countStreak, badgeTransition } = await loadStreak();
   const usersSnap = await db.collection("users").get();
   const usersMap = {};
   usersSnap.forEach((d) => { usersMap[d.id] = d.data(); });
@@ -340,7 +318,7 @@ async function settleDailyBadges() {
     if (u.banned || u.deleted) continue;
     let streak;
     try {
-      streak = await computeStreakBackend(uid);
+      streak = await computeStreakBackend(uid, countStreak);
     } catch (e) {
       // Bu gece bu üyeyi atla; yarın gece lastStreak ile karşılaştırma doğru şekilde yapılır.
       console.error(`[settleDailyBadges] ${uid} serisi okunamadı, atlandı:`, e);
@@ -348,10 +326,10 @@ async function settleDailyBadges() {
     }
     const lastStreak = typeof u.lastStreak === "number" ? u.lastStreak : 0;
     const prevTier = u.currentTier || null;
-    const newTier = currentTierForStreakBackend(streak);
-    if (streak === lastStreak && prevTier === newTier) continue;
+    const { kind, newTier } = badgeTransition(streak, lastStreak, prevTier);
+    if (kind === "none") continue;
 
-    if (streak < lastStreak) {
+    if (kind === "drop") {
       const badgeCounts = { ...(u.badgeCounts || {}) };
       let historyIncremented = false;
       if (prevTier) {
@@ -361,18 +339,19 @@ async function settleDailyBadges() {
       await db.collection("users").doc(uid).update({ lastStreak: streak, badgeCounts, currentTier: newTier, currentStreak: streak });
       usersMap[uid] = { ...u, lastStreak: streak, badgeCounts, currentTier: newTier, currentStreak: streak };
       if (historyIncremented && prevTier) {
-        const lostDef = BADGE_DEFS_BACKEND.find((d) => d.key === prevTier);
+        const lostDef = BADGE_DEFS.find((d) => d.key === prevTier);
         if (lostDef) {
           await createPostBackend("badge_lost", { badgeKey: lostDef.key, badgeLabel: lostDef.label, badgeIcon: lostDef.icon }, uid, u.name);
           await backendCheckAndPostDethrone(usersMap, uid, badgeCounts[lostDef.key] || 1, (ouid) => (usersMap[ouid].badgeCounts || {})[lostDef.key], `${lostDef.label} rozeti`, lostDef.icon);
         }
       }
-    } else if (newTier && newTier !== prevTier) {
+    } else {
+      // kind === "rise"
       // İstemci genelde bunu anlık yakalar; burası sadece kullanıcı hiç uygulamayı açmadan
       // eşiği aştıysa devreye giren bir güvenlik ağı.
       await db.collection("users").doc(uid).update({ lastStreak: streak, currentTier: newTier, currentStreak: streak });
       usersMap[uid] = { ...u, lastStreak: streak, currentTier: newTier, currentStreak: streak };
-      const notifyDef = BADGE_DEFS_BACKEND.find((d) => d.key === newTier);
+      const notifyDef = BADGE_DEFS.find((d) => d.key === newTier);
       if (notifyDef) {
         await notifyUserBackend(uid, `🎉 Tebrikler! "${notifyDef.label}" rozetini kazandın!`, u.role === "admin" ? "worms" : "mworms");
         await createPostBackend("badge_gained", { badgeKey: notifyDef.key, badgeLabel: notifyDef.label, badgeIcon: notifyDef.icon }, uid, u.name);
