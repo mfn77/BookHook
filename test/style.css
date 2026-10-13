@@ -594,3 +594,8 @@ html[data-palette="amber"][data-theme="dark"]{--paper:#18130b;--paper-2:#272016;
 .palette-swatch svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;visibility:hidden}
 .palette-choices button.active .palette-swatch svg{visibility:visible}
 .palette-choices button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+
+/* Language selector uses the existing theme segmented buttons. */
+.language-setting{margin-bottom:24px}.language-setting h3{margin-top:0}
+html[lang="en"] .hub-layout-segmented button{font-size:11px}
