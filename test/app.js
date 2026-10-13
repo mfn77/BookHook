@@ -19,6 +19,10 @@ import {
 import {
   getFunctions, httpsCallable
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+// Haftalık kura kuralları sunucuyla ortak tek dosyada (pazartesi otomatik kurası da bunu kullanıyor).
+import {
+  LOTTERY_ALGO, runLottery, drawHistory, checkDrawRules
+} from "../functions/shared/lottery.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDpRov8Qs7rPQ7lILyhs7DuRHdQpTJZWJ4",
@@ -123,93 +127,11 @@ function turkishAccusativeName(name){
   return `${name}'${endsInVowel ? 'y'+v : v}`;
 }
 
-/* ============ ORTAK KURA ALGORİTMASI ============ */
-// statsArr: [{uid,name,miss,read,marked,joinDate}]
-// Ağırlıklı havuzdan (birisinin şansını azaltmadan tamamen elemeden) rastgele birini seçip
-// havuzdan çıkarır. Ağırlığı düşük olan biri de, havuzda TEK kişi kaldığında yine seçilir
-// (payı toplam ağırlığın %100'ü olur) — yani "başka biri yoksa mecbur çıkar" kuralı doğal olarak sağlanır.
-function weightedPickWithoutReplacement(pool){
-  const totalWeight = pool.reduce((sum,r)=>sum+r.weight,0);
-  let rnd = Math.random()*totalWeight;
-  for(let i=0;i<pool.length;i++){
-    rnd -= pool[i].weight;
-    if(rnd<=1e-9) return pool.splice(i,1)[0];
-  }
-  return pool.splice(pool.length-1,1)[0]; // yuvarlama hatasına karşı güvenlik ağı
-}
-// Bir kişinin bu haftaki ALICI olma ağırlığını, bugüne kadarki TÜM kura geçmişine bakarak
-// hesaplar. SADECE daha önce en az bir kez kazanmış kişiler için çağrılır — hiç kazanmayanlar
-// artık buildTierPools() içinde ağırlığa hiç girmeden, kesin öncelikli bir kuyruktan çıkıyor
-// (bkz. aşağısı). Ağırlık:
-// - (kişinin toplam kazandığı hediye sayısı / bugüne kadar dağıtılan TOPLAM hediye sayısı)
-//   oranının 2 KATI kadar (yüzdeye yuvarlanarak) DÜŞER. Örn. kişi 4 kere kazanmış, toplamda 12
-//   hediye dağıtılmış: 4/12=%33, 2 katı %66 → şansı %66 düşer.
-// - Bunun üstüne, eğer bir önceki hafta da kazandıysa, AYRICA %80 daha düşer (eklenerek).
-function computeReceiverWeight(uid, winCounts, totalGiftsGivenSoFar, previousWinners){
-  const myWins = (winCounts && winCounts[uid]) || 0;
-  const share = totalGiftsGivenSoFar>0 ? myWins/totalGiftsGivenSoFar : 0;
-  const reduction = Math.round(share*100*2)/100;
-  let weight = 1 - reduction;
-  if(previousWinners && previousWinners.has(uid)) weight -= 0.80;
-  return Math.max(weight, 0.05); // sıfıra/negatife düşmesin diye güvenlik tabanı
-}
-function buildWeightedPool(list, previousWinners, winCounts, totalGiftsGivenSoFar){
-  return list.map(s=>({...s, weight: computeReceiverWeight(s.uid, winCounts, totalGiftsGivenSoFar, previousWinners)}));
-}
-// Bir tier'ı (tam okuyan/paslı) ikiye ayırır:
-// - neverWonQueue: hiç hediye kazanmamış olanlar. Ağırlığa HİÇ girmiyorlar — üyelik tarihine
-//   göre KESİN sırayla (en uzun süredir üye olan, yani en uzun süredir hiç kazanmadan bekleyen,
-//   en önde) bir kuyruk. Bu kuyruk tamamen tükenmeden ağırlıklı havuza hiç geçilmiyor.
-// - everWonPool: en az bir kez kazanmış olanlar, mevcut ağırlıklı (kazandığı hediye sayısına ve
-//   bir önceki hafta kazanıp kazanmadığına göre) rastgele seçim.
-function lotteryJoinKey(s){ return (s.joinDate||'9999-99-99')+'|'+(s.joinedAt||''); }
+/* ============ KURA ============
+   Kuralın kendisi functions/shared/lottery.js'te (sunucuyla ortak). Burada sadece uygulamaya
+   özel yardımcılar var. */
+// Üyenin tam kayıt anı: aynı gün katılan hiç kazanmamışlar arasındaki sırayı belirler.
 function joinedAtOf(uid){ const c=usersCache[uid]?.createdAt; const t=c?new Date(c):null; return t&&!isNaN(t)?t.toISOString():''; }
-function buildTierPools(base, previousWinners, winCounts, totalGiftsGivenSoFar){
-  const neverWon = base.filter(s=>!((winCounts||{})[s.uid]));
-  const everWon = base.filter(s=>(winCounts||{})[s.uid]);
-  // Önce üyelik günü, aynı gün katılanlar arasında da tam kayıt anı: "en uzun süredir bekleyen" kesin
-  // belli olsun (eskiden aynı gün katılanlar arasındaki sıra rastgeleydi).
-  neverWon.sort((a,b)=> lotteryJoinKey(a).localeCompare(lotteryJoinKey(b)));
-  return { neverWonQueue: neverWon, everWonPool: buildWeightedPool(everWon, previousWinners, winCounts, totalGiftsGivenSoFar) };
-}
-function pickFromTierPools(tier){
-  if(tier.neverWonQueue.length>0) return tier.neverWonQueue.shift();
-  if(tier.everWonPool.length>0) return weightedPickWithoutReplacement(tier.everWonPool);
-  return null;
-}
-function tierPoolsEmpty(tier){ return tier.neverWonQueue.length===0 && tier.everWonPool.length===0; }
-// previousWinners: bir önceki haftanın kura sonucunda hediye kazanmış kişilerin uid'lerinden
-// oluşan bir Set. winCounts/totalGiftsGivenSoFar: bugüne kadarki TÜM haftaların kura
-// sonuçlarından hesaplanan, kimin kaç kere kazandığı ve toplamda kaç hediye dağıtıldığı.
-function runLottery(statsArr, previousWinners, winCounts, totalGiftsGivenSoFar){
-  const eligible = statsArr.filter(s=>s.marked>0);
-  const givers = shuffle(eligible.filter(s=>s.miss>=2));
-  const tier1Base = shuffle(eligible.filter(s=>s.miss===0));
-  const tier2Base = shuffle(eligible.filter(s=>s.miss===1));
-  const safeCount = tier1Base.length + tier2Base.length;
-  // Alıcı havuzu: önce tüm "temiz" (tier1), sonra tüm "1 pas geçmiş" (tier2) kişiler — tier1
-  // tamamen tükenmeden tier2'ye geçilmez. Her tier'ın İÇİNDE de önce hiç kazanmamışlar (üyelik
-  // süresine göre kesin sırayla), sonra ağırlıklı havuz. Her cezalı bu sıradan bir alıcı alır
-  // (aynı alıcı, o tur bitmeden ikinci kez verilmez). Cezalı sayısı, havuzdaki kişi sayısından
-  // fazlaysa yeni bir tur başlar (havuzlar aynı kurallarla yeniden doldurulur) — bu yüzden
-  // ekstra hediyeler de önce "temiz" kişilere, ancak herkes en az bir kez aldıktan sonra dağılır.
-  let tier1 = buildTierPools(tier1Base, previousWinners, winCounts, totalGiftsGivenSoFar);
-  let tier2 = buildTierPools(tier2Base, previousWinners, winCounts, totalGiftsGivenSoFar);
-  const pairs = [];
-  givers.forEach((g)=>{
-    if(safeCount===0){
-      pairs.push({giverUid:g.uid||null, giverName:g.name, receiverUid:null, receiverName:null});
-      return;
-    }
-    if(tierPoolsEmpty(tier1) && tierPoolsEmpty(tier2)){
-      tier1 = buildTierPools(tier1Base, previousWinners, winCounts, totalGiftsGivenSoFar);
-      tier2 = buildTierPools(tier2Base, previousWinners, winCounts, totalGiftsGivenSoFar);
-    }
-    const r = !tierPoolsEmpty(tier1) ? pickFromTierPools(tier1) : pickFromTierPools(tier2);
-    pairs.push({giverUid:g.uid||null, giverName:g.name, receiverUid:r.uid||null, receiverName:r.name});
-  });
-  return { giverCount: givers.length, safeCount, pairs };
-}
 
 /* ============ DURUM ============ */
 let currentUid = null;
@@ -1774,31 +1696,10 @@ async function finalizeWeek(monday, force){
     const existing = await getDoc(ref);
     if(existing.exists()) return {already:true, data:existing.data()};
   }
-  // Bir önceki haftanın kazananlarını (alıcılarını) çek — bu haftaki alıcı seçiminde onların
-  // şansını ek %20 azaltmak için.
-  const prevWeekStr = toStr(addDays(monday,-7));
-  const prevDrawSnap = await getDoc(doc(db,'draws',prevWeekStr));
-  const previousWinners = new Set();
-  if(prevDrawSnap.exists()){
-    (prevDrawSnap.data().pairs||[]).forEach(p=>{ if(p.receiverUid) previousWinners.add(p.receiverUid); });
-  }
-  // Bugüne kadarki TÜM haftaların kura sonuçlarından, kimin kaç kere kazandığını ve toplamda
-  // kaç hediye dağıtıldığını hesapla (yeni ağırlıklandırma formülü için).
-  const winCounts = {};
-  let totalGiftsGivenSoFar = 0;
+  // Kazanma geçmişi: tüm kuralar; bu haftanın kendi eski sonucu ("yeniden çek") hariç.
   const allDrawsSnap = await getDocs(collection(db,'draws'));
-  allDrawsSnap.forEach(d=>{
-    // Bu haftanın (üzerine yazılacak/zorla yeniden çekilecek) ESKİ kendi sonucunu sayma — yoksa
-    // "yeniden çek" o haftanın henüz geçersiz hale gelecek sonucunu geçmişe dahil edip ağırlıkları
-    // bozardı.
-    if(d.id===wk) return;
-    (d.data().pairs||[]).forEach(p=>{
-      if(p.receiverUid){
-        winCounts[p.receiverUid] = (winCounts[p.receiverUid]||0) + 1;
-        totalGiftsGivenSoFar++;
-      }
-    });
-  });
+  const {winCounts, totalGiftsGivenSoFar, previousWinners} = drawHistory(
+    allDrawsSnap.docs.map(d=>({id:d.id, pairs:d.data().pairs})), wk, toStr(addDays(monday,-7)));
   const stats = await computeWeekStats(monday);
   const {giverCount, safeCount, pairs} = runLottery(stats, previousWinners, winCounts, totalGiftsGivenSoFar);
   const data = { weekStart:wk, weekEnd: toStr(addDays(monday,6)), giverCount, safeCount, pairs, generatedAt: new Date().toISOString(), algo: LOTTERY_ALGO };
@@ -2293,43 +2194,18 @@ document.getElementById('forceCloseBtn').addEventListener('click', async ()=>{
    Bir haftanın kura sonucunu, o haftanın kayıtları ve o haftadan ÖNCEKİ kazanma geçmişiyle
    yeniden değerlendirip kimin hangi grupta olduğunu, hiç kazanmamışların neden seçilmediğini ve
    sonucun öncelik kurallarına uyup uymadığını gösterir. */
-const LOTTERY_ALGO = 'hic-kazanmayan-oncelikli-v2';
-// 0: tam okuyan + hiç kazanmamış, 1: tam okuyan + kazanmış, 2: paslı + hiç kazanmamış,
-// 3: paslı + kazanmış, null: alıcı adayı değil (cezalı ya da o hafta kaydı yok).
-function lotteryRank(s, wins){
-  if(!s || !(s.marked>0) || s.miss>=2) return null;
-  return (s.miss===1?2:0) + (wins>0?1:0);
-}
+// Kural kontrolü ortak dosyada (checkDrawRules); burada sadece sebep kodları ekrana çevriliyor.
 function explainDrawResult(draw, stats, winCounts){
-  const byUid = new Map(stats.map(s=>[s.uid,s]));
-  const receivers = new Set((draw.pairs||[]).map(p=>p.receiverUid).filter(Boolean));
-  const rankOf = uid=> lotteryRank(byUid.get(uid), winCounts[uid]||0);
-  const eligible = stats.filter(s=> rankOf(s.uid)!==null);
-  const violations = [];
-  // Herkes en az bir kez aldıysa (cezalı sayısı havuzdan büyükse) sıra ihlali olamaz.
-  if(receivers.size < eligible.length){
-    for(const x of eligible){
-      if(receivers.has(x.uid)) continue;
-      const rx = rankOf(x.uid);
-      for(const yUid of receivers){
-        const y = byUid.get(yUid), ry = rankOf(yUid);
-        if(ry===null) continue;
-        const outranked = ry>rx || (ry===rx && rx%2===0 && lotteryJoinKey(y) > lotteryJoinKey(x));
-        if(outranked) violations.push({shouldHave:x.uid, gotInstead:yUid});
-      }
-    }
-  }
-  const receiverInfo = [...receivers].map(uid=>({uid, stat:byUid.get(uid), wins:winCounts[uid]||0}));
-  const skippedNeverWon = stats.filter(s=> !(winCounts[s.uid]>0) && !receivers.has(s.uid)).map(s=>{
-    let reason;
-    if(!(s.marked>0)) reason = window.BH_I18N.pick("Bu hafta hiç kaydı yok ya da hafta ortasında katıldı; kuraya girmedi.","No records this week, or joined during the week; not entered in the draw.");
-    else if(s.miss>=2) reason = window.BH_I18N.template`Cezalıydı (${s.miss} gün okumadı); hediye veren taraftaydı.`;
-    else if(violations.some(v=>v.shouldHave===s.uid)) reason = window.BH_I18N.pick("Kurallara göre seçilmesi gerekirdi.","Should have been selected under the rules.");
-    else if(s.miss===1) reason = window.BH_I18N.pick("Paslıydı (1 gün okumadı). Önce tam okuyanlar sırayla alır; hediye sayısı paslılara sıra gelmesine yetmedi.","Used a pass (1 missed reading day). Full readers take priority, and there were not enough gifts for pass users.");
-    else reason = window.BH_I18N.pick("Tam okuyandı ama hediye sayısı yetmedi; ondan önce üye olan, hiç kazanmamış tam okuyanlar önce aldı.","Read every day, but there were not enough gifts. Earlier-joining full readers who had never won took priority.");
-    return {uid:s.uid, reason};
-  });
-  return {receiverInfo, skippedNeverWon, violations};
+  const result = checkDrawRules(draw, stats, winCounts);
+  const text = {
+    'no-records': ()=> window.BH_I18N.pick("Bu hafta hiç kaydı yok ya da hafta ortasında katıldı; kuraya girmedi.","No records this week, or joined during the week; not entered in the draw."),
+    'cezali': x=> window.BH_I18N.template`Cezalıydı (${x.miss} gün okumadı); hediye veren taraftaydı.`,
+    'should-have': ()=> window.BH_I18N.pick("Kurallara göre seçilmesi gerekirdi.","Should have been selected under the rules."),
+    'pasli': ()=> window.BH_I18N.pick("Paslıydı (1 gün okumadı). Önce tam okuyanlar sırayla alır; hediye sayısı paslılara sıra gelmesine yetmedi.","Used a pass (1 missed reading day). Full readers take priority, and there were not enough gifts for pass users."),
+    'not-enough': ()=> window.BH_I18N.pick("Tam okuyandı ama hediye sayısı yetmedi; ondan önce üye olan, hiç kazanmamış tam okuyanlar önce aldı.","Read every day, but there were not enough gifts. Earlier-joining full readers who had never won took priority."),
+  };
+  result.skippedNeverWon = result.skippedNeverWon.map(x=>({uid:x.uid, reason:text[x.reason](x)}));
+  return result;
 }
 async function toggleDrawExplanation(weekStart, scope){
   const panel = scope.querySelector(`[data-explain-panel="${weekStart}"]`);
@@ -2431,10 +2307,8 @@ document.getElementById('manualDrawBtn').addEventListener('click', async ()=>{
   // Deneme kurası da gerçek kurayla aynı geçmişi kullansın (kim kaç kez kazandı, geçen hafta kim
   // kazandı, üyelik sırası); yoksa herkes "hiç kazanmamış" sayılıp sonuç gerçeği yansıtmıyordu.
   await loadDraws();
-  const winCounts = {}; let totalGifts = 0;
-  drawsCache.forEach(d=> (d.pairs||[]).forEach(p=>{ if(p.receiverUid){ winCounts[p.receiverUid]=(winCounts[p.receiverUid]||0)+1; totalGifts++; } }));
-  const lastWinners = new Set((drawsCache[0]?.pairs||[]).map(p=>p.receiverUid).filter(Boolean));
-  const {giverCount, safeCount, pairs} = runLottery(stats, lastWinners, winCounts, totalGifts);
+  const {winCounts, totalGiftsGivenSoFar, previousWinners} = drawHistory(drawsCache, null, drawsCache[0]?.id);
+  const {giverCount, safeCount, pairs} = runLottery(stats, previousWinners, winCounts, totalGiftsGivenSoFar);
   const label = document.getElementById('manualLabel').value.trim() || window.BH_I18N.pick("İsimsiz deneme","Untitled test");
   const resultBox = document.getElementById('manualResult');
   let body;

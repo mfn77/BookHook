@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Code shared between the web app (app.js) and Cloud Functions. 'type: module' lets Node load these files with the same import/export syntax the browser uses."
+}
