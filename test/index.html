@@ -764,6 +764,7 @@ try {
 </div>
 
 <script>document.dispatchEvent(new Event("bh-static-ready"));</script>
+<!-- app.js'e ?v=… gibi bir ek koyma: discover.js de "./app.js"i içe aktarıyor, adres farklı olursa uygulama iki kez yüklenir. Güncellemeyi service worker zaten kendisi alıyor. -->
 <script type="module" src="./app.js"></script>
 </body>
 </html>
