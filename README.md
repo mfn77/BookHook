@@ -65,6 +65,7 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 ├── app.js                   Application logic (ES module)
 ├── feed.js                  Feed: automatic and member posts, polls, votes/reactions, comments, pinned posts
 ├── discover.js              Discover tab (category grid, book details, ratings, admin cover tools)
+├── quarterly.js             Quarterly shared-book pick (nominations, objections, bracket voting, reading) and the admin test copy
 ├── catalog.js               Curated Discover book catalog (data only)
 ├── i18n.js                  English translations and the language switch (loaded before first paint)
 ├── style.css                Application styles (design tokens, components, layout)
