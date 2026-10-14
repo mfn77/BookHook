@@ -98,6 +98,22 @@ function setTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
   try{ localStorage.setItem('bookhook_theme', theme); }catch(e){}
 }
+// Device appearance is a preference; data-theme always contains the resolved light/dark value.
+function getSystemThemeEnabled(){try{return localStorage.getItem('bookhook_theme_system')==='true';}catch(e){return false;}}
+function setSystemThemeEnabled(value){try{localStorage.setItem('bookhook_theme_system',value?'true':'false');}catch(e){}}
+const deviceThemeQuery=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
+function computeDeviceTheme(){return deviceThemeQuery?.matches?'dark':'light';}
+function applyDeviceThemeIfEnabled(){
+ if(!getSystemThemeEnabled())return;
+ document.documentElement.setAttribute('data-theme',computeDeviceTheme());
+ materialThemeSync();
+}
+if(deviceThemeQuery?.addEventListener)deviceThemeQuery.addEventListener('change',applyDeviceThemeIfEnabled);
+else if(deviceThemeQuery?.addListener)deviceThemeQuery.addListener(applyDeviceThemeIfEnabled);
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden)return;
+ if(getSystemThemeEnabled())applyDeviceThemeIfEnabled();else applyAutoThemeIfEnabled();
+});
 function getAutoThemeEnabled(){ try{ return localStorage.getItem('bookhook_theme_auto')==='true'; }catch(e){ return false; } }
 function setAutoThemeEnabled(v){ try{ localStorage.setItem('bookhook_theme_auto', v?'true':'false'); }catch(e){} }
 function computeAutoTheme(){
@@ -105,12 +121,13 @@ function computeAutoTheme(){
   return (h>=8 && h<20) ? 'light' : 'dark';
 }
 function applyAutoThemeIfEnabled(){
-  if(getAutoThemeEnabled()){
+  if(!getSystemThemeEnabled()&&getAutoThemeEnabled()){
     document.documentElement.setAttribute('data-theme', computeAutoTheme());
     materialThemeSync();
   }
 }
 function initTheme(){
+  if(getSystemThemeEnabled()){document.documentElement.setAttribute('data-theme',computeDeviceTheme());return;}
   if(getAutoThemeEnabled()){
     document.documentElement.setAttribute('data-theme', computeAutoTheme());
     return;
@@ -2509,8 +2526,13 @@ function materialInit(){
   document.getElementById('materialGuideBtn').onclick=()=>{ document.getElementById('guideModal').style.display='flex'; };
   document.getElementById('materialLogout').onclick=()=>document.getElementById('logoutBtn').click();
  }
+ const themeChoices=document.getElementById('materialThemeChoices');
+ if(themeChoices&&!themeChoices.querySelector('[data-theme-choice="system"]')){
+  const button=document.createElement('button');button.type='button';button.dataset.themeChoice='system';
+  button.textContent=window.BH_I18N.pick('Cihaz Ayarı','Device setting');themeChoices.append(button);
+ }
  document.querySelectorAll('[data-theme-choice]').forEach(button=>{
-  button.onclick=()=>{const v=button.dataset.themeChoice;setAutoThemeEnabled(v==='auto');setTheme(v==='auto'?computeAutoTheme():v);materialThemeSync();};
+  button.onclick=()=>{const v=button.dataset.themeChoice;setSystemThemeEnabled(v==='system');setAutoThemeEnabled(v==='auto');setTheme(v==='system'?computeDeviceTheme():v==='auto'?computeAutoTheme():v);materialThemeSync();};
  });
  initLanguageSettings();
  initPaletteSettings();
@@ -2578,7 +2600,7 @@ function initLanguageSettings(){
 }
 
 function materialThemeSync(){
- const selected=getAutoThemeEnabled()?'auto':document.documentElement.getAttribute('data-theme')||'light';
+ const selected=getSystemThemeEnabled()?'system':getAutoThemeEnabled()?'auto':document.documentElement.getAttribute('data-theme')||'light';
  document.querySelectorAll('[data-theme-choice]').forEach(button=>{button.classList.toggle('active',button.dataset.themeChoice===selected);button.setAttribute('aria-pressed',String(button.dataset.themeChoice===selected));});
  const palette=document.documentElement.dataset.palette||'green';
  document.querySelectorAll('[data-palette-choice]').forEach(button=>{const active=button.dataset.paletteChoice===palette;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
@@ -3097,3 +3119,4 @@ if('serviceWorker' in navigator){
 async function markNotifReadById(id){
   try{ await updateDoc(doc(db,'notifications',currentUid,'items',id), {read:true}); }catch(e){}
 }
+
