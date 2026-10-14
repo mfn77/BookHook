@@ -599,3 +599,9 @@ html[data-palette="amber"][data-theme="dark"]{--paper:#18130b;--paper-2:#272016;
 /* Language selector uses the existing theme segmented buttons. */
 .language-setting{margin-bottom:24px}.language-setting h3{margin-top:0}
 html[lang="en"] .hub-layout-segmented button{font-size:11px}
+
+
+/* Four exclusive appearance modes, including the device preference. */
+#materialThemeChoices{gap:2px}
+#materialThemeChoices button{min-width:0;flex:1;padding:9px 4px;min-height:48px;font-size:12px;line-height:1.25}
+@media(max-width:360px){#materialThemeChoices button{font-size:11px;padding-inline:2px}}
