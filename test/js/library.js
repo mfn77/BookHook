@@ -6,11 +6,12 @@ import {
 import { createOrBatchPost } from "./feed.js";
 import { renderDiscoverTab } from "./discover.js";
 import { attachBookAutocomplete } from "./books.js";
+import { moveBookWithGoal, renderTotalPagesCard } from "./today.js";
 // app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
 // açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
 import {
   closeAddForm, closeModal, currentUid, db, escapeHtml, hubPreviews, keepOrLoading, markLoaded,
-  materialBookCover, moveBookWithGoal, renderTotalPagesCard, setupAddToggle, showToast
+  materialBookCover, setupAddToggle, showToast
 } from "./app.js";
 
 export function renderBookHistoryTab(){
