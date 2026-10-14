@@ -1,6 +1,7 @@
-/* Discover catalog: the curated book list shown in the Discover tab (categories, books and
-   a short "why read it" note) plus English titles used when searching for covers.
-   Data only; the code is in discover.js. */
+/*
+ * Books, categories, and short reading notes for Discover. English titles help find covers. Screen
+ * behavior lives in discover.js.
+ */
 export const CURATED_CATALOG = [
   {slug:'c01_toplu_onerilenler', label:'Okunması Gerekenler', emoji:'⭐', books:[
     {t:'Don Kişot', a:'Miguel de Cervantes', w:'Modern romanın başlangıcı kabul edilen ve dünya edebiyatını kökten değiştiren başyapıttır.', lv:'orta'},
@@ -1821,3 +1822,4 @@ export const ENGLISH_SEARCH_TITLES = {
   'b_t_n_iirleri_naz_m_hikmet': 'Poems of Nazim Hikmet',
   'nutuk_mustafa_kemal_atat_rk': 'Nutuk Ataturk speech',
 };
+

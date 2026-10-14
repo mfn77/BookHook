@@ -1,9 +1,8 @@
-/* BookHook: main module. Sets up Firebase, holds the shared state (signed-in member,
-   member list, today's check-ins, draws), the date and UI helpers used everywhere, sign-in,
-   tabs and navigation, and the badge rules. Each screen lives in its own module and is
-   imported below.
-
-   To run your own copy, replace the Firebase configuration further down. */
+/*
+ * Starts the app and manages Firebase, sign-in, shared data, navigation, and badge rules.
+ * Screen-specific behavior lives in separate modules. To host your own copy, replace the Firebase
+ * configuration below.
+ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
@@ -74,7 +73,10 @@ const firebaseConfig = {
   appId: "1:611511209042:web:3fa319fb5ee6ca5daba38b"
 };
 export const FCM_VAPID_KEY = "BE2rTmP33eegqZfz2p3wP-skKGpR0NuEWkal5-VaNbsX1ikgMa_mvIUg4uXATWXHzy1boy0yuBqeCb2Q-Wn3aXw";
-export const GOOGLE_BOOKS_API_KEY = "AIzaSyBpIIf2aPenDO9E1ZgX96oNAznFmAadRxs"; // Optional Google Books API key for book search. Without one the low anonymous quota applies and searches may fail with HTTP 429.
+export const GOOGLE_BOOKS_API_KEY = "AIzaSyBpIIf2aPenDO9E1ZgX96oNAznFmAadRxs"; /*
+ * Optional Google Books API key. Without it, searches use a lower shared quota and may fail with HTTP
+ * 429.
+ */
 
 export const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -90,8 +92,10 @@ function setTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
   try{ localStorage.setItem('bookhook_theme', theme); }catch(e){}
 }
-// "Device" mode follows the system setting; data-theme always holds the resolved
-// light/dark value.
+/*
+ * Device mode follows the system preference. data-theme always contains the resulting light or dark
+ * value.
+ */
 function getSystemThemeEnabled(){try{return localStorage.getItem('bookhook_theme_system')==='true';}catch(e){return false;}}
 function setSystemThemeEnabled(value){try{localStorage.setItem('bookhook_theme_system',value?'true':'false');}catch(e){}}
 const deviceThemeQuery=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
@@ -140,8 +144,7 @@ export function getMonday(d){ const day=d.getDay(); const diff = day===0?-6:1-da
 export function weekDates(monday){ const arr=[]; for(let i=0;i<7;i++) arr.push(toStr(addDays(monday,i))); return arr; }
 const MONTHS_TR = [window.BH_I18N.pick("Ocak","January"),window.BH_I18N.pick("Şubat","February"),window.BH_I18N.pick("Mart","March"),window.BH_I18N.pick("Nisan","April"),window.BH_I18N.pick("Mayıs","May"),window.BH_I18N.pick("Haziran","June"),window.BH_I18N.pick("Temmuz","July"),window.BH_I18N.pick("Ağustos","August"),window.BH_I18N.pick("Eylül","September"),window.BH_I18N.pick("Ekim","October"),window.BH_I18N.pick("Kasım","November"),window.BH_I18N.pick("Aralık","December")];
 function isWideScreen(){ return window.matchMedia && window.matchMedia('(min-width:700px)').matches; }
-// Dates written to Firestore (seen by everyone) use a fixed "dd.mm" format, independent of
-// language and screen width, matching fmtShortBackend on the server.
+// Shared records use a fixed day.month date format, matching fmtShortBackend on the server.
 function fmtStoredDate(dstr){ const d = fromStr(dstr); return pad(d.getDate())+"."+pad(d.getMonth()+1); }
 export function fmtShort(dstr){
   const d = fromStr(dstr);
@@ -208,10 +211,10 @@ export function profilePhotoHtml(profile, fontSize){
 }
 export function avatarHtmlFromProfile(profile, size, proportionHint){
   size = size || 22;
-  // size is usually a number of pixels, but any CSS length ("100%") also works. Ring and
-  // badge proportions are then computed from proportionHint (34px by default), since the
-  // real rendered size isn't known here. Pass a realistic proportionHint where the avatar is
-  // drawn very small, so the corner badge doesn't cover the photo.
+  /*
+   * Avatar size accepts pixels or a CSS length. When the final size is unknown, proportionHint sets badge
+   * proportions; use a smaller hint for small avatars.
+   */
   const isNumeric = typeof size === 'number';
   const sizeCss = isNumeric ? `${size}px` : size;
   const proportionBase = isNumeric ? size : (proportionHint || 34);
@@ -225,8 +228,7 @@ export function avatarHtmlFromProfile(profile, size, proportionHint){
   const badgeOverlay = tierDef
     ? `<span class="tier-badge-icon" title="${escapeHtml(tierDef.label)}" style="position:absolute; right:-2px; bottom:-2px; width:${iconSize}px; height:${iconSize}px; border-radius:50%; background:${tierDef.color}; display:flex; align-items:center; justify-content:center; font-size:${Math.round(iconSize*0.62)}px; box-shadow:0 0 0 1.5px var(--card);">${badgeIllustration(tierDef.key)}</span>`
     : '';
-  // The outer layer has a fixed size and carries the badge ring (box-shadow), so it must
-  // not clip; the round crop is done by the inner layer with its own overflow:hidden.
+  // Keep the outer badge ring unclipped. Only the inner photo is cropped to a circle.
   return `<span style="position:relative; display:inline-flex; width:${sizeCss}; height:${sizeCss}; margin-right:${isNumeric?'6px':'0'}; vertical-align:middle; line-height:0; flex:0 0 auto; border-radius:50%; ${ringStyle}">
     <span style="display:block; width:100%; height:100%; border-radius:50%; overflow:hidden;">${inner}</span>
     ${badgeOverlay}
@@ -470,9 +472,10 @@ export function hideAnchoredPopover(){
   pop.classList.add('closing');
   setTimeout(()=>{ pop.style.display='none'; pop.classList.remove('closing'); }, 120);
 }
-// While a popover or menu is open, a click outside should only close it, not also trigger
-// whatever is underneath (e.g. another post card). Handled in the capture phase so the
-// click never reaches that element.
+/*
+ * An outside tap only closes the open menu. Capture it before it reaches an unrelated element
+ * underneath.
+ */
 document.addEventListener('click', (e)=>{
   const pop = document.getElementById('anchoredPopover');
   if(pop.style.display==='block' && !pop.contains(e.target) && !e.target.closest('.badge-info-icon') && !e.target.closest('.total-pages-clickable') && !e.target.closest('#coverFixTarget')){
@@ -518,21 +521,20 @@ document.body.addEventListener('click', (e)=>{
   }
 });
 
-// Content cache for slow-loading containers. The first visit shows "Loading…"; later
-// visits keep the previous content on screen while fresh data loads in the background.
-// Content is also stored in localStorage so it survives a restart. Entries older than
-// CACHE_TTL_MS are ignored, so a container that keeps failing to refresh doesn't show
-// stale content forever.
+/*
+ * Keep previous content visible while fresh data loads. Save it locally for later visits, but ignore
+ * entries older than CACHE_TTL_MS.
+ */
 const APP_CACHE_VERSION = 'material-i18n-v1-'+window.BH_I18N.language;
 const CACHE_PREFIX = 'bh_cache_'+APP_CACHE_VERSION+'_';
-const CACHE_TTL_MS = 7*24*60*60*1000; // 1 week
+const CACHE_TTL_MS = 7*24*60*60*1000;
 function getPersistedHTML(key){
   try{
     const raw = localStorage.getItem(CACHE_PREFIX+currentUid+'_'+key);
     if(!raw) return null;
     const parsed = JSON.parse(raw);
     if(!parsed || typeof parsed.html!=='string' || typeof parsed.ts!=='number') return null;
-    if(Date.now() - parsed.ts > CACHE_TTL_MS) return null; // expired
+    if(Date.now() - parsed.ts > CACHE_TTL_MS) return null;
     return parsed.html;
   }catch(e){ return null; }
 }
@@ -549,7 +551,7 @@ function setPersistedHTML(key, html){
       }
       ownKeys.slice(0, 8).forEach(k=>{ try{ localStorage.removeItem(k); }catch(e2){} });
       localStorage.setItem(CACHE_PREFIX+currentUid+'_'+key, payload);
-    }catch(e3){ /* give up quietly */ }
+    }catch(e3){  }
   }
 }
 export function showCachedOrPlaceholder(el, placeholderHtml){
@@ -700,8 +702,7 @@ const HAMBURGER_MEMBER_EXTRA = [
   {id:'settings', label:window.BH_I18N.pick("Ayarlar","Settings"), icon:'⚒'},
   {id:'profile', label:window.BH_I18N.pick("Profilim","My profile"), icon:'◍'}
 ];
-// HAMBURGER_ADMIN_EXTRA / HAMBURGER_MEMBER_EXTRA are only used to look up tab titles
-// (getTabLabel); those screens are reached from the settings tab.
+// These extra menu lists supply screen titles. Their screens are opened from settings.
 
 let prevTabBeforeProfile = null;
 document.getElementById('whoamiClickable').addEventListener('click', ()=>{
@@ -751,10 +752,7 @@ function flashRequiredFields(){
   return anyEmpty;
 }
 let lastTabSwitchTime = 0;
-// Some notifications link to one tab id but go to both members and admins, who have
-// different ids for the same screen (Today: msurvey/today, Records: mtoday/week,
-// Badges: mworms/worms). Map the link to the reader's own version, otherwise an admin
-// would land on a member tab that isn't part of their swipeable tab set.
+// Map notification links to the recipient’s member or admin screen, since their tab IDs differ.
 const TAB_ROLE_EQUIVALENTS = { msurvey:'today', today:'msurvey', mtoday:'week', week:'mtoday', mworms:'worms', worms:'mworms' };
 const MEMBER_SIDE_TAB_IDS = ['msurvey','mtoday','mworms'];
 export function resolveNotifTab(tabId){
@@ -767,15 +765,14 @@ export function resolveNotifTab(tabId){
   if(!isAdmin && !tabIsMemberSide) return equiv;
   return tabId;
 }
-// Animates the page title when it changes. Used by switchTab() and by
-// materialSyncNavigation() (right when a swipe gesture ends).
+// Animate title changes for both tapped and swiped navigation.
 function setTabTitleAnimated(newText){
   const el = document.getElementById('currentTabTitle');
   if(!el) return;
-  // During a swipe this is called twice with the same text (on release and again from
-  // switchTab() ~240ms later). While the animation runs, el.textContent contains both spans,
-  // so compare against the stored target instead; otherwise the second call would restart
-  // the animation and garble the text.
+  /*
+   * A swipe requests the same title twice. Compare the stored target instead of the animated text to
+   * avoid restarting the animation.
+   */
   const currentTarget = el._titleTarget!==undefined ? el._titleTarget : el.textContent;
   if(currentTarget===newText) return;
   if(el._titleAnimTimeout){ clearTimeout(el._titleAnimTimeout); el._titleAnimTimeout=null; }
@@ -790,12 +787,9 @@ function setTabTitleAnimated(newText){
     el._titleAnimTimeout = null;
   }, 260);
 }
-// Title for any tab id. Used by switchTab() and by the swipe gesture so both show the same
-// label (materialSyncNavigation only knows the hub tabs).
+// Use one title lookup for both tapped and swiped navigation.
 function getTabLabel(id){
-  // ADMIN_TABS / MEMBER_TABS don't contain the hub ids ('club', 'library'), so include
-  // materialPrimaryTabs(). Without them the title would be cleared and, because
-  // setTabTitleAnimated skips a target it already has, never filled in again.
+  // Include the hub tabs when looking up titles; they are absent from the member and admin screen lists.
   const allTabDefs = [...ADMIN_TABS, ...MEMBER_TABS, ...HAMBURGER_ADMIN_EXTRA, ...HAMBURGER_MEMBER_EXTRA, ...materialPrimaryTabs()];
   const def = allTabDefs.find(t=>t.id===id);
   return def ? def.label : '';
@@ -830,8 +824,10 @@ export function switchTab(id, { animate = true } = {}){
   document.querySelectorAll('section.tab').forEach(s=> s.classList.remove('active','anim-from-right','anim-from-left','anim-fade'));
   const sec = document.getElementById('tab-'+id);
   if(sec){
-    // After a completed swipe the page is already in place, so skip the entry animation;
-    // regular tab clicks keep it.
+    /*
+     * After a completed swipe the page is already in place, so skip the entry animation; regular tab clicks
+     * keep it.
+     */
     sec.style.animation = animate ? '' : 'none';
     sec.classList.add('active');
     sec.classList.add(direction==='right' ? 'anim-from-right' : direction==='left' ? 'anim-from-left' : 'anim-fade');
@@ -846,9 +842,10 @@ export function switchTab(id, { animate = true } = {}){
   renderTab(id);
 }
 
-/* Bottom navigation: compensate for the visible-viewport offset in regular browsers. In
-   an iOS home-screen app the fixed + safe-area position is already right, and adding the
-   temporary offset would push the bar up. */
+/*
+ * Adjust bottom navigation for the browser’s visible viewport. Skip this adjustment in iOS home-screen
+ * mode, where it would push the bar upward.
+ */
 (function stabilizeBottomNav(){
   const nav = document.getElementById('sidebarNav');
   if(!nav || !window.visualViewport) return;
@@ -870,12 +867,10 @@ export function switchTab(id, { animate = true } = {}){
   update();
 })();
 
-/* Swipe between tabs. The page follows the finger and the neighbouring tab slides in with
-   its real content (the section already in the DOM: filled if visited before, empty
-   otherwise). renderTab() is never called during the gesture, so no extra listeners or
-   queries; data refreshes when the gesture completes and switchTab() runs. Vertical
-   scrolling is locked while swiping, and completion depends on distance and velocity,
-   like native iOS/Android swipes. */
+/*
+ * Move the current and neighbouring sections with the finger. Reuse their existing content during the
+ * gesture and refresh only after completion. Distance and velocity determine whether to switch tabs.
+ */
 (function setupSwipeNav(){
   let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, pendingSettleTimeout=null, pendingFinish=null;
   let motionSamples=[];
@@ -886,8 +881,7 @@ export function switchTab(id, { animate = true } = {}){
   const DISTANCE_THRESHOLD_RATIO = 0.5; // same as iOS/Android: half the width
   const VELOCITY_THRESHOLD = 0.35; // px/ms; faster flicks complete regardless of distance
 
-  // Velocity is measured over a short time window rather than the last two events, so a
-  // final event at the same position right before release doesn't zero a fast flick.
+  // Measure velocity over a short time window so a stationary final event does not cancel a fast flick.
   function recordMotion(x, time){
     const last=motionSamples[motionSamples.length-1];
     if(last && time===last.time) last.x=x;
@@ -938,13 +932,13 @@ export function switchTab(id, { animate = true } = {}){
     previewTargetSection = null;
     previewTargetIdx = -1;
   }
-  // Places the target tab (an inactive <section> already in the DOM) right next to the
-  // current one, based on the current section's rendered rectangle (position:fixed, so the
-  // main element's padding doesn't matter).
+  // Place the target section beside the current section using its measured screen position.
   function beginPreview(currentSection, targetSection, targetIdx, goingNext){
     const rect = previewRect || (previewRect = currentSection.getBoundingClientRect());
-    // Leave a gap between the two sections while dragging (twice main's horizontal padding).
-    // When the gesture completes, the target lands exactly where the current tab was.
+    /*
+     * Keep the page margins between sections during dragging; the target lands exactly in the current
+     * section’s position.
+     */
     const gap = (parseFloat(getComputedStyle(contentCol).paddingLeft) || 0) * 2;
     previewCurrentSection = currentSection;
     previewTargetSection = targetSection;
@@ -992,9 +986,10 @@ export function switchTab(id, { animate = true } = {}){
     previewCurrentSection.style.transform = `translateX(${dx}px)`;
     previewTargetSection.style.transform = `translateX(${dx}px)`;
   }
-  // If the drag changes direction, rebuild the preview for the new direction. Returns false
-  // when there is no tab that way (e.g. going back from the first tab); the caller then
-  // clamps dx to 0.
+  /*
+   * Rebuild the preview if the drag reverses. If no tab exists in that direction, keep the movement at
+   * zero.
+   */
   function maybeFlipDirection(goingNextNow){
     if(goingNextNow===previewGoingNext || !previewCurrentSection) return true;
     const order = getTabOrder();
@@ -1055,18 +1050,16 @@ export function switchTab(id, { animate = true } = {}){
     if(e.pointerType!=='touch' && e.pointerType!=='pen') return;
     if(!e.isPrimary){ cancelGesture(); return; }
     if(pointerId!==null) cancelGesture();
-    // A new gesture can start before the previous one's 240ms settle has finished. The nav
-    // bar and title already show the new tab, but switchTab() hasn't run yet; skipping it
-    // would leave the old section active and make the next gesture start from the wrong tab.
-    // Run the pending switch now to keep the DOM in sync.
+    /*
+     * Finish any pending tab switch before starting a new gesture, so the next swipe starts from the
+     * section shown by the navigation.
+     */
     if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
     if(pendingFinish){ pendingFinish(); }
-    cleanupPreview(); // defensive second cleanup
+    cleanupPreview();
     releaseGesture();
     const t = e.target;
-    // Panes with their own inner swipe (e.g. Club/Me, Reading/Want/Read inside an expanded
-    // card) handle the gesture themselves (see setupInnerPaneCarousels), so don't start the
-    // page-level swipe there.
+    // Let inner swipeable panels handle their own gestures instead of starting a page-level swipe.
     if(!contentCol.contains(t) || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || (t.closest('.inner-pane-viewport')&&!t.closest('.hub-flat')) || (t.closest('#discoverFeed')&&hubLayoutMode('library')!=='primary')){
       touchStartX=null; return;
     }
@@ -1086,8 +1079,7 @@ export function switchTab(id, { animate = true } = {}){
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
     if(!dragging){
-      // Wait until the direction is clearly horizontal; starting on mostly-vertical moves made
-      // the browser's scroll and the swipe fight each other.
+      // Wait for a clearly horizontal movement to avoid interfering with vertical scrolling.
       if(Math.abs(dx) < 5 || Math.abs(dx) <= Math.abs(dy)*2.2) return;
       const order = getTabOrder();
       const idx = order.indexOf(activeTab);
@@ -1124,8 +1116,7 @@ export function switchTab(id, { animate = true } = {}){
     const order = getTabOrder();
     const idx = order.indexOf(activeTab);
     const goingNext = dx < 0;
-    // The direction may have flipped during the drag, so use the direction the preview is
-    // actually set up for (previewGoingNext / previewTargetIdx), not the sign of dx.
+    // Use the preview’s actual direction, which may have changed during the drag.
     const canComplete = previewCurrentSection && goingNext===previewGoingNext && previewTargetIdx>=0;
     const distanceOk = Math.abs(dx) > containerWidth * DISTANCE_THRESHOLD_RATIO;
     const velocity = releaseVelocity(e.clientX,e.timeStamp);
@@ -1133,16 +1124,15 @@ export function switchTab(id, { animate = true } = {}){
     const shouldComplete = canComplete && idx!==-1 && (distanceOk || flickOk);
     if(shouldComplete){
       const targetIdx = previewTargetIdx;
-      // Use previewWidth (the section's rendered width, i.e. main's content width), not
-      // containerWidth (main including padding); the latter overshoots and causes a jump when
-      // the inline styles are cleared.
+      /*
+       * Use the section’s width without outer padding; including padding causes a jump when temporary styles
+       * are removed.
+       */
       const flyDist = goingNext ? -(previewWidth+previewGap) : (previewWidth+previewGap);
       settlePreview(flyDist, true);
-      // Update the bottom nav as soon as the finger lifts instead of after the 240ms slide, so
-      // two tabs never look highlighted at once. switchTab() repeats this harmlessly.
+      // Update the selected navigation item when the finger lifts, before the slide finishes.
       if(typeof materialSyncNavigation==='function') materialSyncNavigation(order[targetIdx], { resetScroll: false });
-      // materialSyncNavigation() only sets titles for hub tabs, so set the title here as well.
-      // switchTab() sets the same text again later, which is a no-op.
+      // Update titles for non-hub screens too. Repeating the same title later has no effect.
       if(typeof getTabLabel==='function' && typeof setTabTitleAnimated==='function'){
         const nextLabel = getTabLabel(order[targetIdx]);
         if(nextLabel) setTabTitleAnimated(nextLabel);
@@ -1245,14 +1235,11 @@ export async function computeWeekStats(monday){
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   return activeUids().map(uid=>{
     const joinDs = joinDateStrOf(uid);
-    // Members who joined during this week (on any day but Monday) sit out this week's draw
-    // (marked: 0) and take part from next week.
+    // Members who join after Monday enter the draw from the following week.
     if(joinDs && joinDs > weekMondayStr && joinDs <= weekSundayStr){
       return {uid, name: usersCache[uid]?.name || '?', miss:0, read:0, marked:0, joinDate: joinDs||'', joinedAt: joinedAtOf(uid)};
     }
-    // A closed day (before today) with no record counts as missed, the same rule the 06:00
-    // auto-fill writes. This keeps a draw run before the auto-fill from treating a missed
-    // day as unmarked.
+    // A closed day with no record counts as missed, even if the automatic fill has not run yet.
     const today = todayStr();
     let miss=0, read=0, autoMiss=0;
     perDate.forEach((map,i)=>{
@@ -1263,8 +1250,10 @@ export async function computeWeekStats(monday){
     return {uid, name: usersCache[uid]?.name || '?', miss, read, marked: miss+read, joinDate: joinDs||'', joinedAt: joinedAtOf(uid), autoMiss};
   });
 }
-// Writes "missed" for closed days that have no check-in. Only runs for admins (they
-// have write access and it should run in one place).
+/*
+ * Fill missing records for closed days. Only admins run this operation because it requires write
+ * access.
+ */
 export const CLUB_START_DATE = '2026-07-06'; // no records exist before this date
 function logicalDateStrOf(d){
   const copy = new Date(d);
@@ -1304,8 +1293,10 @@ async function autoFillPastDays(daysBack){
   }));
   return results.reduce((a,b)=>a+b,0);
 }
-// Removes automatic "missed" records (auto: true) written for days before the club
-// started or before a member joined. Manually entered records are never touched.
+/*
+ * Remove only automatic missed records from before the club or membership started. Preserve manually
+ * entered records.
+ */
 export async function cleanupBadAutoFills(daysBack){
   daysBack = daysBack || 60;
   const uids = Object.keys(usersCache);
@@ -1329,9 +1320,10 @@ export async function cleanupBadAutoFills(daysBack){
   }
   return deleted;
 }
-// Recomputes a member's badge history (badgeCounts) by replaying every day from the club
-// start (or their join date) up to yesterday with the shared rules. Today's part is added
-// afterwards by computeStreak + checkAndAwardBadges.
+/*
+ * Rebuild badge history from the member’s eligible start date through yesterday. Today’s contribution
+ * is handled separately.
+ */
 async function recomputeUserBadgeHistory(uid){
   const u = usersCache[uid];
   if(!u) return;
@@ -1341,8 +1333,10 @@ async function recomputeUserBadgeHistory(uid){
   const dateStrs = [];
   let cursor = fromStr(startDs);
   while(toStr(cursor) <= toStr(yesterday)){ dateStrs.push(toStr(cursor)); cursor = addDays(cursor,1); }
-  // Fetch all days in parallel. If any day can't be read, throw and leave this member
-  // unchanged; counting it as missed would rewrite the history wrongly.
+  /*
+   * Stop if any daily record cannot be read. Treating a failed read as missed would corrupt badge
+   * history.
+   */
   const snaps = await Promise.all(dateStrs.map(ds=> getDoc(doc(db,'days',ds,'answers',uid))));
   const {badgeCounts, streak, tier, bankedRepeats} = replayBadgeHistory(snaps.map(snap=> snap.exists() ? snap.data().status : null));
   const updates = { badgeCounts, lastStreak: streak, currentTier: tier, currentStreak: streak, bankedRepeats };
@@ -1403,19 +1397,23 @@ export async function loadDraws(){
   drawsCache = [];
   snap.forEach(d=> drawsCache.push({id:d.id, ...d.data()}));
 }
-// Streak counting is shared (countStreak): from today (or yesterday if today isn't marked
-// yet) back to the first day not read, with no upper limit. A day that can't be read
-// throws instead of counting as missed.
+/*
+ * Count backward to the first day not read, with no length limit. Failed reads must throw rather than
+ * count as missed.
+ */
 export function computeStreak(uid){
   return countStreak(todayStr(), ds=> getDoc(doc(db,'days',ds,'answers',uid)).then(snap=> snap.exists() ? snap.data().status : null), {startMayBeUnmarked:true});
 }
 
-/* Badges */
-// A badge belongs to the current streak: it shows on the member's avatar ring and goes
-// away when the streak breaks. How many times each badge was earned is kept in
-// badgeCounts (for the badge history on the Bookworms screen).
-// Badge definitions are shared with the server; the screen shows the name in the member's
-// language, while stored records (posts, notifications) always use the Turkish name.
+
+/*
+ * The active badge belongs to the current streak. When that streak ends, badgeCounts preserves the
+ * member’s previous awards.
+ */
+/*
+ * Badge rules are shared with the server. Display names follow the selected language; shared records
+ * use Turkish names.
+ */
 export const BADGE_DEFS = SHARED_BADGE_DEFS.map(def=>({...def, label: window.BH_I18N.pick(def.label, def.labelEn)}));
 // Badge artwork (inline SVG) for each badge key.
 export function badgeIllustration(key){
@@ -1478,9 +1476,10 @@ export async function checkAndPostDethrone(uid, newCount, getOthersCount, label,
     createPost('record_dethrone', { recordLabel:label, recordIcon:icon||'🏆', recordCount:newCount, dethronedName:usersCache[maxUid]?.name||'' }, uid, u.name);
   }
 }
-// The 30-day badge was earned again without breaking the streak (day 60, 90, ...): add the
-// previous one to the badge history. The nightly server job does the same, so the stored
-// values are re-read inside a transaction to avoid counting it twice.
+/*
+ * Bank each repeated 30-day badge. Re-read the saved counts in a transaction so the client and server
+ * cannot count the same award twice.
+ */
 async function bankRepeatBadges(uid, streak, uTab){
   const ref = doc(db,'users',uid);
   const saved = await runTransaction(db, async (tx)=>{
@@ -1511,10 +1510,10 @@ export async function checkAndAwardBadges(uid, streak){
     if(!u) return;
     const lastStreak = typeof u.lastStreak==='number' ? u.lastStreak : 0;
     const {kind, newTier, bank} = badgeTransition(streak, lastStreak, u.currentTier || null, u.bankedRepeats || 0);
-    // Only upward changes are handled here (a new badge, or the 30-day badge earned again).
-    // A broken streak is settled by the server after the day closes at 06:00: today's
-    // check-in can still change until then (e.g. "missed" marked by mistake and corrected), and
-    // such a temporary drop must not end up as a badge history entry or a "streak lost" post.
+    /*
+     * The client awards new badges and repeats only. The server settles streak losses after 06:00, allowing
+     * check-in corrections before the day closes.
+     */
     if(kind!=='rise' && kind!=='repeat') return;
     const uTab = u.role==='admin' ? 'worms' : 'mworms';
     if(kind==='rise'){
@@ -1568,11 +1567,10 @@ export function shadeHexColor(hex, percent){
   const clamp = v=>Math.max(0,Math.min(255,Math.round(v)));
   return '#'+[r,g,b].map(v=>clamp(v).toString(16).padStart(2,'0')).join('');
 }
-// Badge crest drawn behind a member's streak count, based on the shape of the GNOME
-// EarTag (app.drey.EarTag) app icon: the note shape is removed (the streak count goes
-// there) and the empty ring holds the profile photo. Gradient colors follow the member's
-// current badge color; gradient ids are unique per member because ids must be unique on
-// the page.
+/*
+ * The streak crest is adapted from the GNOME EarTag (app.drey.EarTag) icon. Colors follow the active
+ * badge; gradient IDs are unique per member.
+ */
 function earTagCrestSvg(uid, baseColor){
   const gid = 'et' + String(uid).replace(/[^a-zA-Z0-9]/g,'');
   const base = baseColor, light = shadeHexColor(baseColor,0.5), lighter = shadeHexColor(baseColor,0.72),
@@ -2030,8 +2028,10 @@ async function renderSettingsTab(){
   socialChk.onchange = ()=> saveNotifPref('social', socialChk.checked);
 }
 
-/* Signed-in UI: navigation, hubs and sign-in state */
-/* Material UI layer: presentation and navigation only; the data model is unchanged. */
+/*
+ * Signed-in UI: navigation, hubs and sign-in state Material UI layer: presentation and navigation only;
+ * the data model is unchanged.
+ */
 function materialIcon(kind){
  const paths={bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',logout:'<path d="M9 4H4v16h5M10 12h11m-4-4 4 4-4 4"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',home:'<path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/>',feed:'<path d="M4 5h16M4 10h16M4 15h10M4 20h6"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',book:'<path d="M12 5C9 2 5 2 2 3v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/>',club:'<circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M3 9a3 3 0 0 0 0 6m18-6a3 3 0 0 1 0 6M2 21v-2m20 2v-2"/>',gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8H8a3 3 0 1 1 3-3Zm0 0h4a3 3 0 1 0-3-3Z"/>',badge:'<circle cx="12" cy="9" r="6"/><path d="m8 14-2 8 6-3 6 3-2-8m-6-6 2-3 2 3"/>',records:'<path d="M4 3h16v18H4ZM8 8h8M8 12h8M8 16h5"/>',settings:'<path d="m9 3-1 3-3 1v4l-2 1 2 2v4l3 1 1 3h6l1-3 3-1v-4l2-2-2-1V7l-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/>',rules:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',heart:'<path d="M12 21s-6.5-4.2-9-8.4C1.3 9 2.7 5.5 6 4.6c2-.5 3.8.3 5 2 .1.2.5.2.6 0 1.2-1.7 3-2.5 5-2 3.3.9 4.7 4.4 3 8C18.5 16.8 12 21 12 21Z"/>',account:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',import:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>'};
  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[kind]||paths.book}</svg>`;
@@ -2053,14 +2053,12 @@ function materialRoute(id){
 function materialLink(id,label,description,icon){
  return `<button class="destination-row" data-material-route="${id}"><span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span><span aria-hidden="true">›</span></button>`;
 }
-/* Club / Library hubs: cards that expand in place. Instead of opening a separate page, a
-   hub card expands and the target screen's <section> is moved inside it (render functions
-   stay the same). HUB_PARENT maps a screen id to its hub, so switchTab() can open the
-   right hub and card when it is reached from elsewhere (back button, notification,
-   shortcuts). */
+/*
+ * Expanding a hub card moves its existing screen section into the card. HUB_PARENT maps links and
+ * navigation back to the correct hub.
+ */
 const HUB_PARENT = {};
-// Cards on the settings hub (admin, rules, app settings) open as separate pages with a
-// back button instead of expanding in place; see materialHubLink().
+// Settings cards open separate screens with a back button rather than expanding in place.
 const HUB_NO_ACCORDION = new Set();
 const HUB_ILLUSTRATIONS = {
  records: `<svg class="hub-illustration" viewBox="0 0 100 84" aria-hidden="true"><rect x="60" y="6" width="16" height="14" rx="2" fill="none" stroke="var(--gold)" stroke-width="2"/><line x1="64" y1="4" x2="64" y2="9" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"/><line x1="72" y1="4" x2="72" y2="9" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"/><path d="M64,14 66.5,16.5 72,11" fill="none" stroke="var(--forest)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12,80 12,42 22,42 26,36 44,36 44,42 80,42 80,80 Z" fill="var(--secondary-ink)"/><rect x="28" y="20" width="32" height="40" rx="3" fill="var(--card)"/><circle cx="35" cy="29" r="2.4" fill="var(--secondary-container)"/><rect x="40" y="27.5" width="15" height="3" rx="1.5" fill="var(--line)"/><rect x="34" y="36" width="21" height="3" rx="1.5" fill="var(--line)"/><path d="M34.5,45 36,46.5 39,43" fill="none" stroke="var(--forest)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="40" y="43.5" width="15" height="3" rx="1.5" fill="var(--primary-container)"/></svg>`,
@@ -2085,19 +2083,17 @@ function materialExpandHubItem(item, targetId){
  if(section){ inner.appendChild(section); section.classList.add('active'); renderTab(targetId); }
  item.classList.add('expanded');
  watchPanelHeightGrowth(inner);
- // Inner carousels may have been measured while the card was a narrow grid cell, so
- // re-measure them once the card has expanded to full width.
+ // Re-measure inner panels after a card expands to full width.
  requestAnimationFrame(()=>{
   inner.querySelectorAll('.inner-pane-viewport').forEach(vp=>{
    if(vp._carousel) vp._carousel.goTo(vp._carousel.current, false);
   });
  });
 }
-// The panel expands to whatever it contains when opened, usually just a small "Loading…"
-// placeholder because the data arrives later from Firestore. When the real content
-// arrives the grid-template-rows value doesn't change, so CSS wouldn't animate it and
-// the content would jump. For a short time after opening, watch the panel's height and
-// animate each growth with a separate max-height transition.
+/*
+ * Data may arrive after the card opens. Briefly observe its height and animate changes so loaded
+ * content does not jump into place.
+ */
 function watchPanelHeightGrowth(inner){
  if(!inner) return;
  if(inner._growthObserver){ inner._growthObserver.disconnect(); }
@@ -2147,9 +2143,10 @@ document.body.addEventListener('click', e=>{
  if(wasExpanded){ materialCollapseHubItem(item); }
  else { materialExpandHubItem(item, targetId); item.scrollIntoView({behavior:'smooth', block:'start'}); }
 });
-// An expanded card has no header strip, so it closes when the user taps an empty area
-// (the card itself, the panel body or directly on the moved <section>). Taps on actual
-// content target a deeper element and don't match.
+/*
+ * Tapping an expanded card’s empty background closes it. Taps on nested content do not match these
+ * targets.
+ */
 document.body.addEventListener('click', e=>{
  const item = e.target.closest('.hub-item.expanded');
  if(!item) return;
@@ -2160,9 +2157,10 @@ document.body.addEventListener('click', e=>{
   materialCollapseHubItem(item);
  }
 });
-// Low-level carousel for the swipeable panes inside a card: drags a viewport/track/pane
-// set with the finger, decides by distance and velocity thresholds, and animates the
-// height when the pane changes. A smaller version of the page-level setupSwipeNav().
+/*
+ * Swipe between panels inside a card, using distance and velocity to choose the target and animating
+ * the height between panels.
+ */
 function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
  const PEEK=22, GAP=10; // GAP must match .inner-pane-track > .inner-pane margin-right
  let current=0, cardW=0, touchStartX=null, touchStartY=0, dragging=false, lastMoveX=0, lastMoveTime=0, velocity=0;
@@ -2177,10 +2175,10 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
   const el = panes[current];
   if(!el) return;
   const h = el.scrollHeight;
-  // Read "from" from the last height we set ourselves rather than the rendered height. This
-  // also runs from paneResizeObserver, which fires after the DOM has already reflowed, so
-  // the rendered height would already equal h and the change would jump instead of
-  // animating. That is also why the viewport height is always an explicit px value.
+  /*
+   * Start height transitions from the last height set here. A resize observer runs after layout, so a
+   * fresh measurement may already equal the target.
+   */
   const currentPx = parseFloat(viewport.style.height);
   const from = !isNaN(currentPx) ? currentPx : (viewport.getBoundingClientRect().height || h);
   viewport.style.transition = 'none';
@@ -2227,8 +2225,10 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
   const dt = e.timeStamp - lastMoveTime;
   if(dt>0) velocity = (touch.clientX - lastMoveX)/dt;
   lastMoveX = touch.clientX; lastMoveTime = e.timeStamp;
-  // Rubber-band resistance past the first/last pane; the page-level swipe is already
-  // disabled for this touch.
+  /*
+   * Rubber-band resistance past the first/last pane; the page-level swipe is already disabled for this
+   * touch.
+   */
   let d = dx;
   if(current<=0 && dx>0) d = dx*0.35;
   if(current>=panes.length-1 && dx<0) d = dx*0.35;
@@ -2257,9 +2257,10 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
   goTo(current, true);
  }, {passive:true});
  goTo(0, false);
- // goTo() measures the height only when switching. Panes whose content arrives later from
- // Firestore (e.g. the gifts "History" pane) would then be clipped or jump in size, so
- // watch the active pane's height and follow it smoothly.
+ /*
+  * Watch the active panel’s height so late-arriving content is neither clipped nor shown with a sudden
+  * jump.
+  */
  const paneResizeObserver = new ResizeObserver(()=>{
   if(dragging) return;
   setHeight(true);
@@ -2267,9 +2268,10 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
  panes.forEach(p=>paneResizeObserver.observe(p));
  return { goTo, get current(){ return current; } };
 }
-// section: the <section> whose children are the pane groups (one or more .card each).
-// groups: [[cardEl], [cardEl], ...] or grouped like gifts: [[card1, card2], [card3]].
-// buttonEntries: [{el: button, index: Number}], the segmented control's buttons.
+/*
+ * section contains the panels; groups defines which cards appear together; buttonEntries pairs each
+ * navigation button with its panel index.
+ */
 function buildInnerPaneCarousel(section, groups, buttonEntries){
  if(groups.length<2 || !groups[0] || !groups[0][0]) return null;
  const marker = document.createComment('inner-pane-carousel');
@@ -2309,7 +2311,7 @@ window.addEventListener('resize', ()=>{
   });
  }, 150);
 });
-// Layout preferences are kept per device and per member, like the theme.
+// Save layout preferences separately for each member on this device.
 export function hubLayoutMode(hub){
  try{const value=localStorage.getItem('bookhook_layout_'+currentUid+'_'+hub);return ['expanded','tabs','primary'].includes(value)?value:'cards';}catch(_){return 'cards';}
 }
@@ -2417,9 +2419,10 @@ function materialInit(){
  document.querySelectorAll('[data-material-date]').forEach(el=>el.textContent=nowLogical().toLocaleDateString(window.BH_I18N.locale,{day:'numeric',month:'long',weekday:'long'}));
  document.querySelectorAll('[data-panels]').forEach(control=>{
   const section=document.getElementById('tab-'+control.dataset.panels);
-  // materialInit() can run more than once (e.g. buildNav() after the profile is completed).
-  // Once the carousel exists the cards live inside .inner-pane, so leave it alone;
-  // rebuilding would bind the buttons to an empty list.
+  /*
+   * Initialization can run again. Keep an existing carousel rather than rebuilding it from cards already
+   * moved into panels.
+   */
   if(section.querySelector(':scope>.inner-pane-viewport')) return;
   const cards=[...section.children].filter(x=>x.classList.contains('card'));
   const chosen=Number(control.dataset.selected || (control.dataset.panels==='recs'?'1':control.dataset.panels==='week'||control.dataset.panels==='mtoday'?'1':'0'));
@@ -2433,14 +2436,11 @@ function materialInit(){
    select(chosen);
   }
  });
- // The buttons follow the carousel order (Personal = 0 on the left, Club = 1 on the
- // right). "Club" is selected by default; the carousel opens there and shows a small peek
- // of Personal on the left.
+ // Personal recommendations are panel 0 and Club recommendations are panel 1. Open on Club by default.
  const gifts=document.getElementById('tab-gifts');
  if(!document.getElementById('materialGiftTabs'))gifts.insertAdjacentHTML('afterbegin',window.BH_I18N.pick("<div class=\"segmented scrollable\" id=\"materialGiftTabs\"><button data-gift-view=\"0\" class=\"active\">Bekleyen</button><button data-gift-view=\"1\">Geçmiş</button><button data-gift-view=\"2\">Hediye Kayıtları</button><button data-gift-view=\"3\">Hediye Kitap Geçmişi</button></div>","<div class=\"segmented scrollable\" id=\"materialGiftTabs\"><button data-gift-view=\"0\" class=\"active\">Pending</button><button data-gift-view=\"1\">History</button><button data-gift-view=\"2\">Gift records</button><button data-gift-view=\"3\">Book gift history</button></div>"));
  if(!gifts.querySelector(':scope>.inner-pane-viewport')){
-  // Gifts panes are grouped by hand into four side-by-side panes: Pending / History /
-  // Gift stats / Gift books.
+  // Group gifts into four panels: pending, history, statistics, and books.
   const giftMainCard = document.getElementById('giftsContent') ? document.getElementById('giftsContent').closest('.card') : null;
   const qpGiftCard = document.getElementById('qpGiftCardWrap');
   const lastWeekCard = document.getElementById('giftsMemberLastWeekWrap');
@@ -2557,29 +2557,26 @@ function materialThemeSync(){
  document.querySelectorAll('[data-palette-choice]').forEach(button=>{const active=button.dataset.paletteChoice===palette;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
  const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=getComputedStyle(document.documentElement).getPropertyValue('--paper').trim();
 }
-// Finds which primary (bottom nav) tab a screen belongs to. Admin sub-screens resolve to
-// 'admin', which HUB_PARENT maps to its hub ('appsettings'); hub card ids are in
-// HUB_PARENT directly. Falls back to 'club'.
+// Find the primary navigation tab for a screen, including nested admin screens.
 const ADMIN_SUB_SCREENS = ['members','manual','qptest','editpast','whoreadtoday','goodreadsimport'];
 function materialHubRoot(id){
  if(ADMIN_SUB_SCREENS.includes(id)) id = 'admin';
  if(['club','library','appsettings'].includes(id)) return id;
  return HUB_PARENT[id] || 'club';
 }
-// materialHubRoot() resolves admin sub-screens two levels up (to 'appsettings'), which is
-// right for highlighting the nav tab but wrong for the back button. Back goes up one
-// level (admin sub-screen -> 'admin'), so it uses this one-level lookup.
+/*
+ * The back button moves up one level. Do not use the two-level lookup used to highlight primary
+ * navigation.
+ */
 function materialImmediateParent(id){
  if(ADMIN_SUB_SCREENS.includes(id)) return 'admin';
  if(['club','library','appsettings'].includes(id)) return id;
  return HUB_PARENT[id] || 'club';
 }
-// Scrolls to the top when the tab changes without a visible scroll jump. A plain
-// window.scrollTo(0, 0) could trigger Android Chrome's address-bar animation and hide the
-// bottom nav during the transition, and making the body position:fixed for this
-// ("fixed inside fixed" with the nav) made the nav disappear for a few frames. So reset
-// the scroll position in the same frame without changing the body's position, with
-// scroll-behavior:smooth turned off temporarily (it would also smooth scrollTop).
+/*
+ * Reset scroll in the same frame without fixing the body. Temporarily disable smooth scrolling to avoid
+ * jumps and disappearing mobile navigation.
+ */
 function silentScrollToTop(){
  const roots=[document.documentElement,document.body];
  const previous=roots.map(el=>[el.style.getPropertyValue('scroll-behavior'),el.style.getPropertyPriority('scroll-behavior')]);
@@ -2737,14 +2734,12 @@ export const hubPreviews=(()=>{
       for(let i=start;i<days.length && days[i]?.[id]?.status==='read';i++)count++;
       return {uid:id,streak:count,name:usersCache[id]?.name||window.BH_I18N.pick("Kulüp üyesi","Club member")};
     });
-    // Members who read every day of the 61-day window may have longer streaks; count those
-    // with computeStreak, which has no upper limit.
+    // A streak spanning the full 61-day preview window may be longer; calculate its full length separately.
     await Promise.all(leaders.map(async l=>{ if(l.streak>=days.length-1) l.streak=await computeStreak(l.uid); }));
     leaders.sort((a,b)=>b.streak-a.streak||a.name.localeCompare(b.name,'tr')||a.uid.localeCompare(b.uid));
     const streak=leaders.find(x=>x.uid===uid)?.streak||0;const def=BADGE_DEFS.find(x=>x.key===currentTierForStreak(streak));const u=usersCache[uid]||{};
     const next=BADGE_DEFS.find(x=>x.days>streak);
-    // The 30-day badge is earned again every 30 days, so at the top badge show the days to
-    // the next one.
+    // The top badge repeats every 30 days, so show progress toward the next repeat.
     const repeatDef=!next&&def&&def.repeats?def:null;
     const nextHint=next?window.BH_I18N.template`Sonraki rozete ${next.days-streak} gün`:repeatDef?window.BH_I18N.template`Sonraki ${repeatDef.label.split(' (')[0]} rozetine ${repeatDef.days-streak%repeatDef.days} gün`:window.BH_I18N.pick("En yüksek seri rozetindesin.","You’ve reached the highest streak badge.");
     const slides=[metric(window.BH_I18N.pick("Okuma serin","Reading streak"),window.BH_I18N.template`${streak} gün`,nextHint,'♨','hp-ok'),metric('Aktif rozetin',def?def.label:window.BH_I18N.pick("Henüz rozet yok","No badges yet"),def?window.BH_I18N.pick("Her gün okumaya devam.","Keep reading every day."):window.BH_I18N.pick("İlk rozet için 3 gün üst üste oku.","Read for 3 days in a row to earn your first badge."),def?.icon||'✦'),metric(def?window.BH_I18N.pick("Bu rozetin geçmişi","History of this badge"):window.BH_I18N.pick("Rozet geçmişin","Your badge history"),def?`${Number(u.badgeCounts?.[def.key]||0)+1} kez`:`${Object.values(u.badgeCounts||{}).reduce((a,b)=>a+Number(b||0),0)} rozet`,def?window.BH_I18N.pick("Geçmiş kazanımlar + aktif serin","Past achievements and your current streak"):'Tamamlanmış serilerde kazanılan rozetler','✧')];
@@ -2798,9 +2793,10 @@ export const hubPreviews=(()=>{
   const state={pending:true,at:Date.now()};cache.set(key,state);
   (id==='club'?club(uid):library(uid)).finally(()=>{state.pending=false;});
  }
- // Previews are normally cached for 60 seconds. When the member changes the underlying
- // data (adds or moves a book, checks in, sends a recommendation), drop the cached preview
- // so the next sync() shows fresh data.
+ /*
+  * Preview data normally lasts 60 seconds. Invalidate it after a book, check-in, or recommendation
+  * changes.
+  */
  function invalidate(id){ if(currentUid) cache.delete(currentUid+':'+id); }
  document.addEventListener('pointerdown',()=>{touching=true;},true);
  const idle=()=>{touching=false;quietUntil=performance.now()+500;};
@@ -2817,8 +2813,7 @@ export const hubPreviews=(()=>{
  return {sync, invalidate};
 })();
 
-/* Browser / PWA back button: screens and temporary views (dialogs, expanded cards) share
-   one history. */
+/* Browser / PWA back button: screens and temporary views (dialogs, expanded cards) share one history. */
 const appBackNavigation=(()=>{
  const key='bookhookNavigation';let session='';
  let owner=null,entries=[],index=-1,applying=false,scheduled=false,dialogSequence=0,popRevision=0,pendingRoot=false;
@@ -2936,8 +2931,7 @@ onAuthStateChanged(auth, async (user)=>{
   }
 
   currentUid = user.uid;
-  // Remove cache entries from older cache versions; they would otherwise stay in
-  // localStorage unused.
+  // Remove cache entries from older cache versions; they would otherwise stay in localStorage unused.
   try{
     const staleKeys = [];
     for(let i=0;i<localStorage.length;i++){
@@ -2976,8 +2970,10 @@ onAuthStateChanged(auth, async (user)=>{
     document.getElementById('bannedNotice').style.display='none';
   }
 
-  // Load the member list once before continuing: onSnapshot's first result arrives
-  // asynchronously, and the auto-fill and draw steps below need the members.
+  /*
+   * Wait for the initial member list before filling records or drawing gifts; the live listener returns
+   * asynchronously.
+   */
   try{
     const initialUsersSnap = await getDocs(collection(db,'users'));
     usersCache = {};
@@ -3013,8 +3009,7 @@ onAuthStateChanged(auth, async (user)=>{
   if(myProfile.role==='admin'){
     const filledCount = await autoFillPastDays(30);
     if(filledCount>0) showToast(`${filledCount} eksik işaretleme otomatik "okumadı" olarak dolduruldu.`);
-    // The auto-fill may have broken someone's streak; refresh everyone's streak and badge
-    // so avatar rings stay current.
+    // Automatic missed records may break streaks. Refresh badges so avatar rings match the current results.
     await Promise.all(activeUids().map(async uid=>{
       try{ const s = await computeStreak(uid); await checkAndAwardBadges(uid, s); }catch(_){}
     }));
@@ -3032,8 +3027,7 @@ onAuthStateChanged(auth, async (user)=>{
 if('serviceWorker' in navigator){
   window.addEventListener('load', async ()=>{
     try{
-      // Unregister the old firebase-messaging-sw.js if a device still has it (everything is in
-      // sw.js now); a second worker could interfere with push handling.
+      // Remove the retired messaging worker so only sw.js handles push notifications.
       const regs = await navigator.serviceWorker.getRegistrations();
       for(const reg of regs){
         const scriptUrl = (reg.active && reg.active.scriptURL) || (reg.installing && reg.installing.scriptURL) || (reg.waiting && reg.waiting.scriptURL) || '';
@@ -3058,4 +3052,5 @@ if('serviceWorker' in navigator){
 async function markNotifReadById(id){
   try{ await updateDoc(doc(db,'notifications',currentUid,'items',id), {read:true}); }catch(e){}
 }
+
 

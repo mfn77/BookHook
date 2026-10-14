@@ -1,13 +1,13 @@
-/* Book lookup shared by every screen: the book info window opened from any cover (with
-   "read" / "want to read" buttons) and Google Books / Open Library search with
-   autocomplete. */
+/* Shared book details, reading-list buttons, and book search with autocomplete. */
 
 import {
   addDoc, collection, deleteDoc, doc, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { createOrBatchPost } from "./feed.js";
-// Circular import: app.js imports this module too. These names are only used inside
-// functions (after startup), never while the module is being evaluated, so the cycle is safe.
+/*
+ * This module and app.js import each other. Shared values are only read inside functions after startup,
+ * not while the modules are loading.
+ */
 import { GOOGLE_BOOKS_API_KEY, closeModal, currentUid, db, escapeHtml, showToast } from "./app.js";
 
 async function addBookToMyLibrary(title, author, cover, listType){
@@ -100,9 +100,10 @@ export async function showBookInfo(rawTitle, cover, prependHtml, sourceContext){
   const dashIdx = rawTitle.indexOf(' - ');
   if(dashIdx>0){ author = rawTitle.slice(0,dashIdx).trim(); title = rawTitle.slice(dashIdx+3).trim(); }
 
-  // Render what we already know (cover, title, author, list buttons) right away. Details
-  // that only the book APIs have (description, rating, ...) load in the background and are
-  // added to a separate section.
+  /*
+   * Render what we already know (cover, title, author, list buttons) right away. Details that only the
+   * book APIs have (description, rating, ...) load in the background and are added to a separate section.
+   */
   body.innerHTML = window.BH_I18N.template`
     ${prependHtml||''}
     ${cover ? `<img src="${cover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.style.display='none';" />` : ''}
@@ -215,8 +216,10 @@ export async function searchOpenLibrary(q){
     cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : ''
   }));
 }
-// search.json only returns basic fields; page count, language and ratings live on the
-// book's "work" endpoints, so fetch those and merge them in.
+/*
+ * search.json only returns basic fields; page count, language and ratings live on the book's "work"
+ * endpoints, so fetch those and merge them in.
+ */
 async function enrichFromOpenLibraryWork(info){
   if(!info.workKey) return info;
   try{
@@ -333,3 +336,4 @@ export function initBooks(){
     }
   });
 }
+

@@ -1,5 +1,7 @@
-/* "My books": the member's three lists (reading now, want to read, finished), moving a
-   book between them, the add forms, and the Discover tab's floating buttons. */
+/*
+ * Personal reading lists: currently reading, want to read, and finished. Handles adding books, moving
+ * them between lists, and the Discover action buttons.
+ */
 
 import {
   addDoc, collection, deleteDoc, doc, getDocs, orderBy, query
@@ -8,8 +10,10 @@ import { createOrBatchPost } from "./feed.js";
 import { renderDiscoverTab } from "./discover.js";
 import { attachBookAutocomplete } from "./books.js";
 import { moveBookWithGoal, renderTotalPagesCard } from "./today.js";
-// Circular import: app.js imports this module too. These names are only used inside
-// functions (after startup), never while the module is being evaluated, so the cycle is safe.
+/*
+ * This module and app.js import each other. Shared values are only read inside functions after startup,
+ * not while the modules are loading.
+ */
 import {
   closeAddForm, closeModal, currentUid, db, escapeHtml, hubPreviews, keepOrLoading, markLoaded,
   materialBookCover, setupAddToggle, showToast
@@ -61,8 +65,10 @@ export async function renderBookHistoryGrid(uid, gridId, editable, collectionNam
     const snap = await getDocs(query(collection(db,'users',uid,collectionName), orderBy('addedAt','desc')));
     snap.forEach(d=> items.push({ id:d.id, ...d.data() }));
   }catch(e){
-    // On a failed query (e.g. right after startup, before the network is ready), keep what is
-    // on screen; showing "no books yet" here would also be written to the persistent cache.
+    /*
+     * On a failed query (e.g. right after startup, before the network is ready), keep what is on screen;
+     * showing "no books yet" here would also be written to the persistent cache.
+     */
     return;
   }
   if(!items.length){
@@ -121,9 +127,11 @@ export async function renderBookHistoryGrid(uid, gridId, editable, collectionNam
   }
   markLoaded(grid);
 }
-// Book window for an item in "My books": cover, title, author and one button that moves
-// the book one step forward (want to read -> reading now -> finished). Finished books
-// have no button. Only shown for the member's own library.
+/*
+ * Book window for an item in "My books": cover, title, author and one button that moves the book one
+ * step forward (want to read -> reading now -> finished). Finished books have no button. Only shown for
+ * the member's own library.
+ */
 function showBhBookInfo(b, uid, gridId, collectionName){
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
@@ -151,8 +159,10 @@ function showBhBookInfo(b, uid, gridId, collectionName){
         renderBookHistoryGrid(currentUid, gridId, true, collectionName);
         const destGridId = destCollection==='readBooks' ? 'readBooksGrid' : 'bookHistoryGrid';
         if(document.getElementById(destGridId)) renderBookHistoryGrid(currentUid, destGridId, true, destCollection);
-        // A finished book can count toward the monthly goal, so refresh the Today card's totals
-        // as well. The id that isn't on the current screen (admin vs member) is a no-op.
+        /*
+         * A finished book can count toward the monthly goal, so refresh the Today card's totals as well. The id
+         * that isn't on the current screen (admin vs member) is a no-op.
+         */
         renderTotalPagesCard('totalPagesNumber');
         renderTotalPagesCard('mTotalPagesNumber');
       }catch(err){ alert(window.BH_I18N.pick("Taşınamadı: ","Could not move: ")+(err.message||err)); btn.disabled = false; }
@@ -232,3 +242,4 @@ export function initLibrary(){
     }catch(err){ alert(window.BH_I18N.pick("Eklenemedi: ","Could not add: ")+(err.message||err)); }
   });
 }
+

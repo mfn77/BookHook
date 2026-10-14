@@ -1,6 +1,7 @@
-/* Discover tab: category filters, the book grid, the book window (club ratings, rating a
-   book) and the admin's cover tools. The curated book list lives in catalog.js.
-   app.js calls initDiscover() at startup; renderDiscoverTab() draws the tab when it opens. */
+/*
+ * Discover categories, book lists, ratings, and admin cover tools. The curated catalog is defined in
+ * catalog.js.
+ */
 import {
   addDoc, collection, doc, getDoc, getDocs, query, setDoc, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -8,8 +9,10 @@ import {
   CURATED_CATALOG, DISCOVER_CATEGORIES, ENGLISH_SEARCH_TITLES, bookKeyFor
 } from "./catalog.js";
 import { refreshLibraryButtons, searchGoogleBooks, searchOpenLibrary } from "./books.js";
-// Circular import: app.js imports this module too. These names are only used inside
-// functions (after startup), never while the module is being evaluated, so the cycle is safe.
+/*
+ * This module and app.js import each other. Shared values are only read inside functions after startup,
+ * not while the modules are loading.
+ */
 import {
   closeModal, currentUid, db, escapeHtml, hideAnchoredPopover, hubLayoutMode, markLoaded,
   materialBookCover, myProfile, showAnchoredPopover, showCachedOrPlaceholder, showSimpleInfoModal,
@@ -45,8 +48,10 @@ export async function ensureDiscoverCoversLoaded(){
   try{
     const snap = await getDocs(collection(db,'discoverCovers'));
     snap.forEach(d=>{ discoverCoversCache[d.id] = d.data(); });
-    // Only mark covers as loaded after a successful load, so a failed first attempt (e.g.
-    // before the network is ready) is retried later in the session.
+    /*
+     * Only mark covers as loaded after a successful load, so a failed first attempt (e.g. before the
+     * network is ready) is retried later in the session.
+     */
     discoverCoversLoaded = true;
   }catch(e){}
 }
@@ -55,8 +60,10 @@ export async function seedDiscoverCovers(){
   await ensureDiscoverCoversLoaded();
   const allBooks = [];
   CURATED_CATALOG.forEach(cat=> cat.books.forEach(b=> allBooks.push({title:b.t, author:b.a})));
-  // Retry books never tried and books with no cover found; a book only counts as done once
-  // a cover has been found.
+  /*
+   * Retry books never tried and books with no cover found; a book only counts as done once a cover has
+   * been found.
+   */
   const remaining = allBooks.filter(b=>{
     const cached = discoverCoversCache[bookKeyFor({title:b.title, author:b.author})];
     return !cached || !cached.cover;
@@ -120,9 +127,10 @@ export async function renderDiscoverFilters(){
   });
   applyDiscoverFiltersHeight();
 }
-// The filter bar is collapsed to one row by default and expands with an animation from
-// the arrow button. Its height depends on how the chips wrap, so it is recalculated on
-// render and on resize.
+/*
+ * The filter bar is collapsed to one row by default and expands with an animation from the arrow
+ * button. Its height depends on how the chips wrap, so it is recalculated on render and on resize.
+ */
 function applyDiscoverFiltersHeight(){
   const bar = document.getElementById('discoverFilters');
   const toggle = document.getElementById('discoverFiltersToggle');
@@ -504,11 +512,13 @@ async function openBookDiscoverModal(book){
   });
 }
 
-// Discover's event listeners: previous/next category buttons, the filter toggle, closing
-// the book window, and swiping on the grid to move to the previous/next category (like
-// tapping a chip, with a short fade). Categories are paged lists loaded from Firestore,
-// so they aren't laid out side by side like the other swipeable panes; the page-level
-// tab swipe ignores #discoverFeed. app.js calls this once at startup.
+/*
+ * Discover's event listeners: previous/next category buttons, the filter toggle, closing the book
+ * window, and swiping on the grid to move to the previous/next category (like tapping a chip, with a
+ * short fade). Categories are paged lists loaded from Firestore, so they aren't laid out side by side
+ * like the other swipeable panes; the page-level tab swipe ignores #discoverFeed. app.js calls this
+ * once at startup.
+ */
 export function initDiscover(){
   document.getElementById('discoverFabPrev').addEventListener('click', ()=> discoverGoToOffset(-1));
   document.getElementById('discoverFabNext').addEventListener('click', ()=> discoverGoToOffset(1));
@@ -567,3 +577,4 @@ export function initDiscover(){
   document.getElementById('bookDiscoverModalClose').addEventListener('click', ()=> closeModal('bookDiscoverModal'));
   document.getElementById('bookDiscoverModal').addEventListener('click', (e)=>{ if(e.target.id==='bookDiscoverModal') closeModal('bookDiscoverModal'); });
 }
+

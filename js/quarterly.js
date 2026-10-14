@@ -1,7 +1,7 @@
-/* Quarterly shared-book pick, run as a tournament: nominations -> objections -> voting
-   rounds -> reading. Phase changes happen on the server (quarterlyPickTick in
-   functions/index.js); this module shows the current phase and records nominations,
-   objections and votes with Firestore transactions. */
+/*
+ * Shared-book selection: nominations, objections, voting, and reading. The server advances the phases;
+ * this module displays them and records member actions.
+ */
 
 import {
   addDoc, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query,
@@ -11,8 +11,10 @@ import { bookKeyFor } from "./catalog.js";
 import { createPost, createOrBatchPost } from "./feed.js";
 import { attachBookAutocompleteEl } from "./books.js";
 import { notifyUser } from "./notifications.js";
-// Circular import: app.js imports this module too. These names are only used inside
-// functions (after startup), never while the module is being evaluated, so the cycle is safe.
+/*
+ * This module and app.js import each other. Shared values are only read inside functions after startup,
+ * not while the modules are loading.
+ */
 import {
   activeUids, avatarHtmlFromProfile, currentUid, db, escapeHtml, materialBookCover,
   materialRenderPhase, myProfile, showToast, shuffle, usersCache
@@ -51,8 +53,10 @@ export async function renderQuarterlyPickCard(){
   const body = document.getElementById('quarterlyPickBody');
   if(!body) return;
   let qp = null;
-  // On a failed read, keep the screen as it is instead of showing "not started". A missing
-  // document (really not started) doesn't throw.
+  /*
+   * On a failed read, keep the screen as it is instead of showing "not started". A missing document
+   * (really not started) doesn't throw.
+   */
   try{ const snap = await getDoc(qpDocRef()); qp = snap.exists() ? snap.data() : null; }catch(e){ return; }
   qpCache = qp;
   materialRenderPhase(qp);
@@ -96,9 +100,11 @@ function qpWireNomRowClicks(body){
     });
   });
 }
-// Turns a nomination row (a narrow flex row with cover and title) into an edit form. The
-// row switches to block layout so the form fields aren't squeezed side by side, and its
-// height animates so the rows below slide down smoothly.
+/*
+ * Turns a nomination row (a narrow flex row with cover and title) into an edit form. The row switches
+ * to block layout so the form fields aren't squeezed side by side, and its height animates so the rows
+ * below slide down smoothly.
+ */
 function qpExpandRowToForm(row, formHtml){
   row.classList.add('qp-editing');
   row.style.overflow = 'hidden';
@@ -124,9 +130,11 @@ function qpNominationFormHtml(idPrefix, submitLabel){
     <button class="primary" id="${idPrefix}SendBtn">${submitLabel}</button>
   `;
 }
-// Both the title and the author field run the same search (Open Library's general search
-// also matches authors), and both accept free text without picking a result. Submitting
-// requires an author, either picked or typed.
+/*
+ * Both the title and the author field run the same search (Open Library's general search also matches
+ * authors), and both accept free text without picking a result. Submitting requires an author, either
+ * picked or typed.
+ */
 function qpWireNominationForm(idPrefix, onSubmit){
   const bookInput = document.getElementById(idPrefix+'Book');
   const authorInput = document.getElementById(idPrefix+'Author');
@@ -558,8 +566,10 @@ async function objectToQuarterlyNomination(nomId, bookTitle){
     renderQuarterlyPickCard();
   }catch(err){ alert(window.BH_I18N.pick("İtiraz edilemedi: ","Could not submit objection: ")+(err.message||err)); }
 }
-// Tell the member whose book was objected to (they can always fill their own slot) and
-// everyone who still has nominations left that they can nominate a replacement.
+/*
+ * Tell the member whose book was objected to (they can always fill their own slot) and everyone who
+ * still has nominations left that they can nominate a replacement.
+ */
 async function notifyQpObjectionEligible(nominatorUid, bookTitle){
   try{
     const snap = await getDocs(qpNomsCol());
@@ -598,9 +608,11 @@ async function voteQuarterlyMatch(round, matchId, slot){
     qpCheckRoundFullyVoted(round); // in the background: stamps an early finish if the whole round has voted
   }catch(err){ alert('Oy verilemedi: '+(err.message||err)); renderQuarterlyPickCard(); }
 }
-// After a vote, checks whether every active member has voted in every match of the
-// round. If so, sets fullyVotedAt and the server closes the round 5 minutes after the
-// last vote instead of waiting the full day. Withdrawing a vote clears the stamp.
+/*
+ * After a vote, checks whether every active member has voted in every match of the round. If so, sets
+ * fullyVotedAt and the server closes the round 5 minutes after the last vote instead of waiting the
+ * full day. Withdrawing a vote clears the stamp.
+ */
 async function qpCheckRoundFullyVoted(round){
   try{
     const qpSnap = await getDoc(qpDocRef());
@@ -622,9 +634,11 @@ async function qpCheckRoundFullyVoted(round){
   }catch(e){ /* background check; failures are ignored */ }
 }
 
-/* Admin-only test copy of the shared-book pick: the same flow, stored separately under
-   quarterlyPickTest, with unlimited nominations, no time limits and phases advanced by
-   hand. It sends no notifications or feed posts and is never shown to members. */
+/*
+ * Admin-only test copy of the shared-book pick: the same flow, stored separately under
+ * quarterlyPickTest, with unlimited nominations, no time limits and phases advanced by hand. It sends
+ * no notifications or feed posts and is never shown to members.
+ */
 function qpTestDocRef(){ return doc(db,'quarterlyPickTest','current'); }
 function qpTestNomsCol(){ return collection(db,'quarterlyPickTest','current','nominations'); }
 function qpTestMatchesCol(round){ return collection(db,'quarterlyPickTest','current','rounds',String(round),'matches'); }
@@ -909,3 +923,4 @@ async function qpTestReset(){
   showToast(window.BH_I18N.pick("Deneme sıfırlandı.","Test reset."));
   renderQpTestCard();
 }
+

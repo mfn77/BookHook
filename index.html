@@ -16,7 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>html,body{background:#dcebd7}#loadingScreen{position:fixed;inset:0;background:#dcebd7;z-index:1000}.startup-content{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}.startup-mark{display:grid;place-items:center;width:144px;height:144px;border-radius:40px;background:#dcebd7}.startup-name{font:600 24px system-ui;color:#294c32}.startup-status{font:14px system-ui;color:#42664b}</style>
 <script>
-// Restore the device's appearance before the first paint.
+// Apply saved palette and theme preferences before the page becomes visible.
 try {
  const root=document.documentElement;
  const palette=localStorage.getItem('bookhook_palette');
@@ -610,10 +610,8 @@ try {
   </div>
 </div>
 
-<!-- These two button groups sit at body level, outside the tab sections: sections get a
-     CSS transform during tab transitions, and a transformed ancestor would make these
-     position:fixed buttons scroll away and let clicks fall through. switchTab() shows and
-     hides them for the active tab. -->
+<!-- Keep fixed actions outside the sections moved by swipe animations. switchTab controls their
+visibility. -->
 <div id="socialFloatingAction" class="social-floating-action hidden">
   <button type="button" id="composePostBtn" class="social-fab">✎ <span>Paylaş</span></button>
 </div>
@@ -763,10 +761,12 @@ try {
 </div>
 
 <script>document.dispatchEvent(new Event("bh-static-ready"));</script>
-<!-- Don't add ?v=… to js/app.js: the other modules in js/ import "./app.js", and a different URL would load the app twice. The service worker already revalidates code on every load. -->
+<!-- Use the same js/app.js URL everywhere. Adding a version query can load the module twice; sw.js
+handles freshness checks. -->
 <script type="module" src="./js/app.js"></script>
 </body>
 </html>
+
 
 
 

@@ -1,6 +1,5 @@
 const CACHE = "kitap-kulubu-v24-folders";
-// Only rarely changing files are precached. HTML and code (js/, css/) are not: they are
-// revalidated with the server on every load (see the fetch handler).
+// Precache only rarely changing assets. Check HTML, JavaScript, and CSS with the server on each load.
 const ASSETS = ["./manifest.json?v=brand-2", "./icons/logo-mark.png", "./icons/icon-192.png?v=brand-2", "./icons/icon-512.png?v=brand-2", "./icons/favicon.png?v=brand-2", "./icons/apple-touch-icon.png?v=brand-2"];
 
 self.addEventListener("install", (e) => {
@@ -23,10 +22,10 @@ self.addEventListener("fetch", (e) => {
   const isCode = url.pathname.endsWith(".js") || url.pathname.endsWith(".css");
 
   if (isHtml || isCode) {
-    // HTML and code are revalidated on every load (cache: "no-cache"). If nothing changed
-    // the server answers 304 and the browser's copy is used; otherwise the new file is
-    // downloaded. HTML and code therefore always stay in sync without version numbers in
-    // file names. Offline, the cached copy is used.
+    /*
+     * Revalidate pages and code before use. Reuse unchanged responses and download updated files; fall back
+     * to the saved copy when offline.
+     */
     e.respondWith(
       fetch(e.request, { cache: "no-cache" })
         .then((res) => {
@@ -59,11 +58,10 @@ self.addEventListener("fetch", (e) => {
   );
 });
 
-/* Push notifications. Chrome checks that every push message shows a notification
-   within event.waitUntil(); if it doesn't (or is late), Chrome shows its own "This site
-   has been updated in the background" notification. Firebase's onBackgroundMessage()
-   wrapper doesn't reliably guarantee that, so push events are handled directly here with
-   a single showNotification() call inside event.waitUntil(). */
+/*
+ * Show push notifications directly inside event.waitUntil. Otherwise Chrome may display its own
+ * background-update warning instead.
+ */
 self.addEventListener('push', (event) => {
   let payload = {};
   try{ payload = event.data ? event.data.json() : {}; }catch(e){}
@@ -101,5 +99,6 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
 
 

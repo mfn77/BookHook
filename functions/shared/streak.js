@@ -1,20 +1,18 @@
-/* Reading streak and badge rules, shared by the app (js/app.js) and the server
-   (functions/index.js, the nightly 06:00 badge settlement). Pure functions: the caller
-   passes in a function that reads day records.
+/*
+ * Reading streak and badge rules shared by the app and server. The caller supplies daily reading
+ * records.
+ *
+ * Count consecutive read days backward from today, or yesterday if today is unmarked. The active badge
+ * is the highest threshold reached; when the streak ends, it moves into badge history.
+ *
+ * The 30-day badge repeats every 30 days without a break. bankedRepeats tracks repeats already added to
+ * history, preventing duplicate awards.
+ */
 
-   - Streak: consecutive "read" days counting back from today (or from yesterday if today
-     isn't marked yet).
-   - Badge: the highest threshold the streak has reached (BADGE_DEFS). When the streak
-     breaks the badge goes away and is added once to the member's badge history
-     (badgeCounts).
-   - The 30-day badge (repeats: true) is earned again every 30 days of an unbroken streak:
-     the second on day 60, the third on day 90, and so on. Each time, the previous one is
-     added to the history (bankedRepeats counts how many this streak has added). A finished
-     streak therefore earns floor(streak / 30) 30-day badges, so never breaking a streak is
-     never worse than breaking and restarting it. */
-
-// label: Turkish name used in stored records seen by everyone (posts, notifications).
-// labelEn: shown on screen in English only.
+/*
+ * label: Turkish name used in stored records seen by everyone (posts, notifications). labelEn: shown on
+ * screen in English only.
+ */
 export const BADGE_DEFS = [
   {key:'b3',  days:3,  icon:'🔥', label:'3 gün aralıksız seri',             labelEn:'3-day reading streak',              color:'#CD7F32'},
   {key:'b5',  days:5,  icon:'⭐', label:'5 gün aralıksız seri',             labelEn:'5-day reading streak',              color:'#9E9E9E'},
@@ -30,8 +28,10 @@ export function currentTierForStreak(streak){
   return tier;
 }
 
-// Number of extra badges (beyond the active one) this streak should already have added to
-// the history. For the 30-day badge: 59 days -> 0, 60 -> 1, 90 -> 2. Always 0 for other badges.
+/*
+ * Number of extra badges (beyond the active one) this streak should already have added to the history.
+ * For the 30-day badge: 59 days -> 0, 60 -> 1, 90 -> 2. Always 0 for other badges.
+ */
 export function repeatsDue(streak){
   const def = BADGE_DEFS.find(d=>d.key===currentTierForStreak(streak));
   return def && def.repeats ? Math.floor(streak/def.days) - 1 : 0;
@@ -44,11 +44,13 @@ function addDaysToDateStr(dateStr, n){
   return dt.toISOString().slice(0,10);
 }
 
-// Counts the streak back from startDateStr (YYYY-MM-DD) in chunks of 31 days until the
-// first day not read; there is no upper limit. readStatus(dateStr) returns that day's
-// status ('read' | 'skip' | null) and must throw if the read fails; treating a failed read
-// as "not read" would break the streak by mistake. startMayBeUnmarked: if the start day
-// (today) isn't marked yet, start counting from the day before.
+/*
+ * Counts the streak back from startDateStr (YYYY-MM-DD) in chunks of 31 days until the first day not
+ * read; there is no upper limit. readStatus(dateStr) returns that day's status ('read' | 'skip' | null)
+ * and must throw if the read fails; treating a failed read as "not read" would break the streak by
+ * mistake. startMayBeUnmarked: if the start day (today) isn't marked yet, start counting from the day
+ * before.
+ */
 export async function countStreak(startDateStr, readStatus, {startMayBeUnmarked=false}={}){
   const CHUNK = 31;
   let streak = 0;
@@ -63,15 +65,16 @@ export async function countStreak(startDateStr, readStatus, {startMayBeUnmarked=
   }
 }
 
-// Compares the stored state (lastStreak, currentTier, bankedRepeats) with the new streak:
-// - 'rise': a new, higher badge was reached -> award it and notify.
-// - 'repeat': the 30-day badge was earned again without a break (day 60, 90, ...) -> add
-//   `bank` badges to the history and notify. A 'rise' can also carry bank > 0.
-// - 'drop': the streak broke or got shorter -> completedTier (the badge held before, if
-//   any) goes to the history. The app ignores drops; the server settles them after the
-//   day closes.
-// - 'none': nothing to record.
-// bank: badges to add to the history now; repeats: the new bankedRepeats to store.
+/*
+ * Compares the stored state (lastStreak, currentTier, bankedRepeats) with the new streak:
+ * - 'rise': a new, higher badge was reached -> award it and notify.
+ * - 'repeat': the 30-day badge was earned again without a break (day 60, 90, ...) -> add `bank`
+ *   badges to the history and notify. A 'rise' can also carry bank > 0.
+ * - 'drop': the streak broke or got shorter -> completedTier (the badge held before, if any) goes to
+ *   the history. The app ignores drops; the server settles them after the day closes.
+ * - 'none': nothing to record.
+ * bank: badges to add to the history now; repeats: the new bankedRepeats to store.
+ */
 export function badgeTransition(streak, lastStreak, prevTier, bankedRepeats=0){
   const newTier = currentTierForStreak(streak);
   if(streak<lastStreak) return {kind:'drop', newTier, completedTier: prevTier||null, bank:0, repeats:0};
@@ -82,9 +85,11 @@ export function badgeTransition(streak, lastStreak, prevTier, bankedRepeats=0){
   return {kind:'none', newTier, bank:0, repeats};
 }
 
-// Replays a member's whole history (day statuses, oldest first) and computes the badge
-// history: badges of finished streaks plus the repeated 30-day badges of the current
-// streak. The current streak's active badge is not counted yet.
+/*
+ * Replays a member's whole history (day statuses, oldest first) and computes the badge history: badges
+ * of finished streaks plus the repeated 30-day badges of the current streak. The current streak's
+ * active badge is not counted yet.
+ */
 export function replayBadgeHistory(statusesOldestFirst){
   const badgeCounts = {};
   let streak = 0, tier = null, bankedRepeats = 0;
@@ -100,3 +105,4 @@ export function replayBadgeHistory(statusesOldestFirst){
   }
   return {badgeCounts, streak, tier, bankedRepeats};
 }
+

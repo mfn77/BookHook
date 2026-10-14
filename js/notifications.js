@@ -1,5 +1,4 @@
-/* Notifications: the in-app list and unread badge, sending notifications to members and
-   admins, and phone (push) notifications through Firebase Cloud Messaging. */
+/* In-app notifications, unread counts, and phone notifications through Firebase Cloud Messaging. */
 
 import {
   arrayUnion, collection, doc, getDocs, limit, onSnapshot, orderBy, query, setDoc, updateDoc
@@ -8,8 +7,10 @@ import {
   getMessaging, getToken, onMessage, isSupported as isMessagingSupported
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 import { openPostModal } from "./feed.js";
-// Circular import: app.js imports this module too. These names are only used inside
-// functions (after startup), never while the module is being evaluated, so the cycle is safe.
+/*
+ * This module and app.js import each other. Shared values are only read inside functions after startup,
+ * not while the modules are loading.
+ */
 import {
   FCM_VAPID_KEY, activeTab, app, closeModal, currentUid, db, escapeHtml, keepOrLoading, markLoaded,
   pad, renderTab, resolveNotifTab, showToast, switchTab, usersCache
@@ -25,9 +26,11 @@ export async function notifyUser(uid, message, linkTab, postId){
     if(prefs[category] === false) return; // the recipient turned this category off
   }
   try{
-    // Deduplicate without reading the recipient's notifications: the document id is derived
-    // from the message and a time bucket, so sending the same message again shortly afterwards
-    // overwrites the same document (or is rejected by the rules) instead of adding a duplicate.
+    /*
+     * Deduplicate without reading the recipient's notifications: the document id is derived from the
+     * message and a time bucket, so sending the same message again shortly afterwards overwrites the same
+     * document (or is rejected by the rules) instead of adding a duplicate.
+     */
     let hash = 0;
     for(let i=0;i<message.length;i++) hash = (hash*31 + message.charCodeAt(i)) & 0xffffffff;
     const bucket = Math.floor(Date.now()/10000);
@@ -78,9 +81,10 @@ async function registerPushToken(){
     if(activeTab) renderTab(activeTab);
   });
 }
-// Runs at sign-in: refreshes the push token if permission was already granted. It never
-// asks for permission, because browsers only allow that from a direct user click (see
-// enablePushNotifications).
+/*
+ * Runs at sign-in: refreshes the push token if permission was already granted. It never asks for
+ * permission, because browsers only allow that from a direct user click (see enablePushNotifications).
+ */
 export async function setupPushNotifications(){
   try{
     const supported = await isMessagingSupported();
@@ -90,8 +94,10 @@ export async function setupPushNotifications(){
     await registerPushToken();
   }catch(e){ /* without push, in-app notifications still work */ }
 }
-// Called from the "Enable notifications" button, so the permission prompt happens inside
-// the click handler as browsers require.
+/*
+ * Called from the "Enable notifications" button, so the permission prompt happens inside the click
+ * handler as browsers require.
+ */
 export async function enablePushNotifications(){
   try{
     const supported = await isMessagingSupported();
@@ -129,8 +135,10 @@ async function renderNotifsTab(){
 
   const box = keepOrLoading('notifsList');
   let snap;
-  // On a failed query, keep the current (possibly cached) list instead of replacing it with
-  // an error that would then be cached.
+  /*
+   * On a failed query, keep the current (possibly cached) list instead of replacing it with an error that
+   * would then be cached.
+   */
   try{ snap = await getDocs(query(collection(db,'notifications',currentUid,'items'), orderBy('createdAt','desc'), limit(50))); }
   catch(e){ return; }
   const items = [];
@@ -170,3 +178,4 @@ export function initNotifications(){
     renderNotifsTab();
   });
 }
+

@@ -1,14 +1,14 @@
-/* Feed tab and posts: automatic posts (checked in, badges, gifts, ...) and merging them
-   into batch posts, post cards, polls, votes and reactions, comments, the pinned post
-   bar, writing and editing posts, and the post window. app.js calls initFeed() at startup. */
+/* Feed posts, polls, votes, comments, and reactions. Also handles automatic posts and the post editor. */
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, runTransaction,
   startAfter, updateDoc, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { renderReactionBar, setPendingReactionRefresh, showReactorsModal, toggleReactionDrawer } from "./reactions.js";
 import { notifyAllMembers, notifyUser } from "./notifications.js";
-// Circular import: app.js imports this module too. These names are only used inside
-// functions (after startup), never while the module is being evaluated, so the cycle is safe.
+/*
+ * This module and app.js import each other. Shared values are only read inside functions after startup,
+ * not while the modules are loading.
+ */
 import {
   BADGE_DEFS, activeTab, closeModal, currentUid, db, escapeHtml, hideAnchoredPopover,
   keepOrLoading, markLoaded, materialBookCover, myProfile, pad, profilePhotoHtml,
@@ -211,11 +211,11 @@ function timeAgoLabel(iso){
   const d = new Date(iso);
   return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
 }
-// Every post has a bold title above its body. Members write their own titles (p.title);
-// system posts and polls get a generated one.
-//
-// In English, titles of automatic posts are translated when rendered; stored posts and
-// member-written text are never changed.
+/*
+ * Every post has a bold title above its body. Members write their own titles (p.title); system posts
+ * and polls get a generated one. In English, titles of automatic posts are translated when rendered;
+ * stored posts and member-written text are never changed.
+ */
 function automaticPostTitleEn(p){
  const titles={read:'✓ Read today',skip:'😴 Missed reading',badge_gained:'🏅 Badge earned',badge_lost:'💔 Badge lost',gift_won:'🎁 Book gift won',gift_requested:'📮 Gift request',gift_completed:'🎉 Gift received',new_member:'👋 New member',book_review:'⭐ Book rated',book_review_batch:'⭐ Book ratings',book_added:'📖 Added to library',book_added_batch:'📖 Added to library',record_dethrone:'👑 New record',no_lottery:'🍀 No draw needed',rec_personal:'💡 Book recommendation',rec_group:'💡 Club recommendation'};
  const quarterly={nominations_open:'📚 Nominations open',nominations_near_end:'⏰ Nominations closing',objecting_open:'🔎 Objections open',objecting_near_end:'⏰ Objections closing',objection_made:'🙅 Objection submitted',nomination_made:'📖 New nomination',round_start:'🗳️ Voting round started',round_near_end:'⏰ Voting closing',round_result:'📊 Round results',final_winner:'🏆 Shared book selected',gift_lottery_drawn:'🎁 Gift draw completed',gift_lottery_applied:'🎁 Shared book gifts confirmed',discussion_opened:'💬 Discussion opened'};
@@ -382,8 +382,10 @@ function postBodyHtml(p, expanded){
     default: return escapeHtml(p.text||'');
   }
 }
-// Poll body: each option is a clickable row with a bar filled by its share of the votes;
-// the user's own vote is highlighted and the total is shown below.
+/*
+ * Poll body: each option is a clickable row with a bar filled by its share of the votes; the user's own
+ * vote is highlighted and the total is shown below.
+ */
 function pollVoterAvatarsHtml(voters){
   if(!voters || !voters.length) return '';
   const maxShow = 4;
@@ -406,8 +408,10 @@ function pollBodyHtml(p, expanded){
     const count = (o.voters||[]).length;
     const pct = totalVotes>0 ? Math.round(count/totalVotes*100) : 0;
     const voted = i===myVoteIdx;
-    // Voter avatars (in voting order) are only shown on the expanded post, not on the small
-    // card in the feed.
+    /*
+     * Voter avatars (in voting order) are only shown on the expanded post, not on the small card in the
+     * feed.
+     */
     const voterAvatars = expanded ? pollVoterAvatarsHtml(o.voters) : '';
     return `<div class="poll-option-row${voted?' voted':''}" data-poll-post="${p.id}" data-poll-option="${i}">
       <div class="poll-option-fill" style="width:${pct}%;"></div>
@@ -471,8 +475,10 @@ function postVoteRowHtml(p){
     <button type="button" class="post-vote-btn down${myDown?' active':''}" data-vote-post="${p.id}" data-dir="down" title="Beğenme">▼</button>
   </div>`;
 }
-// Compact emoji reaction pill next to the vote pill: shows your own reaction, if any, and
-// opens the reaction picker on tap.
+/*
+ * Compact emoji reaction pill next to the vote pill: shows your own reaction, if any, and opens the
+ * reaction picker on tap.
+ */
 function postReactionPillHtml(p){
   const reactions = p.reactions || {};
   const myReaction = myReactionEmoji(reactions);
@@ -531,8 +537,10 @@ async function setPostVote(postId, dir){
     if(notifyUid) notifyUser(notifyUid, `${myProfile.name} gönderini beğendi.`, 'social', postId);
   }catch(err){ alert('Oy verilemedi: '+(err.message||err)); }
 }
-// Visual weight of a post: member posts are the largest, book added/rated posts medium,
-// everything else (badges, gifts, system posts) default size.
+/*
+ * Visual weight of a post: member posts are the largest, book added/rated posts medium, everything else
+ * (badges, gifts, system posts) default size.
+ */
 function postWeightClass(p){
   if(p.type==='user_post') return 'weight-high';
   if(p.type==='book_review' || p.type==='book_review_batch' || p.type==='book_added' || p.type==='book_added_batch') return 'weight-medium';
@@ -742,8 +750,10 @@ function resizeImageToDataUrl(file, maxDim, quality){
   });
 }
 let composeImageDataUrl = null;
-// "Join the conversation" box: expands in place (no dialog) into title and text fields;
-// the small "+" button attaches an image.
+/*
+ * "Join the conversation" box: expands in place (no dialog) into title and text fields; the small "+"
+ * button attaches an image.
+ */
 let jcImageDataUrl = null;
 function jcExpand(){
   document.getElementById('joinConversationTrigger').style.display = 'none';
@@ -878,15 +888,19 @@ export function wirePostCards(container, refreshFn){
     });
   });
 }
-// The post window refreshes itself after a comment is added or removed; this also updates
-// the comment count on the post's card in the feed behind it.
+/*
+ * The post window refreshes itself after a comment is added or removed; this also updates the comment
+ * count on the post's card in the feed behind it.
+ */
 function syncFeedCardCommentCount(postId, newCount){
   document.querySelectorAll(`.post-card[data-post-id="${postId}"] .post-comment-count`).forEach(el=>{
     el.textContent = `💬 ${newCount}`;
   });
 }
-// Tapping a post expands its card in place (the cards below slide down) instead of opening
-// a dialog; comments are read and written right there.
+/*
+ * Tapping a post expands its card in place (the cards below slide down) instead of opening a dialog;
+ * comments are read and written right there.
+ */
 function togglePostComments(postId){
   const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
   if(!card) return;
@@ -1183,3 +1197,4 @@ export function initFeed(){
   document.getElementById('postModalClose').addEventListener('click', ()=> closeModal('postModal'));
   document.getElementById('postModal').addEventListener('click', (e)=>{ if(e.target.id==='postModal') closeModal('postModal'); });
 }
+

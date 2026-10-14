@@ -1,22 +1,25 @@
-/* "Today" screen: the "Did you read today?" card with its instant "Read" button, the
-   page-count question, personal daily/monthly goals and reading totals. */
+/* Daily reading check-in, page counts, optional daily and monthly goals, and reading totals. */
 
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { notifyAllMembers } from "./notifications.js";
 import { renderQpBookInBugun } from "./quarterly.js";
-// Circular import: app.js imports this module too. These names are only used inside
-// functions (after startup), never while the module is being evaluated, so the cycle is safe.
+/*
+ * This module and app.js import each other. Shared values are only read inside functions after startup,
+ * not while the modules are loading.
+ */
 import {
   CLUB_START_DATE, DOW, addDays, checkAndAwardBadges, computeStreak, currentUid, db, fromStr,
   hubPreviews, joinDateStrOf, markLoaded, myProfile, nowLogical, pad, showCachedOrPlaceholder,
   showToast, stampBtnInFlight, toStr, todayAnswers, todayStr, usersCache
 } from "./app.js";
 
-// "Read" updates the screen before the server confirms. While that write is in flight, a
-// snapshot triggered by someone else's check-in must not undo the optimistic state, so the
-// pending check-in is kept here (resubscribeToday in app.js re-applies it).
+/*
+ * "Read" updates the screen before the server confirms. While that write is in flight, a snapshot
+ * triggered by someone else's check-in must not undo the optimistic state, so the pending check-in is
+ * kept here (resubscribeToday in app.js re-applies it).
+ */
 export let selfReadPending = null;
 
 export async function renderTotalPagesCard(elId){
@@ -167,8 +170,7 @@ async function renderPersonalGoals(section,totals,uid=currentUid){
   const nextDay=fromStr(toStr(addDays(nowLogical(),1)));nextDay.setHours(6,0,0,0);
   section.dataset.goalRefreshAt=String(Math.min(nextDay.getTime(),monthly?Date.parse(monthly.end):Infinity));
   const rec=totals.records[day],pages=rec?.status==='read'?(Number.isSafeInteger(rec.pages)&&rec.pages>=15?rec.pages:15):0;
-  // Totals may have been read before the optimistic check-in; don't let them flip the
-  // button back.
+  // Totals may have been read before the optimistic check-in; don't let them flip the button back.
   updateSelfReadButton(section,todayAnswers[uid]==='read'&&rec?.status!=='read'?{...rec,status:'read'}:rec,daily);
   const dailyText=pages>=daily?.target?window.BH_I18N.template`Bugünkü hedefini ${pages} sayfayla tamamladın.`:pages?window.BH_I18N.template`Bugün ${pages} sayfa okudun. Hedefine ${Math.max(0,(daily?.target||0)-pages)} sayfa kaldı.`:window.BH_I18N.pick("Bugün henüz okuma kaydın yok.","You haven’t recorded any reading today.");
   grid.innerHTML=window.BH_I18N.template`<div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▤</span><h2>Günlük sayfa hedefi</h2>${daily?goalEditButton("daily"):""}${daily?window.BH_I18N.template`<strong class="goal-value">${daily.target} <small>sayfa / gün</small></strong>${goalProgress(pages,daily.target)}<p role="status">${dailyText}</p>${daily.end?window.BH_I18N.pick("<p class=\"muted\">Hedefin yarın 06.00’da sona erecek.</p>","<p class=\"muted\">Your goal will end tomorrow at 06:00.</p>"):window.BH_I18N.pick("<button type=\"button\" class=\"ai-text-action\" data-stop-goal>Hedefi yarından itibaren bırak</button>","<button type=\"button\" class=\"ai-text-action\" data-stop-goal>End goal from tomorrow</button>")}`:goalForm('daily')}<p class="muted">İsteğe bağlı</p></div>
@@ -194,8 +196,10 @@ function updateSelfReadButton(section,rec,daily){
  button.disabled=read&&!editable;button.classList.toggle('selected',read);
  button.classList.toggle('pages-editable',Boolean(editable));
  button.setAttribute('aria-pressed',String(read));
- // Only rewrite the button when its state actually changes, so an ongoing check-in
- // animation isn't cut short by an unrelated re-render.
+ /*
+  * Only rewrite the button when its state actually changes, so an ongoing check-in animation isn't cut
+  * short by an unrelated re-render.
+  */
  const state=editable?'edit:'+pages:read?'read':'idle';
  if(button.dataset.markState!==state){
   button.dataset.markState=state;
@@ -204,8 +208,10 @@ function updateSelfReadButton(section,rec,daily){
  button.title=editable?window.BH_I18N.pick("Bugün okuduğun toplam sayfa sayısını güncelle","Update your total pages read today"):read?window.BH_I18N.pick("Bugün okudun","You read today"):window.BH_I18N.pick("Okudum","Read");
 }
 const READ_CHECK_SVG='<svg class="mark-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-// Instant check-in feedback: a fill spreading from the tap point, a self-drawing tick and
-// a small burst of sparks. Runs without waiting for the network.
+/*
+ * Instant check-in feedback: a fill spreading from the tap point, a self-drawing tick and a small burst
+ * of sparks. Runs without waiting for the network.
+ */
 function playReadMarkFx(btn,point){
  try{navigator.vibrate?.(12);}catch(_){}
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
@@ -275,11 +281,11 @@ export async function moveBookWithGoal(b,collectionName,destCollection){
 }
 // Refresh the view at 06:00 and when a monthly goal period ends while the app stays open.
 
-/* "Did you read today?" card */
-// Members and admins see the same check-in card on their own Today screens; it is wired
-// to different element ids because both screens exist in the page at the same time.
-//
-// Greeting for the card heading, based on the time of day and today's check-in status.
+/*
+ * "Did you read today?" card Members and admins see the same check-in card on their own Today screens;
+ * it is wired to different element ids because both screens exist in the page at the same time.
+ * Greeting for the card heading, based on the time of day and today's check-in status.
+ */
 function dailyGreetingText(status){
   const h = new Date().getHours();
   const part = h<6 ? 'gece' : h<11 ? 'sabah' : h<17 ? 'oglen' : h<21 ? 'aksam' : 'gece';
@@ -339,8 +345,10 @@ export function wireSelfMarkCard(ids){
     const uid=currentUid,day=todayStr(),prevStatus=todayAnswers[uid];
     let optimistic=false;
     try{
-      // Goals and today's status are already kept up to date by live listeners, so the click
-      // doesn't wait for the server.
+      /*
+       * Goals and today's status are already kept up to date by live listeners, so the click doesn't wait for
+       * the server.
+       */
       const goals=personalGoals((usersCache[uid]||myProfile)?.readingGoals);
       const daily=dailyGoalAt(goals,day),wasRead=prevStatus==='read';
       let previousPages=0;
@@ -409,3 +417,4 @@ export function initToday(){
    if(section&&Date.now()>=Number(section.dataset.goalRefreshAt||Infinity))renderTotalPagesCard(section.id==='tab-today'?'totalPagesNumber':'mTotalPagesNumber');
   },60000);
 }
+

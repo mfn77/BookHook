@@ -1,3 +1,4 @@
+/* Server tasks for notifications, reading records, gift draws, badges, recommendations, and shared-book selection. */
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
@@ -12,8 +13,10 @@ const db = getFirestore();
 const messaging = getMessaging();
 const authAdmin = getAuth();
 
-// Sends a push notification to the member's registered devices whenever a new in-app
-// notification is created under notifications/{uid}/items.
+/*
+ * Sends a push notification to the member's registered devices whenever a new in-app notification is
+ * created under notifications/{uid}/items.
+ */
 exports.sendPushOnNotification = onDocumentCreated(
   "notifications/{uid}/items/{itemId}",
   async (event) => {
@@ -141,9 +144,11 @@ exports.readingReminderNight = onSchedule(
   }
 );
 
-// Reminds members with an incomplete profile (surname, phone, address) twice a day. New
-// members can't use the app before completing their profile, so this only affects older
-// accounts. Members with a complete profile are never notified.
+/*
+ * Reminds members with an incomplete profile (surname, phone, address) twice a day. New members can't
+ * use the app before completing their profile, so this only affects older accounts. Members with a
+ * complete profile are never notified.
+ */
 async function sendProfileCompletionReminders() {
   const usersSnap = await db.collection("users").get();
   const tokens = [];
@@ -188,10 +193,12 @@ exports.profileCompletionReminderEvening = onSchedule(
   }
 );
 
-/* Scheduled jobs that run even when nobody opens the app: filling missed days with
-   "missed" and drawing the weekly gift lottery. They follow the same rules and write the
-   same Firestore fields as the app's versions (autoFillPastDays, computeWeekStats,
-   finalizeWeek), so the app reads their records the same way. */
+/*
+ * Scheduled jobs that run even when nobody opens the app: filling missed days with "missed" and drawing
+ * the weekly gift lottery. They follow the same rules and write the same Firestore fields as the app's
+ * versions (autoFillPastDays, computeWeekStats, finalizeWeek), so the app reads their records the same
+ * way.
+ */
 
 // No records exist before this date (same as CLUB_START_DATE in the app).
 const CLUB_START_DATE = "2026-07-06";
@@ -220,9 +227,11 @@ function weekDatesFrom(mondayStr) {
   for (let i = 0; i < 7; i++) arr.push(addDaysToDateStr(mondayStr, i));
   return arr;
 }
-// Converts an ISO timestamp to a reading day with the app's rule (logicalDateStrOf):
-// Istanbul time, and before 06:00 it still counts as the previous day. Used to find a
-// member's join day (days before joining are never filled).
+/*
+ * Converts an ISO timestamp to a reading day with the app's rule (logicalDateStrOf): Istanbul time, and
+ * before 06:00 it still counts as the previous day. Used to find a member's join day (days before
+ * joining are never filled).
+ */
 function logicalDateStrFromIso(iso) {
   if (!iso) return null;
   const d = new Date(iso);
@@ -235,8 +244,10 @@ function logicalDateStrFromIso(iso) {
   return `${y}-${m}-${dd}`;
 }
 
-// Writes "missed" for members with no check-in on a closed day. Server version of the
-// app's autoFillPastDays, for a single day.
+/*
+ * Writes "missed" for members with no check-in on a closed day. Server version of the app's
+ * autoFillPastDays, for a single day.
+ */
 async function autoMarkMissedDay(dateStr) {
   if (dateStr < CLUB_START_DATE) return 0;
   const usersSnap = await db.collection("users").get();
@@ -262,9 +273,10 @@ async function autoMarkMissedDay(dateStr) {
   return toCreate.length;
 }
 
-// Every day at 06:00 Turkey time: fills the day that just closed, and checks the two days
-// before it again in case an earlier run was missed (days that already have a record are
-// never changed).
+/*
+ * Every day at 06:00 Turkey time: fills the day that just closed, and checks the two days before it
+ * again in case an earlier run was missed (days that already have a record are never changed).
+ */
 exports.autoMarkMissedReading = onSchedule(
   { schedule: "0 6 * * *", timeZone: "Europe/Istanbul" },
   async () => {
@@ -277,9 +289,11 @@ exports.autoMarkMissedReading = onSchedule(
 
 // Streak and badge rules are shared with the app: functions/shared/streak.js.
 const loadStreak = () => import("./shared/streak.js");
-// A member's settled streak as of yesterday. A failed read throws instead of counting as
-// "missed"; otherwise a temporary error would break the streak and permanently write a
-// "badge lost" post and a wrong badge history entry.
+/*
+ * A member's settled streak as of yesterday. A failed read throws instead of counting as "missed";
+ * otherwise a temporary error would break the streak and permanently write a "badge lost" post and a
+ * wrong badge history entry.
+ */
 async function computeStreakBackend(uid, countStreak) {
   return countStreak(dateNDaysAgoInIstanbul(1), (ds) =>
     db.collection("days").doc(ds).collection("answers").doc(uid).get().then((snap) => (snap.exists ? snap.data().status : null)));
@@ -296,10 +310,12 @@ async function backendCheckAndPostDethrone(usersMap, uid, newCount, getOthersCou
     await createPostBackend("record_dethrone", { recordLabel: label, recordIcon: icon || "🏆", recordCount: newCount, dethronedName: usersMap[maxUid]?.name || "" }, uid, u.name);
   }
 }
-// Settles streaks once the day has closed (06:00). The app only handles upward changes
-// (new badges) right away; a broken streak (badge history entry and "streak lost" post)
-// is recorded here, after all of the day's check-ins are final, so a mistake corrected on
-// the same day never becomes a permanent record.
+/*
+ * Settles streaks once the day has closed (06:00). The app only handles upward changes (new badges)
+ * right away; a broken streak (badge history entry and "streak lost" post) is recorded here, after all
+ * of the day's check-ins are final, so a mistake corrected on the same day never becomes a permanent
+ * record.
+ */
 async function settleDailyBadges() {
   const { BADGE_DEFS, countStreak, badgeTransition } = await loadStreak();
   const usersSnap = await db.collection("users").get();
@@ -338,9 +354,10 @@ async function settleDailyBadges() {
         }
       }
     } else {
-      // kind is "rise" or "repeat".
-      // The app usually records these right away; this covers members who reached a threshold
-      // without opening the app.
+      /*
+       * kind is "rise" or "repeat". The app usually records these right away; this covers members who reached
+       * a threshold without opening the app.
+       */
       const uTab = u.role === "admin" ? "worms" : "mworms";
       if (kind === "rise") {
         await db.collection("users").doc(uid).update({ lastStreak: streak, currentTier: newTier, currentStreak: streak });
@@ -355,9 +372,11 @@ async function settleDailyBadges() {
     }
   }
 }
-// The 30-day badge was earned again without breaking the streak (day 60, 90, ...): add the
-// previous one to the badge history. The app can do the same at the same time, so the
-// stored values are re-read inside a transaction to avoid counting it twice.
+/*
+ * The 30-day badge was earned again without breaking the streak (day 60, 90, ...): add the previous one
+ * to the badge history. The app can do the same at the same time, so the stored values are re-read
+ * inside a transaction to avoid counting it twice.
+ */
 async function bankRepeatBadgesBackend(usersMap, uid, streak, uTab, BADGE_DEFS, badgeTransition) {
   const ref = db.collection("users").doc(uid);
   const saved = await db.runTransaction(async (tx) => {
@@ -401,8 +420,10 @@ function shuffleBackend(arr) {
   }
   return a;
 }
-// Weekly draw rules are shared with the app: functions/shared/lottery.js. It is an ES
-// module (the browser loads the same file), so it is loaded here with import().
+/*
+ * Weekly draw rules are shared with the app: functions/shared/lottery.js. It is an ES module (the
+ * browser loads the same file), so it is loaded here with import().
+ */
 const loadLottery = () => import("./shared/lottery.js");
 // Server version of the app's computeWeekStats.
 async function computeWeekStatsBackend(mondayStr) {
@@ -431,8 +452,10 @@ async function computeWeekStatsBackend(mondayStr) {
       stats.push({ uid, name: u.name || "?", miss: 0, read: 0, marked: 0, joinDate: joinDs || "", joinedAt });
       return;
     }
-    // A closed day with no record counts as missed (same rule as autoMarkMissedDay), so the
-    // draw is right even if Sunday's auto-fill hasn't been written yet.
+    /*
+     * A closed day with no record counts as missed (same rule as autoMarkMissedDay), so the draw is right
+     * even if Sunday's auto-fill hasn't been written yet.
+     */
     let miss = 0, read = 0;
     perDate.forEach((map, i) => {
       const rec = map[uid], ds = dates[i];
@@ -472,9 +495,11 @@ async function createPostBackend(type, data, forUid, forName) {
     console.error("[kura] Gönderi oluşturulamadı:", e);
   }
 }
-// Server version of the app's finalizeWeek: does nothing if draws/{weekStart} already
-// exists (idempotent); otherwise runs the draw, stores the result, and creates the
-// notifications and feed posts for receivers and givers.
+/*
+ * Server version of the app's finalizeWeek: does nothing if draws/{weekStart} already exists
+ * (idempotent); otherwise runs the draw, stores the result, and creates the notifications and feed
+ * posts for receivers and givers.
+ */
 async function finalizeWeekBackend(mondayStr) {
   const drawRef = db.collection("draws").doc(mondayStr);
   const existing = await drawRef.get();
@@ -512,24 +537,28 @@ async function finalizeWeekBackend(mondayStr) {
   console.log(`[kura] ${mondayStr} haftası kapatıldı. giverCount=${giverCount} safeCount=${safeCount} pairs=${pairs.length}`);
 }
 
-// Every Monday at 06:10 Turkey time: draws the gift lottery for the previous week
-// (Monday-Sunday). It runs 10 minutes after autoMarkMissedReading because Cloud Scheduler
-// doesn't guarantee an order between jobs at the same minute; drawing before Sunday's
-// "missed" records are written could leave the receiver pool wrong.
+/*
+ * Every Monday at 06:10 Turkey time: draws the gift lottery for the previous week (Monday-Sunday). It
+ * runs 10 minutes after autoMarkMissedReading because Cloud Scheduler doesn't guarantee an order
+ * between jobs at the same minute; drawing before Sunday's "missed" records are written could leave the
+ * receiver pool wrong.
+ */
 exports.weeklyLotteryDraw = onSchedule(
   { schedule: "10 6 * * 1", timeZone: "Europe/Istanbul" },
   async () => {
-    const thisMonday = dateNDaysAgoInIstanbul(0); // "today" is the Monday this job runs on
+    const thisMonday = dateNDaysAgoInIstanbul(0);
     const prevMonday = addDaysToDateStr(thisMonday, -7);
     await finalizeWeekBackend(prevMonday);
   }
 );
 
-// Deletes a member completely: their Firebase Auth account, users/{uid} and their
-// personal subcollections (reading lists, notifications). Only the Admin SDK can delete
-// another user's Auth account, so this has to run on the server. It can't be undone.
-// Shared history (days/{date}/answers/{uid}, past posts) is deliberately kept: weekly
-// stats, badges and past draws depend on it.
+/*
+ * Deletes a member completely: their Firebase Auth account, users/{uid} and their personal
+ * subcollections (reading lists, notifications). Only the Admin SDK can delete another user's Auth
+ * account, so this has to run on the server. It can't be undone. Shared history
+ * (days/{date}/answers/{uid}, past posts) is deliberately kept: weekly stats, badges and past draws
+ * depend on it.
+ */
 exports.adminDeleteMember = onCall(async (request) => {
   const callerUid = request.auth && request.auth.uid;
   if (!callerUid) throw new HttpsError("unauthenticated", "Giriş yapmış olmalısın.");
@@ -580,18 +609,20 @@ exports.adminDeleteMember = onCall(async (request) => {
     await authAdmin.deleteUser(targetUid);
   } catch (e) {
     console.error(`[adminDeleteMember] ${targetUid} için Auth hesabı silinemedi:`, e);
-    // The Firestore data is already gone, so continue even if the Auth account can't be
-    // deleted; signing in again recreates the profile as a new member.
+    /*
+     * The Firestore data is already gone, so continue even if the Auth account can't be deleted; signing in
+     * again recreates the profile as a new member.
+     */
   }
 
   console.log(`[adminDeleteMember] ${targetUid} (${targetData.name || ""}) tamamen silindi. İşlemi yapan: ${callerUid}.`);
   return { success: true };
 });
 
-/* AI book recommendations. Asks Claude for a few personal picks based on the books the
-   member has read, is reading and wants to read. The API key stays on the server and is
-   never sent to the client. The result is stored in users/{uid}.aiRecommendations, so the
-   app only calls this again when the member asks for new recommendations. */
+/*
+ * Generate personal recommendations from finished, current, and wanted books. Keep the AI key on the
+ * server and save picks to the member profile for reuse.
+ */
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 const AI_REC_COUNT = 3;
 const AI_PERSONAL_VERSION = 2;
@@ -698,11 +729,12 @@ Bu kitabın bu okuyucuya neden uygun olabileceğini Türkçe 4-5 cümleyle anlat
   return {text:value.text,contextKey:context.key};
 });
 
-/* Quarterly shared-book pick (tournament voting). Every phase change (nominations ->
-   objections -> voting rounds -> reading -> next cycle) is done here by one "tick" job that
-   runs every 15 minutes, so the pick moves on even if nobody opens the app. Nominating,
-   objecting and voting are done in the app with Firestore transactions; only the
-   time-based transitions live here. */
+/*
+ * Quarterly shared-book pick (tournament voting). Every phase change (nominations -> objections ->
+ * voting rounds -> reading -> next cycle) is done here by one "tick" job that runs every 15 minutes, so
+ * the pick moves on even if nobody opens the app. Nominating, objecting and voting are done in the app
+ * with Firestore transactions; only the time-based transitions live here.
+ */
 
 const QP_NOMINATION_DAYS = 2;
 const QP_OBJECTION_DAYS = 1;
@@ -721,8 +753,10 @@ function addMonthsIso(iso, months) {
   d.setMonth(d.getMonth() + months);
   return d.toISOString();
 }
-// Bracket size: the largest power of two that fits the nominations (4-7 -> 4, 8-15 -> 8,
-// 16-31 -> 16, and 2-3 -> 2).
+/*
+ * Bracket size: the largest power of two that fits the nominations (4-7 -> 4, 8-15 -> 8, 16-31 -> 16,
+ * and 2-3 -> 2).
+ */
 function bracketSizeForCount(n) {
   if (n < 2) return n;
   let size = 2;
@@ -737,8 +771,10 @@ async function notifyAllBackend(message, linkTab) {
     return notifyUserBackend(d.id, message, linkTab);
   }));
 }
-// Automatic shared-book posts are published under the club owner's account so they
-// don't appear anonymous.
+/*
+ * Automatic shared-book posts are published under the club owner's account so they don't appear
+ * anonymous.
+ */
 const QP_OWNER_UID = "ZqooOlqf0fafVe8HSzmbg2fyCJJ3";
 let qpOwnerNameCache = null;
 async function qpOwnerName() {
@@ -770,11 +806,13 @@ async function qpStartNominationPhase(prevData) {
   await notifyAllBackend(`📚 Yeni ortak kitap önerileri başladı! ${QP_NOMINATION_DAYS} gün içinde en fazla 3 kitap önerebilirsin.`, "recs");
 }
 
-// Gift lottery for the quarterly shared book, separate from the weekly gift draw: when the
-// period ends, every member who didn't mark the book as finished gives a book to one who
-// did (round-robin until everyone received one, then again from the start if needed).
-// The book to give is the next shared book, which isn't known yet, so only who gives to
-// whom is stored in quarterlyGiftPending/current for now.
+/*
+ * Gift lottery for the quarterly shared book, separate from the weekly gift draw: when the period ends,
+ * every member who didn't mark the book as finished gives a book to one who did (round-robin until
+ * everyone received one, then again from the start if needed). The book to give is the next shared
+ * book, which isn't known yet, so only who gives to whom is stored in quarterlyGiftPending/current for
+ * now.
+ */
 function runQuarterlyGiftLotteryBackend(nonReaders, readers) {
   const givers = shuffleBackend(nonReaders);
   const pool = shuffleBackend(readers);
@@ -811,8 +849,10 @@ async function qpDrawQuarterlyGiftLottery(data) {
   });
   await postQuarterly("gift_lottery_drawn", { pairCount: pairs.length });
 }
-// When a new shared book is chosen, adds it to every member's "want to read" list
-// (unless it is already there).
+/*
+ * When a new shared book is chosen, adds it to every member's "want to read" list (unless it is already
+ * there).
+ */
 async function qpAddWinnerToEveryonesWantToRead(winner) {
   const usersSnap = await db.collection("users").get();
   for (const userDoc of usersSnap.docs) {
@@ -832,9 +872,11 @@ async function qpAddWinnerToEveryonesWantToRead(winner) {
     }
   }
 }
-// Called when the next shared book is chosen: if a gift lottery is pending, fills in the
-// new book and creates the actual gift requests, pre-filled with each receiver's profile
-// details (name, address, phone) as if they had sent the form themselves.
+/*
+ * Called when the next shared book is chosen: if a gift lottery is pending, fills in the new book and
+ * creates the actual gift requests, pre-filled with each receiver's profile details (name, address,
+ * phone) as if they had sent the form themselves.
+ */
 async function qpApplyPendingGiftLottery(winner) {
   const pendingRef = db.collection("quarterlyGiftPending").doc("current");
   const pendingSnap = await pendingRef.get();
@@ -1036,10 +1078,11 @@ exports.quarterlyPickTick = onSchedule(
       else if (data.phase === "voting") await postQuarterly("round_near_end", { round: data.round });
     }
 
-    // If every active member has voted in a round (the app sets fullyVotedAt, see
-    // qpCheckRoundFullyVoted), close the round 5 minutes after the last vote instead of
-    // waiting the full day, unless someone withdraws a vote in that time (the app then clears
-    // fullyVotedAt).
+    /*
+     * If every active member has voted in a round (the app sets fullyVotedAt, see qpCheckRoundFullyVoted),
+     * close the round 5 minutes after the last vote instead of waiting the full day, unless someone
+     * withdraws a vote in that time (the app then clears fullyVotedAt).
+     */
     if (data.phase === "voting" && data.fullyVotedAt) {
       const fullyVotedAt = new Date(data.fullyVotedAt);
       if (now >= new Date(fullyVotedAt.getTime() + QP_EARLY_FINISH_MINUTES * 60 * 1000)) {
@@ -1055,4 +1098,5 @@ exports.quarterlyPickTick = onSchedule(
     }
   }
 );
+
 

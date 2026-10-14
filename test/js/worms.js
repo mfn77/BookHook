@@ -1,18 +1,23 @@
-/* Bookworms screen: the club's current reading streaks and each member's badge history
-   shelf. The member and admin screens show the same data in different containers. */
+/*
+ * Current reading streaks and badge history. Member and admin screens show the same data in separate
+ * containers.
+ */
 
-// Circular import: app.js imports this module too. These names are only used inside
-// functions (after startup), never while the module is being evaluated, so the cycle is safe.
+/*
+ * This module and app.js import each other. Shared values are only read inside functions after startup,
+ * not while the modules are loading.
+ */
 import {
   BADGE_DEFS, activeUids, avatarHtmlFromProfile, badgeIllustration, checkAndAwardBadges, computeStreak,
   currentUid, escapeHtml, keepOrLoading, markLoaded, shadeHexColor, userChipHtml, usersCache
 } from "./app.js";
 
-// Badge history shelf: one row per member with all badges side by side; badges not
-// earned yet are drawn as faded placeholders, and a corner counter shows how many times
-// a badge was earned. Rows are ranked by score = sum over badges of
-// (times earned x the badge's day threshold), independent of the current-streak ranking.
-//
+/*
+ * Badge history shelf: one row per member with all badges side by side; badges not earned yet are drawn
+ * as faded placeholders, and a corner counter shows how many times a badge was earned. Rows are ranked
+ * by score = sum over badges of (times earned x the badge's day threshold), independent of the
+ * current-streak ranking.
+ */
 // Short label for a badge's day threshold: 3 -> "3 days", 7 -> "1 week", 30 -> "1 month".
 function formatStreakDuration(days){
   if(days % 7 === 0) return (days/7) + window.BH_I18N.pick(" hafta"," weeks");
@@ -55,8 +60,10 @@ function renderBadgeHistoryShelf(rows){
     </div>`;
   }).join('')}</div>`;
 }
-// Clicking a badge plays a short wiggle and toggles its popover, closing any other open
-// one. Bound once per container so re-renders don't stack listeners.
+/*
+ * Clicking a badge plays a short wiggle and toggles its popover, closing any other open one. Bound once
+ * per container so re-renders don't stack listeners.
+ */
 function bindBadgeShelfClicks(container){
   if(!container || container.dataset.shelfClicksBound) return;
   container.dataset.shelfClicksBound = '1';
@@ -91,8 +98,10 @@ async function renderWormsShared(myStreakContainerId, clubStreaksContainerId, hi
       return {uid, streak};
     }catch(e){ failed = true; return {uid, streak:0}; }
   }));
-  // If any streak can't be read, keep what is on screen. Rendering it as 0 days would also
-  // write the wrong values to the persistent cache.
+  /*
+   * If any streak can't be read, keep what is on screen. Rendering it as 0 days would also write the
+   * wrong values to the persistent cache.
+   */
   if(failed) return;
   results.sort((a,b)=>b.streak-a.streak);
 
@@ -135,3 +144,4 @@ export function initWorms(){
     document.querySelectorAll('.badge-shelf-info.show').forEach(p=> p.classList.remove('show'));
   });
 }
+

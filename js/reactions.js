@@ -1,20 +1,26 @@
-/* Emoji reactions on feed posts, comments and book recommendations: the reaction
-   bar, the emoji picker drawer, "who reacted" and saving a reaction. */
+/*
+ * Emoji reactions for posts, comments, and recommendations, including selection, voter details, and
+ * saving.
+ */
 
 import {
   arrayRemove, arrayUnion, doc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { burstMyReactionBadge } from "./feed.js";
 import { notifyUser } from "./notifications.js";
-// Circular import: app.js imports this module too. These names are only used inside
-// functions (after startup), never while the module is being evaluated, so the cycle is safe.
+/*
+ * This module and app.js import each other. Shared values are only read inside functions after startup,
+ * not while the modules are loading.
+ */
 import {
   currentUid, db, escapeHtml, myProfile, showSimpleInfoModal, usersCache
 } from "./app.js";
 
 export let pendingReactionRefresh = null;
-// View to re-render after the user picks an emoji. Other modules set it through
-// setPendingReactionRefresh(), since imported bindings are read-only.
+/*
+ * View to re-render after the user picks an emoji. Other modules set it through
+ * setPendingReactionRefresh(), since imported bindings are read-only.
+ */
 export function setPendingReactionRefresh(fn){ pendingReactionRefresh = fn; }
 
 const REACTION_EMOJIS = ['👍','❤️','😂','😮','😢','🔥','👏','🎉','🤔','👎'];
@@ -29,8 +35,10 @@ function reactionTargetRef(target){
 export function renderReactionBar(reactions, target){
   reactions = reactions || {};
   const allEmojis = [...REACTION_EMOJIS, ...Object.keys(reactions).filter(em => !REACTION_EMOJIS.includes(em))];
-  // The user's own reaction is shown next to the avatar in the card header, so the bar
-  // only lists other people's reactions.
+  /*
+   * The user's own reaction is shown next to the avatar in the card header, so the bar only lists other
+   * people's reactions.
+   */
   const activeEmojis = allEmojis.filter(em => (reactions[em]||[]).filter(u=>u!==currentUid).length>0);
   const pills = activeEmojis.map(em=>{
     const uids = (reactions[em] || []).filter(u=>u!==currentUid);
@@ -136,3 +144,4 @@ export function initReactions(){
     }
   });
 }
+

@@ -1,3 +1,4 @@
+/* Manages Turkish and English interface text and language selection. User-written content is not translated. */
 (()=>{
  let language='tr';try{if(localStorage.getItem('bookhook_language')==='en')language='en';}catch(e){}
  document.documentElement.lang=language;
@@ -13,3 +14,4 @@
   document.querySelectorAll('[placeholder],[aria-label],[title]').forEach(el=>{for(const attr of ['placeholder','aria-label','title'])if(el.hasAttribute(attr))el.setAttribute(attr,label(el.getAttribute(attr)));});
  },{once:true});
 })();
+

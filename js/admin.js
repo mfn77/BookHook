@@ -1,6 +1,7 @@
-/* Admin screens: today's check-ins for every member, editing past days, the weekly
-   report, the real weekly draw (with "Why?" explanations), the manual test draw, and
-   member management. */
+/*
+ * Admin screens for reading records, weekly reports, gift draws, draw simulations, and member
+ * management.
+ */
 
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, updateDoc
@@ -9,8 +10,10 @@ import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { createPost, pickVariantMessage } from "./feed.js";
 import { notifyAllMembers } from "./notifications.js";
 import { playMarkFx, renderTotalPagesCard } from "./today.js";
-// Circular import: app.js imports this module too. These names are only used inside
-// functions (after startup), never while the module is being evaluated, so the cycle is safe.
+/*
+ * This module and app.js import each other. Shared values are only read inside functions after startup,
+ * not while the modules are loading.
+ */
 import {
   activeTab, activeUids, addDays, buildWeekHistoryHTML, checkDrawRules, cleanupBadAutoFills,
   cloudFunctions, CLUB_START_DATE, computeWeekStats, currentUid, db, DOW, drawHistory, drawsCache,
@@ -58,8 +61,10 @@ export function renderAdminToday(){
         if(wasNew && btn.dataset.status==='skip') createPost('skip', {variantText: await pickVariantMessage('skip')});
         if(isSettingMark){
           const markedName = (usersCache[btn.dataset.uid] && usersCache[btn.dataset.uid].name) || '';
-          // Notifications are stored and shown to every member, so the text stays in Turkish
-          // regardless of the sender's language.
+          /*
+           * Notifications are stored and shown to every member, so the text stays in Turkish regardless of the
+           * sender's language.
+           */
           notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week', currentUid);
         }
       } finally {
@@ -222,11 +227,15 @@ export async function renderAdminDraws(){
   });
 }
 
-/* Draw explanation ("Why?"): re-evaluates a week's result using that week's records and
-   the win history before it, showing each member's group, why members who never won
-   were not picked, and whether the result follows the priority rules. */
-// The rules live in functions/shared/lottery.js (checkDrawRules); this only turns the
-// reason codes into text.
+/*
+ * Draw explanation ("Why?"): re-evaluates a week's result using that week's records and the win history
+ * before it, showing each member's group, why members who never won were not picked, and whether the
+ * result follows the priority rules.
+ */
+/*
+ * The rules live in functions/shared/lottery.js (checkDrawRules); this only turns the reason codes into
+ * text.
+ */
 function explainDrawResult(draw, stats, winCounts){
   const result = checkDrawRules(draw, stats, winCounts);
   const text = {
@@ -264,8 +273,10 @@ async function toggleDrawExplanation(weekStart, scope){
     }
     html += window.BH_I18N.template`<div style="font-size:13px;margin-top:8px;"><b>Kazananlar</b>${receiverInfo.map(r=>`<div>${name(r.uid)} — ${group(r.stat)} · ${winsText(r.wins)}</div>`).join('') || '<div class="muted">—</div>'}</div>`;
     if(skippedNeverWon.length) html += window.BH_I18N.template`<div style="font-size:13px;margin-top:8px;"><b>Hiç kazanmamış ama bu hafta çıkmayanlar</b>${skippedNeverWon.map(x=>`<div>${name(x.uid)} — ${escapeHtml(x.reason)}</div>`).join('')}</div>`;
-    // Every member's count for the week and the weeks they won, so wrong win records or
-    // unexpected groups are easy to spot.
+    /*
+     * Every member's count for the week and the weeks they won, so wrong win records or unexpected groups
+     * are easy to spot.
+     */
     const order = st=> st.marked>0 ? (st.miss>=2?2:st.miss) : 3;
     const everyone = [...stats].sort((a,b)=> order(a)-order(b) || (usersCache[a.uid]?.name||'').localeCompare(usersCache[b.uid]?.name||'','tr'));
     html += window.BH_I18N.template`<details style="font-size:13px;margin-top:10px;"><summary><b>Tüm üyelerin bu haftası</b></summary>${everyone.map(st=>{
@@ -342,8 +353,10 @@ async function renderManualHistory(){
 /* Members: roles, ban, join date, delete */
 export async function renderAdminMembers(){
   const list = document.getElementById('membersList');
-  // Deleting a member removes their document, so deleted members never appear here.
-  // Deletion is permanent.
+  /*
+   * Deleting a member removes their document, so deleted members never appear here. Deletion is
+   * permanent.
+   */
   const uids = Object.keys(usersCache);
   if(uids.length===0){ list.innerHTML = window.BH_I18N.template`<p class="muted">Henüz üye yok.</p>`; return; }
   const adminCount = uids.filter(u=>usersCache[u].role==='admin' && !usersCache[u].banned).length;
@@ -471,8 +484,10 @@ export function initAdmin(){
       const read = arr.filter(s=>s==='read').length;
       return {uid, name: usersCache[uid].name, miss, read, marked: miss+read, joinDate: joinDateStrOf(uid)||'', joinedAt: joinedAtOf(uid)};
     });
-    // Use the real win history (win counts, last week's winners, join order) so the test
-    // draw behaves like the real one.
+    /*
+     * Use the real win history (win counts, last week's winners, join order) so the test draw behaves like
+     * the real one.
+     */
     await loadDraws();
     const {winCounts, totalGiftsGivenSoFar, previousWinners} = drawHistory(drawsCache, null, drawsCache[0]?.id);
     const {giverCount, safeCount, pairs} = runLottery(stats, previousWinners, winCounts, totalGiftsGivenSoFar);
@@ -511,3 +526,4 @@ export function initAdmin(){
     if(activeTab) renderTab(activeTab);
   });
 }
+

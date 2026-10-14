@@ -1,3 +1,4 @@
+// Controls which users can read or change each type of database record.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -24,8 +25,7 @@ service cloud.firestore {
       );
       allow delete: if isAdmin() && !isOwnerUid(uid);
 
-      // Admin override (Goodreads içe aktarma aracı için): admin kendi hesabı dışında bir üyenin
-      // kütüphane koleksiyonlarına da yazabilir — users/{uid} update kuralındaki aynı desen.
+      // Admins can write to another member’s reading lists when importing a Goodreads library.
       match /bookHistory/{itemId} {
         allow read: if isSignedIn();
         allow create, update, delete: if isSignedIn() && (request.auth.uid == uid || (isAdmin() && !isOwnerUid(uid)));
@@ -73,9 +73,8 @@ service cloud.firestore {
       allow create, update: if isSignedIn() && (request.resource.data.receiverUid == request.auth.uid || request.resource.data.giverUid == request.auth.uid || isAdmin());
     }
 
-    // 3 aylık ortak kitabı bitirmeyenler için çekilen, haftalık hediye kurasından bağımsız kura.
-    // Kimin kime vereceği ve hediye edilecek kitap sadece sunucu (Admin SDK) tarafından yazılıyor;
-    // istemci sadece okuyor ve (gönderdim/aldım) durumunu güncelliyor.
+    // Shared-book gift pairings are separate from weekly draws. Only the server assigns members and books;
+    // clients can update permitted delivery statuses.
     match /quarterlyGiftPending/{id} {
       allow read: if isSignedIn();
       allow write: if false;
@@ -132,11 +131,9 @@ service cloud.firestore {
       allow write: if isSignedIn() && isAdmin();
     }
 
-    // 3 aylık ortak kitap seçimi (turnuva usulü oylama). Ana durum belgesi (faz, süre, turnuva
-    // sonucu) sadece sunucu tarafından (Cloud Function / Admin SDK) yazılıyor — istemci sadece
-    // okuyor. Öneriler ve tur eşleşmeleri (oy verme dahil) istemciden yazılabiliyor; doğruluk
-    // (3 hak sınırı, "önce davranan kazanır" kilidi, kendi oyunu ekleme/çıkarma) istemci
-    // tarafındaki transaction mantığıyla sağlanıyor — kulübün küçük/güvenilir yapısıyla uyumlu.
+    // Only the server changes the shared-book phase, timing, and tournament result. Clients can submit
+    // nominations and votes. Nomination limits and concurrency checks are handled by client transactions,
+    // not enforced by these rules.
     match /quarterlyPick/{docId} {
       allow read: if isSignedIn();
       allow write: if false;
@@ -155,8 +152,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Yöneticiye özel deneme alanı (bildirim/gönderi yok, süre yok) — sadece yöneticiler
-    // okuyup yazabiliyor.
+    // Only admins can read and write the separate selection test area.
     match /quarterlyPickTest/{docId} {
       allow read, write: if isAdmin();
       match /nominations/{nomId} {
@@ -198,3 +194,4 @@ service cloud.firestore {
     }
   }
 }
+

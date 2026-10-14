@@ -1,15 +1,14 @@
-/* Admin tool: import a member's Goodreads library export (goodreads_library_export.csv).
-
-   Each row goes to a collection based on its "Exclusive Shelf" (see
-   goodreadsShelfToCollection). Titles and authors are stored exactly as they appear in
-   the CSV; the book APIs are only used to find a cover, never to rename a book. Cover
-   lookups use Google Books with an Open Library fallback and are rate limited.
-   firestore.rules lets admins write to another member's library collections. */
+/*
+ * Imports a Goodreads CSV into a member’s reading lists. Titles and authors are preserved; book APIs
+ * are used only to find covers. Cover requests are spaced out to respect service limits.
+ */
 
 import { addDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { searchGoogleBooks, searchOpenLibrary } from "./books.js";
-// Circular import: app.js imports this module too. These names are only used inside
-// functions (after startup), never while the module is being evaluated, so the cycle is safe.
+/*
+ * This module and app.js import each other. Shared values are only read inside functions after startup,
+ * not while the modules are loading.
+ */
 import {
   db, escapeHtml, showToast, sleep, usersCache
 } from "./app.js";
@@ -41,9 +40,10 @@ function parseGoodreadsCSV(text){
     return obj;
   });
 }
-// "read" -> finished books, "currently-reading" -> reading now. Everything else
-// (to-read, did-not-finish, custom shelves) becomes "want to read"; rows with no
-// shelf are skipped.
+/*
+ * "read" -> finished books, "currently-reading" -> reading now. Everything else (to-read,
+ * did-not-finish, custom shelves) becomes "want to read"; rows with no shelf are skipped.
+ */
 function goodreadsShelfToCollection(shelf){
   if(shelf==='read') return 'bookHistory';
   if(shelf==='currently-reading') return 'readBooks';
@@ -154,3 +154,4 @@ export function renderGoodreadsImportTab(){
     }
   };
 }
+
