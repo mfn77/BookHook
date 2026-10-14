@@ -4,12 +4,13 @@ import {
   collection, doc, getDoc, getDocs, query, setDoc, updateDoc, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { createPost } from "./feed.js";
+import { attachBookAutocompleteEl, showBookInfo } from "./books.js";
 // app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
 // açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
 import {
-  attachBookAutocompleteEl, avatarHtmlFromProfile, checkAndPostDethrone, currentUid, db, drawsCache,
-  escapeHtml, fmtShort, keepOrLoading, loadDraws, markLoaded, materialBookCover, myProfile, notifyUser,
-  pickGiftMessage, showBookInfo, showToast, userChipHtml, usersCache
+  avatarHtmlFromProfile, checkAndPostDethrone, currentUid, db, drawsCache, escapeHtml, fmtShort,
+  keepOrLoading, loadDraws, markLoaded, materialBookCover, myProfile, notifyUser, pickGiftMessage,
+  showToast, userChipHtml, usersCache
 } from "./app.js";
 
 // Tüm çekilişlerdeki (draws) her çift için tek bir "giftRequests/{id}" belgesi var. Eskiden bu

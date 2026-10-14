@@ -8,10 +8,11 @@
    üyenin bookHistory/readBooks/wantToRead koleksiyonlarına yazabiliyor. */
 
 import { addDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { searchGoogleBooks, searchOpenLibrary } from "./books.js";
 // app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
 // açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
 import {
-  db, escapeHtml, searchGoogleBooks, searchOpenLibrary, showToast, sleep, usersCache
+  db, escapeHtml, showToast, sleep, usersCache
 } from "./app.js";
 
 function parseGoodreadsCSV(text){

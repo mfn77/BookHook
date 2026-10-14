@@ -8,12 +8,12 @@ import {
 import {
   CURATED_CATALOG, DISCOVER_CATEGORIES, ENGLISH_SEARCH_TITLES, bookKeyFor
 } from "./catalog.js";
+import { refreshLibraryButtons, searchGoogleBooks, searchOpenLibrary } from "./books.js";
 // app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
 // açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
 import {
-  closeModal, currentUid, db, escapeHtml, hideAnchoredPopover, hubLayoutMode,
-  markLoaded, materialBookCover, myProfile, refreshLibraryButtons, searchGoogleBooks,
-  searchOpenLibrary, showAnchoredPopover, showCachedOrPlaceholder, showSimpleInfoModal,
+  closeModal, currentUid, db, escapeHtml, hideAnchoredPopover, hubLayoutMode, markLoaded,
+  materialBookCover, myProfile, showAnchoredPopover, showCachedOrPlaceholder, showSimpleInfoModal,
   showToast, sleep, userChipHtml
 } from "./app.js";
 import { createOrBatchPost } from "./feed.js";

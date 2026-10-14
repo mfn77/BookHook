@@ -10,11 +10,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { bookKeyFor } from "./catalog.js";
 import { createPost, createOrBatchPost } from "./feed.js";
+import { attachBookAutocompleteEl } from "./books.js";
 // app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
 // açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
 import {
-  activeUids, attachBookAutocompleteEl, avatarHtmlFromProfile, currentUid, db, escapeHtml,
-  materialBookCover, materialRenderPhase, myProfile, notifyUser, showToast, shuffle, usersCache
+  activeUids, avatarHtmlFromProfile, currentUid, db, escapeHtml, materialBookCover,
+  materialRenderPhase, myProfile, notifyUser, showToast, shuffle, usersCache
 } from "./app.js";
 
 const QP_MAX_NOMINATIONS = 3;
