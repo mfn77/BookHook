@@ -85,7 +85,8 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 │   ├── favicon.png
 │   ├── logo-mark.png        In-app logo (sign-in screen and sidebar), transparent background
 │   └── notif-icon.png       Small monochrome icon shown in the notification bar
-├── test/                    Test copy of the app (same layout; shares icons/ and functions/shared/ with the main app)
+├── test/                    Test copy of the app (same layout; shares icons/ and functions/shared/ with the main app;
+│                            its own manifest.json installs it separately as "BookHook Test")
 ├── firestore.rules          Firestore security rules
 ├── firebase.json            Firebase CLI config (points to the functions/ source folder)
 ├── .firebaserc              Firebase CLI project alias
