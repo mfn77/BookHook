@@ -1398,8 +1398,8 @@ async function recomputeUserBadgeHistory(uid){
   // Okunamayan bir gün "okumadı" sayılırsa rozet geçmişi yanlış yeniden yazılırdı; hata fırlatıp
   // bu üyeyi hiç güncellemeden bırakıyoruz.
   const snaps = await Promise.all(dateStrs.map(ds=> getDoc(doc(db,'days',ds,'answers',uid))));
-  const {badgeCounts, streak, tier} = replayBadgeHistory(snaps.map(snap=> snap.exists() ? snap.data().status : null));
-  const updates = { badgeCounts, lastStreak: streak, currentTier: tier, currentStreak: streak };
+  const {badgeCounts, streak, tier, bankedRepeats} = replayBadgeHistory(snaps.map(snap=> snap.exists() ? snap.data().status : null));
+  const updates = { badgeCounts, lastStreak: streak, currentTier: tier, currentStreak: streak, bankedRepeats };
   try{
     await updateDoc(doc(db,'users',uid), updates);
     Object.assign(u, updates);
@@ -1540,6 +1540,31 @@ export async function checkAndPostDethrone(uid, newCount, getOthersCount, label,
 // kesinleştirmesi) kesinleşiyor — o ana kadar aynı gün içinde düzeltilen bir hata hiç sayılmaz.
 // Sadece YUKARI (yeni bir eşiğe ulaşma) anlık bildirim/gönderi olarak kalıyor, çünkü o zaten
 // geri alınamaz bir zarar oluşturmuyor.
+// 30 günlük rozet seri bozulmadan yeniden kazanıldı (60, 90, ... gün): bir öncekini rozet
+// geçmişine say. Gecelik sunucu kontrolüyle aynı anda iki kez sayılmasın diye kayıtlı değerler
+// transaction içinde yeniden okunup karar orada veriliyor.
+async function bankRepeatBadges(uid, streak, uTab){
+  const ref = doc(db,'users',uid);
+  const saved = await runTransaction(db, async (tx)=>{
+    const cur = (await tx.get(ref)).data() || {};
+    const t = badgeTransition(streak, typeof cur.lastStreak==='number' ? cur.lastStreak : 0, cur.currentTier || null, cur.bankedRepeats || 0);
+    if(t.kind==='drop' || t.bank<=0) return null;
+    const badgeCounts = { ...(cur.badgeCounts || {}) };
+    badgeCounts[t.newTier] = (badgeCounts[t.newTier] || 0) + t.bank;
+    const updates = { lastStreak: streak, currentTier: t.newTier, currentStreak: streak, bankedRepeats: t.repeats, badgeCounts };
+    tx.update(ref, updates);
+    return updates;
+  });
+  if(!saved) return;
+  const u = usersCache[uid];
+  if(u) Object.assign(u, saved);
+  const def = SHARED_BADGE_DEFS.find(d=>d.key===saved.currentTier);
+  if(!def) return;
+  const nth = saved.bankedRepeats + 1; // bu serideki kaçıncı 30 günlük rozet
+  await notifyUser(uid, `🎉 Tebrikler! ${nth}. kez "${def.label}" rozetini kazandın, ${streak} gündür aralıksız okuyorsun!`, uTab);
+  createPost('badge_gained', { badgeKey:def.key, badgeLabel:def.label, badgeIcon:def.icon, variantText: `${def.icon} ${streak} gündür hiç ara vermeden okuyor: ${nth}. ${def.label.split(' (')[0]} rozeti!` }, uid, u?.name);
+  await checkAndPostDethrone(uid, saved.badgeCounts[def.key], (ouid)=> (usersCache[ouid].badgeCounts||{})[def.key], `${def.label} rozeti`, def.icon);
+}
 export async function checkAndAwardBadges(uid, streak){
   if(badgeCheckInFlight.has(uid)) return; // aynı kişi için eşzamanlı ikinci bir kontrolü atla (çift sayımı önler)
   badgeCheckInFlight.add(uid);
@@ -1547,21 +1572,24 @@ export async function checkAndAwardBadges(uid, streak){
     const u = usersCache[uid];
     if(!u) return;
     const lastStreak = typeof u.lastStreak==='number' ? u.lastStreak : 0;
-    const {kind, newTier} = badgeTransition(streak, lastStreak, u.currentTier || null);
+    const {kind, newTier, bank} = badgeTransition(streak, lastStreak, u.currentTier || null, u.bankedRepeats || 0);
     // Düşüş: kesinleşme geceye (sunucuya) bırakılıyor. Sadece yeni bir rozete ulaşınca bildir;
     // geçmişe (badgeCounts) henüz sayma, seri bitince (gece) sayılacak.
-    if(kind!=='rise') return;
-    // Gönderi ve bildirim herkesin gördüğü kayıt: üyenin dil ayarından bağımsız Türkçe ad.
-    const notifyDef = SHARED_BADGE_DEFS.find(d=>d.key===newTier);
+    if(kind!=='rise' && kind!=='repeat') return;
+    const uTab = u.role==='admin' ? 'worms' : 'mworms';
+    if(kind==='rise'){
+      // Gönderi ve bildirim herkesin gördüğü kayıt: üyenin dil ayarından bağımsız Türkçe ad.
+      const notifyDef = SHARED_BADGE_DEFS.find(d=>d.key===newTier);
 
-    const updates = { lastStreak: streak, currentTier: newTier, currentStreak: streak };
-    await updateDoc(doc(db,'users',uid), updates);
-    Object.assign(u, updates);
-    if(notifyDef){
-      const uTab = u.role==='admin' ? 'worms' : 'mworms';
-      await notifyUser(uid, `🎉 Tebrikler! "${notifyDef.label}" rozetini kazandın!`, uTab);
-      createPost('badge_gained', { badgeKey:notifyDef.key, badgeLabel:notifyDef.label, badgeIcon:notifyDef.icon, variantText: pickBadgeGainedMessage(notifyDef.key) }, uid, u.name);
+      const updates = { lastStreak: streak, currentTier: newTier, currentStreak: streak };
+      await updateDoc(doc(db,'users',uid), updates);
+      Object.assign(u, updates);
+      if(notifyDef){
+        await notifyUser(uid, `🎉 Tebrikler! "${notifyDef.label}" rozetini kazandın!`, uTab);
+        createPost('badge_gained', { badgeKey:notifyDef.key, badgeLabel:notifyDef.label, badgeIcon:notifyDef.icon, variantText: pickBadgeGainedMessage(notifyDef.key) }, uid, u.name);
+      }
     }
+    if(bank>0) await bankRepeatBadges(uid, streak, uTab);
   }catch(e){ /* rozet kaydedilemezse sessizce geç */ }
   finally{ badgeCheckInFlight.delete(uid); }
 }
@@ -2804,7 +2832,10 @@ export const hubPreviews=(()=>{
     leaders.sort((a,b)=>b.streak-a.streak||a.name.localeCompare(b.name,'tr')||a.uid.localeCompare(b.uid));
     const streak=leaders.find(x=>x.uid===uid)?.streak||0;const def=BADGE_DEFS.find(x=>x.key===currentTierForStreak(streak));const u=usersCache[uid]||{};
     const next=BADGE_DEFS.find(x=>x.days>streak);
-    const slides=[metric(window.BH_I18N.pick("Okuma serin","Reading streak"),window.BH_I18N.template`${streak} gün`,next?window.BH_I18N.template`Sonraki rozete ${next.days-streak} gün`:window.BH_I18N.pick("En yüksek seri rozetindesin.","You’ve reached the highest streak badge."),'♨','hp-ok'),metric('Aktif rozetin',def?def.label:window.BH_I18N.pick("Henüz rozet yok","No badges yet"),def?window.BH_I18N.pick("Her gün okumaya devam.","Keep reading every day."):window.BH_I18N.pick("İlk rozet için 3 gün üst üste oku.","Read for 3 days in a row to earn your first badge."),def?.icon||'✦'),metric(def?window.BH_I18N.pick("Bu rozetin geçmişi","History of this badge"):window.BH_I18N.pick("Rozet geçmişin","Your badge history"),def?`${Number(u.badgeCounts?.[def.key]||0)+1} kez`:`${Object.values(u.badgeCounts||{}).reduce((a,b)=>a+Number(b||0),0)} rozet`,def?window.BH_I18N.pick("Geçmiş kazanımlar + aktif serin","Past achievements and your current streak"):'Tamamlanmış serilerde kazanılan rozetler','✧')];
+    // 30 günlük rozet her 30 günde bir yeniden kazanılıyor; en üst rozetteyken bir sonrakini göster.
+    const repeatDef=!next&&def&&def.repeats?def:null;
+    const nextHint=next?window.BH_I18N.template`Sonraki rozete ${next.days-streak} gün`:repeatDef?window.BH_I18N.template`Sonraki ${repeatDef.label.split(' (')[0]} rozetine ${repeatDef.days-streak%repeatDef.days} gün`:window.BH_I18N.pick("En yüksek seri rozetindesin.","You’ve reached the highest streak badge.");
+    const slides=[metric(window.BH_I18N.pick("Okuma serin","Reading streak"),window.BH_I18N.template`${streak} gün`,nextHint,'♨','hp-ok'),metric('Aktif rozetin',def?def.label:window.BH_I18N.pick("Henüz rozet yok","No badges yet"),def?window.BH_I18N.pick("Her gün okumaya devam.","Keep reading every day."):window.BH_I18N.pick("İlk rozet için 3 gün üst üste oku.","Read for 3 days in a row to earn your first badge."),def?.icon||'✦'),metric(def?window.BH_I18N.pick("Bu rozetin geçmişi","History of this badge"):window.BH_I18N.pick("Rozet geçmişin","Your badge history"),def?`${Number(u.badgeCounts?.[def.key]||0)+1} kez`:`${Object.values(u.badgeCounts||{}).reduce((a,b)=>a+Number(b||0),0)} rozet`,def?window.BH_I18N.pick("Geçmiş kazanımlar + aktif serin","Past achievements and your current streak"):'Tamamlanmış serilerde kazanılan rozetler','✧')];
     leaders.slice(0,3).forEach(person=>{
       const badge=BADGE_DEFS.find(d=>d.key===currentTierForStreak(person.streak));
       const rank=1+leaders.filter(x=>x.streak>person.streak).length;

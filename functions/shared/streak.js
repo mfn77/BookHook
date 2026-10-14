@@ -5,7 +5,12 @@
 
    - Seri: bugünden (bugün henüz işaretlenmediyse dünden) geriye, arka arkaya "okudum" gün sayısı.
    - Rozet: serinin ulaştığı en yüksek eşik (BADGE_DEFS). Seri bozulunca rozet kaybolur, o rozet
-     üyenin rozet geçmişine (badgeCounts) bir kez sayılır. */
+     üyenin rozet geçmişine (badgeCounts) bir kez sayılır.
+   - 30 günlük rozet (repeats: true) seri bozulmadan devam ettikçe her 30 günde bir yeniden
+     kazanılır: 60. günde ikincisi, 90. günde üçüncüsü... Her yeni 30 gün dolunca bir önceki
+     geçmişe sayılır (bankedRepeats bu seride kaç tane sayıldığını tutar). Böylece seriyi hiç
+     bozmayan, bozup yeniden başlayandan daha az rozet toplamaz: biten bir serinin 30 günlük
+     rozet sayısı = seri / 30 (aşağı yuvarlanmış). */
 
 // label: kayıtlara (gönderi, bildirim) yazılan, herkesin gördüğü Türkçe ad. labelEn: sadece ekranda.
 export const BADGE_DEFS = [
@@ -14,13 +19,20 @@ export const BADGE_DEFS = [
   {key:'b7',  days:7,  icon:'🎯', label:'1 hafta aralıksız seri',           labelEn:'1-week reading streak',             color:'#FFC107'},
   {key:'b14', days:14, icon:'💎', label:'2 hafta aralıksız seri',           labelEn:'2-week reading streak',             color:'#29B6F6'},
   {key:'b21', days:21, icon:'🏆', label:'3 hafta aralıksız seri',           labelEn:'3-week reading streak',             color:'#AB47BC'},
-  {key:'b30', days:30, icon:'🐺', label:'Kitap Kurdu (1 ay aralıksız seri)', labelEn:'Bookworm (1-month reading streak)', color:'#FF6F00'}
+  {key:'b30', days:30, icon:'🐺', label:'Kitap Kurdu (1 ay aralıksız seri)', labelEn:'Bookworm (1-month reading streak)', color:'#FF6F00', repeats:true}
 ];
 
 export function currentTierForStreak(streak){
   let tier = null;
   BADGE_DEFS.forEach(def=>{ if(streak>=def.days) tier = def.key; });
   return tier;
+}
+
+// Bu seride, aktif rozete ek olarak geçmişe sayılmış olması gereken tekrar rozeti sayısı.
+// 30 günlük rozette: 59 gün → 0, 60 → 1, 90 → 2. Diğer rozetlerde her zaman 0.
+export function repeatsDue(streak){
+  const def = BADGE_DEFS.find(d=>d.key===currentTierForStreak(streak));
+  return def && def.repeats ? Math.floor(streak/def.days) - 1 : 0;
 }
 
 function addDaysToDateStr(dateStr, n){
@@ -48,31 +60,39 @@ export async function countStreak(startDateStr, readStatus, {startMayBeUnmarked=
   }
 }
 
-// Kayıtlı durum (lastStreak, currentTier) ile yeni seri arasındaki değişim:
+// Kayıtlı durum (lastStreak, currentTier, bankedRepeats) ile yeni seri arasındaki değişim:
 // - 'rise': yeni (daha yüksek) bir rozete ulaşıldı → rozet ver, bildir.
+// - 'repeat': 30 günlük rozet seri bozulmadan yeniden kazanıldı (60, 90, ... gün) → bank kadar
+//   rozet geçmişe sayılır, bildirilir. 'rise' ile birlikte de gelebilir (bank > 0).
 // - 'drop': seri bozuldu/kısaldı → completedTier (bozulmadan önceki rozet, varsa) geçmişe sayılır.
 //   Uygulama düşüşleri yok sayar; kesinleştirme sunucuda, gün kapandıktan sonra yapılır.
 // - 'none': kayda değer bir değişiklik yok.
-export function badgeTransition(streak, lastStreak, prevTier){
+// bank: geçmişe şimdi eklenecek tekrar rozeti sayısı; repeats: kayda yazılacak yeni bankedRepeats.
+export function badgeTransition(streak, lastStreak, prevTier, bankedRepeats=0){
   const newTier = currentTierForStreak(streak);
-  if(streak===lastStreak && prevTier===newTier) return {kind:'none', newTier};
-  if(streak<lastStreak) return {kind:'drop', newTier, completedTier: prevTier||null};
-  if(newTier && newTier!==prevTier) return {kind:'rise', newTier};
-  return {kind:'none', newTier};
+  if(streak<lastStreak) return {kind:'drop', newTier, completedTier: prevTier||null, bank:0, repeats:0};
+  const repeats = Math.max(repeatsDue(streak), bankedRepeats||0);
+  const bank = repeats - (bankedRepeats||0);
+  if(newTier && newTier!==prevTier) return {kind:'rise', newTier, bank, repeats};
+  if(bank>0) return {kind:'repeat', newTier, bank, repeats};
+  return {kind:'none', newTier, bank:0, repeats};
 }
 
 // Bir üyenin tüm geçmişini (eskiden yeniye gün durumları) baştan oynatıp rozet geçmişini hesaplar.
-// Sadece bozulmuş (tamamlanmış) serilerin rozetleri sayılır; sona kalan seri hâlâ devam ediyor.
+// Bozulmuş (tamamlanmış) serilerin rozetleri ve devam eden serideki tekrar rozetleri (60, 90, ...
+// günde dolan 30 günlükler) sayılır; sona kalan serinin aktif rozeti hâlâ devam ediyor.
 export function replayBadgeHistory(statusesOldestFirst){
   const badgeCounts = {};
-  let streak = 0, tier = null;
+  let streak = 0, tier = null, bankedRepeats = 0;
   for(const status of statusesOldestFirst){
     if(status==='read') streak++;
     else {
       if(tier) badgeCounts[tier] = (badgeCounts[tier]||0) + 1;
-      streak = 0; tier = null;
+      streak = 0; tier = null; bankedRepeats = 0;
     }
     tier = currentTierForStreak(streak);
+    const due = repeatsDue(streak);
+    if(due>bankedRepeats){ badgeCounts[tier] = (badgeCounts[tier]||0) + (due-bankedRepeats); bankedRepeats = due; }
   }
-  return {badgeCounts, streak, tier};
+  return {badgeCounts, streak, tier, bankedRepeats};
 }

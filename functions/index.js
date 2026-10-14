@@ -326,7 +326,7 @@ async function settleDailyBadges() {
     }
     const lastStreak = typeof u.lastStreak === "number" ? u.lastStreak : 0;
     const prevTier = u.currentTier || null;
-    const { kind, newTier } = badgeTransition(streak, lastStreak, prevTier);
+    const { kind, newTier, bank } = badgeTransition(streak, lastStreak, prevTier, u.bankedRepeats || 0);
     if (kind === "none") continue;
 
     if (kind === "drop") {
@@ -336,8 +336,8 @@ async function settleDailyBadges() {
         badgeCounts[prevTier] = (badgeCounts[prevTier] || 0) + 1;
         historyIncremented = true;
       }
-      await db.collection("users").doc(uid).update({ lastStreak: streak, badgeCounts, currentTier: newTier, currentStreak: streak });
-      usersMap[uid] = { ...u, lastStreak: streak, badgeCounts, currentTier: newTier, currentStreak: streak };
+      await db.collection("users").doc(uid).update({ lastStreak: streak, badgeCounts, currentTier: newTier, currentStreak: streak, bankedRepeats: 0 });
+      usersMap[uid] = { ...u, lastStreak: streak, badgeCounts, currentTier: newTier, currentStreak: streak, bankedRepeats: 0 };
       if (historyIncremented && prevTier) {
         const lostDef = BADGE_DEFS.find((d) => d.key === prevTier);
         if (lostDef) {
@@ -346,18 +346,46 @@ async function settleDailyBadges() {
         }
       }
     } else {
-      // kind === "rise"
+      // kind === "rise" veya "repeat"
       // İstemci genelde bunu anlık yakalar; burası sadece kullanıcı hiç uygulamayı açmadan
       // eşiği aştıysa devreye giren bir güvenlik ağı.
-      await db.collection("users").doc(uid).update({ lastStreak: streak, currentTier: newTier, currentStreak: streak });
-      usersMap[uid] = { ...u, lastStreak: streak, currentTier: newTier, currentStreak: streak };
-      const notifyDef = BADGE_DEFS.find((d) => d.key === newTier);
-      if (notifyDef) {
-        await notifyUserBackend(uid, `🎉 Tebrikler! "${notifyDef.label}" rozetini kazandın!`, u.role === "admin" ? "worms" : "mworms");
-        await createPostBackend("badge_gained", { badgeKey: notifyDef.key, badgeLabel: notifyDef.label, badgeIcon: notifyDef.icon }, uid, u.name);
+      const uTab = u.role === "admin" ? "worms" : "mworms";
+      if (kind === "rise") {
+        await db.collection("users").doc(uid).update({ lastStreak: streak, currentTier: newTier, currentStreak: streak });
+        usersMap[uid] = { ...u, lastStreak: streak, currentTier: newTier, currentStreak: streak };
+        const notifyDef = BADGE_DEFS.find((d) => d.key === newTier);
+        if (notifyDef) {
+          await notifyUserBackend(uid, `🎉 Tebrikler! "${notifyDef.label}" rozetini kazandın!`, uTab);
+          await createPostBackend("badge_gained", { badgeKey: notifyDef.key, badgeLabel: notifyDef.label, badgeIcon: notifyDef.icon }, uid, u.name);
+        }
       }
+      if (bank > 0) await bankRepeatBadgesBackend(usersMap, uid, streak, uTab, BADGE_DEFS, badgeTransition);
     }
   }
+}
+// 30 günlük rozet seri bozulmadan yeniden kazanıldı (60, 90, ... gün): bir öncekini rozet
+// geçmişine say. Uygulama da aynı şeyi anlık yapabildiği için iki kez sayılmasın diye kayıtlı
+// değerler transaction içinde yeniden okunup karar orada veriliyor.
+async function bankRepeatBadgesBackend(usersMap, uid, streak, uTab, BADGE_DEFS, badgeTransition) {
+  const ref = db.collection("users").doc(uid);
+  const saved = await db.runTransaction(async (tx) => {
+    const cur = (await tx.get(ref)).data() || {};
+    const t = badgeTransition(streak, typeof cur.lastStreak === "number" ? cur.lastStreak : 0, cur.currentTier || null, cur.bankedRepeats || 0);
+    if (t.kind === "drop" || t.bank <= 0) return null;
+    const badgeCounts = { ...(cur.badgeCounts || {}) };
+    badgeCounts[t.newTier] = (badgeCounts[t.newTier] || 0) + t.bank;
+    const updates = { lastStreak: streak, currentTier: t.newTier, currentStreak: streak, bankedRepeats: t.repeats, badgeCounts };
+    tx.update(ref, updates);
+    return updates;
+  });
+  if (!saved) return;
+  usersMap[uid] = { ...usersMap[uid], ...saved };
+  const def = BADGE_DEFS.find((d) => d.key === saved.currentTier);
+  if (!def) return;
+  const nth = saved.bankedRepeats + 1; // bu serideki kaçıncı 30 günlük rozet
+  await notifyUserBackend(uid, `🎉 Tebrikler! ${nth}. kez "${def.label}" rozetini kazandın, ${streak} gündür aralıksız okuyorsun!`, uTab);
+  await createPostBackend("badge_gained", { badgeKey: def.key, badgeLabel: def.label, badgeIcon: def.icon, variantText: `${def.icon} ${streak} gündür hiç ara vermeden okuyor: ${nth}. ${def.label.split(" (")[0]} rozeti!` }, uid, usersMap[uid].name);
+  await backendCheckAndPostDethrone(usersMap, uid, saved.badgeCounts[def.key], (ouid) => (usersMap[ouid].badgeCounts || {})[def.key], `${def.label} rozeti`, def.icon);
 }
 
 const GIFT_WON_MESSAGES = [
