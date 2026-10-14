@@ -11,11 +11,12 @@ import {
 import { bookKeyFor } from "./catalog.js";
 import { createPost, createOrBatchPost } from "./feed.js";
 import { attachBookAutocompleteEl } from "./books.js";
+import { notifyUser } from "./notifications.js";
 // app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
 // açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
 import {
   activeUids, avatarHtmlFromProfile, currentUid, db, escapeHtml, materialBookCover,
-  materialRenderPhase, myProfile, notifyUser, showToast, shuffle, usersCache
+  materialRenderPhase, myProfile, showToast, shuffle, usersCache
 } from "./app.js";
 
 const QP_MAX_NOMINATIONS = 3;

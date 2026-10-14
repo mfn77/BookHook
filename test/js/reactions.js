@@ -4,10 +4,11 @@ import {
   arrayRemove, arrayUnion, doc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { burstMyReactionBadge } from "./feed.js";
+import { notifyUser } from "./notifications.js";
 // app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
 // açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
 import {
-  currentUid, db, escapeHtml, myProfile, notifyUser, showSimpleInfoModal, usersCache
+  currentUid, db, escapeHtml, myProfile, showSimpleInfoModal, usersCache
 } from "./app.js";
 
 export let pendingReactionRefresh = null;

@@ -5,6 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 import { createPost, pickVariantMessage } from "./feed.js";
+import { notifyAllMembers } from "./notifications.js";
 // app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
 // açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
 import {
@@ -12,9 +13,9 @@ import {
   cloudFunctions, CLUB_START_DATE, computeWeekStats, currentUid, db, DOW, drawHistory, drawsCache,
   escapeHtml, fetchDayAnswers, finalizeWeek, fmtShort, fromStr, getMonday, hubPreviews,
   joinDateStrOf, joinedAtOf, keepOrLoading, loadDraws, LOTTERY_ALGO, markLoaded, markStatus,
-  notifyAllMembers, nowLogical, pad, playMarkFx, renderTab, renderTotalPagesCard,
-  resetAndRecomputeAllBadges, runLottery, showCachedOrPlaceholder, showToast, stampBtnInFlight,
-  todayAnswers, todayStr, toStr, userChipHtml, usersCache, weekDates
+  nowLogical, pad, playMarkFx, renderTab, renderTotalPagesCard, resetAndRecomputeAllBadges,
+  runLottery, showCachedOrPlaceholder, showToast, stampBtnInFlight, todayAnswers, todayStr, toStr,
+  userChipHtml, usersCache, weekDates
 } from "./app.js";
 
 let manualGrid = {}; // uid -> ['', 'read', 'skip', ...] length 7
