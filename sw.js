@@ -1,7 +1,7 @@
-const CACHE = "kitap-kulubu-v23-split-js";
-// Sadece nadiren değişen dosyalar önceden önbelleğe alınır. Kod (app.js, i18n.js, style.css) ve
+const CACHE = "kitap-kulubu-v24-folders";
+// Sadece nadiren değişen dosyalar önceden önbelleğe alınır. Kod (js/ ve css/ klasörleri) ve
 // HTML burada yok: onlar her açılışta sunucuya "değişti mi?" diye sorularak alınıyor (aşağıda).
-const ASSETS = ["./manifest.json?v=brand-2", "./logo-mark.png", "./icon-192.png?v=brand-2", "./icon-512.png?v=brand-2", "./favicon.png?v=brand-2", "./apple-touch-icon.png?v=brand-2"];
+const ASSETS = ["./manifest.json?v=brand-2", "./icons/logo-mark.png", "./icons/icon-192.png?v=brand-2", "./icons/icon-512.png?v=brand-2", "./icons/favicon.png?v=brand-2", "./icons/apple-touch-icon.png?v=brand-2"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -77,8 +77,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: './icon-192.png',
-      badge: './notif-icon.png',
+      icon: './icons/icon-192.png',
+      badge: './icons/notif-icon.png',
       data: { linkTab: data.linkTab || null, postId: data.postId || null, notifId: data.notifId || null }
     })
   );

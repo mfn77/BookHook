@@ -4,11 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>BookHook</title>
-<script src="./i18n.js"></script>
+<script src="./js/i18n.js"></script>
 <meta name="theme-color" content="#F8FAF4" />
 <link rel="manifest" href="./manifest.json?v=brand-2" />
-<link rel="apple-touch-icon" href="./apple-touch-icon.png?v=brand-2" />
-<link rel="icon" href="./favicon.png?v=brand-2" />
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png?v=brand-2" />
+<link rel="icon" href="./icons/favicon.png?v=brand-2" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,17 +27,17 @@ try {
  root.dataset.theme=auto?(hour>=8&&hour<20?'light':'dark'):(['light','dark'].includes(saved)?saved:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
 } catch(e) {}
 </script>
-<link rel="stylesheet" href="./style.css?v=language-20261013" />
+<link rel="stylesheet" href="./css/style.css?v=language-20261013" />
 
 </head>
 <body>
 <div id="bgLayer"></div>
 
-<div id="loadingScreen" class="loading-note" role="status"><div class="startup-content"><span class="startup-mark"><img src="./logo-mark.png" width="108" height="108" alt="" /></span><span class="startup-name">BookHook</span><span class="startup-status">Yükleniyor…</span></div></div>
+<div id="loadingScreen" class="loading-note" role="status"><div class="startup-content"><span class="startup-mark"><img src="./icons/logo-mark.png" width="108" height="108" alt="" /></span><span class="startup-name">BookHook</span><span class="startup-status">Yükleniyor…</span></div></div>
 
 <div id="authScreen" class="auth-wrap" style="display:none;">
   <div class="center-logo">
-    <div class="center-logo-mark"><img src="./logo-mark.png" width="60" height="60" alt="" /></div>
+    <div class="center-logo-mark"><img src="./icons/logo-mark.png" width="60" height="60" alt="" /></div>
     <div class="center-logo-word">BookHook</div>
   </div>
   <div id="bannedNotice" class="banned-notice" style="display:none;"></div>
@@ -75,7 +75,7 @@ try {
 <div id="appRoot" style="display:none;">
   <div class="app-shell">
     <aside class="sidebar" id="sidebarNav">
-      <div class="sidebar-header"><button id="sidebarLogoBtn" class="brand-button" aria-label="Bugün"><img src="./logo-mark.png" width="44" height="44" alt="BookHook" /></button></div>
+      <div class="sidebar-header"><button id="sidebarLogoBtn" class="brand-button" aria-label="Bugün"><img src="./icons/logo-mark.png" width="44" height="44" alt="BookHook" /></button></div>
       <nav class="sidebar-tabs tabs" id="tabs"></nav>
       <button type="button" id="sidebarCollapseBtn" class="sidebar-collapse-btn" title="Menüyü gizle">◀</button>
     </aside>
@@ -764,8 +764,8 @@ try {
 </div>
 
 <script>document.dispatchEvent(new Event("bh-static-ready"));</script>
-<!-- app.js'e ?v=… gibi bir ek koyma: discover.js, feed.js, quarterly.js, gifts.js, recs.js, worms.js ve goodreads.js de "./app.js"i içe aktarıyor, adres farklı olursa uygulama iki kez yüklenir. Güncellemeyi service worker zaten kendisi alıyor. -->
-<script type="module" src="./app.js"></script>
+<!-- js/app.js'e ?v=… gibi bir ek koyma: js/ klasöründeki diğer dosyalar (feed.js, discover.js, quarterly.js, gifts.js, recs.js, worms.js, goodreads.js) da "./app.js"i içe aktarıyor, adres farklı olursa uygulama iki kez yüklenir. Güncellemeyi service worker zaten kendisi alıyor. -->
+<script type="module" src="./js/app.js"></script>
 </body>
 </html>
 

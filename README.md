@@ -52,7 +52,7 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 
 ## Tech Stack
 
-- **Frontend**: A vanilla HTML/CSS/JavaScript application (`index.html` + `app.js` + `i18n.js` + `style.css`), with no build step or framework dependency.
+- **Frontend**: A vanilla HTML/CSS/JavaScript application (`index.html` + `js/` + `css/style.css`), with no build step or framework dependency.
 - **Backend**: [Firebase](https://firebase.google.com/) - Authentication, Firestore, and Cloud Functions (2nd gen) for push notifications and scheduled reminders.
 - **Hosting**: Static hosting on GitHub Pages, with a service worker (`sw.js`) handling caching and background push delivery.
 - **External data**: [Open Library API](https://openlibrary.org/developers/api) as the primary book data source, with the [Google Books API](https://developers.google.com/books) as a fallback.
@@ -62,31 +62,37 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 ```
 .
 ├── index.html               Page markup (loads the files below)
-├── app.js                   Application logic (ES module)
-├── feed.js                  Feed: automatic and member posts, polls, votes/reactions, comments, pinned posts
-├── discover.js              Discover tab (category grid, book details, ratings, admin cover tools)
-├── quarterly.js             Quarterly shared-book pick (nominations, objections, bracket voting, reading) and the admin test copy
-├── gifts.js                 Gift books tab (gift requests, shipping/receipt confirmations, gift stats, received-books grid)
-├── recs.js                  Book recommendations (AI picks with explanations, member-to-member and club recommendations)
-├── worms.js                 Bookworms screen (club reading streaks and the badge history shelf)
-├── goodreads.js             Admin tool: import a member's Goodreads CSV export into their library
-├── catalog.js               Curated Discover book catalog (data only)
-├── i18n.js                  English translations and the language switch (loaded before first paint)
-├── style.css                Application styles (design tokens, components, layout)
-├── sw.js                    Service worker: offline caching (code is revalidated on every open) and background push
+├── sw.js                    Service worker: offline caching (code is revalidated on every open) and background push.
+│                            Stays at the root: a service worker only controls its own folder and the ones below it.
 ├── manifest.json            PWA manifest (name, icons, theme color)
-├── icon-512.png             App icon (home screen / favicon)
-├── icon-192.png
-├── apple-touch-icon.png
-├── favicon.png
-├── logo-mark.png            In-app logo (sign-in screen and sidebar), transparent background
+├── js/
+│   ├── app.js               Application logic (ES module, entry point)
+│   ├── i18n.js              English translations and the language switch (loaded before first paint)
+│   ├── feed.js              Feed: automatic and member posts, polls, votes/reactions, comments, pinned posts
+│   ├── discover.js          Discover tab (category grid, book details, ratings, admin cover tools)
+│   ├── quarterly.js         Quarterly shared-book pick (nominations, objections, bracket voting, reading) and the admin test copy
+│   ├── gifts.js             Gift books tab (gift requests, shipping/receipt confirmations, gift stats, received-books grid)
+│   ├── recs.js              Book recommendations (AI picks with explanations, member-to-member and club recommendations)
+│   ├── worms.js             Bookworms screen (club reading streaks and the badge history shelf)
+│   ├── goodreads.js         Admin tool: import a member's Goodreads CSV export into their library
+│   └── catalog.js           Curated Discover book catalog (data only)
+├── css/
+│   └── style.css            Application styles (design tokens, components, layout)
+├── icons/
+│   ├── icon-512.png         App icon (home screen / favicon)
+│   ├── icon-192.png
+│   ├── apple-touch-icon.png
+│   ├── favicon.png
+│   ├── logo-mark.png        In-app logo (sign-in screen and sidebar), transparent background
+│   └── notif-icon.png       Small monochrome icon shown in the notification bar
+├── test/                    Test copy of the app (same layout; shares icons/ and functions/shared/ with the main app)
 ├── firestore.rules          Firestore security rules
 ├── firebase.json            Firebase CLI config (points to the functions/ source folder)
 ├── .firebaserc              Firebase CLI project alias
 └── functions/
     ├── package.json         Cloud Functions dependencies (firebase-admin, firebase-functions)
     ├── index.js             Cloud Functions source (push notifications and scheduled reminders)
-    └── shared/              Rules used by both the app (app.js) and Cloud Functions
+    └── shared/              Rules used by both the app (js/app.js) and Cloud Functions
         ├── lottery.js       Weekly gift draw
         └── streak.js        Reading streaks and badges
 ```
@@ -104,7 +110,7 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 2. Under **Authentication**, enable the Email/Password provider (and Google, if desired).
 3. Under **Firestore Database**, create a database, then paste the contents of `firestore.rules` into the Rules tab and publish.
 4. Under **Cloud Messaging**, generate a Web Push certificate (VAPID key).
-5. In `app.js`, replace the Firebase configuration object (`apiKey`, `authDomain`, `projectId`, etc.) and the VAPID key with the values from your own project.
+5. In `js/app.js`, replace the Firebase configuration object (`apiKey`, `authDomain`, `projectId`, etc.) and the VAPID key with the values from your own project.
 
 ### Cloud Functions
 
@@ -127,11 +133,11 @@ All scheduled functions require Cloud Scheduler, which is only available on the 
 
 ### Google Books API Key (optional)
 
-Open Library is used as the primary book data source and requires no API key. If you want to configure Google Books as a more reliable fallback, add your own key to the `GOOGLE_BOOKS_API_KEY` constant in `app.js`, and restrict it to your domain in Google Cloud Console.
+Open Library is used as the primary book data source and requires no API key. If you want to configure Google Books as a more reliable fallback, add your own key to the `GOOGLE_BOOKS_API_KEY` constant in `js/app.js`, and restrict it to your domain in Google Cloud Console.
 
 ## Configuration
 
-All configuration lives directly in `app.js` as plain constants near the top of the file:
+All configuration lives directly in `js/app.js` as plain constants near the top of the file:
 
 | Constant | Purpose |
 |---|---|

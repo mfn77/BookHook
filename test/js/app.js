@@ -22,11 +22,11 @@ import {
 // Haftalık kura kuralları sunucuyla ortak tek dosyada (pazartesi otomatik kurası da bunu kullanıyor).
 import {
   LOTTERY_ALGO, runLottery, drawHistory, checkDrawRules
-} from "./functions/shared/lottery.js";
+} from "../../functions/shared/lottery.js";
 // Seri ve rozet kuralları da sunucuyla ortak (gece 06:00 rozet kesinleştirmesi de bunu kullanıyor).
 import {
   BADGE_DEFS as SHARED_BADGE_DEFS, currentTierForStreak, countStreak, badgeTransition, replayBadgeHistory
-} from "./functions/shared/streak.js";
+} from "../../functions/shared/streak.js";
 // Keşfet sekmesi ve seçilmiş kitap kataloğu ayrı dosyalarda.
 import { CURATED_CATALOG, bookKeyFor } from "./catalog.js";
 import {
