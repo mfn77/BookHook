@@ -6,13 +6,13 @@ import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, runTransaction,
   startAfter, updateDoc, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { renderReactionBar, setPendingReactionRefresh, showReactorsModal, toggleReactionDrawer } from "./reactions.js";
 // app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
 // açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
 import {
   BADGE_DEFS, activeTab, closeModal, currentUid, db, escapeHtml, hideAnchoredPopover,
   keepOrLoading, markLoaded, materialBookCover, myProfile, notifyAllMembers, notifyUser, pad,
-  profilePhotoHtml, renderReactionBar, setPendingReactionRefresh, showAnchoredPopover,
-  showReactorsModal, showSimpleInfoModal, showToast, toggleReactionDrawer, turkishAccusativeName,
+  profilePhotoHtml, showAnchoredPopover, showSimpleInfoModal, showToast, turkishAccusativeName,
   turkishDativeName, userChipHtml, usersCache
 } from "./app.js";
 
