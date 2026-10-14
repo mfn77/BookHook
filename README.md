@@ -74,6 +74,7 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 │   ├── gifts.js             Gift books tab (gift requests, shipping/receipt confirmations, gift stats, received-books grid)
 │   ├── recs.js              Book recommendations (AI picks with explanations, member-to-member and club recommendations)
 │   ├── worms.js             Bookworms screen (club reading streaks and the badge history shelf)
+│   ├── admin.js             Admin screens: today's check-ins, edit past days, weekly report, draws and "Why?", manual draw, members
 │   ├── goodreads.js         Admin tool: import a member's Goodreads CSV export into their library
 │   └── catalog.js           Curated Discover book catalog (data only)
 ├── css/
