@@ -21,13 +21,14 @@ try {
  const root=document.documentElement;
  const palette=localStorage.getItem('bookhook_palette');
  root.dataset.palette=['green','blue','purple','rose','amber'].includes(palette)?palette:'green';
+ const system=localStorage.getItem('bookhook_theme_system')==='true';
  const auto=localStorage.getItem('bookhook_theme_auto')==='true';
  const hour=new Date().getHours();
  const saved=localStorage.getItem('bookhook_theme');
- root.dataset.theme=auto?(hour>=8&&hour<20?'light':'dark'):(['light','dark'].includes(saved)?saved:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+ root.dataset.theme=system?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):auto?(hour>=8&&hour<20?'light':'dark'):(['light','dark'].includes(saved)?saved:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
 } catch(e) {}
 </script>
-<link rel="stylesheet" href="./css/style.css?v=language-20261013" />
+<link rel="stylesheet" href="./css/style.css?v=device-theme-20261014" />
 
 </head>
 <body>
@@ -768,6 +769,7 @@ try {
 <script type="module" src="./js/app.js"></script>
 </body>
 </html>
+
 
 
 
