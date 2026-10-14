@@ -1,6 +1,6 @@
-/* ============ KEŞFET KATALOĞU ============
-   Keşfet sekmesindeki seçilmiş kitap listesi (kategoriler, kitaplar, kısa "neden okunmalı" notları)
-   ve kapak aramasında kullanılan İngilizce başlıklar. Sadece veri; kodu discover.js'te. */
+/* Discover catalog: the curated book list shown in the Discover tab (categories, books and
+   a short "why read it" note) plus English titles used when searching for covers.
+   Data only; the code is in discover.js. */
 export const CURATED_CATALOG = [
   {slug:'c01_toplu_onerilenler', label:'Okunması Gerekenler', emoji:'⭐', books:[
     {t:'Don Kişot', a:'Miguel de Cervantes', w:'Modern romanın başlangıcı kabul edilen ve dünya edebiyatını kökten değiştiren başyapıttır.', lv:'orta'},

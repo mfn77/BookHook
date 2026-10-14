@@ -1,18 +1,20 @@
-/* ============ ORTAK: EMOJİ TEPKİLERİ (akış gönderileri, yorumlar ve kitap önerileri) ============ */
+/* Emoji reactions on feed posts, comments and book recommendations: the reaction
+   bar, the emoji picker drawer, "who reacted" and saving a reaction. */
 
 import {
   arrayRemove, arrayUnion, doc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { burstMyReactionBadge } from "./feed.js";
 import { notifyUser } from "./notifications.js";
-// app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
-// açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
+// Circular import: app.js imports this module too. These names are only used inside
+// functions (after startup), never while the module is being evaluated, so the cycle is safe.
 import {
   currentUid, db, escapeHtml, myProfile, showSimpleInfoModal, usersCache
 } from "./app.js";
 
 export let pendingReactionRefresh = null;
-// Tepki seçilince yenilenecek görünüm. Başka dosyalar (feed.js) bu değişkene doğrudan yazamadığı için.
+// View to re-render after the user picks an emoji. Other modules set it through
+// setPendingReactionRefresh(), since imported bindings are read-only.
 export function setPendingReactionRefresh(fn){ pendingReactionRefresh = fn; }
 
 const REACTION_EMOJIS = ['👍','❤️','😂','😮','😢','🔥','👏','🎉','🤔','👎'];
@@ -27,9 +29,8 @@ function reactionTargetRef(target){
 export function renderReactionBar(reactions, target){
   reactions = reactions || {};
   const allEmojis = [...REACTION_EMOJIS, ...Object.keys(reactions).filter(em => !REACTION_EMOJIS.includes(em))];
-  // Kullanıcının kendi tepkisi artık başlıkta (avatarın solunda) tek başına gösterildiği için,
-  // burada (alttaki çubukta) SADECE başkalarının tepkileri gösteriliyor — aynı tepki iki kere
-  // (hem burada hem köşede) görünmesin.
+  // The user's own reaction is shown next to the avatar in the card header, so the bar
+  // only lists other people's reactions.
   const activeEmojis = allEmojis.filter(em => (reactions[em]||[]).filter(u=>u!==currentUid).length>0);
   const pills = activeEmojis.map(em=>{
     const uids = (reactions[em] || []).filter(u=>u!==currentUid);
@@ -47,7 +48,7 @@ export function closeReactionDrawer(){
 }
 function renderDrawerEmojiRow(target, availableWidth){
   const drawer = document.getElementById('reactionDrawer');
-  const BTN_W = 34; // her emoji tuşunun kapladığı yaklaşık genişlik
+  const BTN_W = 34; // approximate width of one emoji button, in px
   let maxCount = Math.max(1, Math.floor((availableWidth - BTN_W) / BTN_W) - 1);
   maxCount = Math.min(maxCount, REACTION_EMOJIS.length);
   const shown = REACTION_EMOJIS.slice(0, maxCount);

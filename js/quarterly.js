@@ -1,8 +1,7 @@
-/* ============ ORTAK KİTAP SEÇİMİ (3 aylık turnuva usulü oylama) ============
-   Faz geçişleri (öneri → itiraz → oylama turları → okuma) sunucu tarafında otomatik
-   ilerliyor (bkz. functions/index.js: quarterlyPickTick). Burada sadece o anki fazı
-   gösterip, öneri/itiraz/oy verme gibi kullanıcı eylemlerini Firestore transaction'larıyla
-   güvenli şekilde kaydediyoruz. */
+/* Quarterly shared-book pick, run as a tournament: nominations -> objections -> voting
+   rounds -> reading. Phase changes happen on the server (quarterlyPickTick in
+   functions/index.js); this module shows the current phase and records nominations,
+   objections and votes with Firestore transactions. */
 
 import {
   addDoc, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query,
@@ -12,8 +11,8 @@ import { bookKeyFor } from "./catalog.js";
 import { createPost, createOrBatchPost } from "./feed.js";
 import { attachBookAutocompleteEl } from "./books.js";
 import { notifyUser } from "./notifications.js";
-// app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
-// açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
+// Circular import: app.js imports this module too. These names are only used inside
+// functions (after startup), never while the module is being evaluated, so the cycle is safe.
 import {
   activeUids, avatarHtmlFromProfile, currentUid, db, escapeHtml, materialBookCover,
   materialRenderPhase, myProfile, showToast, shuffle, usersCache
@@ -52,8 +51,8 @@ export async function renderQuarterlyPickCard(){
   const body = document.getElementById('quarterlyPickBody');
   if(!body) return;
   let qp = null;
-  // Sorgu başarısız olursa "henüz başlamamış" sanıp ekranı yanlışlıkla ezmeyelim — olduğu gibi
-  // bırakıp çıkıyoruz, "belge yok" (gerçekten başlamamış) durumu zaten hata fırlatmaz.
+  // On a failed read, keep the screen as it is instead of showing "not started". A missing
+  // document (really not started) doesn't throw.
   try{ const snap = await getDoc(qpDocRef()); qp = snap.exists() ? snap.data() : null; }catch(e){ return; }
   qpCache = qp;
   materialRenderPhase(qp);
@@ -97,11 +96,9 @@ function qpWireNomRowClicks(body){
     });
   });
 }
-// Bir öneri satırını (kapak+isim yan yana duran, dar flex bir satır) düzenleme formuna
-// çevirir. Satırın kendi flex düzenini (display:block ile) geçersiz kılıyoruz, yoksa form
-// alanları (kitap adı, yazar adı vs.) o dar satırın içinde yan yana sıkışıp kalıyordu — dar
-// ekranlarda okunamaz hâle geliyordu. Ayrıca diğer önerileri aşağı itme, yumuşak bir
-// yükseklik animasyonuyla oluyor.
+// Turns a nomination row (a narrow flex row with cover and title) into an edit form. The
+// row switches to block layout so the form fields aren't squeezed side by side, and its
+// height animates so the rows below slide down smoothly.
 function qpExpandRowToForm(row, formHtml){
   row.classList.add('qp-editing');
   row.style.overflow = 'hidden';
@@ -127,10 +124,9 @@ function qpNominationFormHtml(idPrefix, submitLabel){
     <button class="primary" id="${idPrefix}SendBtn">${submitLabel}</button>
   `;
 }
-// Hem "kitap adı" hem "yazar adı" alanı aynı genel aramayı tetikliyor (OpenLibrary'nin genel
-// arama uç noktası zaten yazar adına göre de eşleşiyor); ikisi de seçim yapılmadan elle yazmaya
-// devam edebiliyor. Gönderirken yazar adı boşsa (database'den seçilmemiş VE elle de
-// yazılmamışsa) engelliyoruz.
+// Both the title and the author field run the same search (Open Library's general search
+// also matches authors), and both accept free text without picking a result. Submitting
+// requires an author, either picked or typed.
 function qpWireNominationForm(idPrefix, onSubmit){
   const bookInput = document.getElementById(idPrefix+'Book');
   const authorInput = document.getElementById(idPrefix+'Author');
@@ -295,7 +291,7 @@ async function renderQpVoting(body, qp){
       const countB = cardB.querySelector('[data-vote-count]');
       let nA = parseInt(countA.textContent,10) || 0;
       let nB = parseInt(countB.textContent,10) || 0;
-      // Anlık (iyimser) güncelleme — yazı Firestore'a arka planda gidiyor, ekranda beklemiyorsun.
+      // Update the vote counts right away; the write goes to Firestore in the background.
       if(clickedSlot==='A'){
         if(cardA.classList.contains('voted')){ nA--; cardA.classList.remove('voted'); }
         else { nA++; cardA.classList.add('voted'); if(cardB.classList.contains('voted')){ nB--; cardB.classList.remove('voted'); } }
@@ -452,7 +448,7 @@ async function qpSubmitFinishAnswers(containerId, qp){
       charAnswer, eventAnswer, extraNote, submittedAt: new Date().toISOString()
     });
     await updateDoc(qpDocRef(), { finishedBy: arrayUnion(currentUid) });
-    // Kitaplığım'daki grup puanlama sistemine de aynı puan/yorum işleniyor.
+    // Also record the rating and review in the club's book ratings (groupBookRatings).
     const bookKey = bookKeyFor({title:qp.winnerTitle, author:qp.winnerAuthor});
     const groupSnap = await getDoc(doc(db,'groupBookRatings',bookKey));
     const existing = groupSnap.exists() ? groupSnap.data() : {};
@@ -562,8 +558,8 @@ async function objectToQuarterlyNomination(nomId, bookTitle){
     renderQuarterlyPickCard();
   }catch(err){ alert(window.BH_I18N.pick("İtiraz edilemedi: ","Could not submit objection: ")+(err.message||err)); }
 }
-// İtiraz edilen kitabı öneren kişiye (hakkı dolu olsa bile — kendi boşluğunu her zaman
-// doldurabilir) VE hâlâ öneri hakkı dolmamış herkese "yerine önerebilirsin" bildirimi gider.
+// Tell the member whose book was objected to (they can always fill their own slot) and
+// everyone who still has nominations left that they can nominate a replacement.
 async function notifyQpObjectionEligible(nominatorUid, bookTitle){
   try{
     const snap = await getDocs(qpNomsCol());
@@ -582,7 +578,7 @@ async function notifyQpObjectionEligible(nominatorUid, bookTitle){
     toNotify.forEach(uid=>{
       notifyUser(uid, `"${bookTitle}" kitabına itiraz edildi, öneriden düştü. Yerine yeni bir öneri yapabilirsin!`, 'recs');
     });
-  }catch(e){ /* bildirim gönderilemezse sessizce geç */ }
+  }catch(e){ /* a failed notification is not an error for the caller */ }
 }
 async function voteQuarterlyMatch(round, matchId, slot){
   const matchRef = doc(db,'quarterlyPick','current','rounds',String(round),'matches',matchId);
@@ -599,19 +595,18 @@ async function voteQuarterlyMatch(round, matchId, slot){
       }
       tx.update(matchRef, { votesA, votesB });
     });
-    qpCheckRoundFullyVoted(round); // arka planda, beklemeden — turun tamamı oylandıysa erken bitiş damgası basılır
+    qpCheckRoundFullyVoted(round); // in the background: stamps an early finish if the whole round has voted
   }catch(err){ alert('Oy verilemedi: '+(err.message||err)); renderQuarterlyPickCard(); }
 }
-// Bir oydan sonra, o turdaki TÜM eşleşmelerde AKTİF her üyenin oy kullanıp kullanmadığını
-// kontrol eder. Herkes oy kullandıysa "fullyVotedAt" damgası basılır — sunucu tarafı bunu görüp
-// 1 gün dolmadan, son oydan 5 dakika sonra turu erken kapatır (kimse oyunu geri çekmezse). Biri
-// oyunu geri çekip tam katılımı bozarsa damga temizlenir (erken bitiş iptal olur).
+// After a vote, checks whether every active member has voted in every match of the
+// round. If so, sets fullyVotedAt and the server closes the round 5 minutes after the
+// last vote instead of waiting the full day. Withdrawing a vote clears the stamp.
 async function qpCheckRoundFullyVoted(round){
   try{
     const qpSnap = await getDoc(qpDocRef());
     if(!qpSnap.exists()) return;
     const qp = qpSnap.data();
-    if(qp.phase!=='voting' || qp.round!==round) return; // bu arada tur değişmiş olabilir, boşuna yazma
+    if(qp.phase!=='voting' || qp.round!==round) return; // the round may have changed in the meantime
     const matchesSnap = await getDocs(qpMatchesCol(round));
     const matches = []; matchesSnap.forEach(d=> matches.push(d.data()));
     const activeUidList = activeUids();
@@ -624,14 +619,12 @@ async function qpCheckRoundFullyVoted(round){
     } else if(!fullyVoted && qp.fullyVotedAt){
       await updateDoc(qpDocRef(), { fullyVotedAt: null });
     }
-  }catch(e){ /* arka plan kontrolü, sessizce geç */ }
+  }catch(e){ /* background check; failures are ignored */ }
 }
 
-/* ============ YÖNETİCİYE ÖZEL DENEME: ORTAK KİTAP SEÇİMİ ============
-   Gerçek sistemle AYNI mantık (öneri→itiraz→turnuva→okuma), ama tamamen ayrı bir Firestore
-   yolunda (quarterlyPickTest), sınırsız öneri hakkıyla, süre sınırı olmadan ve faz geçişleri
-   burada bir tuşla elle tetikleniyor. Hiçbir bildirim/akış gönderisi oluşturmuyor, üyelere hiç
-   görünmüyor — sadece yöneticinin kendi deneme alanı. */
+/* Admin-only test copy of the shared-book pick: the same flow, stored separately under
+   quarterlyPickTest, with unlimited nominations, no time limits and phases advanced by
+   hand. It sends no notifications or feed posts and is never shown to members. */
 function qpTestDocRef(){ return doc(db,'quarterlyPickTest','current'); }
 function qpTestNomsCol(){ return collection(db,'quarterlyPickTest','current','nominations'); }
 function qpTestMatchesCol(round){ return collection(db,'quarterlyPickTest','current','rounds',String(round),'matches'); }

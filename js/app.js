@@ -1,4 +1,9 @@
-/* ================= FIREBASE AYARLARI — BURAYI DOLDUR ================= */
+/* BookHook: main module. Sets up Firebase, holds the shared state (signed-in member,
+   member list, today's check-ins, draws), the date and UI helpers used everywhere, sign-in,
+   tabs and navigation, and the badge rules. Each screen lives in its own module and is
+   imported below.
+
+   To run your own copy, replace the Firebase configuration further down. */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
@@ -16,57 +21,45 @@ import {
 import {
   getFunctions, httpsCallable
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
-// Haftalık kura kuralları sunucuyla ortak tek dosyada (pazartesi otomatik kurası da bunu kullanıyor).
+// Weekly gift draw rules, shared with the server (functions/shared/lottery.js).
 import {
   LOTTERY_ALGO, runLottery, drawHistory, checkDrawRules
 } from "../functions/shared/lottery.js";
-export { LOTTERY_ALGO, runLottery, drawHistory, checkDrawRules }; // admin.js de kullanıyor
-// Seri ve rozet kuralları da sunucuyla ortak (gece 06:00 rozet kesinleştirmesi de bunu kullanıyor).
+export { LOTTERY_ALGO, runLottery, drawHistory, checkDrawRules }; // re-exported for admin.js
+// Reading streak and badge rules, shared with the server (functions/shared/streak.js).
 import {
   BADGE_DEFS as SHARED_BADGE_DEFS, currentTierForStreak, countStreak, badgeTransition, replayBadgeHistory
 } from "../functions/shared/streak.js";
-// Kitap bilgisi penceresi ve kitap arama (Google Books / Open Library) ayrı dosyada.
+// Screens and features, one module each:
 import { initBooks, attachBookAutocomplete } from "./books.js";
-// Kitaplığım (kitap geçmişi, okuyorum, okumak istiyorum) ayrı dosyada.
 import {
   initLibrary, renderBookHistoryTab, renderMyBooksTab, renderBookHistoryGrid, bhPageState,
   positionDiscoverFabs, updateDiscoverFabVisibility
 } from "./library.js";
-// Emoji tepkileri (çekmece, tepki çubuğu, kimler tepki verdi) ayrı dosyada.
 import { initReactions, pendingReactionRefresh, closeReactionDrawer, setReaction } from "./reactions.js";
-// Bildirimler (uygulama içi liste ve telefon bildirimleri) ayrı dosyada.
 import {
   initNotifications, notifyUser, notifyAdmins, notifyAllMembers, subscribeNotifs, unsubscribeNotifs,
   openNotifModal, setupPushNotifications, enablePushNotifications
 } from "./notifications.js";
-// "Bugün" sekmesi: okuma toplamları, kişisel hedefler ve "Okudum" işaretleme kartı ayrı dosyada.
 import { initToday, selfReadPending, computeTotalReadDays, wireSelfMarkCard } from "./today.js";
-// Keşfet sekmesi ve seçilmiş kitap kataloğu ayrı dosyalarda.
 import { CURATED_CATALOG, bookKeyFor } from "./catalog.js";
 import {
   initDiscover, renderDiscoverTab, renderDiscoverFilters, renderDiscoverContent,
   discoverCoversCache, ensureDiscoverCoversLoaded, seedDiscoverCovers,
   discoverPageSize, ensureDiscoverPageSizeLoaded, setDiscoverPageSize
 } from "./discover.js";
-// Akış (gönderiler) ayrı dosyada.
 import {
   initFeed, createPost, createOrBatchPost, pickVariantMessage, renderTimelineTab, renderPostCard,
   wirePostCards, openPostModal, positionPinnedPostBar, burstMyReactionBadge,
   deleteReadPostsRetroactively, migrateBatchPostsRetroactively
 } from "./feed.js";
-// Ortak kitap seçimi (ve yöneticinin deneme sürümü) ayrı dosyada.
 import {
   renderQuarterlyPickCard, renderQpBookInBugun, renderQpTestTab, qpDocRef
 } from "./quarterly.js";
-// Hediye kitap sekmesi ayrı dosyada.
 import { renderGiftsTab, renderGiftBooksGrid } from "./gifts.js";
-// Kitap önerileri (yapay zekâ önerileri ve üyelerin önerileri) ayrı dosyada.
 import { initRecs, renderRecsTab, renderAiRecCard } from "./recs.js";
-// Kitap kurtları (seri sıralaması ve rozet geçmişi) ayrı dosyada.
 import { initWorms, renderAdminWorms, renderMemberWorms } from "./worms.js";
-// Goodreads'ten içe aktarma (yönetici aracı) ayrı dosyada.
 import { renderGoodreadsImportTab } from "./goodreads.js";
-// Yönetici ekranları (bugün, geçmişi düzenle, haftalık rapor, kura, manuel kura, üyeler) ayrı dosyada.
 import {
   initAdmin, renderAdminToday, renderAdminOwnWeek, renderEditPastTab, renderWeekReportTable, renderAdminWeek,
   renderEditPastWeekReport, renderAdminDraws, renderManualTab, renderAdminMembers, setAdminWeekOffset, setEditPastWeekOffset
@@ -81,24 +74,24 @@ const firebaseConfig = {
   appId: "1:611511209042:web:3fa319fb5ee6ca5daba38b"
 };
 export const FCM_VAPID_KEY = "BE2rTmP33eegqZfz2p3wP-skKGpR0NuEWkal5-VaNbsX1ikgMa_mvIUg4uXATWXHzy1boy0yuBqeCb2Q-Wn3aXw";
-export const GOOGLE_BOOKS_API_KEY = "AIzaSyBpIIf2aPenDO9E1ZgX96oNAznFmAadRxs"; // Kitap arama kotasını yükseltmek için buraya kendi Google Books API anahtarını yapıştır (boş bırakılırsa düşük anonim kota kullanılır, 429 hatası alınabilir)
+export const GOOGLE_BOOKS_API_KEY = "AIzaSyBpIIf2aPenDO9E1ZgX96oNAznFmAadRxs"; // Optional Google Books API key for book search. Without one the low anonymous quota applies and searches may fail with HTTP 429.
 
 export const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 export const db = getFirestore(app);
 const storage = getStorage(app);
 export const cloudFunctions = getFunctions(app);
-/* ======================================================================= */
 
-/* ============ TARİH YARDIMCILARI (gün 06:00'a kadar sürer) ============ */
+/* Date helpers. A reading day lasts until 06:00 the next morning. */
 export const DOW = [window.BH_I18N.pick("Pzt","Mon"),window.BH_I18N.pick("Sal","Tue"),window.BH_I18N.pick("Çar","Wed"),window.BH_I18N.pick("Per","Thu"),window.BH_I18N.pick("Cum","Fri"),window.BH_I18N.pick("Cmt","Sat"),window.BH_I18N.pick("Paz","Sun")];
-/* ============ KARANLIK / AYDINLIK TEMA ============ */
+/* Light / dark theme */
 function getStoredTheme(){ try{ return localStorage.getItem('bookhook_theme'); }catch(e){ return null; } }
 function setTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
   try{ localStorage.setItem('bookhook_theme', theme); }catch(e){}
 }
-// Device appearance is a preference; data-theme always contains the resolved light/dark value.
+// "Device" mode follows the system setting; data-theme always holds the resolved
+// light/dark value.
 function getSystemThemeEnabled(){try{return localStorage.getItem('bookhook_theme_system')==='true';}catch(e){return false;}}
 function setSystemThemeEnabled(value){try{localStorage.setItem('bookhook_theme_system',value?'true':'false');}catch(e){}}
 const deviceThemeQuery=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
@@ -147,8 +140,8 @@ export function getMonday(d){ const day=d.getDay(); const diff = day===0?-6:1-da
 export function weekDates(monday){ const arr=[]; for(let i=0;i<7;i++) arr.push(toStr(addDays(monday,i))); return arr; }
 const MONTHS_TR = [window.BH_I18N.pick("Ocak","January"),window.BH_I18N.pick("Şubat","February"),window.BH_I18N.pick("Mart","March"),window.BH_I18N.pick("Nisan","April"),window.BH_I18N.pick("Mayıs","May"),window.BH_I18N.pick("Haziran","June"),window.BH_I18N.pick("Temmuz","July"),window.BH_I18N.pick("Ağustos","August"),window.BH_I18N.pick("Eylül","September"),window.BH_I18N.pick("Ekim","October"),window.BH_I18N.pick("Kasım","November"),window.BH_I18N.pick("Aralık","December")];
 function isWideScreen(){ return window.matchMedia && window.matchMedia('(min-width:700px)').matches; }
-// Firestore'a kaydedilen (herkesin gördüğü) metinler için dilden ve ekran genişliğinden bağımsız
-// tarih; sunucudaki fmtShortBackend ile aynı "gg.aa" biçimi.
+// Dates written to Firestore (seen by everyone) use a fixed "dd.mm" format, independent of
+// language and screen width, matching fmtShortBackend on the server.
 function fmtStoredDate(dstr){ const d = fromStr(dstr); return pad(d.getDate())+"."+pad(d.getMonth()+1); }
 export function fmtShort(dstr){
   const d = fromStr(dstr);
@@ -161,7 +154,7 @@ window.addEventListener('resize', ()=>{
   if(_lastWideState!==null && nowWide!==_lastWideState && activeTab){ renderTab(activeTab); }
   _lastWideState = nowWide;
 });
-// "Mantıksal gün": saat 06:00'dan önceyse hâlâ önceki günün okuma günü sayılır (gece okumaları için).
+// The "logical day": before 06:00 it is still the previous reading day (for late-night reading).
 export function nowLogical(){ const d=new Date(); if(d.getHours()<6){ d.setDate(d.getDate()-1); } d.setHours(0,0,0,0); return d; }
 export function todayStr(){ return toStr(nowLogical()); }
 export function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
@@ -192,13 +185,11 @@ export function turkishAccusativeName(name){
   return `${name}'${endsInVowel ? 'y'+v : v}`;
 }
 
-/* ============ KURA ============
-   Kuralın kendisi functions/shared/lottery.js'te (sunucuyla ortak). Burada sadece uygulamaya
-   özel yardımcılar var. */
-// Üyenin tam kayıt anı: aynı gün katılan hiç kazanmamışlar arasındaki sırayı belirler.
+/* Weekly draw. The rules are in functions/shared/lottery.js; these are app-side helpers. */
+// Exact sign-up time; orders members who never won and joined on the same day.
 export function joinedAtOf(uid){ const c=usersCache[uid]?.createdAt; const t=c?new Date(c):null; return t&&!isNaN(t)?t.toISOString():''; }
 
-/* ============ DURUM ============ */
+/* Shared state */
 export let currentUid = null;
 export let myProfile = null;
 export let usersCache = {};
@@ -217,11 +208,10 @@ export function profilePhotoHtml(profile, fontSize){
 }
 export function avatarHtmlFromProfile(profile, size, proportionHint){
   size = size || 22;
-  // size normalde piksel sayısıdır; bir CSS ölçüsü/yüzdesi ("100%" gibi) de verilebilir — bu durumda
-  // halka/rozet oranları için proportionHint (verilmediyse 34px) varsayılan bir taban kullanılır
-  // (kendi kapsayıcısına göre orantı hesaplayamayacağımız için), asıl daire boyutu yine verilen CSS
-  // değerine göre esner. Avatarın gerçekte çok küçük render edileceği yerlerde (ör. rozet crest'i)
-  // köşe simgesinin fotoğrafı kapatmaması için proportionHint ile gerçekçi bir taban verilmeli.
+  // size is usually a number of pixels, but any CSS length ("100%") also works. Ring and
+  // badge proportions are then computed from proportionHint (34px by default), since the
+  // real rendered size isn't known here. Pass a realistic proportionHint where the avatar is
+  // drawn very small, so the corner badge doesn't cover the photo.
   const isNumeric = typeof size === 'number';
   const sizeCss = isNumeric ? `${size}px` : size;
   const proportionBase = isNumeric ? size : (proportionHint || 34);
@@ -235,9 +225,8 @@ export function avatarHtmlFromProfile(profile, size, proportionHint){
   const badgeOverlay = tierDef
     ? `<span class="tier-badge-icon" title="${escapeHtml(tierDef.label)}" style="position:absolute; right:-2px; bottom:-2px; width:${iconSize}px; height:${iconSize}px; border-radius:50%; background:${tierDef.color}; display:flex; align-items:center; justify-content:center; font-size:${Math.round(iconSize*0.62)}px; box-shadow:0 0 0 1.5px var(--card);">${badgeIllustration(tierDef.key)}</span>`
     : '';
-  // Dıştaki katman sabit boyutlu (size×size) ve rozet halkasını (box-shadow) taşıyor; overflow burada
-  // KESİNLİKLE hidden değil, aksi halde halka kırpılırdı. Yuvarlak kırpma tamamen içteki, kendi
-  // overflow:hidden'ına sahip ayrı katmanda yapılıyor; bu yüzden halka asla köşeli görünmez.
+  // The outer layer has a fixed size and carries the badge ring (box-shadow), so it must
+  // not clip; the round crop is done by the inner layer with its own overflow:hidden.
   return `<span style="position:relative; display:inline-flex; width:${sizeCss}; height:${sizeCss}; margin-right:${isNumeric?'6px':'0'}; vertical-align:middle; line-height:0; flex:0 0 auto; border-radius:50%; ${ringStyle}">
     <span style="display:block; width:100%; height:100%; border-radius:50%; overflow:hidden;">${inner}</span>
     ${badgeOverlay}
@@ -481,10 +470,9 @@ export function hideAnchoredPopover(){
   pop.classList.add('closing');
   setTimeout(()=>{ pop.style.display='none'; pop.classList.remove('closing'); }, 120);
 }
-// Seçenekler penceresi (ve diğer bağlı popover'lar) açıkken dışarıya tıklanınca önce SADECE o
-// pencere kapanmalı — o tıklamanın altındaki başka bir öğenin (örn. başka bir gönderi kartının)
-// kendi tıklama işlevi TETİKLENMEMELİ. Bunu "capture" evresinde (olay hedefine erişmeden önce)
-// yakalayıp durdurarak sağlıyoruz — böylece kart kendi tıklama dinleyicisine hiç ulaşmıyor.
+// While a popover or menu is open, a click outside should only close it, not also trigger
+// whatever is underneath (e.g. another post card). Handled in the capture phase so the
+// click never reaches that element.
 document.addEventListener('click', (e)=>{
   const pop = document.getElementById('anchoredPopover');
   if(pop.style.display==='block' && !pop.contains(e.target) && !e.target.closest('.badge-info-icon') && !e.target.closest('.total-pages-clickable') && !e.target.closest('#coverFixTarget')){
@@ -530,27 +518,21 @@ document.body.addEventListener('click', (e)=>{
   }
 });
 
-// Bir konteynerin daha önce içerik gösterip göstermediğini işaretler. İlk seferinde
-// "Yükleniyor…" gösterilir; sonraki ziyaretlerde önceki içerik ekranda kalmaya devam
-// eder, veri arka planda tazelenip sessizce günceller. Ayrıca içeriği cihazın kendi
-// hafızasına (localStorage) kaydediyoruz — böylece uygulama tamamen kapatılıp yeniden
-// açıldığında da "yükleniyor" boşluğu görülmez, son bilinen hal anında gösterilir ve
-// arka planda gerçek veriyle sessizce güncellenir.
-// Her kayıtla birlikte bir zaman damgası da tutuluyor: bir kayıt CACHE_TTL_MS'ten (1 hafta)
-// daha eskiyse artık hiç gösterilmiyor (sanki önbellek boşmuş gibi davranılıyor, yerine
-// "Yükleniyor…" çıkıyor) — böylece normal günlük kullanımda önbellek her zaman anında
-// gösterilmeye devam ediyor, ama bir konteynerin taze render'ı haftalarca hiç
-// tamamlanamazsa o eski içerik sonsuza kadar takılı kalmıyor, kendiliğinden düşüyor.
+// Content cache for slow-loading containers. The first visit shows "Loading…"; later
+// visits keep the previous content on screen while fresh data loads in the background.
+// Content is also stored in localStorage so it survives a restart. Entries older than
+// CACHE_TTL_MS are ignored, so a container that keeps failing to refresh doesn't show
+// stale content forever.
 const APP_CACHE_VERSION = 'material-i18n-v1-'+window.BH_I18N.language;
 const CACHE_PREFIX = 'bh_cache_'+APP_CACHE_VERSION+'_';
-const CACHE_TTL_MS = 7*24*60*60*1000; // 1 hafta
+const CACHE_TTL_MS = 7*24*60*60*1000; // 1 week
 function getPersistedHTML(key){
   try{
     const raw = localStorage.getItem(CACHE_PREFIX+currentUid+'_'+key);
     if(!raw) return null;
     const parsed = JSON.parse(raw);
     if(!parsed || typeof parsed.html!=='string' || typeof parsed.ts!=='number') return null;
-    if(Date.now() - parsed.ts > CACHE_TTL_MS) return null; // 1 haftadan eski — geçersiz say
+    if(Date.now() - parsed.ts > CACHE_TTL_MS) return null; // expired
     return parsed.html;
   }catch(e){ return null; }
 }
@@ -558,8 +540,7 @@ function setPersistedHTML(key, html){
   const payload = JSON.stringify({html, ts: Date.now()});
   try{ localStorage.setItem(CACHE_PREFIX+currentUid+'_'+key, payload); }
   catch(e){
-    // Depolama dolu olabilir: bu uygulamaya ait birkaç eski önbellek kaydını silip tekrar dene
-    // (yeni gösterilecek içerik, eski/kullanılmayan bir önbellekten daha değerli).
+    // Storage may be full: drop a few of this app's older cache entries and retry.
     try{
       const ownKeys = [];
       for(let i=0;i<localStorage.length;i++){
@@ -568,7 +549,7 @@ function setPersistedHTML(key, html){
       }
       ownKeys.slice(0, 8).forEach(k=>{ try{ localStorage.removeItem(k); }catch(e2){} });
       localStorage.setItem(CACHE_PREFIX+currentUid+'_'+key, payload);
-    }catch(e3){ /* hâlâ olmuyorsa sessizce geç */ }
+    }catch(e3){ /* give up quietly */ }
   }
 }
 export function showCachedOrPlaceholder(el, placeholderHtml){
@@ -602,7 +583,7 @@ export function showToast(msg){
 initNotifications();
 document.getElementById('guideModalClose').addEventListener('click', ()=>{ closeModal('guideModal'); });
 document.getElementById('guideModal').addEventListener('click', (e)=>{ if(e.target.id==='guideModal') closeModal('guideModal'); });
-/* ============ AUTH EKRANI ============ */
+/* Sign-in screen */
 const authScreen = document.getElementById('authScreen');
 const appRoot = document.getElementById('appRoot');
 const loadingScreen = document.getElementById('loadingScreen');
@@ -675,14 +656,14 @@ document.getElementById('googleAuthBtn').addEventListener('click', async ()=>{
     if(err.code && err.code.includes('unauthorized-domain')){
       alert(window.BH_I18N.pick("Bu site adresi Firebase'de yetkili domainler listesinde değil. Firebase konsolu → Authentication → Settings → Authorized domains kısmına bu sitenin adresini eklemen gerekiyor.","This site is not an authorized Firebase domain. Add its address in Firebase Console → Authentication → Settings → Authorized domains."));
     } else if(err.code && err.code.includes('popup-closed-by-user')){
-      // kullanıcı pencereyi kapattı, sessizce geç
+      // the user closed the sign-in popup
     } else {
       alert(friendlyAuthError(err));
     }
   }
 });
 
-/* ============ TAB TANIMLARI ============ */
+/* Tab definitions */
 const ADMIN_TABS = [
   {id:'social', label:window.BH_I18N.pick("Akış","Feed"), icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>'},
   {id:'today', label:window.BH_I18N.pick("Bugün","Today"), icon:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'},
@@ -719,9 +700,8 @@ const HAMBURGER_MEMBER_EXTRA = [
   {id:'settings', label:window.BH_I18N.pick("Ayarlar","Settings"), icon:'⚒'},
   {id:'profile', label:window.BH_I18N.pick("Profilim","My profile"), icon:'◍'}
 ];
-// Hamburger menüsü kaldırıldı, herşey Ayarlar sekmesine taşındı (bkz. tab-appsettings). Yukarıdaki
-// iki dizi (HAMBURGER_ADMIN_EXTRA/HAMBURGER_MEMBER_EXTRA) hâlâ switchTab()'daki başlık aramasında
-// kullanıldığı için duruyor.
+// HAMBURGER_ADMIN_EXTRA / HAMBURGER_MEMBER_EXTRA are only used to look up tab titles
+// (getTabLabel); those screens are reached from the settings tab.
 
 let prevTabBeforeProfile = null;
 document.getElementById('whoamiClickable').addEventListener('click', ()=>{
@@ -771,35 +751,31 @@ function flashRequiredFields(){
   return anyEmpty;
 }
 let lastTabSwitchTime = 0;
-// Bazı bildirimler (ör. hatırlatma push'u, "X bugün okudum işaretledi") tek bir sekme id'siyle hem
-// üyelere hem yöneticilere gönderiliyor. Üye ve yönetici arayüzlerinde aynı işi gören ama farklı
-// id'li sekmeler olduğu için (Bugün: msurvey/today, Kayıtlar: mtoday/week, Rozet: mworms/worms),
-// bildirime tıklanınca kullanıcının KENDİ rolündeki karşılığa gitmesi lazım — yoksa örneğin bir
-// yönetici üyelerin "Bugün" sekmesine düşer ve orada sağa/sola kaydırarak diğer sekmelerine
-// geçemez (çünkü o sekme kendi sekme setinin bir parçası değildir).
+// Some notifications link to one tab id but go to both members and admins, who have
+// different ids for the same screen (Today: msurvey/today, Records: mtoday/week,
+// Badges: mworms/worms). Map the link to the reader's own version, otherwise an admin
+// would land on a member tab that isn't part of their swipeable tab set.
 const TAB_ROLE_EQUIVALENTS = { msurvey:'today', today:'msurvey', mtoday:'week', week:'mtoday', mworms:'worms', worms:'mworms' };
 const MEMBER_SIDE_TAB_IDS = ['msurvey','mtoday','mworms'];
 export function resolveNotifTab(tabId){
   if(!tabId) return tabId;
   const equiv = TAB_ROLE_EQUIVALENTS[tabId];
-  if(!equiv) return tabId; // ortak sekme (ör. gifts, mybooks, settings) — dönüşüm gerekmez
+  if(!equiv) return tabId; // shared tab (e.g. gifts, mybooks, settings): no mapping needed
   const isAdmin = myProfile && myProfile.role==='admin';
   const tabIsMemberSide = MEMBER_SIDE_TAB_IDS.includes(tabId);
   if(isAdmin && tabIsMemberSide) return equiv;
   if(!isAdmin && !tabIsMemberSide) return equiv;
   return tabId;
 }
-// Üstteki sekme başlığı değişirken eskisi silinip yerine yenisi giren küçük bir animasyonla
-// değişsin diye — switchTab() (buton/tıklama ile) ve materialSyncNavigation() (kaydırma anında,
-// parmak kalkar kalkmaz) her ikisi de aynı yardımcı fonksiyonu çağırıyor.
+// Animates the page title when it changes. Used by switchTab() and by
+// materialSyncNavigation() (right when a swipe gesture ends).
 function setTabTitleAnimated(newText){
   const el = document.getElementById('currentTabTitle');
   if(!el) return;
-  // Kaydırma anında hem parmak kalkar kalkmaz (materialSyncNavigation) hem de içerik gerçekten
-  // değişince (switchTab, ~240ms sonra) bu fonksiyon aynı hedef metinle iki kez çağrılıyor.
-  // Animasyon sürerken el.textContent, iki <span>'in birleşimi (ör. "BugünAkış") olduğu için
-  // güvenilir değil — bunun yerine son hedeflenen metni ayrıca saklayıp ona göre kısa devre
-  // yapıyoruz, yoksa ikinci çağrı yarım kalan animasyonu yeniden başlatıp metni birbirine katardı.
+  // During a swipe this is called twice with the same text (on release and again from
+  // switchTab() ~240ms later). While the animation runs, el.textContent contains both spans,
+  // so compare against the stored target instead; otherwise the second call would restart
+  // the animation and garble the text.
   const currentTarget = el._titleTarget!==undefined ? el._titleTarget : el.textContent;
   if(currentTarget===newText) return;
   if(el._titleAnimTimeout){ clearTimeout(el._titleAnimTimeout); el._titleAnimTimeout=null; }
@@ -814,18 +790,12 @@ function setTabTitleAnimated(newText){
     el._titleAnimTimeout = null;
   }, 260);
 }
-// switchTab() ve kaydırma jestinin parmak-kalkar-kalkmaz senkronizasyonu aynı etiket kaynağını
-// kullansın diye — materialSyncNavigation()'daki names haritası yalnızca hub-kökü olan
-// sekmeleri kapsıyor (ör. "Akış" orada yok), o yüzden birincil sekmelerin tümü için başlık bunu
-// kullanmalı.
+// Title for any tab id. Used by switchTab() and by the swipe gesture so both show the same
+// label (materialSyncNavigation only knows the hub tabs).
 function getTabLabel(id){
-  // ADMIN_TABS/MEMBER_TABS eski (hub'lar öncesi) sekme listeleri — 'club'/'library' gibi hub-kökü
-  // id'leri hiç içermiyor. materialPrimaryTabs() eklenmezse getTabLabel('club') boş dönüyor;
-  // switchTab() bunu "etiket yok" sanıp başlığı '' ile SİLİYOR (bkz. titleEl.textContent=''), ve
-  // eğer o an setTabTitleAnimated'ın kendi _titleTarget'ı zaten aynı metne eşitse (ör. swipe'ın
-  // touchend'te hemen çağırdığı materialSyncNavigation bunu önceden ayarlamışsa), sonraki
-  // düzeltme çağrısı "hedef zaten aynı" diye kısa devre yapıp görünen metni hiç geri doldurmuyor
-  // — başlık kalıcı olarak boş kalıyor. Kök neden burada.
+  // ADMIN_TABS / MEMBER_TABS don't contain the hub ids ('club', 'library'), so include
+  // materialPrimaryTabs(). Without them the title would be cleared and, because
+  // setTabTitleAnimated skips a target it already has, never filled in again.
   const allTabDefs = [...ADMIN_TABS, ...MEMBER_TABS, ...HAMBURGER_ADMIN_EXTRA, ...HAMBURGER_MEMBER_EXTRA, ...materialPrimaryTabs()];
   const def = allTabDefs.find(t=>t.id===id);
   return def ? def.label : '';
@@ -860,8 +830,8 @@ export function switchTab(id, { animate = true } = {}){
   document.querySelectorAll('section.tab').forEach(s=> s.classList.remove('active','anim-from-right','anim-from-left','anim-fade'));
   const sec = document.getElementById('tab-'+id);
   if(sec){
-    // Swipe zaten tamamlandıysa giriş animasyonuyla sayfayı yeniden soldurma.
-    // Normal sekme tıklamalarında CSS animasyonunu geri etkinleştir.
+    // After a completed swipe the page is already in place, so skip the entry animation;
+    // regular tab clicks keep it.
     sec.style.animation = animate ? '' : 'none';
     sec.classList.add('active');
     sec.classList.add(direction==='right' ? 'anim-from-right' : direction==='left' ? 'anim-from-left' : 'anim-fade');
@@ -876,9 +846,9 @@ export function switchTab(id, { animate = true } = {}){
   renderTab(id);
 }
 
-/* Alt panel: normal tarayıcıda görünür viewport farkını telafi et.
-   iOS ana ekran uygulamasında fixed + safe-area konumuna ayrıca bu farkı ekleme;
-   geçici viewport farkı paneli gereksiz yere yukarı taşıyabilir. */
+/* Bottom navigation: compensate for the visible-viewport offset in regular browsers. In
+   an iOS home-screen app the fixed + safe-area position is already right, and adding the
+   temporary offset would push the bar up. */
 (function stabilizeBottomNav(){
   const nav = document.getElementById('sidebarNav');
   if(!nav || !window.visualViewport) return;
@@ -900,13 +870,12 @@ export function switchTab(id, { animate = true } = {}){
   update();
 })();
 
-/* ============ SEKMELER ARASI KAYDIRMA (SWIPE) — parmakla birlikte anlık kayar, hedef sekme
-   kenardan GERÇEK içeriğiyle (kart içi sekme karuseli gibi) girer. Komşu sekmenin DOM'da zaten
-   var olan (önceden ziyaret edildiyse dolu, edilmediyse henüz boş) bölümü gösterilir —
-   renderTab() jest sırasında ASLA ikinci kez çağrılmaz, bu yüzden çift Firestore dinleyicisi ya
-   da ekstra sorgu maliyeti oluşmaz; gerçek veri tazeleme her zaman olduğu gibi jest tamamlanıp
-   switchTab() çalıştığında olur. Animasyon sürerken dikey kaydırmayı kilitler, iOS/Android'deki
-   gibi mesafe + hız kombinasyonuyla karar verir ============ */
+/* Swipe between tabs. The page follows the finger and the neighbouring tab slides in with
+   its real content (the section already in the DOM: filled if visited before, empty
+   otherwise). renderTab() is never called during the gesture, so no extra listeners or
+   queries; data refreshes when the gesture completes and switchTab() runs. Vertical
+   scrolling is locked while swiping, and completion depends on distance and velocity,
+   like native iOS/Android swipes. */
 (function setupSwipeNav(){
   let touchStartX=null, touchStartY=0, dragging=false, containerWidth=0, pendingSettleTimeout=null, pendingFinish=null;
   let motionSamples=[];
@@ -914,11 +883,11 @@ export function switchTab(id, { animate = true } = {}){
   let moveFrame=null, queuedDx=0, previewRect=null, transitionListener=null;
   let pointerId=null, recoveryTimer=null;
   const contentCol = document.querySelector('.content-col > main');
-  const DISTANCE_THRESHOLD_RATIO = 0.5; // klasik iOS/Android varsayılanı: genişliğin yarısı
-  const VELOCITY_THRESHOLD = 0.35; // piksel/ms — bunun üzerindeki hızlı "fiske"ler mesafe şartını atlar
+  const DISTANCE_THRESHOLD_RATIO = 0.5; // same as iOS/Android: half the width
+  const VELOCITY_THRESHOLD = 0.35; // px/ms; faster flicks complete regardless of distance
 
-  // Son iki olay yerine kısa bir hareket penceresi: parmak kalkmadan önce gelen
-  // aynı konumlu son olay hızlı fiskenin hızını sıfırlamasın.
+  // Velocity is measured over a short time window rather than the last two events, so a
+  // final event at the same position right before release doesn't zero a fast flick.
   function recordMotion(x, time){
     const last=motionSamples[motionSamples.length-1];
     if(last && time===last.time) last.x=x;
@@ -969,15 +938,13 @@ export function switchTab(id, { animate = true } = {}){
     previewTargetSection = null;
     previewTargetIdx = -1;
   }
-  // Hedef sekmeyi (DOM'da zaten var olan ama aktif olmayan <section>) mevcut sekmenin tam
-  // yanına, onun GERÇEK render edilmiş dikdörtgenine göre konumlandırır (position:fixed ile —
-  // main'in padding'iyle ilgili yüzde hesaplarıyla uğraşmaya hiç gerek kalmıyor).
+  // Places the target tab (an inactive <section> already in the DOM) right next to the
+  // current one, based on the current section's rendered rectangle (position:fixed, so the
+  // main element's padding doesn't matter).
   function beginPreview(currentSection, targetSection, targetIdx, goingNext){
     const rect = previewRect || (previewRect = currentSection.getBoundingClientRect());
-    // İki sekme birbirine dip dibe kaymasın — mevcut sekmenin sağ/sol kenarındaki inset ile
-    // hedef sekmenin kendi kenarındaki inset TOPLANARAK (main'in yatay padding'inin iki katı)
-    // aradaki boşluk belirlenir. Bu boşluk sadece sürükleme SIRASINDA görünür; jest tamamlanınca
-    // hedef tam olarak mevcut sekmenin durduğu yere oturur, boşluk kaybolur.
+    // Leave a gap between the two sections while dragging (twice main's horizontal padding).
+    // When the gesture completes, the target lands exactly where the current tab was.
     const gap = (parseFloat(getComputedStyle(contentCol).paddingLeft) || 0) * 2;
     previewCurrentSection = currentSection;
     previewTargetSection = targetSection;
@@ -988,7 +955,7 @@ export function switchTab(id, { animate = true } = {}){
     targetSection.style.transition = 'none';
     targetSection.style.display = 'block';
     targetSection.style.position = 'fixed';
-    // Hedef, geçiş sonunda scroll=0 iken duracağı yükseklikten girsin.
+    // Start the target at the height it will have once scrolled to the top.
     targetSection.style.top = (rect.top + window.scrollY) + 'px';
     targetSection.style.left = (rect.left + (goingNext ? rect.width+gap : -(rect.width+gap))) + 'px';
     targetSection.style.width = rect.width + 'px';
@@ -1003,7 +970,7 @@ export function switchTab(id, { animate = true } = {}){
     previewCurrentSection.style.transform = `translateX(${dx}px)`;
     previewTargetSection.style.transform = `translateX(${dx}px)`;
   }
-  // Çok sayıdaki touchmove olayını ekran başına tek görsel güncellemeye indir.
+  // Coalesce many touchmove events into one visual update per frame.
   function queuePreview(dx){
     queuedDx=dx;
     if(moveFrame===null) moveFrame=requestAnimationFrame(()=>{
@@ -1015,7 +982,7 @@ export function switchTab(id, { animate = true } = {}){
     if(moveFrame!==null){
       cancelAnimationFrame(moveFrame); moveFrame=null;
       updatePreview(queuedDx);
-      // Son parmak konumu transition başlangıcı olarak işlensin (yalnızca bırakırken).
+      // Commit the last finger position as the transition's starting point (on release only).
       if(previewCurrentSection) getComputedStyle(previewCurrentSection).transform;
     }
     if(!previewCurrentSection || !previewTargetSection) return;
@@ -1025,9 +992,9 @@ export function switchTab(id, { animate = true } = {}){
     previewCurrentSection.style.transform = `translateX(${dx}px)`;
     previewTargetSection.style.transform = `translateX(${dx}px)`;
   }
-  // Sürüklerken yön tersine dönerse (kullanıcı vazgeçip tam tersine gitmeye başlarsa) önizlemeyi
-  // yeni yön için baştan kurar; yeni yön sınır dışındaysa (ör. ilk sekmede geri gitmeye çalışmak)
-  // false döner — çağıran yer bu durumda dx'i 0'da kelepçeler, önizleme olduğu yerde durur.
+  // If the drag changes direction, rebuild the preview for the new direction. Returns false
+  // when there is no tab that way (e.g. going back from the first tab); the caller then
+  // clamps dx to 0.
   function maybeFlipDirection(goingNextNow){
     if(goingNextNow===previewGoingNext || !previewCurrentSection) return true;
     const order = getTabOrder();
@@ -1057,7 +1024,7 @@ export function switchTab(id, { animate = true } = {}){
   }
   function armRecovery(){
     clearTimeout(recoveryTimer);
-    // Sonlandırma olayı gerçekten kaybolursa ekran yarıda kalmasın.
+    // If the end event never arrives, don't leave the screen half-way.
     recoveryTimer=setTimeout(cancelGesture, 1200);
   }
   function waitForSettle(){
@@ -1071,7 +1038,7 @@ export function switchTab(id, { animate = true } = {}){
       if(e.target===section && e.propertyName==='transform') finish();
     };
     if(section) section.addEventListener('transitionend', transitionListener);
-    // Gizli sekme / iptal edilen transition için güvenlik ağı; normal bitiş olayla gelir.
+    // Fallback for a hidden tab or a cancelled transition; normally the transitionend event fires.
     pendingSettleTimeout=setTimeout(finish, 400);
   }
   function interruptGesture(){
@@ -1088,23 +1055,18 @@ export function switchTab(id, { animate = true } = {}){
     if(e.pointerType!=='touch' && e.pointerType!=='pen') return;
     if(!e.isPrimary){ cancelGesture(); return; }
     if(pointerId!==null) cancelGesture();
-    // Önceki jestin 240ms'lik yerleşme süresi bitmeden yeni bir jest başlamış olabilir (hızlı art
-    // arda kaydırma). O süre boyunca alt sekme çubuğu ve başlık ZATEN yeni sekmeyi gösteriyor
-    // (touchend'te hemen güncelleniyorlar) ama gerçek switchTab() — activeTab'ı ve .active
-    // sınıfını güncelleyen — hâlâ bekliyor. Bu bekleyen işlemi burada sessizce iptal edip
-    // atlarsak, nav/başlık YENİ sekmeyi gösterirken DOM'daki gerçek aktif section hâlâ ESKİ
-    // sekmede kalır — ekran, yeni jest başlar başlamaz eski içeriğe sıçrayarak "jerk" eder ve bir
-    // sonraki jest de artık yanlış (eski) sekmeden hesaplama yapar. Onun yerine bekleyen işlemi
-    // burada HEMEN (senkron) çalıştırıp DOM'u nav/başlıkla senkronize tutuyoruz.
+    // A new gesture can start before the previous one's 240ms settle has finished. The nav
+    // bar and title already show the new tab, but switchTab() hasn't run yet; skipping it
+    // would leave the old section active and make the next gesture start from the wrong tab.
+    // Run the pending switch now to keep the DOM in sync.
     if(pendingSettleTimeout){ clearTimeout(pendingSettleTimeout); pendingSettleTimeout=null; }
     if(pendingFinish){ pendingFinish(); }
-    cleanupPreview(); // her ihtimale karşı savunma amaçlı ikinci bir temizlik
+    cleanupPreview(); // defensive second cleanup
     releaseGesture();
     const t = e.target;
-    // Kart içi sekmesi olan bir alanda (ör. genişlemiş "Kayıtlar"/"Kitaplığım" kartındaki
-    // Kulüp/Ben, Okuyorum/İstek listem/Geçmişim gibi iç sekmeler) dokunuş başlıyorsa, sayfa
-    // seviyesindeki bu sekmeler-arası kaydırmayı hiç başlatma — o alan kendi kart-içi kaydırmasını
-    // ayrıca yönetiyor (bkz. setupInnerPaneCarousels).
+    // Panes with their own inner swipe (e.g. Club/Me, Reading/Want/Read inside an expanded
+    // card) handle the gesture themselves (see setupInnerPaneCarousels), so don't start the
+    // page-level swipe there.
     if(!contentCol.contains(t) || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || (t.closest('.inner-pane-viewport')&&!t.closest('.hub-flat')) || (t.closest('#discoverFeed')&&hubLayoutMode('library')!=='primary')){
       touchStartX=null; return;
     }
@@ -1124,10 +1086,8 @@ export function switchTab(id, { animate = true } = {}){
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
     if(!dragging){
-      // Dikey kaydırmayı gereksiz yere kilitlememek için yön belirsizken bekliyoruz. Eşik önceden
-      // gevşekti — bu, hafifçe dikey başlayıp sonra yataya dönen jestlerde tarayıcının önce
-      // scroll'a karar verip sonra bizimle çakışmasına (jitter/takılmaya) sebep oluyordu. Şimdi
-      // çok daha net bir yatay üstünlük istiyoruz.
+      // Wait until the direction is clearly horizontal; starting on mostly-vertical moves made
+      // the browser's scroll and the swipe fight each other.
       if(Math.abs(dx) < 5 || Math.abs(dx) <= Math.abs(dy)*2.2) return;
       const order = getTabOrder();
       const idx = order.indexOf(activeTab);
@@ -1139,7 +1099,7 @@ export function switchTab(id, { animate = true } = {}){
       if(!currentSection || !targetSection){ touchStartX=null; return; }
       dragging = true;
       beginPreview(currentSection, targetSection, targetIdx, goingNext);
-      // Hareket eden / yeniden çizilen kart yerine kalıcı main öğesi dokunuşu tutsun.
+      // Capture on the main element, which stays in place, rather than on the moving card.
       try { contentCol.setPointerCapture(e.pointerId); } catch(_) { cancelGesture(); return; }
     }
     if(dragging && e.cancelable) e.preventDefault();
@@ -1164,8 +1124,8 @@ export function switchTab(id, { animate = true } = {}){
     const order = getTabOrder();
     const idx = order.indexOf(activeTab);
     const goingNext = dx < 0;
-    // Yön, jest sırasında tersine dönmüş olabilir — önizlemenin şu an GERÇEKTEN hangi sekmeye
-    // kurulu olduğunu (previewGoingNext/previewTargetIdx) esas alıyoruz, dx'in çiğ işaretini değil.
+    // The direction may have flipped during the drag, so use the direction the preview is
+    // actually set up for (previewGoingNext / previewTargetIdx), not the sign of dx.
     const canComplete = previewCurrentSection && goingNext===previewGoingNext && previewTargetIdx>=0;
     const distanceOk = Math.abs(dx) > containerWidth * DISTANCE_THRESHOLD_RATIO;
     const velocity = releaseVelocity(e.clientX,e.timeStamp);
@@ -1173,24 +1133,16 @@ export function switchTab(id, { animate = true } = {}){
     const shouldComplete = canComplete && idx!==-1 && (distanceOk || flickOk);
     if(shouldComplete){
       const targetIdx = previewTargetIdx;
-      // NOT: burada containerWidth (main'in KENDİ, padding'i de içeren offsetWidth'i) değil,
-      // previewWidth (kayan section'ın GERÇEK render genişliği, yani main'in İÇERİK genişliği)
-      // kullanılıyor — bu ikisi main'in kendi yatay padding'i kadar farklı, containerWidth
-      // kullanmak hedefi olması gerekenden fazla kaydırıp (jest bittiğinde inline stiller
-      // temizlenip section normal akışa dönünce) bir "düzeltme sıçraması" oluşturuyordu.
+      // Use previewWidth (the section's rendered width, i.e. main's content width), not
+      // containerWidth (main including padding); the latter overshoots and causes a jump when
+      // the inline styles are cleared.
       const flyDist = goingNext ? -(previewWidth+previewGap) : (previewWidth+previewGap);
       settlePreview(flyDist, true);
-      // Alt sekme çubuğunun hangi sekmenin aktif olduğu, parmağın kalktığı an belli olur — bunu
-      // içerik kayma animasyonunun bitmesini (240ms) beklemeden hemen burada güncelliyoruz.
-      // Yoksa eski sekme, kaybolan içerikle birlikte hâlâ "highlighted" görünmeye devam ediyor ve
-      // .tab-icon'daki arka plan geçişiyle (0.2s) çakışıp bir an iki sekme de vurgulanmış gibi
-      // görünebiliyordu. switchTab() içeride aynı senkronizasyonu tekrar yapacak ama bu, zararsız
-      // bir tekrardır (idempotent).
+      // Update the bottom nav as soon as the finger lifts instead of after the 240ms slide, so
+      // two tabs never look highlighted at once. switchTab() repeats this harmlessly.
       if(typeof materialSyncNavigation==='function') materialSyncNavigation(order[targetIdx], { resetScroll: false });
-      // materialSyncNavigation() başlığı yalnızca hub-kökü sekmeler için değiştiriyor (ör. "Akış"
-      // orada yok) — birincil sekmelerin tümünde başlık aynı anda değişsin diye ayrıca burada da
-      // kesin kaynaktan (getTabLabel) çağırıyoruz; switchTab() 240ms sonra aynı metinle tekrar
-      // çağıracak ama setTabTitleAnimated zaten hedef aynıysa no-op.
+      // materialSyncNavigation() only sets titles for hub tabs, so set the title here as well.
+      // switchTab() sets the same text again later, which is a no-op.
       if(typeof getTabLabel==='function' && typeof setTabTitleAnimated==='function'){
         const nextLabel = getTabLabel(order[targetIdx]);
         if(nextLabel) setTabTitleAnimated(nextLabel);
@@ -1268,7 +1220,7 @@ function renderHeader(){
   document.querySelectorAll('[data-material-name]').forEach(el=>el.textContent=myProfile.name||'');
 }
 
-/* ============ FIRESTORE YARDIMCILARI ============ */
+/* Firestore helpers */
 function dayAnswersCol(dateStr){ return collection(db,'days',dateStr,'answers'); }
 export async function fetchDayAnswers(dateStr){
   const snap = await getDocs(dayAnswersCol(dateStr));
@@ -1293,14 +1245,14 @@ export async function computeWeekStats(monday){
   const perDate = await Promise.all(dates.map(fetchDayAnswers));
   return activeUids().map(uid=>{
     const joinDs = joinDateStrOf(uid);
-    // Bir üye bu hafta içinde, Pazartesi DIŞINDA bir günde katıldıysa, sadece bu haftanın
-    // kurasına dahil edilmez (marked:0 vererek eleniyor); sonraki haftalarda normal katılır.
+    // Members who joined during this week (on any day but Monday) sit out this week's draw
+    // (marked: 0) and take part from next week.
     if(joinDs && joinDs > weekMondayStr && joinDs <= weekSundayStr){
       return {uid, name: usersCache[uid]?.name || '?', miss:0, read:0, marked:0, joinDate: joinDs||'', joinedAt: joinedAtOf(uid)};
     }
-    // Kapanmış (bugünden önceki) bir günde hiç kayıt yoksa o gün "okumadı" sayılır — 06:00'daki
-    // otomatik doldurmanın yazacağıyla aynı kural. Eskiden kayıtsız gün hiç sayılmıyordu; kura
-    // otomatik doldurmadan önce çekilirse (ör. Pazar) biri cezalı yerine paslı görünebiliyordu.
+    // A closed day (before today) with no record counts as missed, the same rule the 06:00
+    // auto-fill writes. This keeps a draw run before the auto-fill from treating a missed
+    // day as unmarked.
     const today = todayStr();
     let miss=0, read=0, autoMiss=0;
     perDate.forEach((map,i)=>{
@@ -1311,9 +1263,9 @@ export async function computeWeekStats(monday){
     return {uid, name: usersCache[uid]?.name || '?', miss, read, marked: miss+read, joinDate: joinDs||'', joinedAt: joinedAtOf(uid), autoMiss};
   });
 }
-// Kapanmış (geçmiş) günlerde hiç işaretleme yapılmamışsa otomatik "okumadı" yazar.
-// Sadece yönetici girişinde çalışır (yazma izni ve merkezi tetikleme için).
-export const CLUB_START_DATE = '2026-07-06'; // Bu tarihten önce hiçbir gün için kayıt yok/tutulmuyor
+// Writes "missed" for closed days that have no check-in. Only runs for admins (they
+// have write access and it should run in one place).
+export const CLUB_START_DATE = '2026-07-06'; // no records exist before this date
 function logicalDateStrOf(d){
   const copy = new Date(d);
   if(isNaN(copy.getTime())) return null;
@@ -1330,16 +1282,14 @@ async function autoFillPastDays(daysBack){
   daysBack = daysBack || 30;
   const uids = activeUids();
   if(uids.length===0) return 0;
-  // Önceden 30 gün birbirini bekleyerek (her gün kendi içinde üyeler arası paralel olsa da,
-  // günler arası SIRALI) işleniyordu — bu, yönetici uygulamayı her açtığında saniyelerce
-  // sürebiliyordu. Artık gün×üye kombinasyonlarının HEPSİ tek seferde, aynı anda çekiliyor.
+  // Fetch every day x member combination in parallel.
   const tasks = [];
   for(let i=1;i<=daysBack;i++){
     const ds = toStr(addDays(nowLogical(), -i));
-    if(ds < CLUB_START_DATE) continue; // kulüp başlamadan önceki günler asla doldurulmaz
+    if(ds < CLUB_START_DATE) continue; // never fill days before the club started
     uids.forEach(uid=>{
       const joinDs = joinDateStrOf(uid);
-      if(joinDs && ds < joinDs) return; // üye olmadan önceki günler doldurulmaz, boş kalır
+      if(joinDs && ds < joinDs) return; // never fill days before the member joined
       tasks.push({ds, uid});
     });
   }
@@ -1354,9 +1304,8 @@ async function autoFillPastDays(daysBack){
   }));
   return results.reduce((a,b)=>a+b,0);
 }
-// Daha önce (bu düzeltmeden önce) yanlışlıkla, kulüp başlamadan veya kişi üye olmadan önceki
-// günler için otomatik "okumadı" yazılmış olabilir. Bu, o hatalı otomatik kayıtları temizler.
-// Sadece auto:true (otomatik oluşturulmuş) kayıtları siler, elle girilmiş hiçbir veriye dokunmaz.
+// Removes automatic "missed" records (auto: true) written for days before the club
+// started or before a member joined. Manually entered records are never touched.
 export async function cleanupBadAutoFills(daysBack){
   daysBack = daysBack || 60;
   const uids = Object.keys(usersCache);
@@ -1380,10 +1329,9 @@ export async function cleanupBadAutoFills(daysBack){
   }
   return deleted;
 }
-// Bir üyenin TÜM geçmişini (kulüp başlangıcından ya da katılım tarihinden dünе kadar)
-// gün gün yeniden oynatarak rozet geçmişini (badgeCounts) sıfırdan, doğru mantıkla hesaplar.
-// Sadece tamamlanmış (bozulmuş) serileri sayar; bugünü bu fonksiyon işlemez, bugünün
-// katkısı ayrıca computeStreak + checkAndAwardBadges ile eklenir.
+// Recomputes a member's badge history (badgeCounts) by replaying every day from the club
+// start (or their join date) up to yesterday with the shared rules. Today's part is added
+// afterwards by computeStreak + checkAndAwardBadges.
 async function recomputeUserBadgeHistory(uid){
   const u = usersCache[uid];
   if(!u) return;
@@ -1393,10 +1341,8 @@ async function recomputeUserBadgeHistory(uid){
   const dateStrs = [];
   let cursor = fromStr(startDs);
   while(toStr(cursor) <= toStr(yesterday)){ dateStrs.push(toStr(cursor)); cursor = addDays(cursor,1); }
-  // Günleri tek tek sırayla değil, hepsini aynı anda (paralel) çekiyoruz; sıralı olan artık
-  // sadece hesaplama (seri/rozet sayımı) — o hâlâ sırayla ama ağ beklemeden, hafızada yapılıyor.
-  // Okunamayan bir gün "okumadı" sayılırsa rozet geçmişi yanlış yeniden yazılırdı; hata fırlatıp
-  // bu üyeyi hiç güncellemeden bırakıyoruz.
+  // Fetch all days in parallel. If any day can't be read, throw and leave this member
+  // unchanged; counting it as missed would rewrite the history wrongly.
   const snaps = await Promise.all(dateStrs.map(ds=> getDoc(doc(db,'days',ds,'answers',uid))));
   const {badgeCounts, streak, tier, bankedRepeats} = replayBadgeHistory(snaps.map(snap=> snap.exists() ? snap.data().status : null));
   const updates = { badgeCounts, lastStreak: streak, currentTier: tier, currentStreak: streak, bankedRepeats };
@@ -1422,7 +1368,7 @@ export async function finalizeWeek(monday, force){
     const existing = await getDoc(ref);
     if(existing.exists()) return {already:true, data:existing.data()};
   }
-  // Kazanma geçmişi: tüm kuralar; bu haftanın kendi eski sonucu ("yeniden çek") hariç.
+  // Win history: every draw except this week's own previous result (when drawing again).
   const allDrawsSnap = await getDocs(collection(db,'draws'));
   const {winCounts, totalGiftsGivenSoFar, previousWinners} = drawHistory(
     allDrawsSnap.docs.map(d=>({id:d.id, pairs:d.data().pairs})), wk, toStr(addDays(monday,-7)));
@@ -1437,7 +1383,7 @@ export async function finalizeWeek(monday, force){
     didWrite = true;
   });
   if(didWrite){
-    // Bildirimlere ve gönderiye kaydedilen etiket: dil ayarından ve ekran genişliğinden bağımsız.
+    // Label stored in notifications and the post, independent of language and screen width.
     const rangeLabel = `${fmtStoredDate(data.weekStart)}–${fmtStoredDate(data.weekEnd)}`;
     if(pairs.length===0){
       createPost('no_lottery', { weekLabel: rangeLabel });
@@ -1457,20 +1403,21 @@ export async function loadDraws(){
   drawsCache = [];
   snap.forEach(d=> drawsCache.push({id:d.id, ...d.data()}));
 }
-// Seri sayımı ortak dosyada (countStreak): bugünden (henüz işaretlenmediyse dünden) geriye, okunmamış
-// ilk güne kadar, üst sınırsız. Okunamayan gün hata fırlatır, "okumadı" sayılmaz.
+// Streak counting is shared (countStreak): from today (or yesterday if today isn't marked
+// yet) back to the first day not read, with no upper limit. A day that can't be read
+// throws instead of counting as missed.
 export function computeStreak(uid){
   return countStreak(todayStr(), ds=> getDoc(doc(db,'days',ds,'answers',uid)).then(snap=> snap.exists() ? snap.data().status : null), {startMayBeUnmarked:true});
 }
 
-/* ============ ROZET SİSTEMİ ============ */
-// Rozetler artık KALICI değil, o anki aktif seriye bağlı: seri bozulunca profil resmindeki
-// çerçeve/rozet de kayboluyor. Kaç kere kazanıldığı ayrıca badgeCounts içinde sayılıyor
-// (Kitap Kurtları sekmesindeki geçmiş tablosu için).
-// Rozet tanımları ortak dosyada; ekranda üyenin diline göre ad gösteriliyor. Kayıtlara (gönderi,
-// bildirim) her zaman ortak tanımdaki Türkçe ad yazılır (bkz. checkAndAwardBadges).
+/* Badges */
+// A badge belongs to the current streak: it shows on the member's avatar ring and goes
+// away when the streak breaks. How many times each badge was earned is kept in
+// badgeCounts (for the badge history on the Bookworms screen).
+// Badge definitions are shared with the server; the screen shows the name in the member's
+// language, while stored records (posts, notifications) always use the Turkish name.
 export const BADGE_DEFS = SHARED_BADGE_DEFS.map(def=>({...def, label: window.BH_I18N.pick(def.label, def.labelEn)}));
-// Rozet kavramları ve eşikleri aynı; ikonlar uygulamaya ait vektör çizimler.
+// Badge artwork (inline SVG) for each badge key.
 export function badgeIllustration(key){
  const art={
  b3:'<path d="M34 10c3 12-10 15-7 26 3-2 6-6 7-10 9 8 16 15 13 24-3 10-25 12-30 0-5-12 6-18 5-28 5 3 6 7 7 10 4-8 1-14 5-22Z" fill="currentColor"/><path d="M32 36c0 7-8 10-6 16 2 5 11 6 13 0 2-5-3-10-7-16Z" fill="var(--badge-light)"/>',
@@ -1531,18 +1478,9 @@ export async function checkAndPostDethrone(uid, newCount, getOthersCount, label,
     createPost('record_dethrone', { recordLabel:label, recordIcon:icon||'🏆', recordCount:newCount, dethronedName:usersCache[maxUid]?.name||'' }, uid, u.name);
   }
 }
-// ÖNEMLİ: seri DÜŞTÜĞÜNDE (streak < lastStreak) burada ARTIK hiçbir şey kalıcı olarak
-// kaydedilmiyor — ne rozet geçmişine (badgeCounts) ekleme, ne "seri bozuldu" gönderisi. Bunun
-// sebebi: bugünün işaretlemesi gün bitene (06:00) kadar değişebilir; biri yanlışlıkla
-// "okumadım" işaretleyip hemen "okudum" olarak düzeltirse, o anlık düşüş burada kalıcı bir
-// rozet/gönderiye dönüşmemeli. Bir serinin GERÇEKTEN bitip bitmediği artık sadece gece 06:00'da
-// sunucu tarafında (bkz. functions/index.js: autoMarkMissedReading içindeki günlük rozet
-// kesinleştirmesi) kesinleşiyor — o ana kadar aynı gün içinde düzeltilen bir hata hiç sayılmaz.
-// Sadece YUKARI (yeni bir eşiğe ulaşma) anlık bildirim/gönderi olarak kalıyor, çünkü o zaten
-// geri alınamaz bir zarar oluşturmuyor.
-// 30 günlük rozet seri bozulmadan yeniden kazanıldı (60, 90, ... gün): bir öncekini rozet
-// geçmişine say. Gecelik sunucu kontrolüyle aynı anda iki kez sayılmasın diye kayıtlı değerler
-// transaction içinde yeniden okunup karar orada veriliyor.
+// The 30-day badge was earned again without breaking the streak (day 60, 90, ...): add the
+// previous one to the badge history. The nightly server job does the same, so the stored
+// values are re-read inside a transaction to avoid counting it twice.
 async function bankRepeatBadges(uid, streak, uTab){
   const ref = doc(db,'users',uid);
   const saved = await runTransaction(db, async (tx)=>{
@@ -1560,25 +1498,27 @@ async function bankRepeatBadges(uid, streak, uTab){
   if(u) Object.assign(u, saved);
   const def = SHARED_BADGE_DEFS.find(d=>d.key===saved.currentTier);
   if(!def) return;
-  const nth = saved.bankedRepeats + 1; // bu serideki kaçıncı 30 günlük rozet
+  const nth = saved.bankedRepeats + 1; // which 30-day badge of this streak this is
   await notifyUser(uid, `🎉 Tebrikler! ${nth}. kez "${def.label}" rozetini kazandın, ${streak} gündür aralıksız okuyorsun!`, uTab);
   createPost('badge_gained', { badgeKey:def.key, badgeLabel:def.label, badgeIcon:def.icon, variantText: `${def.icon} ${streak} gündür hiç ara vermeden okuyor: ${nth}. ${def.label.split(' (')[0]} rozeti!` }, uid, u?.name);
   await checkAndPostDethrone(uid, saved.badgeCounts[def.key], (ouid)=> (usersCache[ouid].badgeCounts||{})[def.key], `${def.label} rozeti`, def.icon);
 }
 export async function checkAndAwardBadges(uid, streak){
-  if(badgeCheckInFlight.has(uid)) return; // aynı kişi için eşzamanlı ikinci bir kontrolü atla (çift sayımı önler)
+  if(badgeCheckInFlight.has(uid)) return; // skip a second check for the same member while one is running (avoids double counting)
   badgeCheckInFlight.add(uid);
   try{
     const u = usersCache[uid];
     if(!u) return;
     const lastStreak = typeof u.lastStreak==='number' ? u.lastStreak : 0;
     const {kind, newTier, bank} = badgeTransition(streak, lastStreak, u.currentTier || null, u.bankedRepeats || 0);
-    // Düşüş: kesinleşme geceye (sunucuya) bırakılıyor. Sadece yeni bir rozete ulaşınca bildir;
-    // geçmişe (badgeCounts) henüz sayma, seri bitince (gece) sayılacak.
+    // Only upward changes are handled here (a new badge, or the 30-day badge earned again).
+    // A broken streak is settled by the server after the day closes at 06:00: today's
+    // check-in can still change until then (e.g. "missed" marked by mistake and corrected), and
+    // such a temporary drop must not end up as a badge history entry or a "streak lost" post.
     if(kind!=='rise' && kind!=='repeat') return;
     const uTab = u.role==='admin' ? 'worms' : 'mworms';
     if(kind==='rise'){
-      // Gönderi ve bildirim herkesin gördüğü kayıt: üyenin dil ayarından bağımsız Türkçe ad.
+      // Posts and notifications are stored for everyone, so use the Turkish badge name.
       const notifyDef = SHARED_BADGE_DEFS.find(d=>d.key===newTier);
 
       const updates = { lastStreak: streak, currentTier: newTier, currentStreak: streak };
@@ -1590,11 +1530,11 @@ export async function checkAndAwardBadges(uid, streak){
       }
     }
     if(bank>0) await bankRepeatBadges(uid, streak, uTab);
-  }catch(e){ /* rozet kaydedilemezse sessizce geç */ }
+  }catch(e){ /* badge bookkeeping failures are ignored */ }
   finally{ badgeCheckInFlight.delete(uid); }
 }
 
-/* ============ GÜN GEÇİŞİNİ (06:00) TAKİP ET ============ */
+/* Day change (06:00): re-subscribe to the new day's check-ins */
 function resubscribeToday(){
   if(unsubToday) unsubToday();
   subscribedTodayKey = todayStr();
@@ -1628,11 +1568,11 @@ export function shadeHexColor(hex, percent){
   const clamp = v=>Math.max(0,Math.min(255,Math.round(v)));
   return '#'+[r,g,b].map(v=>clamp(v).toString(16).padStart(2,'0')).join('');
 }
-// GNOME "EarTag" (app.drey.EarTag) uygulama simgesinin küpe/etiket şekli — rozet arka planı olarak
-// kullanılıyor. Orijinal simgedeki nota şekli çıkarıldı (yerine seri gün sayısı yazılıyor); üstteki
-// boş halkanın içi ise profil fotoğrafıyla dolduruluyor. Kaynak: GNOME uygulama kataloğu.
-// Gradyan renkleri, kişinin o anki rozet çerçevesi rengine göre (baseColor) yeniden hesaplanıyor;
-// her rozet kendi benzersiz gradient id'lerini kullanır (aynı sayfada aynı id iki kez olamaz).
+// Badge crest drawn behind a member's streak count, based on the shape of the GNOME
+// EarTag (app.drey.EarTag) app icon: the note shape is removed (the streak count goes
+// there) and the empty ring holds the profile photo. Gradient colors follow the member's
+// current badge color; gradient ids are unique per member because ids must be unique on
+// the page.
 function earTagCrestSvg(uid, baseColor){
   const gid = 'et' + String(uid).replace(/[^a-zA-Z0-9]/g,'');
   const base = baseColor, light = shadeHexColor(baseColor,0.5), lighter = shadeHexColor(baseColor,0.72),
@@ -1691,7 +1631,7 @@ initAdmin();
 initWorms();
 initToday();
 const renderMemberSurvey = wireSelfMarkCard({readBtn:'mReadBtn', dateNote:'mDateNote', statusNote:'mMyStatusNote', streakNote:'mMyStreakNote', pagesNumber:'mTotalPagesNumber', qpBook:'mMyQpBook', heading:'mTodayHeading'});
-let memberWeekOffset = 0; // 0 = bu hafta, -1 = önceki hafta, ...
+let memberWeekOffset = 0; // 0 = this week, -1 = previous week, ...
 const renderAdminSelfToday = wireSelfMarkCard({readBtn:'aSelfReadBtn', dateNote:'aSelfDateNote', statusNote:'aSelfStatusNote', streakNote:'aSelfStreakNote', pagesNumber:'totalPagesNumber', qpBook:'aSelfQpBook', heading:'aTodayHeading'});
 
 async function renderMemberOwnWeek(){
@@ -1709,10 +1649,10 @@ async function renderMemberOwnWeek(){
 document.getElementById('mWeekPrevBtn').addEventListener('click', ()=>{ memberWeekOffset -= 1; renderMemberOwnWeek(); });
 document.getElementById('mWeekNextBtn').addEventListener('click', ()=>{ if(memberWeekOffset<0){ memberWeekOffset += 1; renderMemberOwnWeek(); } });
 
-/* ============ ÜYE: BU HAFTA (HERKES) ============ */
+/* Member: this week (everyone) */
 
 
-/* ============ ÜYE: GEÇEN HAFTA ============ */
+/* Member: last week */
 async function renderMemberLastWeek(){
   const box = keepOrLoading('mLastWeekBox');
   await loadDraws();
@@ -1734,7 +1674,7 @@ async function renderMemberLastWeek(){
   markLoaded(box);
 }
 
-/* ============ ORTAK: KURA GEÇMİŞİ (gezinilebilir, tek tek hafta) ============ */
+/* Draw history (one week at a time, with previous/next) */
 let drawHistIndex = { m:0, a:0 };
 async function renderDrawHistoryCard(prefix){
   const box = keepOrLoading(prefix+'DrawHistBox');
@@ -1775,7 +1715,7 @@ document.getElementById('mDrawHistNextBtn').addEventListener('click', ()=>{ if(d
 document.getElementById('aDrawHistPrevBtn').addEventListener('click', ()=>{ drawHistIndex.a += 1; renderDrawHistoryCard('a'); });
 document.getElementById('aDrawHistNextBtn').addEventListener('click', ()=>{ if(drawHistIndex.a>0){ drawHistIndex.a -= 1; renderDrawHistoryCard('a'); } });
 
-/* ============ ORTAK: PROFİLİM ============ */
+/* Profile */
 function isGoogleUser(){
   return !!(auth.currentUser && auth.currentUser.providerData.some(p=>p.providerId==='google.com'));
 }
@@ -1904,7 +1844,7 @@ document.getElementById('deleteMyAccountBtn').addEventListener('click', async ()
   }
 });
 
-/* ============ ORTAK: GRUP KURALLARI ============ */
+/* Club rules */
 async function renderRulesTab(){
   const displayBox = document.getElementById('rulesDisplay');
   showCachedOrPlaceholder(displayBox, window.BH_I18N.pick("Yükleniyor…","Loading…"));
@@ -2016,7 +1956,7 @@ attachBookAutocomplete('recGroupBook', 'recGroupCover', 'recGroupBookSuggest');
 initLibrary();
 initReactions();
 initFeed();
-/* --- Sosyal pill çubuğu: alt sekme geçişi + kaydırınca gizle/göster --- */
+/* Feed sub-tabs bar: switching sub-tabs, and hiding/showing the bar on scroll. */
 let lastSocialScrollY = 0;
 initDiscover();
 window.addEventListener('scroll', ()=>{
@@ -2090,8 +2030,8 @@ async function renderSettingsTab(){
   socialChk.onchange = ()=> saveNotifPref('social', socialChk.checked);
 }
 
-/* ============ GİRİŞ / AUTH DURUM TAKİBİ ============ */
-/* BookHook Material UI adapter. Only presentation/navigation; existing data model retained. */
+/* Signed-in UI: navigation, hubs and sign-in state */
+/* Material UI layer: presentation and navigation only; the data model is unchanged. */
 function materialIcon(kind){
  const paths={bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',logout:'<path d="M9 4H4v16h5M10 12h11m-4-4 4 4-4 4"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',home:'<path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/>',feed:'<path d="M4 5h16M4 10h16M4 15h10M4 20h6"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',book:'<path d="M12 5C9 2 5 2 2 3v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-7-1-10 2Z"/><path d="M12 5v16"/>',club:'<circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M3 9a3 3 0 0 0 0 6m18-6a3 3 0 0 1 0 6M2 21v-2m20 2v-2"/>',gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8H8a3 3 0 1 1 3-3Zm0 0h4a3 3 0 1 0-3-3Z"/>',badge:'<circle cx="12" cy="9" r="6"/><path d="m8 14-2 8 6-3 6 3-2-8m-6-6 2-3 2 3"/>',records:'<path d="M4 3h16v18H4ZM8 8h8M8 12h8M8 16h5"/>',settings:'<path d="m9 3-1 3-3 1v4l-2 1 2 2v4l3 1 1 3h6l1-3 3-1v-4l2-2-2-1V7l-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/>',rules:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',heart:'<path d="M12 21s-6.5-4.2-9-8.4C1.3 9 2.7 5.5 6 4.6c2-.5 3.8.3 5 2 .1.2.5.2.6 0 1.2-1.7 3-2.5 5-2 3.3.9 4.7 4.4 3 8C18.5 16.8 12 21 12 21Z"/>',account:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',import:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>'};
  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[kind]||paths.book}</svg>`;
@@ -2113,14 +2053,14 @@ function materialRoute(id){
 function materialLink(id,label,description,icon){
  return `<button class="destination-row" data-material-route="${id}"><span class="route-icon">${materialIcon(icon)}</span><span><b>${label}</b><small>${description}</small></span><span aria-hidden="true">›</span></button>`;
 }
-/* ============ KULÜP/KİTAPLIK HUB'LARI: yerinde büyüyen kartlar (accordion) ============
-   Her hub kartı ayrı bir sayfaya gitmek yerine kendi içinde büyüyor, hedef ekranın <section>'ı
-   (tüm mevcut render fonksiyonları değişmeden) kartın içine taşınıyor. HUB_PARENT, switchTab()'a
-   dışarıdan (geri tuşu, bildirim, "Haftalık kayıtlar" gibi kısayollar) bu id'lerden biriyle
-   gelindiğinde önce doğru hub sekmesine gidip sonra ilgili kartı açması için kullanılıyor. */
+/* Club / Library hubs: cards that expand in place. Instead of opening a separate page, a
+   hub card expands and the target screen's <section> is moved inside it (render functions
+   stay the same). HUB_PARENT maps a screen id to its hub, so switchTab() can open the
+   right hub and card when it is reached from elsewhere (back button, notification,
+   shortcuts). */
 const HUB_PARENT = {};
-// Ayarlar sekmesindeki kartlar (Yönetim, Grup kuralları, Uygulama ayarları) accordion yerine eski
-// usül ayrı sayfa + geri okuna gitsin diye bu setle işaretleniyor — bkz. materialHubLink().
+// Cards on the settings hub (admin, rules, app settings) open as separate pages with a
+// back button instead of expanding in place; see materialHubLink().
 const HUB_NO_ACCORDION = new Set();
 const HUB_ILLUSTRATIONS = {
  records: `<svg class="hub-illustration" viewBox="0 0 100 84" aria-hidden="true"><rect x="60" y="6" width="16" height="14" rx="2" fill="none" stroke="var(--gold)" stroke-width="2"/><line x1="64" y1="4" x2="64" y2="9" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"/><line x1="72" y1="4" x2="72" y2="9" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"/><path d="M64,14 66.5,16.5 72,11" fill="none" stroke="var(--forest)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12,80 12,42 22,42 26,36 44,36 44,42 80,42 80,80 Z" fill="var(--secondary-ink)"/><rect x="28" y="20" width="32" height="40" rx="3" fill="var(--card)"/><circle cx="35" cy="29" r="2.4" fill="var(--secondary-container)"/><rect x="40" y="27.5" width="15" height="3" rx="1.5" fill="var(--line)"/><rect x="34" y="36" width="21" height="3" rx="1.5" fill="var(--line)"/><path d="M34.5,45 36,46.5 39,43" fill="none" stroke="var(--forest)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="40" y="43.5" width="15" height="3" rx="1.5" fill="var(--primary-container)"/></svg>`,
@@ -2145,21 +2085,19 @@ function materialExpandHubItem(item, targetId){
  if(section){ inner.appendChild(section); section.classList.add('active'); renderTab(targetId); }
  item.classList.add('expanded');
  watchPanelHeightGrowth(inner);
- // Kart kapalıyken dar grid hücresi genişliğine göre kurulmuş olabilecek kart-içi karuseller
- // (bkz. wireInnerPaneCarousel), kart açılıp tam genişliğe geçince yanlış ölçülü kalır —
- // açılışta bir kez yeniden ölçüp konumluyoruz.
+ // Inner carousels may have been measured while the card was a narrow grid cell, so
+ // re-measure them once the card has expanded to full width.
  requestAnimationFrame(()=>{
   inner.querySelectorAll('.inner-pane-viewport').forEach(vp=>{
    if(vp._carousel) vp._carousel.goTo(vp._carousel.current, false);
   });
  });
 }
-// Kart açılırken panel, o anda içeride ne varsa ona göre büyüyor — ama sekmenin verisi
-// Firestore'dan asenkron geliyor, o yüzden tıklama anında panelde genelde sadece küçük bir
-// "Yükleniyor…" yer tutucusu oluyor. Gerçek veri biraz sonra gelip DOM'u değiştirdiğinde
-// grid-template-rows değeri hiç değişmediği için CSS geçişi tekrar tetiklenmiyor ve içerik
-// animasyonsuz aniden tam boyuna zıplıyor. Açılıştan sonraki kısa bir pencerede panelin asıl
-// yüksekliğini izleyip her büyümede ölçülmüş, ayrı bir max-height geçişiyle bunu yumuşatıyoruz.
+// The panel expands to whatever it contains when opened, usually just a small "Loading…"
+// placeholder because the data arrives later from Firestore. When the real content
+// arrives the grid-template-rows value doesn't change, so CSS wouldn't animate it and
+// the content would jump. For a short time after opening, watch the panel's height and
+// animate each growth with a separate max-height transition.
 function watchPanelHeightGrowth(inner){
  if(!inner) return;
  if(inner._growthObserver){ inner._growthObserver.disconnect(); }
@@ -2209,11 +2147,9 @@ document.body.addEventListener('click', e=>{
  if(wasExpanded){ materialCollapseHubItem(item); }
  else { materialExpandHubItem(item, targetId); item.scrollIntoView({behavior:'smooth', block:'start'}); }
 });
-// Genişleyen kartın başlık şeridi tamamen kayboluyor (bkz. .hub-item.expanded .destination-row),
-// o yüzden kapatmak için ayrı bir "boşluğa" ihtiyaç yok: içerik olmayan herhangi bir yere —
-// kartın kendisine, panelin gövdesine veya taşınan <section>'ın doğrudan üstüne — tıklamak
-// yeterli. Gerçek içerik (buton, kart, metin vb.) tıklamaları e.target'ı daha derin bir öğeye
-// taşıdığı için bu eşleşmeye hiç girmiyor.
+// An expanded card has no header strip, so it closes when the user taps an empty area
+// (the card itself, the panel body or directly on the moved <section>). Taps on actual
+// content target a deeper element and don't match.
 document.body.addEventListener('click', e=>{
  const item = e.target.closest('.hub-item.expanded');
  if(!item) return;
@@ -2224,13 +2160,11 @@ document.body.addEventListener('click', e=>{
   materialCollapseHubItem(item);
  }
 });
-// Kart içi sekme geçişini (bkz. yukarıdaki .inner-pane-* CSS yorumu) yöneten düşük seviye
-// karusel — bir viewport/track/pane üçlüsü üzerinde parmakla sürükleme, mesafe+hız eşiğiyle
-// karar verme ve pane değişince yükseklik geçişini üstleniyor. Sayfa seviyesindeki
-// setupSwipeNav() ile aynı deseni (mesafe/hız eşiği, watchdog'a gerek yok çünkü tek dokunuşluk
-// kısa bir alan) kart-içi ölçeğe indirgenmiş hali.
+// Low-level carousel for the swipeable panes inside a card: drags a viewport/track/pane
+// set with the finger, decides by distance and velocity thresholds, and animates the
+// height when the pane changes. A smaller version of the page-level setupSwipeNav().
 function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
- const PEEK=22, GAP=10; // GAP, .inner-pane-track>.inner-pane margin-right ile eşleşmeli
+ const PEEK=22, GAP=10; // GAP must match .inner-pane-track > .inner-pane margin-right
  let current=0, cardW=0, touchStartX=null, touchStartY=0, dragging=false, lastMoveX=0, lastMoveTime=0, velocity=0;
  function measure(){
   const vw = viewport.clientWidth || 1;
@@ -2243,14 +2177,10 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
   const el = panes[current];
   if(!el) return;
   const h = el.scrollHeight;
-  // "from", viewport'un O ANKİ gerçek render edilmiş yüksekliğinden (getBoundingClientRect)
-  // DEĞİL, bizim EN SON kendi belirlediğimiz px değerinden okunuyor. Bunun sebebi: bu fonksiyon
-  // artık paneResizeObserver tarafından da (içerik asenkron değiştiğinde) tetikleniyor — o an
-  // DOM zaten yeni boyutuna reflow olmuş oluyor (ResizeObserver her zaman DEĞİŞİKLİKTEN SONRA
-  // ateşlenir), yani getBoundingClientRect zaten "h" ile aynı değeri verir ve "geçiş" görünmeden
-  // anında zıplardı. Kendi son belirlediğimiz değeri hatırlayarak gerçek bir "eski->yeni" farkı
-  // elde ediyoruz — bu yüzden viewport'un height'ını ASLA ''(auto)'ya geri sıfırlamıyoruz, hep
-  // açık bir piksel değeri olarak kalıyor.
+  // Read "from" from the last height we set ourselves rather than the rendered height. This
+  // also runs from paneResizeObserver, which fires after the DOM has already reflowed, so
+  // the rendered height would already equal h and the change would jump instead of
+  // animating. That is also why the viewport height is always an explicit px value.
   const currentPx = parseFloat(viewport.style.height);
   const from = !isNaN(currentPx) ? currentPx : (viewport.getBoundingClientRect().height || h);
   viewport.style.transition = 'none';
@@ -2297,8 +2227,8 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
   const dt = e.timeStamp - lastMoveTime;
   if(dt>0) velocity = (touch.clientX - lastMoveX)/dt;
   lastMoveX = touch.clientX; lastMoveTime = e.timeStamp;
-  // Uçtaki (ilk/son) sekmede daha ileri çekilirse lastik gibi hafifçe direnç göster — ama jesti
-  // asla sayfa seviyesindeki sekme geçişine bırakma (o zaten touchstart'ta devre dışı bırakıldı).
+  // Rubber-band resistance past the first/last pane; the page-level swipe is already
+  // disabled for this touch.
   let d = dx;
   if(current<=0 && dx>0) d = dx*0.35;
   if(current>=panes.length-1 && dx<0) d = dx*0.35;
@@ -2327,12 +2257,9 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
   goTo(current, true);
  }, {passive:true});
  goTo(0, false);
- // goTo() yüksekliği SADECE geçiş anında ölçüyor — ama ör. Hediyeler kartındaki "Geçmiş" panesi
- // gibi içeriği Firestore'dan asenkron gelen bir pane'e tam o veri gelmeden hemen önce/sırasında
- // kaydırılırsa, ölçülen yükseklik eski (kısa) kalıyor ve veri az sonra gelince viewport ya
- // içeriği kırpıyor ya da (dışarıdaki akordeon yükseklik izleyicisiyle çakışınca) kart aniden
- // küçülüp büyüyormuş gibi görünüyordu. Aktif pane'in kendi yüksekliğini sürekli izleyip her
- // değiştiğinde viewport'u yumuşakça buna göre ayarlayarak bunu kalıcı olarak çözüyoruz.
+ // goTo() measures the height only when switching. Panes whose content arrives later from
+ // Firestore (e.g. the gifts "History" pane) would then be clipped or jump in size, so
+ // watch the active pane's height and follow it smoothly.
  const paneResizeObserver = new ResizeObserver(()=>{
   if(dragging) return;
   setHeight(true);
@@ -2340,9 +2267,9 @@ function wireInnerPaneCarousel(viewport, track, panes, onIndexChange){
  panes.forEach(p=>paneResizeObserver.observe(p));
  return { goTo, get current(){ return current; } };
 }
-// section: pane gruplarının (her biri bir veya birden çok .card) şu an düz sırayla çocuğu olduğu
-// <section>. groups: [[cardEl], [cardEl], ...] veya gift gibi gruplu [[card1,card2],[card3]].
-// buttonEntries: [{el:button, index:Number}] — segmented kontrolündeki sekme düğmeleri.
+// section: the <section> whose children are the pane groups (one or more .card each).
+// groups: [[cardEl], [cardEl], ...] or grouped like gifts: [[card1, card2], [card3]].
+// buttonEntries: [{el: button, index: Number}], the segmented control's buttons.
 function buildInnerPaneCarousel(section, groups, buttonEntries){
  if(groups.length<2 || !groups[0] || !groups[0][0]) return null;
  const marker = document.createComment('inner-pane-carousel');
@@ -2382,7 +2309,7 @@ window.addEventListener('resize', ()=>{
   });
  }, 150);
 });
-// Görünüm tercihleri tema gibi bu cihazda, kullanıcıya özel tutulur.
+// Layout preferences are kept per device and per member, like the theme.
 export function hubLayoutMode(hub){
  try{const value=localStorage.getItem('bookhook_layout_'+currentUid+'_'+hub);return ['expanded','tabs','primary'].includes(value)?value:'cards';}catch(_){return 'cards';}
 }
@@ -2476,7 +2403,7 @@ function renderMaterialNav(){
  nav.innerHTML=tabs.map(t=>`<button data-tab="${t.id}" aria-label="${t.label}"><span class="tab-icon">${t.icon}</span><span>${tabs.length>4&&t.id==='recs'?window.BH_I18N.pick("Öneriler","Recommendations"):t.label}</span></button>`).join('');
  nav.querySelectorAll('button').forEach(button=>button.onclick=()=>switchTab(button.dataset.tab));
 }
-// Yeniden menü kurulurken taşınmış asıl bölümler innerHTML ile silinmesin.
+// Keep the moved screen sections from being wiped by innerHTML when the menu is rebuilt.
 function preserveHubSections(){
  const main=document.querySelector('.content-col > main');
  document.querySelectorAll('#materialClubGrid .hub-item-panel-inner > section.tab, #materialLibraryGrid .hub-item-panel-inner > section.tab').forEach(section=>{
@@ -2490,10 +2417,9 @@ function materialInit(){
  document.querySelectorAll('[data-material-date]').forEach(el=>el.textContent=nowLogical().toLocaleDateString(window.BH_I18N.locale,{day:'numeric',month:'long',weekday:'long'}));
  document.querySelectorAll('[data-panels]').forEach(control=>{
   const section=document.getElementById('tab-'+control.dataset.panels);
-  // materialInit() ikinci kez çalışabiliyor (ör. profil tamamlanıp buildNav() tekrar çağrılınca) —
-  // karusel zaten kurulduysa kartlar artık .inner-pane içine taşınmış olur, section.children'da
-  // .card kalmaz; burada dokunmadan bırakıyoruz, yoksa düğmelerin onclick'i boş bir diziye
-  // bağlanıp sekme geçişi sessizce kırılırdı.
+  // materialInit() can run more than once (e.g. buildNav() after the profile is completed).
+  // Once the carousel exists the cards live inside .inner-pane, so leave it alone;
+  // rebuilding would bind the buttons to an empty list.
   if(section.querySelector(':scope>.inner-pane-viewport')) return;
   const cards=[...section.children].filter(x=>x.classList.contains('card'));
   const chosen=Number(control.dataset.selected || (control.dataset.panels==='recs'?'1':control.dataset.panels==='week'||control.dataset.panels==='mtoday'?'1':'0'));
@@ -2501,23 +2427,20 @@ function materialInit(){
   const carousel = buildInnerPaneCarousel(section, cards.map(c=>[c]), buttonEntries);
   if(carousel){ control.dataset.selected=String(chosen); carousel.goTo(chosen, false); }
   else {
-   // Tek panelli/az kartlı güvenlik ağı — karusel kurulamadıysa eski göster/gizle davranışı.
+   // Fallback when there aren't enough cards for a carousel: plain show/hide.
    const select=(i)=>{ control.dataset.selected=String(i); cards.forEach((card,j)=>{card.hidden=i!==j;}); buttonEntries.forEach(({el,index})=>{el.classList.toggle('active',index===i); el.setAttribute('aria-selected', String(index===i));}); };
    buttonEntries.forEach(({el,index})=> el.onclick=()=>select(index));
    select(chosen);
   }
  });
- // Not: eskiden burada "Gruba" düğmesi görsel olarak başa alınıyordu (varsayılan seçili pane
- // buydu) — ama artık karusel pane'leri fiziksel olarak index sırasına göre yan yana dizildiği
- // için, düğme sırası içerikle eşleşmeli: Kişisel solda/0, Gruba sağda/1, ikisi de karusel
- // konumuyla tutarlı. Varsayılan "chosen" hâlâ Gruba (1) gösteriyor, karusel açılışta oraya kayıp
- // solundan Kişisel'in ufak bir dilimini (peek) gösteriyor.
+ // The buttons follow the carousel order (Personal = 0 on the left, Club = 1 on the
+ // right). "Club" is selected by default; the carousel opens there and shows a small peek
+ // of Personal on the left.
  const gifts=document.getElementById('tab-gifts');
  if(!document.getElementById('materialGiftTabs'))gifts.insertAdjacentHTML('afterbegin',window.BH_I18N.pick("<div class=\"segmented scrollable\" id=\"materialGiftTabs\"><button data-gift-view=\"0\" class=\"active\">Bekleyen</button><button data-gift-view=\"1\">Geçmiş</button><button data-gift-view=\"2\">Hediye Kayıtları</button><button data-gift-view=\"3\">Hediye Kitap Geçmişi</button></div>","<div class=\"segmented scrollable\" id=\"materialGiftTabs\"><button data-gift-view=\"0\" class=\"active\">Pending</button><button data-gift-view=\"1\">History</button><button data-gift-view=\"2\">Gift records</button><button data-gift-view=\"3\">Book gift history</button></div>"));
  if(!gifts.querySelector(':scope>.inner-pane-viewport')){
-  // Burada artık .card sınıfına göre otomatik dilimleme yerine elemanları tek tek isimlendirip
-  // elle grupluyoruz — 4 sekme hepsi aynı seviyede, yan yana: Bekleyen / Geçmiş / Hediye
-  // Kayıtları / Hediye Kitap Geçmişi (iç içe değil, düz bir karusel).
+  // Gifts panes are grouped by hand into four side-by-side panes: Pending / History /
+  // Gift stats / Gift books.
   const giftMainCard = document.getElementById('giftsContent') ? document.getElementById('giftsContent').closest('.card') : null;
   const qpGiftCard = document.getElementById('qpGiftCardWrap');
   const lastWeekCard = document.getElementById('giftsMemberLastWeekWrap');
@@ -2634,41 +2557,29 @@ function materialThemeSync(){
  document.querySelectorAll('[data-palette-choice]').forEach(button=>{const active=button.dataset.paletteChoice===palette;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
  const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=getComputedStyle(document.documentElement).getPropertyValue('--paper').trim();
 }
-// Herhangi bir ekranın, birincil (alt gezinme) sekmelerinden hangisine ait olduğunu bulur —
-// admin alt ekranları (members/manual/...) önce 'admin'e, o da HUB_PARENT üzerinden kendi
-// hub'ına (artık 'appsettings') çözülür; hub kartı id'leri (gifts/rules/bookhistory/...) zaten
-// HUB_PARENT'ta kayıtlı. Eşleşme yoksa güvenli varsayılan olarak 'club' döner.
+// Finds which primary (bottom nav) tab a screen belongs to. Admin sub-screens resolve to
+// 'admin', which HUB_PARENT maps to its hub ('appsettings'); hub card ids are in
+// HUB_PARENT directly. Falls back to 'club'.
 const ADMIN_SUB_SCREENS = ['members','manual','qptest','editpast','whoreadtoday','goodreadsimport'];
 function materialHubRoot(id){
  if(ADMIN_SUB_SCREENS.includes(id)) id = 'admin';
  if(['club','library','appsettings'].includes(id)) return id;
  return HUB_PARENT[id] || 'club';
 }
-// materialHubRoot() admin alt ekranlarını (members/manual/goodreadsimport/...) İKİ seviye birden
-// çözüyor (önce 'admin'e, sonra HUB_PARENT üzerinden 'appsettings'e) — bu, alt nav'da hangi
-// birincil sekmenin vurgulanacağını bulmak için doğru, ama geri tuşu için YANLIŞ: geri tuşu bir
-// üst seviyeye (admin alt ekranından → admin'e) çıkmalı, direkt en tepeye (appsettings) değil.
-// Bu yüzden geri tuşu ayrı, TEK seviye çözen bu fonksiyonu kullanıyor.
+// materialHubRoot() resolves admin sub-screens two levels up (to 'appsettings'), which is
+// right for highlighting the nav tab but wrong for the back button. Back goes up one
+// level (admin sub-screen -> 'admin'), so it uses this one-level lookup.
 function materialImmediateParent(id){
  if(ADMIN_SUB_SCREENS.includes(id)) return 'admin';
  if(['club','library','appsettings'].includes(id)) return id;
  return HUB_PARENT[id] || 'club';
 }
-// Her sekme değişiminde sayfayı en üste sıfırlamak için düz window.scrollTo(0,0) kullanmak,
-// kullanıcı önceki sekmede aşağı kaymışsa GERÇEK, tarayıcının kendisinin de fark ettiği bir
-// kaydırma sıçraması yaratıyordu — bu da (dokunuşla hiç ilgisi olmadan, sadece bu programatik
-// sıçramadan dolayı) Android Chrome'un adres çubuğu animasyonunu tetikleyip alt sekme çubuğunun
-// geçiş boyunca kaybolmasına sebep olabiliyordu (kaydırma kilidimiz sadece parmakla sürüklerken
-// çalışıyordu, bu programatik sıçrama ondan tamamen bağımsızdı). Burada da aynı "body'yi olduğu
-// yerde dondur" tekniğiyle, tarayıcının fark edeceği gerçek bir kaydırma hiç oluşturmadan üste
-// zıplıyoruz.
-// Video kanıtıyla doğrulandı: burada önceden body.style.position='fixed' ile "sessizce"
-// kaydırma sıfırlama numarası vardı — ama .sidebar (alt nav) da position:fixed olduğu için,
-// body'yi de position:fixed yapmak Android Chrome'da "fixed içinde fixed" durumu oluşturuyor ve
-// nav birkaç kare boyunca tamamen kayboluyordu (tam olarak bu fonksiyonun her swipe/sekme
-// geçişinde iki kez çağrıldığı anlarla örtüşen bir video kaydında doğrulandı). body'nin
-// Body'nin position değerini değiştirmeden kaydırmayı aynı karede sıfırla.
-// CSS scroll-behavior:smooth, scrollTop atamasını da yumuşatabildiği için geçici olarak kapat.
+// Scrolls to the top when the tab changes without a visible scroll jump. A plain
+// window.scrollTo(0, 0) could trigger Android Chrome's address-bar animation and hide the
+// bottom nav during the transition, and making the body position:fixed for this
+// ("fixed inside fixed" with the nav) made the nav disappear for a few frames. So reset
+// the scroll position in the same frame without changing the body's position, with
+// scroll-behavior:smooth turned off temporarily (it would also smooth scrollTop).
 function silentScrollToTop(){
  const roots=[document.documentElement,document.body];
  const previous=roots.map(el=>[el.style.getPropertyValue('scroll-behavior'),el.style.getPropertyPriority('scroll-behavior')]);
@@ -2752,7 +2663,7 @@ document.addEventListener('keydown',e=>{
  else if(!e.shiftKey&&document.activeElement===items.at(-1)){items[0].focus();e.preventDefault();}
 });
 
-/* Kart özetleri: salt okunur veri, sabit boyut, görünürken 3 saniyelik dönüşüm. */
+/* Hub card previews: read-only data, fixed size, rotating every 3 seconds while visible. */
 export const hubPreviews=(()=>{
  const states=new Map(), cache=new Map();
  let owner=null, touching=false, quietUntil=0, observer=null;
@@ -2817,7 +2728,7 @@ export const hubPreviews=(()=>{
     return [status,{label:window.BH_I18N.pick("Kulübün bu haftası","The club this week"),stats:[{icon:'✓',tone:'hp-ok',value:classified.filter(x=>!x.miss).length,label:window.BH_I18N.pick("Tam okuyan","Read every day")},{icon:'−',tone:'hp-pass',value:classified.filter(x=>x.miss===1).length,label:window.BH_I18N.pick("Pas","Pass")},{icon:'×',tone:'hp-danger',value:classified.filter(x=>x.miss>=2).length,label:window.BH_I18N.pick("Cezalı","Penalty")}],detail:window.BH_I18N.template`${rows.length-classified.length} kişi için henüz haftalık kayıt yok`}];
    },uid),
    safe('badges',async()=>{
-    // Aynı gün verileri tüm üyeler için bir kez okunur; üye başına 61 sorgu açılmaz.
+    // Read each day once for all members instead of 61 queries per member.
     const dates=Array.from({length:61},(_,i)=>toStr(addDays(nowLogical(),-i)));
     const days=[];
     for(let i=0;i<dates.length;i+=8) days.push(...await Promise.all(dates.slice(i,i+8).map(fetchDayAnswers)));
@@ -2826,13 +2737,14 @@ export const hubPreviews=(()=>{
       for(let i=start;i<days.length && days[i]?.[id]?.status==='read';i++)count++;
       return {uid:id,streak:count,name:usersCache[id]?.name||window.BH_I18N.pick("Kulüp üyesi","Club member")};
     });
-    // 61 günlük ortak pencerenin sonuna kadar dolu okuyanların serisi daha uzun olabilir; onları
-    // tek tek, sınırsız sayan computeStreak ile kesinleştir (yoksa 60'ta takılı görünürdü).
+    // Members who read every day of the 61-day window may have longer streaks; count those
+    // with computeStreak, which has no upper limit.
     await Promise.all(leaders.map(async l=>{ if(l.streak>=days.length-1) l.streak=await computeStreak(l.uid); }));
     leaders.sort((a,b)=>b.streak-a.streak||a.name.localeCompare(b.name,'tr')||a.uid.localeCompare(b.uid));
     const streak=leaders.find(x=>x.uid===uid)?.streak||0;const def=BADGE_DEFS.find(x=>x.key===currentTierForStreak(streak));const u=usersCache[uid]||{};
     const next=BADGE_DEFS.find(x=>x.days>streak);
-    // 30 günlük rozet her 30 günde bir yeniden kazanılıyor; en üst rozetteyken bir sonrakini göster.
+    // The 30-day badge is earned again every 30 days, so at the top badge show the days to
+    // the next one.
     const repeatDef=!next&&def&&def.repeats?def:null;
     const nextHint=next?window.BH_I18N.template`Sonraki rozete ${next.days-streak} gün`:repeatDef?window.BH_I18N.template`Sonraki ${repeatDef.label.split(' (')[0]} rozetine ${repeatDef.days-streak%repeatDef.days} gün`:window.BH_I18N.pick("En yüksek seri rozetindesin.","You’ve reached the highest streak badge.");
     const slides=[metric(window.BH_I18N.pick("Okuma serin","Reading streak"),window.BH_I18N.template`${streak} gün`,nextHint,'♨','hp-ok'),metric('Aktif rozetin',def?def.label:window.BH_I18N.pick("Henüz rozet yok","No badges yet"),def?window.BH_I18N.pick("Her gün okumaya devam.","Keep reading every day."):window.BH_I18N.pick("İlk rozet için 3 gün üst üste oku.","Read for 3 days in a row to earn your first badge."),def?.icon||'✦'),metric(def?window.BH_I18N.pick("Bu rozetin geçmişi","History of this badge"):window.BH_I18N.pick("Rozet geçmişin","Your badge history"),def?`${Number(u.badgeCounts?.[def.key]||0)+1} kez`:`${Object.values(u.badgeCounts||{}).reduce((a,b)=>a+Number(b||0),0)} rozet`,def?window.BH_I18N.pick("Geçmiş kazanımlar + aktif serin","Past achievements and your current streak"):'Tamamlanmış serilerde kazanılan rozetler','✧')];
@@ -2886,11 +2798,9 @@ export const hubPreviews=(()=>{
   const state={pending:true,at:Date.now()};cache.set(key,state);
   (id==='club'?club(uid):library(uid)).finally(()=>{state.pending=false;});
  }
- // Önizlemeler normalde 60 sn boyunca önbellekten gösterilir (her sekme dönüşünde yeniden
- // hesaplamasın) — ama kullanıcı o önbelleği besleyen veriyi (kitap ekleme/taşıma, okuma
- // işaretleme, öneri gönderme) kendisi değiştirdiğinde, kartı bir dakika boyunca eski göstermek
- // yerine ilgili önbelleği burada geçersiz kılıp bir sonraki sync()'in gerçekten tazelemesini
- // sağlıyoruz.
+ // Previews are normally cached for 60 seconds. When the member changes the underlying
+ // data (adds or moves a book, checks in, sends a recommendation), drop the cached preview
+ // so the next sync() shows fresh data.
  function invalidate(id){ if(currentUid) cache.delete(currentUid+':'+id); }
  document.addEventListener('pointerdown',()=>{touching=true;},true);
  const idle=()=>{touching=false;quietUntil=performance.now()+500;};
@@ -2907,7 +2817,8 @@ export const hubPreviews=(()=>{
  return {sync, invalidate};
 })();
 
-/* PWA/tarayıcı Geri: ekranlar ve geçici ayrıntılar aynı geçmişi kullanır. */
+/* Browser / PWA back button: screens and temporary views (dialogs, expanded cards) share
+   one history. */
 const appBackNavigation=(()=>{
  const key='bookhookNavigation';let session='';
  let owner=null,entries=[],index=-1,applying=false,scheduled=false,dialogSequence=0,popRevision=0,pendingRoot=false;
@@ -2923,7 +2834,7 @@ const appBackNavigation=(()=>{
  }
  const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
  function state(){return {...(history.state||{}),[key]:{session,index}};}
- // Ana sekmeler aynı gezinme seviyesidir; ayrı geri adımı oluşturmaz.
+ // Primary tabs are one navigation level; switching between them adds no back step.
  function replaceRoot(view){
   session=Date.now().toString(36)+Math.random().toString(36).slice(2);
   const base={...view,hubs:[],ai:false,layers:[],native:[]};
@@ -2940,7 +2851,7 @@ const appBackNavigation=(()=>{
    else replaceRoot(next);
    return;
   }
-  // X/boşluk/Vazgeç ile kapanışta boş bir "geri" adımı bırakma.
+  // Closing with X, the backdrop or Cancel shouldn't leave an empty "back" step.
   let previous=-1;
   if(entries[index].view.tab===next.tab){
    for(let i=index-1;i>=0&&entries[i].view.tab===next.tab;i--)if(same(entries[i].view,next)){previous=i;break;}
@@ -2960,7 +2871,7 @@ const appBackNavigation=(()=>{
   for(const dialog of document.querySelectorAll('dialog[open]')){
    if(desired.native.includes(dialog.dataset.backDialog))continue;
    dialog.dispatchEvent(new Event('cancel',{cancelable:true}));
-   // Kaydetme sürerken pencere kapatılmıyorsa geçişi de beklet.
+   // If the dialog refuses to close while saving, hold the navigation as well.
    if(dialog.open)return false;
   }
   const current=snapshot();
@@ -2978,7 +2889,7 @@ const appBackNavigation=(()=>{
    const card=document.getElementById('aiRecCard');
    if(card.classList.contains('expanded')!==desired.ai)card.querySelector('.ai-card-heading').click();
   }
-  // İleri gezinmede eldeki modal içeriği yeniden kullanılabilir; silinmiş form yeniden yaratılmaz.
+  // When going forward, reuse the dialog content that's still there; a removed form isn't recreated.
   for(const id of desired.layers){const el=document.getElementById(id);if(el&&!el.classList.contains('closing'))el.style.display='flex';}
   await new Promise(resolve=>setTimeout(resolve,150));
   if(revision!==popRevision)return null;
@@ -3003,7 +2914,7 @@ const appBackNavigation=(()=>{
  new MutationObserver(records=>{
   if(records.some(r=>r.type==='attributes'?r.target.matches(relevant):[...r.addedNodes,...r.removedNodes].some(n=>n.nodeType===1&&(n.matches('dialog')||n.querySelector?.('dialog')))))schedule();
  }).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class','open']});
- // Başlıktaki ok, donanım Geri ile aynı geçmiş adımını kullanır.
+ // The arrow in the header uses the same history step as the hardware back button.
  document.getElementById('materialBack').addEventListener('click',event=>{
   if(index>0){event.preventDefault();event.stopImmediatePropagation();if(!applying)history.back();}
  },true);
@@ -3025,9 +2936,8 @@ onAuthStateChanged(auth, async (user)=>{
   }
 
   currentUid = user.uid;
-  // Eski sürümlerden kalan (artık hiç okunmayan) önbellek kayıtlarını temizle — sürüm
-  // numarası ilerledikçe bunlar aksi halde localStorage'da sonsuza kadar kullanılmadan
-  // durur.
+  // Remove cache entries from older cache versions; they would otherwise stay in
+  // localStorage unused.
   try{
     const staleKeys = [];
     for(let i=0;i<localStorage.length;i++){
@@ -3066,9 +2976,8 @@ onAuthStateChanged(auth, async (user)=>{
     document.getElementById('bannedNotice').style.display='none';
   }
 
-  // Önce üye listesini bir kerelik senkron olarak çekiyoruz (onSnapshot'ın ilk verisi
-  // asenkron geldiği için, hemen altındaki otomatik-doldurma/kura işlemleri boş listeyle
-  // çalışıp hiçbir şey yapmıyordu — bu satırlar o hatayı çözüyor).
+  // Load the member list once before continuing: onSnapshot's first result arrives
+  // asynchronously, and the auto-fill and draw steps below need the members.
   try{
     const initialUsersSnap = await getDocs(collection(db,'users'));
     usersCache = {};
@@ -3089,7 +2998,7 @@ onAuthStateChanged(auth, async (user)=>{
   renderHeader();
   buildNav();
 
-  // Bildirime tıklanarak açılmışsa (?tab=xxx&post=yyy&notif=zzz), ilgili sekmeye/gönderiye geç ve URL'yi temizle.
+  // Opened from a notification (?tab=...&post=...&notif=...): go to that tab/post and clean up the URL.
   const notifUrlParams = new URLSearchParams(location.search);
   const notifTabParam = resolveNotifTab(notifUrlParams.get('tab'));
   const notifPostParam = notifUrlParams.get('post');
@@ -3104,8 +3013,8 @@ onAuthStateChanged(auth, async (user)=>{
   if(myProfile.role==='admin'){
     const filledCount = await autoFillPastDays(30);
     if(filledCount>0) showToast(`${filledCount} eksik işaretleme otomatik "okumadı" olarak dolduruldu.`);
-    // Otomatik doldurma birinin serisini bozmuş olabilir; herkesin rozet/seri durumunu tazele
-    // ki profil resmindeki çerçeve/rozet güncel kalsın.
+    // The auto-fill may have broken someone's streak; refresh everyone's streak and badge
+    // so avatar rings stay current.
     await Promise.all(activeUids().map(async uid=>{
       try{ const s = await computeStreak(uid); await checkAndAwardBadges(uid, s); }catch(_){}
     }));
@@ -3119,13 +3028,12 @@ onAuthStateChanged(auth, async (user)=>{
   }
 });
 
-/* ============ SERVICE WORKER ============ */
+/* Service worker */
 if('serviceWorker' in navigator){
   window.addEventListener('load', async ()=>{
     try{
-      // Eskiden ayrı bir firebase-messaging-sw.js dosyası da kayıtlıydı; şimdi her şey sw.js
-      // içinde. O eski kayıt hâlâ cihazda kalmışsa (asla otomatik silinmiyor), her push'ta
-      // Chrome'un çakışma/güncelleme algılamasına sebep olabiliyor. Onu burada temizliyoruz.
+      // Unregister the old firebase-messaging-sw.js if a device still has it (everything is in
+      // sw.js now); a second worker could interfere with push handling.
       const regs = await navigator.serviceWorker.getRegistrations();
       for(const reg of regs){
         const scriptUrl = (reg.active && reg.active.scriptURL) || (reg.installing && reg.installing.scriptURL) || (reg.waiting && reg.waiting.scriptURL) || '';

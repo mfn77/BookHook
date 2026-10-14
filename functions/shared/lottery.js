@@ -1,18 +1,20 @@
-/* ============ HAFTALIK HEDİYE KURASI — ORTAK KURALLAR ============
-   Bu dosya hem uygulamada (app.js, tarayıcıda) hem sunucuda (functions/index.js, pazartesi
-   otomatik kurası) AYNEN kullanılıyor; kuralı değiştirmek için sadece burayı değiştir.
-   Veritabanına erişmez, ekrana yazı üretmez: sadece verilen verilerle hesap yapar.
+/* Weekly gift draw rules, shared by the app (js/app.js, in the browser) and the server
+   (functions/index.js, the automatic Monday draw). Change the rules here only. Pure
+   functions: no database access and no UI text.
 
-   Bir üyenin haftalık durumu (stat): {uid, name, miss, read, marked, joinDate, joinedAt}
-   - miss: okumadığı gün, read: okuduğu gün, marked: miss+read (0 ise kuraya girmez)
-   - joinDate: üyelik günü (YYYY-MM-DD), joinedAt: tam kayıt anı (ISO), sıra eşitliğini bozar
+   A member's week (stat): {uid, name, miss, read, marked, joinDate, joinedAt}
+   - miss: days missed, read: days read, marked: miss + read (0 = not in the draw)
+   - joinDate: day the member joined (YYYY-MM-DD); joinedAt: exact sign-up time (ISO),
+     used to break ties
 
-   Kural:
-   - 2+ gün okumayan cezalıdır, hediye verir.
-   - Alıcılar önce tam okuyanlardan (0 gün kaçıran), onlar tükenince paslılardan (1 gün) seçilir.
-   - Her grubun içinde önce HİÇ kazanmamışlar alır, ağırlığa girmeden, en uzun süredir üye olan
-     önce. Onlar tükenince daha önce kazanmışlar arasında ağırlıklı kura çekilir.
-   - Cezalı sayısı alıcı havuzundan fazlaysa havuz aynı kurallarla yeniden doldurulur. */
+   Rules:
+   - Members who missed 2 or more days are givers: each gives a book.
+   - Receivers are picked from members who read every day first, then from members who
+     missed exactly one day (one miss per week is allowed).
+   - Within each group, members who never won come first, in join order (longest
+     membership first), without weights. After them, a weighted draw among previous winners.
+   - If there are more givers than receivers, the receiver pools are refilled with the
+     same rules. */
 
 export const LOTTERY_ALGO = 'hic-kazanmayan-oncelikli-v2';
 
@@ -22,8 +24,8 @@ function shuffle(arr){
   return a;
 }
 
-// Ağırlıklı havuzdan birini seçip havuzdan çıkarır. Ağırlığı düşük olan da havuzda tek kaldığında
-// yine seçilir; yani "başka biri yoksa mecbur çıkar".
+// Picks one entry by weight and removes it from the pool. An entry with a low weight is
+// still picked when it's the only one left.
 function weightedPickWithoutReplacement(pool){
   const totalWeight = pool.reduce((sum,r)=>sum+r.weight,0);
   let rnd = Math.random()*totalWeight;
@@ -31,22 +33,22 @@ function weightedPickWithoutReplacement(pool){
     rnd -= pool[i].weight;
     if(rnd<=1e-9) return pool.splice(i,1)[0];
   }
-  return pool.splice(pool.length-1,1)[0]; // yuvarlama hatasına karşı güvenlik ağı
+  return pool.splice(pool.length-1,1)[0]; // fallback for floating-point rounding
 }
 
-// Daha önce kazanmış birinin alıcı olma ağırlığı. Şansı, (kazandığı / dağıtılan toplam hediye)
-// oranının 2 katı kadar düşer (4/12 = %33 → %66 düşüş); geçen hafta da kazandıysa ayrıca %80 düşer.
-// Hiç kazanmamışlar buraya hiç gelmez, kuyruktan çıkarlar (bkz. buildTierPools).
+// Receiving weight of a member who has won before. It drops by twice their share of all
+// gifts given so far (4 of 12 = 33% -> 66% lower), and by another 0.8 if they also won
+// last week. Members who never won don't use weights; they are queued (see buildTierPools).
 export function computeReceiverWeight(uid, winCounts, totalGiftsGivenSoFar, previousWinners){
   const myWins = (winCounts && winCounts[uid]) || 0;
   const share = totalGiftsGivenSoFar>0 ? myWins/totalGiftsGivenSoFar : 0;
   const reduction = Math.round(share*100*2)/100;
   let weight = 1 - reduction;
   if(previousWinners && previousWinners.has(uid)) weight -= 0.80;
-  return Math.max(weight, 0.05); // sıfıra/negatife düşmesin diye güvenlik tabanı
+  return Math.max(weight, 0.05); // lower bound so the weight never reaches zero or below
 }
 
-// Hiç kazanmamışların sırası: önce üyelik günü, aynı gün katılanlarda tam kayıt anı.
+// Queue order for members who never won: join day first, then exact sign-up time.
 export function lotteryJoinKey(s){ return (s.joinDate||'9999-99-99')+'|'+(s.joinedAt||''); }
 
 function buildTierPools(base, previousWinners, winCounts, totalGiftsGivenSoFar){
@@ -63,8 +65,8 @@ function pickFromTierPools(tier){
 }
 function tierPoolsEmpty(tier){ return tier.neverWonQueue.length===0 && tier.everWonPool.length===0; }
 
-// Kurayı çeker. previousWinners: geçen haftanın alıcıları (Set); winCounts/totalGiftsGivenSoFar:
-// geçmiş kuralardan kimin kaç kez kazandığı ve toplam hediye sayısı (bkz. drawHistory).
+// Runs the draw. previousWinners: last week's receivers (Set); winCounts and
+// totalGiftsGivenSoFar: wins per member and total gifts in earlier draws (see drawHistory).
 export function runLottery(statsArr, previousWinners, winCounts, totalGiftsGivenSoFar){
   const eligible = statsArr.filter(s=>s.marked>0);
   const givers = shuffle(eligible.filter(s=>s.miss>=2));
@@ -89,9 +91,9 @@ export function runLottery(statsArr, previousWinners, winCounts, totalGiftsGiven
   return { giverCount: givers.length, safeCount, pairs };
 }
 
-// Geçmiş kuralardan "kim kaç kez kazandı" ve "geçen hafta kim kazandı".
-// draws: [{id (haftanın pazartesisi), pairs}]. excludeWeekId: yeniden çekilen haftanın kendi eski
-// sonucu sayılmasın diye hariç tutulur. prevWeekId: bir önceki haftanın id'si.
+// Win history from earlier draws: how many times each member won, and who won last week.
+// draws: [{id (the week's Monday), pairs}]. excludeWeekId: skipped so a week that is drawn
+// again doesn't count its own previous result. prevWeekId: the previous week's id.
 export function drawHistory(draws, excludeWeekId, prevWeekId){
   const winCounts = {}, previousWinners = new Set();
   let totalGiftsGivenSoFar = 0;
@@ -107,23 +109,23 @@ export function drawHistory(draws, excludeWeekId, prevWeekId){
   return { winCounts, totalGiftsGivenSoFar, previousWinners };
 }
 
-/* ---- Kura açıklaması ("Neden?") için kural kontrolü ---- */
-// 0: tam okuyan + hiç kazanmamış, 1: tam okuyan + kazanmış, 2: paslı + hiç kazanmamış,
-// 3: paslı + kazanmış, null: alıcı adayı değil (cezalı ya da o hafta kaydı yok).
+/* Rule check for the draw explanation ("Why?") */
+// 0: read every day + never won, 1: read every day + won before, 2: one miss + never won,
+// 3: one miss + won before, null: not a receiver candidate (giver, or no records that week).
 export function lotteryRank(s, wins){
   if(!s || !(s.marked>0) || s.miss>=2) return null;
   return (s.miss===1?2:0) + (wins>0?1:0);
 }
-// Bir kura sonucunu kurallara göre değerlendirir. Ekran metni üretmez; hiç kazanmamış ama
-// seçilmemiş herkes için bir sebep kodu döner:
-// 'no-records' | 'cezali' | 'should-have' | 'pasli' | 'not-enough'
+// Checks a draw result against the rules. Returns no UI text; for every member who never
+// won and wasn't picked it returns a reason code:
+// 'no-records' | 'cezali' (giver) | 'should-have' | 'pasli' (one miss) | 'not-enough'
 export function checkDrawRules(draw, stats, winCounts){
   const byUid = new Map(stats.map(s=>[s.uid,s]));
   const receivers = new Set((draw.pairs||[]).map(p=>p.receiverUid).filter(Boolean));
   const rankOf = uid=> lotteryRank(byUid.get(uid), winCounts[uid]||0);
   const eligible = stats.filter(s=> rankOf(s.uid)!==null);
   const violations = [];
-  // Herkes en az bir kez aldıysa (cezalı sayısı havuzdan büyükse) sıra ihlali olamaz.
+  // If every candidate received a gift (more givers than receivers), the order can't be violated.
   if(receivers.size < eligible.length){
     for(const x of eligible){
       if(receivers.has(x.uid)) continue;

@@ -1,11 +1,13 @@
-/* ============ ORTAK: KİTAP BİLGİSİ (kapağa tıklayınca) ============ */
+/* Book lookup shared by every screen: the book info window opened from any cover (with
+   "read" / "want to read" buttons) and Google Books / Open Library search with
+   autocomplete. */
 
 import {
   addDoc, collection, deleteDoc, doc, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { createOrBatchPost } from "./feed.js";
-// app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
-// açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
+// Circular import: app.js imports this module too. These names are only used inside
+// functions (after startup), never while the module is being evaluated, so the cycle is safe.
 import { GOOGLE_BOOKS_API_KEY, closeModal, currentUid, db, escapeHtml, showToast } from "./app.js";
 
 async function addBookToMyLibrary(title, author, cover, listType){
@@ -93,14 +95,14 @@ export async function showBookInfo(rawTitle, cover, prependHtml, sourceContext){
   if(!rawTitle) return;
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
-  // "Yazar - Kitap Adı" formatındaysa ikiye ayır (sadece başlık kısmını arama sorgusunda kullanmak için)
+  // Titles may come as "Author - Title"; only the title part is used for the search.
   let author = '', title = rawTitle;
   const dashIdx = rawTitle.indexOf(' - ');
   if(dashIdx>0){ author = rawTitle.slice(0,dashIdx).trim(); title = rawTitle.slice(dashIdx+3).trim(); }
 
-  // Kapak, başlık, yazar VE "Okudum/Okumak İstiyorum" tuşları elimizdeki bilgiyle HEMEN
-  // çiziliyor — dış kitap veritabanı aramasını beklemiyorlar. Açıklama/puan gibi sadece dış
-  // kaynaktan gelebilecek bilgiler ayrı bir bölümde, arka planda yüklenip sonradan ekleniyor.
+  // Render what we already know (cover, title, author, list buttons) right away. Details
+  // that only the book APIs have (description, rating, ...) load in the background and are
+  // added to a separate section.
   body.innerHTML = window.BH_I18N.template`
     ${prependHtml||''}
     ${cover ? `<img src="${cover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.style.display='none';" />` : ''}
@@ -130,7 +132,7 @@ export async function showBookInfo(rawTitle, cover, prependHtml, sourceContext){
     }catch(e){ lastError = (lastError?lastError+' | ':'')+'Google Books hata: '+(e.message||e); }
   }
   const extraEl = document.getElementById('bookInfoExtra');
-  if(!extraEl) return; // pencere bu sırada kapatılmış olabilir
+  if(!extraEl) return; // the window may have been closed in the meantime
   if(info){
     info.author = info.author || author || 'Bilinmeyen Yazar';
     info.title = info.title || title;
@@ -159,14 +161,14 @@ export async function showBookInfo(rawTitle, cover, prependHtml, sourceContext){
     ${info.isbn?`<div class="muted" style="font-size:11px; margin-top:8px;">ISBN: ${escapeHtml(info.isbn)}</div>`:''}
     ${info.link?window.BH_I18N.template`<a href="${info.link}" target="_blank" rel="noopener" style="display:inline-block; margin-top:10px; font-size:13px; color:var(--gold);">Daha fazla bilgi →</a>`:''}
   `;
-  // Orijinal bir kapak verilmemişse ve dış kaynaktan bir kapak geldiyse, onu da ekle.
+  // Show the cover from the API if none was given.
   if(!cover && info.cover && !body.querySelector('img')){
     const h2 = body.querySelector('h2');
     if(h2) h2.insertAdjacentHTML('beforebegin', `<img src="${info.cover}" alt="" style="width:100px; height:150px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow); margin-bottom:12px;" onerror="this.style.display='none';" />`);
   }
 }
 
-/* ============ ORTAK: KİTAP ARAMA (Google Books API üzerinden otomatik tamamlama) ============ */
+/* Book search (Google Books, with Open Library as a fallback) and autocomplete */
 export async function searchGoogleBooks(q){
   const keyParam = GOOGLE_BOOKS_API_KEY ? `&key=${GOOGLE_BOOKS_API_KEY}` : '';
   const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=8${keyParam}`);
@@ -213,8 +215,8 @@ export async function searchOpenLibrary(q){
     cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : ''
   }));
 }
-// search.json sonucu sadece temel bilgi veriyor; sayfa sayısı/dil/puan gibi detaylar kitabın
-// kendi "work" sayfasına ait ayrı uç noktalarda duruyor — bu fonksiyon onları ek olarak çekip birleştirir.
+// search.json only returns basic fields; page count, language and ratings live on the
+// book's "work" endpoints, so fetch those and merge them in.
 async function enrichFromOpenLibraryWork(info){
   if(!info.workKey) return info;
   try{
@@ -251,7 +253,7 @@ export function attachBookAutocomplete(inputId, coverInputId, suggestBoxId, onSe
 }
 export function attachBookAutocompleteEl(input, coverInput, box, onSelect){
   if(!input || !box) return;
-  if(input.dataset.bookAutocompleteAttached) return; // aynı elemana iki kez bağlanmasın
+  if(input.dataset.bookAutocompleteAttached) return; // attach only once per element
   input.dataset.bookAutocompleteAttached = '1';
   let debounceTimer = null;
   let queryToken = 0;
@@ -282,7 +284,7 @@ export function attachBookAutocompleteEl(input, coverInput, box, onSelect){
         lastError = null;
       }catch(e2){ lastError = e2; }
     }
-    if(myToken !== queryToken) return; // bu arada yeni bir arama başlamış, eski sonucu gösterme
+    if(myToken !== queryToken) return; // a newer search has started; drop this result
     if(lastError){
       box.innerHTML = `<div class="book-suggest-item" style="cursor:default;"><span class="muted" style="font-size:12px;">Arama başarısız: ${escapeHtml(lastError.message||String(lastError))}</span></div>`;
       return;

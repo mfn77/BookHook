@@ -95,7 +95,7 @@ try {
       </header>
 
       <main>
-    <!-- ADMIN TABS -->
+    <!-- Admin screens -->
     <section class="tab" id="tab-social" style="padding-bottom:0;">
       <div id="pinnedPostBar" style="display:none;"></div>
       <div id="socialFeedView">
@@ -274,7 +274,7 @@ try {
       </div>
     </section>
 
-    <!-- MEMBER TABS -->
+    <!-- Member screens -->
     <section class="tab daily-tab" id="tab-msurvey">
  <div class="daily-greeting">Merhaba, <span data-material-name></span><span class="muted">İyi ki buradasın.</span></div>
  <h1 id="mTodayHeading">Bugün biraz okuyalım.</h1>
@@ -325,7 +325,7 @@ try {
       </div>
     </section>
 
-    <!-- ORTAK: HEDİYE KİTAP -->
+    <!-- Gift books -->
     <section class="tab" id="tab-gifts">
       <div class="card">
         <h2>Hediye Kitap</h2>
@@ -374,7 +374,7 @@ try {
       </div>
     </section>
 
-    <!-- ORTAK: GRUP KURALLARI -->
+    <!-- Club rules -->
     <section class="tab" id="tab-rules">
       <div class="card">
         <h2>Grup kuralları</h2>
@@ -401,7 +401,7 @@ try {
       </div>
     </section>
 
-    <!-- ADMIN: AYARLAR -->
+    <!-- Admin settings -->
     <section class="tab" id="tab-settings">
       <div class="card">
         <h2>Şifre Değiştir</h2>
@@ -476,7 +476,7 @@ try {
       </div>
     </section>
 
-    <!-- ORTAK: PROFİLİM -->
+    <!-- Profile -->
     <section class="tab" id="tab-profile">
       <div class="card">
         <h2>Profilim</h2>
@@ -501,10 +501,10 @@ try {
       </div>
     </section>
 
-    <!-- ORTAK: BİLDİRİMLER -->
+    <!-- Notifications -->
 
 
-    <!-- ORTAK: KİTAP ÖNERİLERİ -->
+    <!-- Book recommendations -->
     <section class="tab" id="tab-recs"><button class="common-selection-link" data-material-route="quarterly">Ortak kitap seçimi <span>→</span></button><div class="segmented" data-panels="recs" role="tablist"><button type="button" data-pane="0" class="active">Kişisel</button><button type="button" data-pane="1" class="">Gruba</button></div>
 
 
@@ -548,7 +548,7 @@ try {
       <div id="discoverFeed" style="padding-bottom:90px;"></div>
     </section>
 
-    <!-- ORTAK: KİTAP GEÇMİŞİM (hamburger menüden erişilir) -->
+    <!-- Discover and My books -->
     <section class="tab" id="tab-mybooks"><div class="segmented" data-panels="mybooks" role="tablist"><button type="button" data-pane="0" class="active">Okuyorum</button><button type="button" data-pane="1" class="">İstek listem</button><button type="button" data-pane="2" class="">Geçmişim</button></div>
       <div class="card">
         <h2>Şu An Okuduklarım</h2>
@@ -610,12 +610,10 @@ try {
   </div>
 </div>
 
-<!-- Bu iki buton grubu bilerek sekme içeriğinin (section.tab) DIŞINDA, body seviyesinde duruyor:
-     section.tab öğeleri sekme geçişinde bir CSS animasyonu (transform) alıyor, ve bir üst öğede
-     transform aktifken position:fixed alt öğeler artık ekrana değil o üst öğeye göre sabitleniyor
-     (CSS'in "containing block" kuralı) — bu da butonun kaydırınca kaybolup tıklamaların
-     altındaki içeriğe geçmesine yol açıyordu. Body seviyesinde olduğu için bu sorunu yaşamıyor,
-     görünürlüğü artık switchTab() içinde aktif sekmeye göre elle kontrol ediliyor. -->
+<!-- These two button groups sit at body level, outside the tab sections: sections get a
+     CSS transform during tab transitions, and a transformed ancestor would make these
+     position:fixed buttons scroll away and let clicks fall through. switchTab() shows and
+     hides them for the active tab. -->
 <div id="socialFloatingAction" class="social-floating-action hidden">
   <button type="button" id="composePostBtn" class="social-fab">✎ <span>Paylaş</span></button>
 </div>
@@ -765,7 +763,7 @@ try {
 </div>
 
 <script>document.dispatchEvent(new Event("bh-static-ready"));</script>
-<!-- js/app.js'e ?v=… gibi bir ek koyma: js/ klasöründeki diğer dosyalar da "./app.js"i içe aktarıyor, adres farklı olursa uygulama iki kez yüklenir. Güncellemeyi service worker zaten kendisi alıyor. -->
+<!-- Don't add ?v=… to js/app.js: the other modules in js/ import "./app.js", and a different URL would load the app twice. The service worker already revalidates code on every load. -->
 <script type="module" src="./js/app.js"></script>
 </body>
 </html>

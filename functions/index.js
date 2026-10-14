@@ -12,8 +12,8 @@ const db = getFirestore();
 const messaging = getMessaging();
 const authAdmin = getAuth();
 
-// notifications/{uid}/items/{itemId} altına her yeni uygulama-içi bildirim
-// eklendiğinde, o kişinin kayıtlı cihazlarına gerçek bir push bildirimi gönderir.
+// Sends a push notification to the member's registered devices whenever a new in-app
+// notification is created under notifications/{uid}/items.
 exports.sendPushOnNotification = onDocumentCreated(
   "notifications/{uid}/items/{itemId}",
   async (event) => {
@@ -79,7 +79,7 @@ exports.sendPushOnNotification = onDocumentCreated(
   }
 );
 
-// Türkiye'nin yerel (UTC+3, DST yok) tarihini YYYY-MM-DD olarak hesaplar.
+// Today's date in Turkey (UTC+3, no DST) as YYYY-MM-DD.
 function todayInIstanbul() {
   const now = new Date();
   const ist = new Date(now.getTime() + 3 * 60 * 60 * 1000);
@@ -89,7 +89,7 @@ function todayInIstanbul() {
   return `${y}-${m}-${d}`;
 }
 
-// Bugün için henüz "okudum/okumadım" işaretlemesi yapmamış herkese hatırlatma push'u gönderir.
+// Sends a reminder push to everyone who hasn't checked in today.
 async function sendReminderToUnmarked(message) {
   const today = todayInIstanbul();
   console.log(`[reminder] Çalışıyor. today=${today} message="${message}"`);
@@ -125,7 +125,7 @@ async function sendReminderToUnmarked(message) {
   }
 }
 
-// Her gün Türkiye saatiyle 14:00
+// Every day at 14:00 Turkey time
 exports.readingReminderNoon = onSchedule(
   { schedule: "0 14 * * *", timeZone: "Europe/Istanbul" },
   async () => {
@@ -133,7 +133,7 @@ exports.readingReminderNoon = onSchedule(
   }
 );
 
-// Her gün Türkiye saatiyle 22:00
+// Every day at 22:00 Turkey time
 exports.readingReminderNight = onSchedule(
   { schedule: "0 22 * * *", timeZone: "Europe/Istanbul" },
   async () => {
@@ -141,10 +141,9 @@ exports.readingReminderNight = onSchedule(
   }
 );
 
-// Profili eksik (soyad/telefon/adres) olan üyelere günde 2 kez hatırlatma gönderir.
-// Not: Yeni kayıt olan üyeler artık uygulama içinde profillerini doldurmadan geçemiyor,
-// bu fonksiyon sadece bu zorunluluktan ÖNCE kayıt olmuş, profili eksik kalmış üyeler için var.
-// Profilini tamamlayan bir üyeye bir daha bildirim gitmez.
+// Reminds members with an incomplete profile (surname, phone, address) twice a day. New
+// members can't use the app before completing their profile, so this only affects older
+// accounts. Members with a complete profile are never notified.
 async function sendProfileCompletionReminders() {
   const usersSnap = await db.collection("users").get();
   const tokens = [];
@@ -173,7 +172,7 @@ async function sendProfileCompletionReminders() {
   }
 }
 
-// Her gün Türkiye saatiyle 10:00
+// Every day at 10:00 Turkey time
 exports.profileCompletionReminderMorning = onSchedule(
   { schedule: "0 10 * * *", timeZone: "Europe/Istanbul" },
   async () => {
@@ -181,7 +180,7 @@ exports.profileCompletionReminderMorning = onSchedule(
   }
 );
 
-// Her gün Türkiye saatiyle 20:00
+// Every day at 20:00 Turkey time
 exports.profileCompletionReminderEvening = onSchedule(
   { schedule: "0 20 * * *", timeZone: "Europe/Istanbul" },
   async () => {
@@ -189,20 +188,15 @@ exports.profileCompletionReminderEvening = onSchedule(
   }
 );
 
-/* ============================================================================
-   AŞAĞIDAKİ İKİ FONKSİYON, İSTEMCİ (UYGULAMA) TARAFINDA "biri uygulamayı açtığında"
-   çalışan iki mantığı (eksik günleri otomatik "okumadı" doldurma ve haftalık kura
-   çekimi) sunucu tarafına, saati geldiğinde KİMSE UYGULAMAYI AÇMASA BİLE otomatik
-   çalışacak şekilde taşır. İstemci tarafındaki karşılıklarıyla (autoFillPastDays,
-   computeWeekStats, runLottery, finalizeWeek) AYNI iş mantığını, AYNI Firestore
-   alan adlarıyla uyguluyor ki istemci kodu bu kayıtları okurken hiçbir fark
-   görmesin.
-   ============================================================================ */
+/* Scheduled jobs that run even when nobody opens the app: filling missed days with
+   "missed" and drawing the weekly gift lottery. They follow the same rules and write the
+   same Firestore fields as the app's versions (autoFillPastDays, computeWeekStats,
+   finalizeWeek), so the app reads their records the same way. */
 
-// Bu tarihten önce hiçbir gün için kayıt tutulmuyor (istemcideki CLUB_START_DATE ile birebir aynı).
+// No records exist before this date (same as CLUB_START_DATE in the app).
 const CLUB_START_DATE = "2026-07-06";
 
-// Bugünden n gün öncesinin İstanbul takvim tarihini YYYY-MM-DD olarak verir.
+// The Istanbul calendar date n days ago, as YYYY-MM-DD.
 function dateNDaysAgoInIstanbul(n) {
   const now = new Date();
   const ist = new Date(now.getTime() + 3 * 60 * 60 * 1000 - n * 24 * 60 * 60 * 1000);
@@ -211,7 +205,7 @@ function dateNDaysAgoInIstanbul(n) {
   const d = String(ist.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
-// Bir tarih dizesine (YYYY-MM-DD) gün ekler/çıkarır.
+// Adds n days (may be negative) to a YYYY-MM-DD date string.
 function addDaysToDateStr(dateStr, n) {
   const [y, m, d] = dateStr.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
@@ -226,9 +220,9 @@ function weekDatesFrom(mondayStr) {
   for (let i = 0; i < 7; i++) arr.push(addDaysToDateStr(mondayStr, i));
   return arr;
 }
-// Bir ISO zaman damgasını, istemcideki logicalDateStrOf ile AYNI kuralla (İstanbul saati,
-// 06:00'dan önceyse bir önceki güne say) mantıksal gün dizesine çevirir. Üyelik tarihini
-// hesaplamak için kullanılıyor (bir üye katılmadan önceki günler asla doldurulmaz).
+// Converts an ISO timestamp to a reading day with the app's rule (logicalDateStrOf):
+// Istanbul time, and before 06:00 it still counts as the previous day. Used to find a
+// member's join day (days before joining are never filled).
 function logicalDateStrFromIso(iso) {
   if (!iso) return null;
   const d = new Date(iso);
@@ -241,8 +235,8 @@ function logicalDateStrFromIso(iso) {
   return `${y}-${m}-${dd}`;
 }
 
-// Kapanmış bir gün için hiç işaretleme yapılmamış üyelere otomatik "okumadı" yazar.
-// İstemcideki autoFillPastDays'in tek bir gün için çalışan sunucu karşılığı.
+// Writes "missed" for members with no check-in on a closed day. Server version of the
+// app's autoFillPastDays, for a single day.
 async function autoMarkMissedDay(dateStr) {
   if (dateStr < CLUB_START_DATE) return 0;
   const usersSnap = await db.collection("users").get();
@@ -252,7 +246,7 @@ async function autoMarkMissedDay(dateStr) {
     const u = userDoc.data();
     if (u.banned || u.deleted) continue;
     const joinDs = logicalDateStrFromIso(u.createdAt);
-    if (joinDs && dateStr < joinDs) continue; // üye olmadan önceki günler asla doldurulmaz
+    if (joinDs && dateStr < joinDs) continue; // never fill days before the member joined
     const ansRef = db.collection("days").doc(dateStr).collection("answers").doc(uid);
     const ansSnap = await ansRef.get();
     if (!ansSnap.exists) {
@@ -268,9 +262,9 @@ async function autoMarkMissedDay(dateStr) {
   return toCreate.length;
 }
 
-// Her gün Türkiye saatiyle 06:00: bir önceki (kapanmış) günü doldurur; olası bir önceki
-// çalışmanın kaçırılmış olma ihtimaline karşı bir de önceki 2 günü tekrar kontrol eder
-// (zaten işaretli günlere hiçbir şey yazılmaz, sadece boş kalanlar dolar).
+// Every day at 06:00 Turkey time: fills the day that just closed, and checks the two days
+// before it again in case an earlier run was missed (days that already have a record are
+// never changed).
 exports.autoMarkMissedReading = onSchedule(
   { schedule: "0 6 * * *", timeZone: "Europe/Istanbul" },
   async () => {
@@ -281,11 +275,11 @@ exports.autoMarkMissedReading = onSchedule(
   }
 );
 
-// Seri ve rozet kuralları uygulamayla ortak tek dosyada: functions/shared/streak.js.
+// Streak and badge rules are shared with the app: functions/shared/streak.js.
 const loadStreak = () => import("./shared/streak.js");
-// Bir kullanıcının DÜN akşamı itibariyle (artık kesinleşmiş) kaç gündür aralıksız okuduğu.
-// Okuma hatası "okumadı" sayılmaz, hata fırlatılır: aksi halde geçici bir hata seriyi bozulmuş
-// gösterip kalıcı bir "rozet kaybedildi" gönderisi ve rozet geçmişine yanlış bir sayım yazardı.
+// A member's settled streak as of yesterday. A failed read throws instead of counting as
+// "missed"; otherwise a temporary error would break the streak and permanently write a
+// "badge lost" post and a wrong badge history entry.
 async function computeStreakBackend(uid, countStreak) {
   return countStreak(dateNDaysAgoInIstanbul(1), (ds) =>
     db.collection("days").doc(ds).collection("answers").doc(uid).get().then((snap) => (snap.exists ? snap.data().status : null)));
@@ -302,12 +296,10 @@ async function backendCheckAndPostDethrone(usersMap, uid, newCount, getOthersCou
     await createPostBackend("record_dethrone", { recordLabel: label, recordIcon: icon || "🏆", recordCount: newCount, dethronedName: usersMap[maxUid]?.name || "" }, uid, u.name);
   }
 }
-// Bir günün kapanmasıyla (06:00) o güne kadarki serinin GERÇEKTEN bozulup bozulmadığı burada
-// kesinleşiyor. İstemci tarafı artık sadece YUKARI (yeni bir eşiğe ulaşma) anlık bildirimi
-// gönderiyor; seri düşüşünü (rozet geçmişine kalıcı ekleme + "seri bozuldu" gönderisi) BİLEREK
-// burada, güne ait tüm işaretlemeler kesinleştikten sonra yapıyoruz — böylece biri aynı gün
-// içinde bir yanlışlığı (örn. yanlışlıkla "okumadım" işaretleyip hemen düzeltmesi) düzeltirse,
-// bu hiçbir zaman kalıcı bir rozet/gönderiye dönüşmez.
+// Settles streaks once the day has closed (06:00). The app only handles upward changes
+// (new badges) right away; a broken streak (badge history entry and "streak lost" post)
+// is recorded here, after all of the day's check-ins are final, so a mistake corrected on
+// the same day never becomes a permanent record.
 async function settleDailyBadges() {
   const { BADGE_DEFS, countStreak, badgeTransition } = await loadStreak();
   const usersSnap = await db.collection("users").get();
@@ -320,7 +312,7 @@ async function settleDailyBadges() {
     try {
       streak = await computeStreakBackend(uid, countStreak);
     } catch (e) {
-      // Bu gece bu üyeyi atla; yarın gece lastStreak ile karşılaştırma doğru şekilde yapılır.
+      // Skip this member tonight; tomorrow's run compares against lastStreak again.
       console.error(`[settleDailyBadges] ${uid} serisi okunamadı, atlandı:`, e);
       continue;
     }
@@ -346,9 +338,9 @@ async function settleDailyBadges() {
         }
       }
     } else {
-      // kind === "rise" veya "repeat"
-      // İstemci genelde bunu anlık yakalar; burası sadece kullanıcı hiç uygulamayı açmadan
-      // eşiği aştıysa devreye giren bir güvenlik ağı.
+      // kind is "rise" or "repeat".
+      // The app usually records these right away; this covers members who reached a threshold
+      // without opening the app.
       const uTab = u.role === "admin" ? "worms" : "mworms";
       if (kind === "rise") {
         await db.collection("users").doc(uid).update({ lastStreak: streak, currentTier: newTier, currentStreak: streak });
@@ -363,9 +355,9 @@ async function settleDailyBadges() {
     }
   }
 }
-// 30 günlük rozet seri bozulmadan yeniden kazanıldı (60, 90, ... gün): bir öncekini rozet
-// geçmişine say. Uygulama da aynı şeyi anlık yapabildiği için iki kez sayılmasın diye kayıtlı
-// değerler transaction içinde yeniden okunup karar orada veriliyor.
+// The 30-day badge was earned again without breaking the streak (day 60, 90, ...): add the
+// previous one to the badge history. The app can do the same at the same time, so the
+// stored values are re-read inside a transaction to avoid counting it twice.
 async function bankRepeatBadgesBackend(usersMap, uid, streak, uTab, BADGE_DEFS, badgeTransition) {
   const ref = db.collection("users").doc(uid);
   const saved = await db.runTransaction(async (tx) => {
@@ -382,7 +374,7 @@ async function bankRepeatBadgesBackend(usersMap, uid, streak, uTab, BADGE_DEFS, 
   usersMap[uid] = { ...usersMap[uid], ...saved };
   const def = BADGE_DEFS.find((d) => d.key === saved.currentTier);
   if (!def) return;
-  const nth = saved.bankedRepeats + 1; // bu serideki kaçıncı 30 günlük rozet
+  const nth = saved.bankedRepeats + 1; // which 30-day badge of this streak this is
   await notifyUserBackend(uid, `🎉 Tebrikler! ${nth}. kez "${def.label}" rozetini kazandın, ${streak} gündür aralıksız okuyorsun!`, uTab);
   await createPostBackend("badge_gained", { badgeKey: def.key, badgeLabel: def.label, badgeIcon: def.icon, variantText: `${def.icon} ${streak} gündür hiç ara vermeden okuyor: ${nth}. ${def.label.split(" (")[0]} rozeti!` }, uid, usersMap[uid].name);
   await backendCheckAndPostDethrone(usersMap, uid, saved.badgeCounts[def.key], (ouid) => (usersMap[ouid].badgeCounts || {})[def.key], `${def.label} rozeti`, def.icon);
@@ -409,10 +401,10 @@ function shuffleBackend(arr) {
   }
   return a;
 }
-// Haftalık kuranın kuralları uygulamayla ortak tek dosyada: functions/shared/lottery.js.
-// O dosya tarayıcıyla aynı (ES modülü) biçimde yazıldığı için burada import() ile yükleniyor.
+// Weekly draw rules are shared with the app: functions/shared/lottery.js. It is an ES
+// module (the browser loads the same file), so it is loaded here with import().
 const loadLottery = () => import("./shared/lottery.js");
-// İstemcideki computeWeekStats'ın sunucu karşılığı.
+// Server version of the app's computeWeekStats.
 async function computeWeekStatsBackend(mondayStr) {
   const dates = weekDatesFrom(mondayStr);
   const weekMondayStr = dates[0];
@@ -439,8 +431,8 @@ async function computeWeekStatsBackend(mondayStr) {
       stats.push({ uid, name: u.name || "?", miss: 0, read: 0, marked: 0, joinDate: joinDs || "", joinedAt });
       return;
     }
-    // Kapanmış bir günde kayıt yoksa "okumadı" sayılır (autoMarkMissedDay ile aynı kural) — kura,
-    // Pazar gününün otomatik doldurması yazılmadan çalışsa bile o gün eksik kalmasın.
+    // A closed day with no record counts as missed (same rule as autoMarkMissedDay), so the
+    // draw is right even if Sunday's auto-fill hasn't been written yet.
     let miss = 0, read = 0;
     perDate.forEach((map, i) => {
       const rec = map[uid], ds = dates[i];
@@ -457,7 +449,7 @@ async function notifyUserBackend(uid, message, linkTab) {
     const userSnap = await db.collection("users").doc(uid).get();
     const prefs = (userSnap.exists && userSnap.data().notifPrefs) || {};
     const category = { gifts: "gifts", social: "social", recs: "social" }[linkTab];
-    if (category && prefs[category] === false) return; // alıcı bu kategoriyi kapatmış
+    if (category && prefs[category] === false) return; // the recipient turned this category off
     let hash = 0;
     for (let i = 0; i < message.length; i++) hash = (hash * 31 + message.charCodeAt(i)) & 0xffffffff;
     const bucket = Math.floor(Date.now() / 10000);
@@ -480,9 +472,9 @@ async function createPostBackend(type, data, forUid, forName) {
     console.error("[kura] Gönderi oluşturulamadı:", e);
   }
 }
-// İstemcideki finalizeWeek'in sunucu karşılığı: draws/{weekStart} zaten varsa hiçbir şey
-// yapmaz (idempotent), yoksa kurayı çeker, sonucu yazar, kazanana/cezalıya bildirim ve
-// akış gönderisi oluşturur.
+// Server version of the app's finalizeWeek: does nothing if draws/{weekStart} already
+// exists (idempotent); otherwise runs the draw, stores the result, and creates the
+// notifications and feed posts for receivers and givers.
 async function finalizeWeekBackend(mondayStr) {
   const drawRef = db.collection("draws").doc(mondayStr);
   const existing = await drawRef.get();
@@ -491,14 +483,14 @@ async function finalizeWeekBackend(mondayStr) {
     return;
   }
   const { LOTTERY_ALGO, runLottery, drawHistory } = await loadLottery();
-  // Kazanma geçmişi: tüm kuralar (uygulamadaki finalizeWeek ile aynı ortak hesap).
+  // Win history: all earlier draws (the same shared computation as the app's finalizeWeek).
   const allDrawsSnap = await db.collection("draws").get();
   const { winCounts, totalGiftsGivenSoFar, previousWinners } = drawHistory(
     allDrawsSnap.docs.map((d) => ({ id: d.id, pairs: d.data().pairs })), mondayStr, addDaysToDateStr(mondayStr, -7));
   const stats = await computeWeekStatsBackend(mondayStr);
   const { giverCount, safeCount, pairs } = runLottery(stats, previousWinners, winCounts, totalGiftsGivenSoFar);
   const weekEnd = addDaysToDateStr(mondayStr, 6);
-  // algo: hangi kural sürümüyle çekildiğini kaydeder; uygulamadaki "Neden?" açıklaması bunu gösteriyor.
+  // algo records which rule version produced the draw; the app's "Why?" view shows it.
   const data = { weekStart: mondayStr, weekEnd, giverCount, safeCount, pairs, generatedAt: new Date().toISOString(), algo: LOTTERY_ALGO };
   let didWrite = false;
   await db.runTransaction(async (tx) => {
@@ -520,29 +512,24 @@ async function finalizeWeekBackend(mondayStr) {
   console.log(`[kura] ${mondayStr} haftası kapatıldı. giverCount=${giverCount} safeCount=${safeCount} pairs=${pairs.length}`);
 }
 
-// Her Pazartesi Türkiye saatiyle 06:10: bir önceki haftanın (Pazartesi-Pazar) kurasını çeker.
-// autoMarkMissedReading ile AYNI dakikada (06:00) değil, 10 dk SONRA çalışıyor — ikisi de aynı
-// anda tetiklenirse (Cloud Scheduler aralarında bir sıra garantisi vermiyor), kura o haftanın son
-// gününün ("Pazar") otomatik "okumadı" doldurması henüz yazılmadan çekilebilir; bu da o hafta için
-// gerçekte uygun alıcı varken havuzun boş/eksik görünmesine (dolayısıyla cezalıların hiç alıcı
-// bulamamasına) yol açabiliyordu.
+// Every Monday at 06:10 Turkey time: draws the gift lottery for the previous week
+// (Monday-Sunday). It runs 10 minutes after autoMarkMissedReading because Cloud Scheduler
+// doesn't guarantee an order between jobs at the same minute; drawing before Sunday's
+// "missed" records are written could leave the receiver pool wrong.
 exports.weeklyLotteryDraw = onSchedule(
   { schedule: "10 6 * * 1", timeZone: "Europe/Istanbul" },
   async () => {
-    const thisMonday = dateNDaysAgoInIstanbul(0); // fonksiyon tam Pazartesi 06:00'da çalışıyor
+    const thisMonday = dateNDaysAgoInIstanbul(0); // "today" is the Monday this job runs on
     const prevMonday = addDaysToDateStr(thisMonday, -7);
     await finalizeWeekBackend(prevMonday);
   }
 );
 
-// Bir üyeyi TAMAMEN siler: Firebase Auth hesabı, users/{uid} belgesi ve kişiye özel alt
-// koleksiyonları (Okuduklarım, Okumak İstediklerim, Kitap Geçmişim, bildirimler). Bu, istemci
-// tarafından yapılamıyor çünkü Firebase bir kullanıcının BAŞKA birinin Auth hesabını silmesine
-// izin vermiyor — bunu yalnızca Admin SDK (yani bir Cloud Function) yapabilir. Geri alınamaz;
-// istemci tarafında ekstra bir "geri yükle" mekanizması yok.
-// NOT: paylaşılan geçmiş kayıtlar (days/{tarih}/answers/{uid}, eski gönderiler) BİLEREK
-// silinmiyor — onlar haftalık istatistik/rozet/kura geçmişinin bir parçası, silinirse geçmiş
-// haftaların hesapları bozulur. Sadece kişinin KENDİ profili ve kişisel verileri siliniyor.
+// Deletes a member completely: their Firebase Auth account, users/{uid} and their
+// personal subcollections (reading lists, notifications). Only the Admin SDK can delete
+// another user's Auth account, so this has to run on the server. It can't be undone.
+// Shared history (days/{date}/answers/{uid}, past posts) is deliberately kept: weekly
+// stats, badges and past draws depend on it.
 exports.adminDeleteMember = onCall(async (request) => {
   const callerUid = request.auth && request.auth.uid;
   if (!callerUid) throw new HttpsError("unauthenticated", "Giriş yapmış olmalısın.");
@@ -570,7 +557,7 @@ exports.adminDeleteMember = onCall(async (request) => {
     throw new HttpsError("permission-denied", "Kulübün sahibini silemezsin.");
   }
 
-  // Kişisel alt koleksiyonları sil.
+  // Personal subcollections.
   for (const sub of ["readBooks", "wantToRead", "bookHistory"]) {
     const subSnap = await targetRef.collection(sub).get();
     if (!subSnap.empty) {
@@ -579,36 +566,32 @@ exports.adminDeleteMember = onCall(async (request) => {
       await batch.commit();
     }
   }
-  // Bildirimlerini sil.
+  // Notifications.
   const notifSnap = await db.collection("notifications").doc(targetUid).collection("items").get();
   if (!notifSnap.empty) {
     const batch = db.batch();
     notifSnap.forEach((d) => batch.delete(d.ref));
     await batch.commit();
   }
-  // Asıl profil belgesini sil.
+  // The profile document.
   await targetRef.delete();
-  // Firebase Auth hesabını sil (giriş yapamaz hale gelir).
+  // The Firebase Auth account (they can no longer sign in).
   try {
     await authAdmin.deleteUser(targetUid);
   } catch (e) {
     console.error(`[adminDeleteMember] ${targetUid} için Auth hesabı silinemedi:`, e);
-    // Firestore verisi zaten silindi; Auth silinemese de devam ediyoruz — biri bu hesapla
-    // tekrar giriş yaparsa mevcut giriş akışı zaten "profil yoksa yeniden oluştur" mantığına
-    // sahip, yani sıfırdan yeni bir üye gibi başlar.
+    // The Firestore data is already gone, so continue even if the Auth account can't be
+    // deleted; signing in again recreates the profile as a new member.
   }
 
   console.log(`[adminDeleteMember] ${targetUid} (${targetData.name || ""}) tamamen silindi. İşlemi yapan: ${callerUid}.`);
   return { success: true };
 });
 
-/* ============================================================================
-   YAPAY ZEKA KİTAP ÖNERİSİ
-   Kullanıcının okuduğu, okumakta olduğu ve okumak istediği kitaplara bakıp Claude'dan
-   birkaç kişisel öneri istiyor. API anahtarı burada, sadece sunucu tarafında kalıyor —
-   istemciye hiç gitmiyor. Sonuç users/{uid}.aiRecommendations altına (bir dizi olarak)
-   yazılıyor ki istemci her sekme açılışında değil, sadece kullanıcı "yeni öneri iste"
-   dediğinde tekrar çağırsın. */
+/* AI book recommendations. Asks Claude for a few personal picks based on the books the
+   member has read, is reading and wants to read. The API key stays on the server and is
+   never sent to the client. The result is stored in users/{uid}.aiRecommendations, so the
+   app only calls this again when the member asks for new recommendations. */
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 const AI_REC_COUNT = 3;
 const AI_PERSONAL_VERSION = 2;
@@ -683,13 +666,13 @@ Her reason Türkçe 3-4 cümle olsun. Okuyucunun verilerinden hangi kitabın, va
   }
   if(items.length<count)throw new HttpsError('unavailable','Yeterli sayıda yeni ve farklı öneri hazırlanamadı. Mevcut önerilerin korundu; tekrar deneyebilirsin.');
   const result={items,generatedAt:new Date().toISOString(),contextKey:context.key,version:AI_PERSONAL_VERSION};
-  // İki cihaz aynı anda isterse aynı kitabın iki kez önerilmesini de önle.
+  // Also keeps two devices requesting at the same time from getting the same book.
   await db.runTransaction(async tx=>{
     const refs=items.map(b=>log.doc(aiHash(aiTitleKey(b.title))));
     const existing=await Promise.all(refs.map(ref=>tx.get(ref)));
     if(existing.some(d=>d.exists))throw new HttpsError('aborted','Başka bir öneri isteği aynı anda tamamlandı. Tekrar deneyebilirsin.');
     items.forEach((book,i)=>tx.set(refs[i],{...book,suggestedAt:result.generatedAt}));
-    // Eski sürümün son önerilerini de geçmişe al; istemci bunların üstüne yazabilir.
+    // Add the last picks stored by older versions to the history as well; the client may overwrite them.
     for(const book of legacy){
       const key=aiTitleKey(book.title);if(key)tx.set(log.doc(aiHash(key)),{title:String(book.title),author:String(book.author||'')},{merge:true});
     }
@@ -715,14 +698,11 @@ Bu kitabın bu okuyucuya neden uygun olabileceğini Türkçe 4-5 cümleyle anlat
   return {text:value.text,contextKey:context.key};
 });
 
-/* ============================================================================
-   3 AYLIK ORTAK KİTAP SEÇİMİ (turnuva usulü oylama)
-   Tüm faz geçişleri (öneri → itiraz → oylama turları → okuma → yeniden başlama) burada,
-   15 dakikada bir çalışan tek bir "tick" fonksiyonuyla yönetiliyor — kimse uygulamayı
-   açmasa bile zamanı gelince otomatik ilerliyor. Öneri gönderme, itiraz etme ve oy verme
-   istemci tarafında (Firestore transaction ile) yapılıyor; burada sadece SÜREYE bağlı
-   geçişler var.
-   ============================================================================ */
+/* Quarterly shared-book pick (tournament voting). Every phase change (nominations ->
+   objections -> voting rounds -> reading -> next cycle) is done here by one "tick" job that
+   runs every 15 minutes, so the pick moves on even if nobody opens the app. Nominating,
+   objecting and voting are done in the app with Firestore transactions; only the
+   time-based transitions live here. */
 
 const QP_NOMINATION_DAYS = 2;
 const QP_OBJECTION_DAYS = 1;
@@ -741,8 +721,8 @@ function addMonthsIso(iso, months) {
   d.setMonth(d.getMonth() + months);
   return d.toISOString();
 }
-// 4-7 öneri → 4'lük parantez, 8-15 → 8'lik, 16-31 → 16'lık ... (kullanıcının tarif ettiği kural,
-// 2-3 öneri için de aynı mantıkla 2'lik parantezle genişletilmiş).
+// Bracket size: the largest power of two that fits the nominations (4-7 -> 4, 8-15 -> 8,
+// 16-31 -> 16, and 2-3 -> 2).
 function bracketSizeForCount(n) {
   if (n < 2) return n;
   let size = 2;
@@ -757,8 +737,8 @@ async function notifyAllBackend(message, linkTab) {
     return notifyUserBackend(d.id, message, linkTab);
   }));
 }
-// Sistem tarafından (kimse tetiklemeden, otomatik) oluşturulan tüm ortak-kitap-seçimi
-// gönderileri, anonim/isimsiz görünmesin diye kulüp sahibinin hesabı üzerinden gönderiliyor.
+// Automatic shared-book posts are published under the club owner's account so they
+// don't appear anonymous.
 const QP_OWNER_UID = "ZqooOlqf0fafVe8HSzmbg2fyCJJ3";
 let qpOwnerNameCache = null;
 async function qpOwnerName() {
@@ -790,12 +770,11 @@ async function qpStartNominationPhase(prevData) {
   await notifyAllBackend(`📚 Yeni ortak kitap önerileri başladı! ${QP_NOMINATION_DAYS} gün içinde en fazla 3 kitap önerebilirsin.`, "recs");
 }
 
-// Sadece bu 3 aylık ortak kitap sürecine özel, HAFTALIK hediye kurasından TAMAMEN bağımsız bir
-// kura: 3 ay bitince, ortak kitabı "Bitirdim" diye işaretlemeyenlerin her biri, işaretleyenlerden
-// birine (herkes en az bir tane alana kadar sırayla, sonra gerekirse tekrar baştan) bir kitap
-// hediye eder. Hangi KİTABIN hediye edileceği henüz belli değildir (bir sonraki ortak kitap
-// seçimi tamamlanınca belli olur) — o yüzden burada sadece KİMİN KİME vereceği belirlenip
-// "quarterlyGiftPending/current" içinde bekletilir.
+// Gift lottery for the quarterly shared book, separate from the weekly gift draw: when the
+// period ends, every member who didn't mark the book as finished gives a book to one who
+// did (round-robin until everyone received one, then again from the start if needed).
+// The book to give is the next shared book, which isn't known yet, so only who gives to
+// whom is stored in quarterlyGiftPending/current for now.
 function runQuarterlyGiftLotteryBackend(nonReaders, readers) {
   const givers = shuffleBackend(nonReaders);
   const pool = shuffleBackend(readers);
@@ -821,7 +800,7 @@ async function qpDrawQuarterlyGiftLottery(data) {
   const finishedBy = new Set(data.finishedBy || []);
   const readers = activeUsers.filter((u) => finishedBy.has(u.uid));
   const nonReaders = activeUsers.filter((u) => !finishedBy.has(u.uid));
-  if (nonReaders.length === 0 || readers.length === 0) return; // hediye edecek veya alacak yoksa kura anlamsız
+  if (nonReaders.length === 0 || readers.length === 0) return; // nothing to draw without givers or receivers
 
   const pairs = runQuarterlyGiftLotteryBackend(nonReaders, readers);
   await db.collection("quarterlyGiftPending").doc("current").set({
@@ -832,8 +811,8 @@ async function qpDrawQuarterlyGiftLottery(data) {
   });
   await postQuarterly("gift_lottery_drawn", { pairCount: pairs.length });
 }
-// Seçim tamamlanıp yeni ortak kitap belli olunca, o kitabı otomatik olarak HERKESİN kendi
-// "Okumak İstediklerim" listesine ekler — zaten aynı kitap listesinde varsa tekrar eklemez.
+// When a new shared book is chosen, adds it to every member's "want to read" list
+// (unless it is already there).
 async function qpAddWinnerToEveryonesWantToRead(winner) {
   const usersSnap = await db.collection("users").get();
   for (const userDoc of usersSnap.docs) {
@@ -853,10 +832,9 @@ async function qpAddWinnerToEveryonesWantToRead(winner) {
     }
   }
 }
-// Bir sonraki ortak kitap seçimi TAMAMLANDIĞINDA (yeni kazanan belli olduğunda) çağrılır: eğer
-// bekleyen bir hediye kurası varsa, hediye edilecek kitabı bu YENİ kazananla dolduruyoruz ve
-// gerçek "hediye isteği" kayıtlarını — alıcının kendi profil bilgileriyle (adres, telefon, ad)
-// otomatik doldurulmuş olarak, sanki kendisi formu doldurup göndermiş gibi — oluşturuyoruz.
+// Called when the next shared book is chosen: if a gift lottery is pending, fills in the
+// new book and creates the actual gift requests, pre-filled with each receiver's profile
+// details (name, address, phone) as if they had sent the form themselves.
 async function qpApplyPendingGiftLottery(winner) {
   const pendingRef = db.collection("quarterlyGiftPending").doc("current");
   const pendingSnap = await pendingRef.get();
@@ -1058,10 +1036,10 @@ exports.quarterlyPickTick = onSchedule(
       else if (data.phase === "voting") await postQuarterly("round_near_end", { round: data.round });
     }
 
-    // Bir oylama turunda AKTİF herkes oy kullandıysa (bkz. istemci tarafındaki
-    // qpCheckRoundFullyVoted — orada "fullyVotedAt" damgası basılıyor), o turu tam 1 gün
-    // beklemeden, son oydan 5 dakika sonra erken kapatıyoruz — yeter ki o 5 dakika içinde kimse
-    // oyunu geri çekmemiş olsun (geri çekilirse istemci fullyVotedAt'i zaten temizliyor).
+    // If every active member has voted in a round (the app sets fullyVotedAt, see
+    // qpCheckRoundFullyVoted), close the round 5 minutes after the last vote instead of
+    // waiting the full day, unless someone withdraws a vote in that time (the app then clears
+    // fullyVotedAt).
     if (data.phase === "voting" && data.fullyVotedAt) {
       const fullyVotedAt = new Date(data.fullyVotedAt);
       if (now >= new Date(fullyVotedAt.getTime() + QP_EARLY_FINISH_MINUTES * 60 * 1000)) {

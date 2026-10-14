@@ -1,16 +1,15 @@
-/* ============ ADMIN: GOODREADS'TEN İÇE AKTARMA ============
-   Bir üyenin Goodreads'ten dışa aktardığı CSV'sini (goodreads_library_export.csv) okuyup
-   Exclusive Shelf'e göre doğru koleksiyona (bookHistory/readBooks/wantToRead) yazar. Kitap/yazar
-   adları CSV'deki haliyle DOKUNULMADAN kaydedilir; sadece kapak arama sorgusunda kullanılır —
-   kaydedilen title/author asla API'nin döndürdüğü isimle değiştirilmez, sadece cover doldurulur.
-   Kapak arama, seedDiscoverCovers()'daki ile aynı iki-kaynaklı (Google Books + Open Library) +
-   hız sınırlamalı deseni kullanır. firestore.rules'taki admin-override sayesinde admin başka bir
-   üyenin bookHistory/readBooks/wantToRead koleksiyonlarına yazabiliyor. */
+/* Admin tool: import a member's Goodreads library export (goodreads_library_export.csv).
+
+   Each row goes to a collection based on its "Exclusive Shelf" (see
+   goodreadsShelfToCollection). Titles and authors are stored exactly as they appear in
+   the CSV; the book APIs are only used to find a cover, never to rename a book. Cover
+   lookups use Google Books with an Open Library fallback and are rate limited.
+   firestore.rules lets admins write to another member's library collections. */
 
 import { addDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { searchGoogleBooks, searchOpenLibrary } from "./books.js";
-// app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
-// açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
+// Circular import: app.js imports this module too. These names are only used inside
+// functions (after startup), never while the module is being evaluated, so the cycle is safe.
 import {
   db, escapeHtml, showToast, sleep, usersCache
 } from "./app.js";
@@ -29,7 +28,7 @@ function parseGoodreadsCSV(text){
       if(c === '"') inQuotes = true;
       else if(c === ','){ row.push(field); field=''; }
       else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
-      else if(c === '\r'){ /* \n zaten satırı kapatıyor, atla */ }
+      else if(c === '\r'){ /* the following \n ends the line */ }
       else field += c;
     }
   }
@@ -42,8 +41,9 @@ function parseGoodreadsCSV(text){
     return obj;
   });
 }
-// 'read'/'currently-reading' dışındaki her şey (to-read, did-not-finish, veya üyenin kendi
-// oluşturduğu herhangi bir özel raf) "okumak istiyorum"a düşer — sadece raf tamamen boşsa atlanır.
+// "read" -> finished books, "currently-reading" -> reading now. Everything else
+// (to-read, did-not-finish, custom shelves) becomes "want to read"; rows with no
+// shelf are skipped.
 function goodreadsShelfToCollection(shelf){
   if(shelf==='read') return 'bookHistory';
   if(shelf==='currently-reading') return 'readBooks';
@@ -80,7 +80,7 @@ export function renderGoodreadsImportTab(){
     const label = u.surname ? `${u.name||'?'} ${u.surname}` : (u.name||'?');
     return `<option value="${uid}">${escapeHtml(label)}</option>`;
   }).join('');
-  // Sekmeden çıkıp geri girildiğinde önceki seçili dosya/kayıt kalmasın diye her girişte sıfırlanıyor.
+  // Reset on every visit so a file picked earlier isn't imported by accident.
   fileInput.value = '';
   const updateBtn = ()=>{ startBtn.disabled = !(select.value && fileInput.files && fileInput.files[0]); };
   select.onchange = updateBtn;

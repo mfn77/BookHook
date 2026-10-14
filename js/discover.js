@@ -1,7 +1,6 @@
-/* ============ KEŞFET ============
-   Keşfet sekmesi: kategori filtreleri, kitap ızgarası, kitap penceresi (grup puanları, puan
-   verme), yöneticinin kapak düzeltme araçları. Seçilmiş kitap listesi catalog.js'te.
-   app.js uygulama açılırken initDiscover() çağırır; sekme açılınca renderDiscoverTab() çizer. */
+/* Discover tab: category filters, the book grid, the book window (club ratings, rating a
+   book) and the admin's cover tools. The curated book list lives in catalog.js.
+   app.js calls initDiscover() at startup; renderDiscoverTab() draws the tab when it opens. */
 import {
   addDoc, collection, doc, getDoc, getDocs, query, setDoc, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -9,8 +8,8 @@ import {
   CURATED_CATALOG, DISCOVER_CATEGORIES, ENGLISH_SEARCH_TITLES, bookKeyFor
 } from "./catalog.js";
 import { refreshLibraryButtons, searchGoogleBooks, searchOpenLibrary } from "./books.js";
-// app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
-// açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
+// Circular import: app.js imports this module too. These names are only used inside
+// functions (after startup), never while the module is being evaluated, so the cycle is safe.
 import {
   closeModal, currentUid, db, escapeHtml, hideAnchoredPopover, hubLayoutMode, markLoaded,
   materialBookCover, myProfile, showAnchoredPopover, showCachedOrPlaceholder, showSimpleInfoModal,
@@ -46,9 +45,8 @@ export async function ensureDiscoverCoversLoaded(){
   try{
     const snap = await getDocs(collection(db,'discoverCovers'));
     snap.forEach(d=>{ discoverCoversCache[d.id] = d.data(); });
-    // Bayrağı sadece BAŞARILI bir yüklemeden sonra kalıcı "yüklendi" yapıyoruz — aksi halde ilk
-    // deneme (ör. ağ henüz hazır değilken) başarısız olursa kapaklar oturum boyunca bir daha hiç
-    // denenmeden boş kalırdı.
+    // Only mark covers as loaded after a successful load, so a failed first attempt (e.g.
+    // before the network is ready) is retried later in the session.
     discoverCoversLoaded = true;
   }catch(e){}
 }
@@ -57,8 +55,8 @@ export async function seedDiscoverCovers(){
   await ensureDiscoverCoversLoaded();
   const allBooks = [];
   CURATED_CATALOG.forEach(cat=> cat.books.forEach(b=> allBooks.push({title:b.t, author:b.a})));
-  // Daha önce hiç denenmemiş VEYA denenip kapak bulunamamış kitapları tekrar dener (kalıcı olarak
-  // sadece gerçekten bir kapak bulununca "tamam" sayılır; boş sonuçlar sürekli yeniden denenir).
+  // Retry books never tried and books with no cover found; a book only counts as done once
+  // a cover has been found.
   const remaining = allBooks.filter(b=>{
     const cached = discoverCoversCache[bookKeyFor({title:b.title, author:b.author})];
     return !cached || !cached.cover;
@@ -88,7 +86,7 @@ export async function seedDiscoverCovers(){
     }catch(e){ failStreak++; }
     done++;
     if(done % 20 === 0) showToast(`${done}/${remaining.length} tarandı, ${found} kapak bulundu…`);
-    // Art arda çok fazla başarısızlık olursa (hız sınırına çarpıldığının işareti) biraz daha uzun bekle
+    // many failures in a row usually means we hit the rate limit, so back off
     await sleep(failStreak > 8 ? 700 : 90);
   }
   showToast(window.BH_I18N.template`Tamamlandı! ${found}/${remaining.length} kapak bulundu.`);
@@ -122,9 +120,9 @@ export async function renderDiscoverFilters(){
   });
   applyDiscoverFiltersHeight();
 }
-// Filtre çubuğu varsayılan olarak tek satıra sıkıştırılır; altındaki ok tuşuna basınca
-// animasyonla açılıp kapanır. Yükseklik, satır sarma genişliğine göre değiştiği için
-// hem ilk render'da hem pencere yeniden boyutlandığında yeniden hesaplanır.
+// The filter bar is collapsed to one row by default and expands with an animation from
+// the arrow button. Its height depends on how the chips wrap, so it is recalculated on
+// render and on resize.
 function applyDiscoverFiltersHeight(){
   const bar = document.getElementById('discoverFilters');
   const toggle = document.getElementById('discoverFiltersToggle');
@@ -142,13 +140,7 @@ function applyDiscoverFiltersHeight(){
 export function renderDiscoverContent(){
   renderDiscoverCategoryGrid(discoverActiveCategory);
 }
-// Keşfet filtreleri de kart-içi sekmeler gibi sağa/sola kaydırarak değişsin istendi — ama buradaki
-// "sekmeler" (kategoriler) onlarca olabiliyor ve her biri sayfalanan, Firestore'dan asenkron gelen
-// ayrı bir liste, o yüzden hepsini yan yana önceden çizip fiziksel bir "peek" karuseli yapmak
-// (diğer kart-içi sekmelerdeki gibi) pratik değil. Onun yerine: içerik alanında sağa/sola
-// sürüklemek bir sonraki/önceki filtre kategorisine geçiyor (çip'e tıklamışsın gibi), kısa bir
-// solma geçişiyle. Sayfa seviyesindeki sekmeler-arası kaydırma bu alanda hiç tetiklenmiyor (bkz.
-// setupSwipeNav içindeki #discoverFeed hariç tutması).
+// Search-and-pick dialog used by the "add a book to this category" button.
 
 function openBookPickerModal(onSelect){
   showSimpleInfoModal(window.BH_I18N.template`
@@ -231,8 +223,7 @@ export async function ensureDiscoverPageSizeLoaded(){
     discoverPageSizeLoaded = true;
   }catch(e){}
 }
-// Yönetici ayarlarından sayfa boyutu değiştirilince (app.js içindeki ayarlar sekmesi): diğer
-// dosyalar buradaki değişkenlere doğrudan yazamadığı için değişikliği bu fonksiyon yapıyor.
+// Called by the admin page-size setting in app.js (imported bindings are read-only).
 export function setDiscoverPageSize(n){
   discoverPageSize = n;
   discoverPage = 0;
@@ -513,8 +504,11 @@ async function openBookDiscoverModal(book){
   });
 }
 
-// Keşfet'in olay dinleyicileri (önceki ve sonraki kategori düğmeleri, filtre aç/kapa, kaydırarak
-// kategori değiştirme, kitap penceresini kapatma). app.js uygulama açılırken bir kez çağırır.
+// Discover's event listeners: previous/next category buttons, the filter toggle, closing
+// the book window, and swiping on the grid to move to the previous/next category (like
+// tapping a chip, with a short fade). Categories are paged lists loaded from Firestore,
+// so they aren't laid out side by side like the other swipeable panes; the page-level
+// tab swipe ignores #discoverFeed. app.js calls this once at startup.
 export function initDiscover(){
   document.getElementById('discoverFabPrev').addEventListener('click', ()=> discoverGoToOffset(-1));
   document.getElementById('discoverFabNext').addEventListener('click', ()=> discoverGoToOffset(1));

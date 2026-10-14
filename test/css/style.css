@@ -1,6 +1,6 @@
-/* BookHook / Material 3 — a complete replacement stylesheet.
-   Paired with index.html. Native app-like mobile navigation, adaptive desktop rail.
-   Legacy variable names are retained because existing renderers reference them. */
+/* BookHook stylesheet (Material 3). Paired with index.html: app-like navigation on phones
+   and an adaptive side rail on desktop. Some older variable names are kept because the
+   renderers still use them. */
 :root {
   color-scheme:light;
   --paper:#f8faf4; --paper-2:#eef1e9; --card:#fff;
@@ -49,15 +49,14 @@ h2{font-size:20px;line-height:1.3;font-weight:600;margin-bottom:16px;letter-spac
 p{margin-bottom:14px}small{font-size:12px}.muted,.page-subtitle{color:var(--ink-70);line-height:1.55;font-size:13px}.page-subtitle{font-size:15px;margin-top:-9px;margin-bottom:24px}
 .mono{font-family:inherit!important}.mono-icon{line-height:1}.svg-icon{width:22px;height:22px}
 #bgLayer{position:fixed;inset:0;background:var(--paper);z-index:-1}
-/* +20px: kısa sayfalarda (ör. Kulüp — az kart içeriyor) sayfa TAM viewport yüksekliğinde kalıp
-   hiç kaydırılabilir taşma olmayınca, hem Android Chrome hem iOS Safari'de position:fixed alt
-   sekme çubuğunun konumu kararsızlaşıyor (Kulüp'e geçince tuhaf biçimde yukarı kayması, geri
-   kaydırırken aşağı kaçması bundan kaynaklanıyor gibi duruyor). Sayfanın HER ZAMAN en az birkaç
-   piksel gerçek taşması olmasını garantileyerek bu sınır-durumdan kaçınıyoruz. */
+/* +20px: on short pages (e.g. Club) with no scrollable overflow, Android Chrome and iOS
+   Safari position the fixed bottom nav inconsistently. A few pixels of guaranteed overflow
+   avoid that edge case. */
 .app-shell{min-height:calc(100svh + 20px)}.content-col{margin-left:var(--rail);min-width:0;touch-action:pan-y}
 main{width:100%;max-width:840px;margin:auto;padding:16px 28px 112px;position:relative}
-/* Aktif sekme de fixed swipe önizlemesi gibi kendi yerleşim alanını oluşturur.
-   İlk/son çocuk margin'leri section dışına taşmaz; geçiş sonunda üst konum değişmez. */
+/* The active tab gets its own layout context, like the fixed swipe preview: first/last
+   child margins stay inside the section, so its top position doesn't change when a swipe
+   finishes. */
 section.tab{display:none}section.tab.active{display:flow-root;animation:screen-in .2s var(--ease)}
 @keyframes screen-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .sidebar{position:fixed;inset:0 auto 0 0;width:var(--rail);background:var(--paper-2);display:flex;flex-direction:column;align-items:center;padding:20px 6px;z-index:80}
@@ -140,10 +139,10 @@ svg.hub-illustration{position:absolute;right:8px;bottom:8px;width:56px;height:48
 .hub-item-panel-inner{overflow:hidden;min-height:0}
 .hub-item.expanded .hub-item-panel-inner{padding:18px 16px;border-top:1px solid var(--line)}
 .hub-item-panel section.tab{display:block!important;animation:none!important}
-/* Kart içi sekmeler (ör. genişleyen "Kayıtlar"/"Kitaplığım" kartındaki Kulüp/Ben, Okuyorum/İstek
-   listem/Geçmişim gibi) artık gizle/göster değil, yan yana bir şerit olarak kayıyor — aktif olan
-   tamamen görünürken komşu sekmenin kenarından ufak bir dilim (peek) taşıyor, JS bu genişliği/
-   kaymayı piksel olarak hesaplıyor (bkz. wireInnerPaneCarousel, GAP=10 burada da eşleşmeli). */
+/* Swipeable panes inside a card (e.g. Club/Me, Reading/Want/Read): the panes sit side by
+   side in a track; the active one is fully visible and the neighbour peeks in from the
+   edge. Widths and offsets are computed in JS (wireInnerPaneCarousel; GAP there must match
+   the margin here). */
 .inner-pane-viewport{position:relative;overflow:hidden;touch-action:pan-y}
 .inner-pane-track{display:flex;align-items:flex-start}
 .inner-pane-track>.inner-pane{flex:0 0 auto;box-sizing:border-box}
@@ -224,13 +223,9 @@ svg.hub-illustration{position:absolute;right:8px;bottom:8px;width:56px;height:48
  :root{--rail:0px}body{font-size:14px}.content-col{margin-left:0!important;padding-bottom:calc(var(--nav-height) + env(safe-area-inset-bottom,0px))}
  header.top{min-height:70px;padding:calc(12px + env(safe-area-inset-top,0px)) 20px 12px}.header-title-area{font-size:27px;gap:6px}.header-pill{width:38px;height:42px}.whoami{gap:2px}
  main{padding:12px 20px 40px}h1{font-size:31px;margin-bottom:22px}h2{font-size:19px}
- /* transform:translateZ(0): nav'ı kendi GPU katmanına terfi ettiriyor. Video kanıtı gösterdi ki
-    nav, TAM OLARAK yanındaki içerik section'ının CSS transition'la kaydığı sırada bir anda
-    kayboluyor, animasyon bitince geri geliyor — bu, position:fixed bir öğe kendi katmanında
-    değilse Android Chrome'da yakındaki bir animasyonun "invalidation" (yeniden boyama) alanına
-    yanlışlıkla dahil olup bir kare boyunca atlanmasıyla ortaya çıkan, iyi bilinen bir render
-    hatası. Bu ipucu (ve isolation) iki tur önce "hiç doğrulanmadı" diye kaldırılmıştı ama video
-    kanıtı artık tam olarak bu hatayı gösteriyor, o yüzden hedefli şekilde geri ekliyoruz. */
+ /* translateZ(0) puts the bottom nav on its own GPU layer. Without it, Android Chrome can
+    skip painting a position:fixed element for a frame while a nearby section animates (the
+    nav flickers during tab swipes). */
  .sidebar{inset:auto 0 0;width:100%;height:calc(var(--nav-height) + env(safe-area-inset-bottom,0px));padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));background:var(--paper);border-top:1px solid var(--line);z-index:100;transform:translateZ(0);isolation:isolate}.sidebar-header{display:none}.sidebar-tabs{flex-direction:row;gap:0;height:100%;justify-content:space-around}.sidebar-tabs button{flex:1;min-width:0;min-height:60px;font-size:11px;gap:4px}.tab-icon{width:58px;height:32px}.tab-icon svg{width:23px;height:23px}
  .card{padding:20px;border-radius:24px;margin-bottom:16px}.daily-greeting{margin-bottom:20px;font-size:13px}.daily-checkin{padding:20px}.daily-checkin h2{font-size:23px}.daily-stats{gap:12px}.stat-card{padding:17px;min-height:128px}.stat-icon{right:14px;top:16px;font-size:22px}.stat-card strong,.streak-stat{font-size:26px}.daily-book{gap:16px}.daily-book>img,.daily-book-placeholder{width:84px;height:128px;flex-basis:84px}.daily-book h3{font-size:17px}.daily-book .primary{font-size:12px;min-height:42px;padding:10px 16px}
  .destination-row{padding:17px;gap:12px}.club-grid{gap:12px}.hub-item .destination-row{padding:18px}.hub-item-summary{min-height:114px}.hub-item .destination-row>.hub-chevron{right:16px;top:20px}.hub-item.expanded .destination-row>.hub-chevron{top:12px}svg.hub-illustration{width:52px;height:44px;right:8px;bottom:6px}.club-feature{padding:20px}.club-feature-illustration{width:64px;height:56px}
@@ -257,7 +252,7 @@ svg.hub-illustration{position:absolute;right:8px;bottom:8px;width:56px;height:48
 .card-add-btn.open::after{content:'Kapat'!important}
 #tab-worms>.card:first-child>h2,#tab-mworms>.card:first-child>h2{font-size:15px;color:var(--ink-70)}
 .book-average{font-size:22px;font-weight:650;color:var(--gold);margin:12px 0}.book-average small{display:block;font-size:12px;font-weight:400;color:var(--ink-70)}
-/* Missed details from the CSS pass: small layout/polish fixes verified against the live markup rather than guessed. */
+/* Small layout fixes, checked against the actual markup. */
 .stamp-btns{display:flex;gap:8px}
 .poll-option-text{flex:1;min-width:0}
 .poll-voter-extra{background:var(--ink-70)!important;color:#fff!important;font-size:8px;font-weight:800}
@@ -273,22 +268,23 @@ svg.hub-illustration{position:absolute;right:8px;bottom:8px;width:56px;height:48
 .slide-down-anim{animation:slideDownOpen .22s var(--ease);overflow:hidden}
 @keyframes reactionBurst{0%{transform:scale(1)}40%{transform:scale(1.6)}100%{transform:scale(1)}}
 .reaction-burst{animation:reactionBurst .28s cubic-bezier(.34,1.56,.64,1)}
-/* New "Kitaplık" hub tab (Keşfet + Kitaplığım + Öneriler merged behind one primary tab) — reuses .club-grid/.destination-row, no new selectors needed beyond this comment marker. */
+/* Library hub (Discover, My books and Recommendations behind one primary tab) reuses
+   .club-grid and .destination-row. */
 .daily-checkin-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .daily-checkin-text{flex:1;min-width:0}
 .daily-illustration{flex:0 0 auto;width:116px;height:116px;pointer-events:none}
 @media(max-width:420px){.daily-checkin-row{gap:8px}.daily-illustration{width:84px;height:84px}}
 
-/* Swipe: ekran dışına kayan sekmeler kök sayfanın yatay alanını büyütmesin.
-   clip yeni bir scroll container oluşturmaz; dikey kaydırma ve fixed nav korunur.
-   Her iki kökte de tanımlı olması body overflow'unun viewport'a aktarılmasını önler. */
+/* Swipe: tabs moving off screen must not widen the page. clip (unlike hidden) doesn't
+   create a scroll container, so vertical scrolling and the fixed nav keep working. Setting
+   it on both roots keeps body overflow from propagating to the viewport. */
 html, body { overflow-x: clip; }
 
-/* Sekme sürüklemesi iptal edildiğinde aşağı taşan hareket tarayıcının
-   pull-to-refresh davranışına geçmesin. Normal dikey kaydırma korunur. */
+/* A cancelled tab drag that moves downward shouldn't turn into the browser's
+   pull-to-refresh. Normal vertical scrolling is unaffected. */
 html, body { overscroll-behavior-y: contain; }
 
-/* Dönüşümlü kart özetleri — kapalı kartların ölçüleri veriyle değişmez. */
+/* Rotating hub card previews: closed cards keep a fixed size whatever the data. */
 #materialClubGrid,#materialLibraryGrid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:14px}
 .hub-item[data-preview]{--hp-height:378px;background:var(--secondary-container);min-width:0}
 .hub-item[data-preview=records],.hub-item[data-preview=bookhistory]{grid-column:1/-1;--hp-height:318px;background:var(--primary-container)}
@@ -315,12 +311,12 @@ html, body { overscroll-behavior-y: contain; }
 
 .hub-item[data-preview]>.hub-item-toggle{touch-action:pan-y;user-select:none;-webkit-user-select:none}
 
-/* Özgün kart illüstrasyonları, başlığın üstünde ve önizlemeden bağımsız. */
+/* Card illustrations, above the title and independent of the preview. */
 .hp-illustration{display:flex;align-items:center;height:56px;min-height:56px;margin-bottom:12px;flex-shrink:0;pointer-events:none}
 .hub-item[data-preview] .hp-illustration svg.hub-illustration{position:static;width:64px;height:56px;display:block}
 .hub-item[data-preview] .destination-row:has(svg.hub-illustration) small{max-width:100%}
 
-/* Kişisel öneriler: aynı kapak dili; açıklamalar yalnızca kart açıldığında. */
+/* Personal picks: same cover style; explanations only show when the card is open. */
 .ai-rec-disclosure>summary{display:block;cursor:pointer;list-style:none;border-radius:12px}
 .ai-rec-disclosure>summary::-webkit-details-marker{display:none}
 .ai-rec-disclosure>summary::marker{content:''}
@@ -336,7 +332,7 @@ html, body { overscroll-behavior-y: contain; }
 .ai-text-action:hover{text-decoration:underline}.ai-refresh-action{display:block;margin-top:12px}
 @media(max-width:360px){.ai-rec-disclosure .ai-rec-list{gap:10px}.ai-rec-disclosure .ai-preview-cover{width:52px;height:80px;font-size:34px}.ai-rec-disclosure .ai-rec-item b{font-size:13px}}
 
-/* İlk kartın yeşili korunur; diğer üç kart birbirinden ayrılır. */
+/* The first card keeps the green color; the other three get distinct tints. */
 :root{--preview-lilac:var(--secondary-container);--preview-peach:#f3e4d6;--preview-blue:#deebf4}
 html[data-theme=dark]{--preview-peach:#3d3027;--preview-blue:#24333e}
 .hub-item[data-preview=records],.hub-item[data-preview=bookhistory]{background:var(--preview-lilac)}
@@ -345,7 +341,7 @@ html[data-theme=dark]{--preview-peach:#3d3027;--preview-blue:#24333e}
 .ai-card-illustration{display:block;width:64px;height:56px;margin-bottom:12px;pointer-events:none}
 .daily-stats .total-days-card{grid-column:1/-1;background:var(--paper-2)}
 
-/* Kartın tamamı ana sekme kaydırmasına açık; önizleme düğmelerle değişir. */
+/* The whole card stays open to the page swipe; previews change with the buttons. */
 .hp-controls{position:absolute;top:calc((var(--hp-height) + 74px)/2);left:3px;right:3px;display:flex;justify-content:space-between;pointer-events:none;transform:translateY(-50%);z-index:2}
 .hp-controls button{pointer-events:auto;width:32px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:999px;font-size:26px;color:var(--ink-70);background:transparent;padding:0}
 .hp-controls button:disabled{opacity:.2;cursor:default}.hub-item.expanded>.hp-controls{display:none}
@@ -358,11 +354,11 @@ html[data-theme=dark]{--preview-peach:#3d3027;--preview-blue:#24333e}
 .ai-modal-reason{font-size:14px;line-height:1.6;text-align:left;color:var(--ink-70)}
 .ai-expanded-pitch{margin-top:10px!important}
 
-/* Açılma okları aynı ölçü, renk ve konum kuralını paylaşır. */
+/* Expand arrows share size, color and position. */
 .ai-card-chevron,.hub-item .destination-row>.hub-chevron{position:absolute;right:20px;top:22px;font-size:15px;font-weight:400;line-height:1.5;color:var(--ink)}
 @media(max-width:700px){.ai-card-chevron,.hub-item .destination-row>.hub-chevron{right:16px;top:20px;font-size:14px}}
 .daily-stats .total-days-card,.daily-stats .completed-books-card{grid-column:auto;background:var(--secondary-container)}
-/* Bronz alev, gümüş yıldız, altın hedef, mavi elmas, mor kupa, turuncu kurt. */
+/* Badge colors: bronze flame, silver star, gold target, blue diamond, purple trophy, orange wolf. */
 .badge-art{width:100%;height:100%;display:block;flex-shrink:0;color:var(--badge-accent)}
 .badge-art-b3{--badge-accent:#b87942;--badge-light:#ffe0ba;--badge-dark:#6f4525}
 .badge-art-b5{--badge-accent:#89969f;--badge-light:#f2f6fa;--badge-dark:#45545f}
@@ -378,7 +374,7 @@ html[data-theme=dark] .badge-art{filter:brightness(1.13)}
 .milestone:not(.earned) .badge-art{opacity:.3;filter:grayscale(1)}
 .daily-stats{grid-auto-rows:1fr}
 
-/* Kişisel hedefler */
+/* Personal goals */
 .personal-goals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
 .personal-goal{margin:0!important;min-width:0;padding:20px!important;background:var(--secondary-container)!important}
 .personal-goal h2{font-size:17px;margin:10px 0 16px}.personal-goal p{font-size:13px;line-height:1.5}
@@ -401,7 +397,7 @@ html[data-theme=dark] .badge-art{filter:brightness(1.13)}
 .goal-history-number{display:block;font-size:30px;line-height:1.15;font-weight:700;margin-top:12px}
 
 
-/* Sekme içinde doğrudan içerik: asıl DOM ve form olayları korunur. */
+/* Hub sections shown directly inside the tab: the original DOM and form handlers are kept. */
 .hub-layout-setting{display:flex;align-items:center;gap:14px;padding:18px 0;cursor:pointer;position:relative}
 .hub-layout-setting>span:first-child{flex:1}.hub-layout-setting small{display:block;color:var(--ink-70);margin-top:5px}
 .hub-layout-setting input{position:absolute;right:0;width:52px;height:32px;opacity:0;cursor:pointer}
@@ -428,7 +424,7 @@ html[data-theme=dark] .badge-art{filter:brightness(1.13)}
 .hub-layout-setting input{z-index:1}.layout-switch{pointer-events:none}
 
 
-/* Hedef düzenleme: diğer simge düğmeleriyle aynı çizgi ve renk dili. */
+/* Goal edit button: same line and color style as the other icon buttons. */
 .personal-goal{position:relative}
 .goal-edit-button{position:absolute;top:12px;right:12px;width:40px;height:40px;min-height:40px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%;background:transparent;color:var(--secondary-ink)}
 .goal-edit-button:hover{background:var(--card)}.goal-edit-button:focus-visible{outline:2px solid var(--secondary-ink);outline-offset:2px}
@@ -495,9 +491,9 @@ body{background:var(--paper)}
 .daily-book>.daily-book-jacket{width:90px;height:136px}
 .qp-bugun-cover{overflow:visible;background:transparent;border-radius:3px 11px 11px 3px}
 @media(max-width:420px){.daily-book>.daily-book-jacket{width:76px;height:114px}}
-/* "Okudum" düğmesi: basar basmaz (ağ beklemeden) dokunulan noktadan yayılan renk dolgusu, kendini
-   çizen tik, yukarı kayarak gelen "Bugün okudun" yazısı, yumuşak bir ışıma halkası ve küçük
-   kıvılcımlar (playReadMarkFx). Bitiş hali soluk değil, dolu ve belirgin. */
+/* "Read" button: right on tap (without waiting for the network) a fill spreads from the
+   tap point, a tick draws itself, "Read today" slides in, with a soft glow ring and small
+   sparks (playReadMarkFx). The final state is solid, not faded. */
 .daily-actions .stamp-btn{position:relative;overflow:hidden;isolation:isolate;transition:background .3s var(--ease),color .3s var(--ease),transform .16s var(--ease),box-shadow .3s var(--ease)}
 .daily-actions .stamp-btn:not(:disabled):active{transform:scale(.95)}
 .daily-actions .stamp-btn::before{content:'';position:absolute;inset:0;z-index:-1;background:var(--gold);clip-path:circle(0 at var(--fx-x,50%) var(--fx-y,50%));pointer-events:none}
@@ -518,7 +514,7 @@ body{background:var(--paper)}
 .mark-burst{position:fixed;width:0;height:0;z-index:500;pointer-events:none}
 .mark-burst i{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%}
 .mark-burst i.streak{left:0;top:-2px;width:13px;height:4px;border-radius:2px}
-/* Yöneticinin üye listesindeki küçük ✓/✕ damgaları (playMarkFx): sallanmadan, yaylı bir büyüme. */
+/* Admin's small ✓/✕ stamps in the member list (playMarkFx): a springy grow, no shake. */
 .stamp-btn.pop-read{animation:stampPopRead .5s cubic-bezier(.34,1.56,.64,1);z-index:2}
 .stamp-btn.pop-skip{animation:stampPopSkip .45s cubic-bezier(.34,1.56,.64,1);z-index:2}
 @keyframes stampPopRead{0%{transform:scale(.9)}45%{transform:scale(1.18);background:var(--gold);color:var(--on-primary)}100%{transform:scale(1);background:var(--gold);color:var(--on-primary)}}
@@ -577,7 +573,7 @@ body{background:var(--paper)}
 @media(max-width:360px){.hub-layout-segmented button{font-size:11px;padding-inline:2px}}
 
 
-/* Material color roles: green is the unchanged default palette. */
+/* Material color roles; green is the default palette. */
 html[data-palette="blue"]:not([data-theme="dark"]){--paper:#f9f9ff;--paper-2:#eef0f8;--card:#ffffff;--ink:#191c20;--ink-70:#43474e;--gold:#415f91;--gold-dark:#284777;--primary-container:#d6e3ff;--on-primary:#ffffff;--secondary-container:#dde2f9;--secondary-ink:#414659;--line:#d9dfe9;--outline:#74777f;--preview-peach:#eddcf5;--preview-blue:#d6ece5;--forest:#415f91;--forest-dark:#284777;--card-bg:255,255,255;--paper-bg:249,249,255;--sidebar-tint:238,240,248;}
 html[data-palette="blue"][data-theme="dark"]{--paper:#111318;--paper-2:#1d2026;--card:#191c22;--ink:#e1e2e9;--ink-70:#c3c6cf;--gold:#aac7ff;--gold-dark:#d6e3ff;--primary-container:#284777;--on-primary:#0a305f;--secondary-container:#414659;--secondary-ink:#dde2f9;--line:#43474e;--outline:#8d9199;--preview-peach:#4d3e55;--preview-blue:#304d45;--forest:#aac7ff;--forest-dark:#d6e3ff;--card-bg:25,28,34;--paper-bg:17,19,24;--sidebar-tint:29,32,38;}
 html[data-palette="purple"]:not([data-theme="dark"]){--paper:#fffbfe;--paper-2:#f3edf7;--card:#ffffff;--ink:#1c1b1f;--ink-70:#49454f;--gold:#6750a4;--gold-dark:#4f378b;--primary-container:#eaddff;--on-primary:#ffffff;--secondary-container:#e8def8;--secondary-ink:#4a4458;--line:#cac4d0;--outline:#79747e;--preview-peach:#ffd8e4;--preview-blue:#d8e8f5;--forest:#6750a4;--forest-dark:#4f378b;--card-bg:255,255,255;--paper-bg:255,251,254;--sidebar-tint:243,237,247;}
@@ -601,7 +597,7 @@ html[data-palette="amber"][data-theme="dark"]{--paper:#18130b;--paper-2:#272016;
 html[lang="en"] .hub-layout-segmented button{font-size:11px}
 
 
-/* Four exclusive appearance modes, including the device preference. */
+/* Appearance modes: light, dark, automatic (by time of day) and device setting. */
 #materialThemeChoices{gap:2px}
 #materialThemeChoices button{min-width:0;flex:1;padding:9px 4px;min-height:48px;font-size:12px;line-height:1.25}
 @media(max-width:360px){#materialThemeChoices button{font-size:11px;padding-inline:2px}}

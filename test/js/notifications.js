@@ -1,4 +1,5 @@
-/* ============ BİLDİRİM SİSTEMİ (uygulama içi) ============ */
+/* Notifications: the in-app list and unread badge, sending notifications to members and
+   admins, and phone (push) notifications through Firebase Cloud Messaging. */
 
 import {
   arrayUnion, collection, doc, getDocs, limit, onSnapshot, orderBy, query, setDoc, updateDoc
@@ -7,8 +8,8 @@ import {
   getMessaging, getToken, onMessage, isSupported as isMessagingSupported
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 import { openPostModal } from "./feed.js";
-// app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
-// açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
+// Circular import: app.js imports this module too. These names are only used inside
+// functions (after startup), never while the module is being evaluated, so the cycle is safe.
 import {
   FCM_VAPID_KEY, activeTab, app, closeModal, currentUid, db, escapeHtml, keepOrLoading, markLoaded,
   pad, renderTab, resolveNotifTab, showToast, switchTab, usersCache
@@ -21,15 +22,12 @@ export async function notifyUser(uid, message, linkTab, postId){
   if(category){
     const recipient = usersCache[uid];
     const prefs = (recipient && recipient.notifPrefs) || {};
-    if(prefs[category] === false) return; // alıcı bu kategoriyi kapatmış
+    if(prefs[category] === false) return; // the recipient turned this category off
   }
   try{
-    // Aynı mesajın kısa süre içinde tekrar yazılmasını, OKUMA izni gerektirmeyen bir yöntemle
-    // engelliyoruz: mesaj + zaman dilimine göre sabit bir belge kimliği üretip setDoc ile yazıyoruz.
-    // Aynı kimlikle ikinci bir yazma denemesi olursa (kısa sürede tekrar tetiklenmişse), ya aynı
-    // belgenin üzerine yazılır (tekrar yok) ya da (başka biri deniyorsa) kurallar zaten reddeder —
-    // ikisi de sonuçta çift bildirim oluşmasını engeller. Alıcının kendi bildirimlerini önceden
-    // OKUMAMIZ gerekmediği için, gönderen kim olursa olsun (kendisi veya başka biri) çalışır.
+    // Deduplicate without reading the recipient's notifications: the document id is derived
+    // from the message and a time bucket, so sending the same message again shortly afterwards
+    // overwrites the same document (or is rejected by the rules) instead of adding a duplicate.
     let hash = 0;
     for(let i=0;i<message.length;i++) hash = (hash*31 + message.charCodeAt(i)) & 0xffffffff;
     const bucket = Math.floor(Date.now()/10000);
@@ -46,7 +44,7 @@ export async function notifyAllMembers(message, linkTab, excludeUid){
   await Promise.all(uids.map(uid=>notifyUser(uid,message,linkTab)));
 }
 let unsubNotifs = null;
-// Çıkış yapılınca app.js bildirim aboneliğini buradan kapatıyor.
+// Called by app.js on sign-out.
 export function unsubscribeNotifs(){ if(unsubNotifs){ unsubNotifs(); unsubNotifs=null; } }
 export function subscribeNotifs(){
   if(unsubNotifs) unsubNotifs();
@@ -64,7 +62,7 @@ export function openNotifModal(){
   renderNotifsTab();
 }
 
-/* ============ GERÇEK TELEFON BİLDİRİMİ (Firebase Cloud Messaging) ============ */
+/* Phone (push) notifications via Firebase Cloud Messaging */
 async function registerPushToken(){
   const swReg = await navigator.serviceWorker.register('./sw.js');
   const messaging = getMessaging(app);
@@ -73,16 +71,16 @@ async function registerPushToken(){
     await updateDoc(doc(db,'users',currentUid), { fcmTokens: arrayUnion(token) }).catch(()=>{});
   }
   onMessage(messaging, (payload)=>{
-    // Uygulama açıkken gelen bildirimler (foreground) tarayıcı tarafından otomatik gösterilmez, biz gösteriyoruz.
+    // Browsers don't display push messages that arrive while the app is open, so show a toast.
     const title = payload.data?.title || 'BookHook';
     const body = payload.data?.body || '';
     showToast(`🔔 ${body || title}`);
     if(activeTab) renderTab(activeTab);
   });
 }
-// Girişte sessizce çalışır: izin ZATEN verilmişse token'ı tazeler. İzin isteme (requestPermission)
-// tarayıcı kısıtlaması yüzünden burada YAPILMAZ — o yalnızca "Bildirimleri Aç" butonuyla, doğrudan
-// bir tıklama içinde tetiklenmeli, yoksa tarayıcı sessizce reddediyor.
+// Runs at sign-in: refreshes the push token if permission was already granted. It never
+// asks for permission, because browsers only allow that from a direct user click (see
+// enablePushNotifications).
 export async function setupPushNotifications(){
   try{
     const supported = await isMessagingSupported();
@@ -90,9 +88,10 @@ export async function setupPushNotifications(){
     if(FCM_VAPID_KEY.includes('BURAYA_')) return;
     if(Notification.permission !== 'granted') return;
     await registerPushToken();
-  }catch(e){ /* push kurulamazsa uygulama içi bildirimler zaten çalışmaya devam eder */ }
+  }catch(e){ /* without push, in-app notifications still work */ }
 }
-// Kullanıcının doğrudan tıklamasıyla çalışır — izin isteme burada, tıklamanın hemen içinde yapılır.
+// Called from the "Enable notifications" button, so the permission prompt happens inside
+// the click handler as browsers require.
 export async function enablePushNotifications(){
   try{
     const supported = await isMessagingSupported();
@@ -130,9 +129,8 @@ async function renderNotifsTab(){
 
   const box = keepOrLoading('notifsList');
   let snap;
-  // Sorgu başarısız olursa (ör. ağ henüz hazır değil) ekrandaki mevcut/önbellekli görünümü
-  // "yüklenemedi" ile ezip bunu kalıcı önbelleğe yazmıyoruz — aksi halde geçici bir hata,
-  // bir sonraki başarılı yüklemeye kadar kalıcı olarak yanlış bir durumu gösterirdi.
+  // On a failed query, keep the current (possibly cached) list instead of replacing it with
+  // an error that would then be cached.
   try{ snap = await getDocs(query(collection(db,'notifications',currentUid,'items'), orderBy('createdAt','desc'), limit(50))); }
   catch(e){ return; }
   const items = [];

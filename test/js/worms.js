@@ -1,20 +1,19 @@
-/* ============ ADMIN: KİTAP KURTLARI ============ */
+/* Bookworms screen: the club's current reading streaks and each member's badge history
+   shelf. The member and admin screens show the same data in different containers. */
 
-// app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
-// açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
+// Circular import: app.js imports this module too. These names are only used inside
+// functions (after startup), never while the module is being evaluated, so the cycle is safe.
 import {
   BADGE_DEFS, activeUids, avatarHtmlFromProfile, badgeIllustration, checkAndAwardBadges, computeStreak,
   currentUid, escapeHtml, keepOrLoading, markLoaded, shadeHexColor, userChipHtml, usersCache
 } from "./app.js";
 
-// Rozet Geçmişi: her üye tek satır, 6 rozet de her zaman yan yana madalyon şeklinde duruyor.
-// Kazanılmamışlar kesikli çizgili soluk "hayalet" madalyon. Sayı, madalyonun köşesindeki metalik
-// (gümüş gradyan + kabartma efektli) yuvarlak rozette duruyor.
-// Sıralama SADECE bu listeye özgü: her rozet, o rozeti kazanmak için gereken gün sayısı (def.days)
-// kadar puan eder; kişinin puanı = Σ (o rozetten kazandığı adet × o rozetin gün değeri). Bu, "Kitap
-// Kurtları" listesindeki güncel seri sıralamasından tamamen bağımsız — orijinal diziyi bozmamak
-// için önce bir kopyası alınıp öyle sıralanıyor.
-// Rozet süre etiketini kısa/okunur biçime çevirir: 3→"3 gün", 7→"1 hafta", 14→"2 hafta", 30→"1 ay".
+// Badge history shelf: one row per member with all badges side by side; badges not
+// earned yet are drawn as faded placeholders, and a corner counter shows how many times
+// a badge was earned. Rows are ranked by score = sum over badges of
+// (times earned x the badge's day threshold), independent of the current-streak ranking.
+//
+// Short label for a badge's day threshold: 3 -> "3 days", 7 -> "1 week", 30 -> "1 month".
 function formatStreakDuration(days){
   if(days % 7 === 0) return (days/7) + window.BH_I18N.pick(" hafta"," weeks");
   if(days % 30 === 0) return (days/30) + ' ay';
@@ -41,9 +40,7 @@ function renderBadgeHistoryShelf(rows){
       const countBadge = count>1
         ? `<span class="badge-shelf-count" style="background:linear-gradient(145deg, ${shadeHexColor(def.color,-0.28)} 0%, ${shadeHexColor(def.color,-0.62)} 100%);"><span class="badge-shelf-count-num">${count}</span></span>`
         : '';
-      // Tıklanınca (sadece kazanılmış rozetlerde) hafif bir sallanma animasyonu ve sağ üstte,
-      // köşedeki sayaçla aynı metalik gradyan/font'ta ama hap (pill) şeklinde bir bilgi kutusu
-      // açılıyor; içinde o rozet için gereken seri gün sayısı yazıyor.
+      // Earned badges get a popover with the streak length they require (opened on click).
       const infoPop = earned
         ? `<div class="badge-shelf-info" style="background:linear-gradient(145deg, ${shadeHexColor(def.color,-0.28)} 0%, ${shadeHexColor(def.color,-0.62)} 100%);"><span class="badge-shelf-info-text">${escapeHtml(formatStreakDuration(def.days))}</span></div>`
         : '';
@@ -58,9 +55,8 @@ function renderBadgeHistoryShelf(rows){
     </div>`;
   }).join('')}</div>`;
 }
-// Rozet madalyonuna tıklayınca sallanma animasyonu oynatır ve o madalyonun bilgi kutusunu açar/
-// kapatır; başka bir madalyon açılınca öncekini kapatır. Konteynere bir kez bağlanır (yeniden
-// render'da tekrar tekrar dinleyici eklenmesin diye).
+// Clicking a badge plays a short wiggle and toggles its popover, closing any other open
+// one. Bound once per container so re-renders don't stack listeners.
 function bindBadgeShelfClicks(container){
   if(!container || container.dataset.shelfClicksBound) return;
   container.dataset.shelfClicksBound = '1';
@@ -81,15 +77,10 @@ function bindBadgeShelfClicks(container){
   });
 }
 async function renderWormsShared(myStreakContainerId, clubStreaksContainerId, historyContainerId){
-  // Eskiden "Kitap Kurtları" tek bir kartın içinde hem senin güncel serini hem kulübün tüm
-  // serilerini üst üste gösteriyordu — artık kart-içi sekmelerde ayrı ayrı gösterildiği için
-  // (bkz. tab-worms/tab-mworms) bu iki parça ayrı konteynerlere yazılıyor.
   const myBox = keepOrLoading(myStreakContainerId, window.BH_I18N.pick("Hesaplanıyor…","Calculating…"));
   const clubBox = keepOrLoading(clubStreaksContainerId, window.BH_I18N.pick("Hesaplanıyor…","Calculating…"));
   const historyBox = historyContainerId ? keepOrLoading(historyContainerId, window.BH_I18N.pick("Hesaplanıyor…","Calculating…")) : null;
-  // Sekme açıldığında önce önbellekteki (eski) HTML anında gösteriliyor, gerçek veri henüz
-  // gelmeden — tıklama dinleyicisi de bu yüzden en başta bağlanıyor, yoksa sayfa ilk açıldığında
-  // önbellek gösterilirken tıklamalar hiçbir şey yapmıyordu (asıl render bitene kadar).
+  // Bind clicks before loading: cached HTML is shown immediately and should already respond.
   if(historyBox) bindBadgeShelfClicks(historyBox);
   const uids = activeUids();
   let failed = false;
@@ -100,9 +91,8 @@ async function renderWormsShared(myStreakContainerId, clubStreaksContainerId, hi
       return {uid, streak};
     }catch(e){ failed = true; return {uid, streak:0}; }
   }));
-  // Bir üyenin serisi hesaplanamazsa onu 0 gündür sanıp herkesi bu şekilde çizip önbelleğe
-  // yazarsak, geçici bir hata gerçek serileri bir süreliğine kalıcı olarak silerdi — bu durumda
-  // ekranı olduğu gibi bırakıyoruz.
+  // If any streak can't be read, keep what is on screen. Rendering it as 0 days would also
+  // write the wrong values to the persistent cache.
   if(failed) return;
   results.sort((a,b)=>b.streak-a.streak);
 
@@ -135,7 +125,7 @@ async function renderWormsShared(myStreakContainerId, clubStreaksContainerId, hi
 
 export async function renderAdminWorms(){ await renderWormsShared('wormsMyStreak','wormsClubStreaks','wormsHistory'); }
 
-/* ============ ÜYE: KİTAP KURTLARI ============ */
+/* Member screen */
 export async function renderMemberWorms(){ await renderWormsShared('mWormsMyStreak','mWormsClubStreaks','mWormsHistory'); }
 
 export function initWorms(){

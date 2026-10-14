@@ -1,4 +1,6 @@
-/* ============ ADMIN: BUGÜN ============ */
+/* Admin screens: today's check-ins for every member, editing past days, the weekly
+   report, the real weekly draw (with "Why?" explanations), the manual test draw, and
+   member management. */
 
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, updateDoc
@@ -7,8 +9,8 @@ import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { createPost, pickVariantMessage } from "./feed.js";
 import { notifyAllMembers } from "./notifications.js";
 import { playMarkFx, renderTotalPagesCard } from "./today.js";
-// app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
-// açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
+// Circular import: app.js imports this module too. These names are only used inside
+// functions (after startup), never while the module is being evaluated, so the cycle is safe.
 import {
   activeTab, activeUids, addDays, buildWeekHistoryHTML, checkDrawRules, cleanupBadAutoFills,
   cloudFunctions, CLUB_START_DATE, computeWeekStats, currentUid, db, DOW, drawHistory, drawsCache,
@@ -18,9 +20,9 @@ import {
   showToast, stampBtnInFlight, todayAnswers, todayStr, toStr, userChipHtml, usersCache, weekDates
 } from "./app.js";
 
-let manualGrid = {}; // uid -> ['', 'read', 'skip', ...] length 7
+let manualGrid = {}; // uid -> 7 day statuses: '' | 'read' | 'skip'
 let manualHistoryCache = [];
-let adminWeekOffset = 0; // 0 = bu hafta, -1 = önceki hafta, ...
+let adminWeekOffset = 0; // 0 = this week, -1 = previous week, ...
 export function setAdminWeekOffset(n){ adminWeekOffset = n; }
 export function renderAdminToday(){
   const list = document.getElementById('todayList');
@@ -56,7 +58,8 @@ export function renderAdminToday(){
         if(wasNew && btn.dataset.status==='skip') createPost('skip', {variantText: await pickVariantMessage('skip')});
         if(isSettingMark){
           const markedName = (usersCache[btn.dataset.uid] && usersCache[btn.dataset.uid].name) || '';
-          // Bildirim tüm üyelere gidip kayıtlı kalıyor; gönderenin dil ayarından bağımsız Türkçe kalmalı.
+          // Notifications are stored and shown to every member, so the text stays in Turkish
+          // regardless of the sender's language.
           notifyAllMembers(`${markedName} bugün "${btn.dataset.status==='read'?'Okudum':'Okumadım'}" işaretledi.`, 'week', currentUid);
         }
       } finally {
@@ -76,11 +79,7 @@ export function renderAdminToday(){
   }
   renderTotalPagesCard('totalPagesNumber');
 }
-// Bir haftanın kendi geçmişini GNOME Hava Durumu tarzı şerit olarak üretir. Haftalık pas hakkı
-// kuralına göre: haftanın ilk "okumadı"sı ücretsiz pastır (sarı), ikinci ve sonrakiler cezadır (kırmızı).
-// uid verilmezse currentUid kullanılır; extraColClass küçük (satır içi) varyant için 'small' gibi bir sınıf eklemeye yarar.
-// Basit hex renk açma/koyulaştırma yardımcıları: rozet crest'inin gradyanlarını kişinin rozet
-// çerçevesi rengine göre yeniden boyamak için kullanılıyor.
+// The admin's own weekly history, shown on the admin's week screen.
 
 export async function renderAdminOwnWeek(){
   const baseMonday = getMonday(nowLogical());
@@ -95,7 +94,7 @@ export async function renderAdminOwnWeek(){
   markLoaded(table);
 }
 
-/* ============ ADMIN: GEÇMİŞ CEVAPLARI DÜZENLE ============ */
+/* Edit past days */
 async function markStatusForDate(uid, dateStr, status){
   const ref = doc(db,'days',dateStr,'answers',uid);
   const snap = await getDoc(ref);
@@ -135,7 +134,7 @@ export async function renderEditPastTab(){
   });
 }
 
-/* ============ ADMIN: BU HAFTA (ve genel olarak: seçilen herhangi bir hafta) ============ */
+/* Weekly report (for any selected week) */
 export async function renderWeekReportTable(monday, tableId){
   const table = document.getElementById(tableId);
   showCachedOrPlaceholder(table, window.BH_I18N.template`<div class="empty-state">Yükleniyor…</div>`);
@@ -182,7 +181,7 @@ export async function renderEditPastWeekReport(){
   await renderWeekReportTable(monday, 'editPastWeekGrid');
 }
 
-/* ============ ADMIN: KURA (gerçek, esnek hafta seçimi) ============ */
+/* Real weekly draw (any week can be closed and drawn again) */
 export async function renderAdminDraws(){
   await loadDraws();
   const note = document.getElementById('drawStatusNote');
@@ -223,11 +222,11 @@ export async function renderAdminDraws(){
   });
 }
 
-/* ============ ADMIN: KURA AÇIKLAMASI ("Neden?") ============
-   Bir haftanın kura sonucunu, o haftanın kayıtları ve o haftadan ÖNCEKİ kazanma geçmişiyle
-   yeniden değerlendirip kimin hangi grupta olduğunu, hiç kazanmamışların neden seçilmediğini ve
-   sonucun öncelik kurallarına uyup uymadığını gösterir. */
-// Kural kontrolü ortak dosyada (checkDrawRules); burada sadece sebep kodları ekrana çevriliyor.
+/* Draw explanation ("Why?"): re-evaluates a week's result using that week's records and
+   the win history before it, showing each member's group, why members who never won
+   were not picked, and whether the result follows the priority rules. */
+// The rules live in functions/shared/lottery.js (checkDrawRules); this only turns the
+// reason codes into text.
 function explainDrawResult(draw, stats, winCounts){
   const result = checkDrawRules(draw, stats, winCounts);
   const text = {
@@ -265,8 +264,8 @@ async function toggleDrawExplanation(weekStart, scope){
     }
     html += window.BH_I18N.template`<div style="font-size:13px;margin-top:8px;"><b>Kazananlar</b>${receiverInfo.map(r=>`<div>${name(r.uid)} — ${group(r.stat)} · ${winsText(r.wins)}</div>`).join('') || '<div class="muted">—</div>'}</div>`;
     if(skippedNeverWon.length) html += window.BH_I18N.template`<div style="font-size:13px;margin-top:8px;"><b>Hiç kazanmamış ama bu hafta çıkmayanlar</b>${skippedNeverWon.map(x=>`<div>${name(x.uid)} — ${escapeHtml(x.reason)}</div>`).join('')}</div>`;
-    // Herkesin bu haftaki sayımı ve kazandığı haftalar: biri "hiç almadı" diye bilinip sistemde bir
-    // kazancı kayıtlıysa ya da beklenmedik bir grupta görünüyorsa burada açıkça görülsün.
+    // Every member's count for the week and the weeks they won, so wrong win records or
+    // unexpected groups are easy to spot.
     const order = st=> st.marked>0 ? (st.miss>=2?2:st.miss) : 3;
     const everyone = [...stats].sort((a,b)=> order(a)-order(b) || (usersCache[a.uid]?.name||'').localeCompare(usersCache[b.uid]?.name||'','tr'));
     html += window.BH_I18N.template`<details style="font-size:13px;margin-top:10px;"><summary><b>Tüm üyelerin bu haftası</b></summary>${everyone.map(st=>{
@@ -281,7 +280,7 @@ async function toggleDrawExplanation(weekStart, scope){
   }
 }
 
-/* ============ ADMIN: MANUEL KURA (sandbox, tamamen izole) ============ */
+/* Manual draw: a sandbox that never touches real records */
 function ensureManualGrid(){
   activeUids().forEach(uid=>{
     if(!manualGrid[uid]) manualGrid[uid] = ['','','','','','',''];
@@ -340,19 +339,18 @@ async function renderManualHistory(){
   }).join('');
 }
 
-/* ============ ADMIN: ÜYELER (rol + ban) ============ */
+/* Members: roles, ban, join date, delete */
 export async function renderAdminMembers(){
   const list = document.getElementById('membersList');
-  // "deleted" artık bir bayrak değil — silinen bir üyenin belgesi tamamen kalkıyor, o yüzden
-  // usersCache'te hiç yer almıyor ve buradaki listeye zaten kendiliğinden hiç girmiyor. Geri
-  // yükleme diye bir şey yok, silme kalıcı.
+  // Deleting a member removes their document, so deleted members never appear here.
+  // Deletion is permanent.
   const uids = Object.keys(usersCache);
   if(uids.length===0){ list.innerHTML = window.BH_I18N.template`<p class="muted">Henüz üye yok.</p>`; return; }
   const adminCount = uids.filter(u=>usersCache[u].role==='admin' && !usersCache[u].banned).length;
   list.innerHTML = uids.map(uid=>{
     const u = usersCache[uid];
     const isSelf = uid===currentUid;
-    const isProtectedOwner = u.isOwner && !isSelf; // sahip, sahibin kendisi dışındaki herkese karşı korumalı
+    const isProtectedOwner = u.isOwner && !isSelf; // the owner can only be changed by themselves
     const joinDs = joinDateStrOf(uid) || '—';
     return window.BH_I18N.template`<div class="member-row">
       <div>
@@ -473,8 +471,8 @@ export function initAdmin(){
       const read = arr.filter(s=>s==='read').length;
       return {uid, name: usersCache[uid].name, miss, read, marked: miss+read, joinDate: joinDateStrOf(uid)||'', joinedAt: joinedAtOf(uid)};
     });
-    // Deneme kurası da gerçek kurayla aynı geçmişi kullansın (kim kaç kez kazandı, geçen hafta kim
-    // kazandı, üyelik sırası); yoksa herkes "hiç kazanmamış" sayılıp sonuç gerçeği yansıtmıyordu.
+    // Use the real win history (win counts, last week's winners, join order) so the test
+    // draw behaves like the real one.
     await loadDraws();
     const {winCounts, totalGiftsGivenSoFar, previousWinners} = drawHistory(drawsCache, null, drawsCache[0]?.id);
     const {giverCount, safeCount, pairs} = runLottery(stats, previousWinners, winCounts, totalGiftsGivenSoFar);
@@ -495,7 +493,7 @@ export function initAdmin(){
       await addDoc(collection(db,'manualDraws'), { label, giverCount, safeCount, pairs, createdAt: new Date().toISOString() });
       showToast(window.BH_I18N.pick("Deneme sonucu kaydedildi (sadece sana görünür).","Test result saved (only visible to you)."));
       renderManualHistory();
-    }catch(e){ /* kayıt başarısız olsa da sonucu ekranda göstermeye devam */ }
+    }catch(e){ /* keep showing the result even if saving it fails */ }
   });
   document.getElementById('cleanupBtn').addEventListener('click', async ()=>{
     if(!confirm(window.BH_I18N.pick("Kulüp başlamadan veya kişi üye olmadan önceki otomatik \"okumadı\" kayıtları silinsin mi? Elle girilmiş hiçbir veri silinmez.","Delete automatic missed-reading records from before the club started or the member joined? Manually entered records will be kept."))) return;

@@ -1,15 +1,14 @@
-/* ============ AKIŞ (gönderiler) ============
-   Akış sekmesi ve gönderiler: otomatik gönderiler (okudum, rozet, hediye…) ve toplu gönderi
-   birleştirme, gönderi kartları, anketler, beğeni/tepkiler, yorumlar, sabitlenen gönderi çubuğu,
-   gönderi yazma/düzenleme ve gönderi penceresi. app.js uygulama açılırken initFeed() çağırır. */
+/* Feed tab and posts: automatic posts (checked in, badges, gifts, ...) and merging them
+   into batch posts, post cards, polls, votes and reactions, comments, the pinned post
+   bar, writing and editing posts, and the post window. app.js calls initFeed() at startup. */
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, runTransaction,
   startAfter, updateDoc, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { renderReactionBar, setPendingReactionRefresh, showReactorsModal, toggleReactionDrawer } from "./reactions.js";
 import { notifyAllMembers, notifyUser } from "./notifications.js";
-// app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
-// açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
+// Circular import: app.js imports this module too. These names are only used inside
+// functions (after startup), never while the module is being evaluated, so the cycle is safe.
 import {
   BADGE_DEFS, activeTab, closeModal, currentUid, db, escapeHtml, hideAnchoredPopover,
   keepOrLoading, markLoaded, materialBookCover, myProfile, pad, profilePhotoHtml,
@@ -212,10 +211,11 @@ function timeAgoLabel(iso){
   const d = new Date(iso);
   return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
 }
-// Reddit tarzı: her gönderinin kalın bir BAŞLIĞI, altında da açıklayıcı gövde metni var.
-// Kullanıcı gönderilerinde başlığı kişi kendisi giriyor (p.title); sistem gönderilerinde ve
-// anketlerde burada sabit/otomatik bir başlık üretiliyor.
-// Translate automatic activity at render time. Stored posts and user-authored text stay untouched.
+// Every post has a bold title above its body. Members write their own titles (p.title);
+// system posts and polls get a generated one.
+//
+// In English, titles of automatic posts are translated when rendered; stored posts and
+// member-written text are never changed.
 function automaticPostTitleEn(p){
  const titles={read:'✓ Read today',skip:'😴 Missed reading',badge_gained:'🏅 Badge earned',badge_lost:'💔 Badge lost',gift_won:'🎁 Book gift won',gift_requested:'📮 Gift request',gift_completed:'🎉 Gift received',new_member:'👋 New member',book_review:'⭐ Book rated',book_review_batch:'⭐ Book ratings',book_added:'📖 Added to library',book_added_batch:'📖 Added to library',record_dethrone:'👑 New record',no_lottery:'🍀 No draw needed',rec_personal:'💡 Book recommendation',rec_group:'💡 Club recommendation'};
  const quarterly={nominations_open:'📚 Nominations open',nominations_near_end:'⏰ Nominations closing',objecting_open:'🔎 Objections open',objecting_near_end:'⏰ Objections closing',objection_made:'🙅 Objection submitted',nomination_made:'📖 New nomination',round_start:'🗳️ Voting round started',round_near_end:'⏰ Voting closing',round_result:'📊 Round results',final_winner:'🏆 Shared book selected',gift_lottery_drawn:'🎁 Gift draw completed',gift_lottery_applied:'🎁 Shared book gifts confirmed',discussion_opened:'💬 Discussion opened'};
@@ -382,8 +382,8 @@ function postBodyHtml(p, expanded){
     default: return escapeHtml(p.text||'');
   }
 }
-// Anket gövdesi: WhatsApp tarzı — her seçenek tıklanabilir bir satır, oy sayısına göre arkada bir
-// dolgu çubuğu var, kullanıcının kendi oyu vurgulanıyor. Toplam oy sayısı altta gösteriliyor.
+// Poll body: each option is a clickable row with a bar filled by its share of the votes;
+// the user's own vote is highlighted and the total is shown below.
 function pollVoterAvatarsHtml(voters){
   if(!voters || !voters.length) return '';
   const maxShow = 4;
@@ -406,8 +406,8 @@ function pollBodyHtml(p, expanded){
     const count = (o.voters||[]).length;
     const pct = totalVotes>0 ? Math.round(count/totalVotes*100) : 0;
     const voted = i===myVoteIdx;
-    // Oy verenlerin profil resimleri (sırayla, oy veriliş sırasında) sadece gönderi büyütülüp
-    // açıldığında (expanded), o seçeneğin sağ tarafında gösteriliyor — akıştaki küçük kartta değil.
+    // Voter avatars (in voting order) are only shown on the expanded post, not on the small
+    // card in the feed.
     const voterAvatars = expanded ? pollVoterAvatarsHtml(o.voters) : '';
     return `<div class="poll-option-row${voted?' voted':''}" data-poll-post="${p.id}" data-poll-option="${i}">
       <div class="poll-option-fill" style="width:${pct}%;"></div>
@@ -434,7 +434,7 @@ async function voteOnPoll(postId, optionIdx){
       const options = (data.options||[]).map(o=> ({...o, voters:[...(o.voters||[])]}));
       const alreadyVotedIdx = options.findIndex(o=> o.voters.includes(currentUid));
       if(alreadyVotedIdx===optionIdx){
-        // Aynı seçeneğe tekrar basıldı: oyu geri çeker.
+        // Tapping the option you voted for again withdraws the vote.
         options[optionIdx].voters = options[optionIdx].voters.filter(u=>u!==currentUid);
       } else {
         if(alreadyVotedIdx!==-1) options[alreadyVotedIdx].voters = options[alreadyVotedIdx].voters.filter(u=>u!==currentUid);
@@ -454,14 +454,12 @@ function myReactionEmoji(reactions){
   }
   return null;
 }
-// Bir tepki verildiğinde/değiştirildiğinde, o gönderinin tepki hapına kısa bir zıplama
-// animasyonu ekler.
+// Briefly bounces the reaction pill of a post after the user reacts.
 export function burstMyReactionBadge(target){
   const badge = document.querySelector(`[data-target="${target}"].reaction-add-btn`) || document.querySelector(`.my-reaction-badge[data-target="${target}"]`);
   if(badge){ badge.classList.add('reaction-burst'); setTimeout(()=>badge.classList.remove('reaction-burst'), 300); }
 }
-// ============ GÖNDERİLER İÇİN REDDİT TARZI BEĞEN/BEĞENME HAPI (yorumlar/öneriler hâlâ emoji
-// tepki sistemini kullanıyor, bu sadece gönderilerin kendisi için). ============
+// Up/down vote pill for posts (comments and recommendations use emoji reactions only).
 function postVoteRowHtml(p){
   const up = (p.votes && p.votes.up) || [];
   const down = (p.votes && p.votes.down) || [];
@@ -473,16 +471,15 @@ function postVoteRowHtml(p){
     <button type="button" class="post-vote-btn down${myDown?' active':''}" data-vote-post="${p.id}" data-dir="down" title="Beğenme">▼</button>
   </div>`;
 }
-// Reddit'teki "repost" hapının yerinde duran, tek bir kompakt emoji-tepki hapı — kendi tepkini
-// (varsa) gösterir, tıklayınca tepki seçicisi açılır (mevcut .reaction-add-btn mekanizması).
+// Compact emoji reaction pill next to the vote pill: shows your own reaction, if any, and
+// opens the reaction picker on tap.
 function postReactionPillHtml(p){
   const reactions = p.reactions || {};
   const myReaction = myReactionEmoji(reactions);
   const totalCount = Object.values(reactions).reduce((sum,arr)=> sum + ((arr&&arr.length)||0), 0);
   return `<button type="button" class="post-action-btn reaction-add-btn" data-target="post:${p.id}">${myReaction||'🙂'}${totalCount>0?` ${totalCount}`:''}</button>`;
 }
-// Tıklanır tıklanmaz ekranı anında günceller (Firestore yazması arka planda gidiyor) — oy
-// verme hiçbir zaman gecikmeli hissettirmesin diye.
+// Update the vote pill immediately; the Firestore write runs in the background.
 function applyOptimisticVoteUI(railEl, dir){
   const upBtn = railEl.querySelector('.post-vote-btn.up');
   const downBtn = railEl.querySelector('.post-vote-btn.down');
@@ -534,9 +531,8 @@ async function setPostVote(postId, dir){
     if(notifyUid) notifyUser(notifyUid, `${myProfile.name} gönderini beğendi.`, 'social', postId);
   }catch(err){ alert('Oy verilemedi: '+(err.message||err)); }
 }
-// Gönderinin önemine göre görsel ağırlık sınıfı: manuel yazılan gönderiler en büyük, kitap
-// ekleme/puanlama gönderileri orta, geri kalan her şey (rozet, hediye, sistem gönderileri vb.)
-// varsayılan boyutta kalıyor.
+// Visual weight of a post: member posts are the largest, book added/rated posts medium,
+// everything else (badges, gifts, system posts) default size.
 function postWeightClass(p){
   if(p.type==='user_post') return 'weight-high';
   if(p.type==='book_review' || p.type==='book_review_batch' || p.type==='book_added' || p.type==='book_added_batch') return 'weight-medium';
@@ -746,8 +742,8 @@ function resizeImageToDataUrl(file, maxDim, quality){
   });
 }
 let composeImageDataUrl = null;
-// "Konuşmaya Katıl" — tıklanınca pencere açmadan, sayfa üzerinde aşağı doğru genişleyip
-// başlık+metin girme alanı çıkıyor. Görsel eklemek istenirse küçük "+" tuşu dosya seçiciyi açıyor.
+// "Join the conversation" box: expands in place (no dialog) into title and text fields;
+// the small "+" button attaches an image.
 let jcImageDataUrl = null;
 function jcExpand(){
   document.getElementById('joinConversationTrigger').style.display = 'none';
@@ -882,16 +878,15 @@ export function wirePostCards(container, refreshFn){
     });
   });
 }
-// Yorum eklenince/silinince gönderi modalı kendini yeniliyor, ama arkadaki akış kartı (feed'de
-// duran ayrı bir DOM öğesi) bunu otomatik görmüyordu — sayfayı yenileyene kadar eski yorum
-// sayısı orada takılı kalıyordu. Bu, o karttaki sayıyı da doğrudan güncelliyor.
+// The post window refreshes itself after a comment is added or removed; this also updates
+// the comment count on the post's card in the feed behind it.
 function syncFeedCardCommentCount(postId, newCount){
   document.querySelectorAll(`.post-card[data-post-id="${postId}"] .post-comment-count`).forEach(el=>{
     el.textContent = `💬 ${newCount}`;
   });
 }
-// Akıştaki gönderiye tıklayınca ayrı bir modal açmak yerine kartın kendisini genişletiyoruz —
-// diğer kartlar hub kartlarındaki gibi aşağı kayıyor, yorumlar da aynı yerde okunup yazılabiliyor.
+// Tapping a post expands its card in place (the cards below slide down) instead of opening
+// a dialog; comments are read and written right there.
 function togglePostComments(postId){
   const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
   if(!card) return;
@@ -945,8 +940,7 @@ export async function openPostModal(postId){
   body.innerHTML = window.BH_I18N.template`<span class="muted">Yükleniyor…</span>`;
   document.getElementById('postModal').style.display='flex';
   let p = null, comments = [];
-  // Gönderiyi ve yorumlarını birbirine bağlı olmadıkları için birbirini beklemeden, aynı anda
-  // çekiyoruz — bu, açılma süresini kabaca yarıya indiriyor.
+  // Fetch the post and its comments in parallel.
   const [postSnap, commentsSnap] = await Promise.all([
     getDoc(doc(db,'posts',postId)).catch(()=>null),
     getDocs(collection(db,'posts',postId,'comments')).catch(()=>null)
@@ -1030,7 +1024,7 @@ export async function openPostModal(postId){
       await addDoc(collection(db,'posts',postId,'comments'), { uid:currentUid, name:myProfile.name, text, createdAt:new Date().toISOString() });
       await updateDoc(doc(db,'posts',postId), { commentCount: newCount });
       syncFeedCardCommentCount(postId, newCount);
-      // Bildirimler asıl sonucu etkilemiyor — arka planda tamamlanırken bekletmiyoruz.
+      // Notifications don't affect the result, so they aren't awaited.
       if(p.uid!==currentUid) notifyUser(p.uid, `${myProfile.name} gönderine yorum yaptı.`, 'social', p.id);
       const priorCommenterUids = new Set(comments.map(c=>c.uid));
       priorCommenterUids.delete(currentUid);

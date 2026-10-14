@@ -1,4 +1,5 @@
-/* ============ ORTAK: KİTAP GEÇMİŞİM (kişisel kitaplık) ============ */
+/* "My books": the member's three lists (reading now, want to read, finished), moving a
+   book between them, the add forms, and the Discover tab's floating buttons. */
 
 import {
   addDoc, collection, deleteDoc, doc, getDocs, orderBy, query
@@ -7,8 +8,8 @@ import { createOrBatchPost } from "./feed.js";
 import { renderDiscoverTab } from "./discover.js";
 import { attachBookAutocomplete } from "./books.js";
 import { moveBookWithGoal, renderTotalPagesCard } from "./today.js";
-// app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
-// açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
+// Circular import: app.js imports this module too. These names are only used inside
+// functions (after startup), never while the module is being evaluated, so the cycle is safe.
 import {
   closeAddForm, closeModal, currentUid, db, escapeHtml, hubPreviews, keepOrLoading, markLoaded,
   materialBookCover, setupAddToggle, showToast
@@ -18,13 +19,7 @@ export function renderBookHistoryTab(){
   renderDiscoverTab();
   setupDiscoverNavObserver();
 }
-// Kitaplık sekmesinin en üstündeki büyük "Senin İçin Seçtik" kartı — okuma geçmişine göre
-// birkaç kişisel öneri hazırlaması için sunucudaki (functions/index.js) getBookRecommendation
-// Cloud Function'ını çağırıyor. Sonuç profildeki aiRecommendations alanına yazıldığı için
-// her sekme açılışında yeniden çağırmıyoruz, sadece hiç öneri yoksa otomatik bir kere
-// hesaplıyoruz; sonrasında kullanıcı "yeni öneri iste" ile manuel tetikliyor. Kapak resimleri
-// Claude'un cevabında yok (uydurma bir link vermesi riskli olurdu) — bunun yerine, kitap
-// ekleme formunda zaten kullandığımız Google Books aramasıyla ayrıca, istemci tarafında çekiliyor.
+// Renders all three lists of the signed-in member.
 export async function renderMyBooksTab(){
   await renderBookHistoryGrid(currentUid, 'readBooksGrid', true, 'readBooks');
   await renderBookHistoryGrid(currentUid, 'wantToReadGrid', true, 'wantToRead');
@@ -66,10 +61,8 @@ export async function renderBookHistoryGrid(uid, gridId, editable, collectionNam
     const snap = await getDocs(query(collection(db,'users',uid,collectionName), orderBy('addedAt','desc')));
     snap.forEach(d=> items.push({ id:d.id, ...d.data() }));
   }catch(e){
-    // Sorgu başarısız olursa (ör. uygulama az önce açılmış, ağ henüz hazır değil) ekranda duran
-    // önbellek/placeholder'ı YANLIŞ bir "henüz kitap eklenmemiş" durumuyla ezip onu kalıcı olarak
-    // önbelleğe yazmayalım — az sonra gelecek doğru sonucu birkaç kez girip çıkana kadar
-    // göremiyordun, kök neden buydu. Mevcut görünümü olduğu gibi bırak.
+    // On a failed query (e.g. right after startup, before the network is ready), keep what is
+    // on screen; showing "no books yet" here would also be written to the persistent cache.
     return;
   }
   if(!items.length){
@@ -128,11 +121,9 @@ export async function renderBookHistoryGrid(uid, gridId, editable, collectionNam
   }
   markLoaded(grid);
 }
-// Kitaplığım'daki bir kitaba tıklayınca açılan pencere: kapak, yazar, kitap adı, ve listeye özel
-// tek bir ilerleme tuşu — "Okumak İstediklerim"de "Okuyorum" (kitabı "Şu An Okuduklarım"a
-// taşır), "Şu An Okuduklarım"da "Okudum" (kitabı "Kitap Geçmişim"e taşır). "Kitap Geçmişim"
-// zaten son durak olduğu için orada bir tuş yok. Sadece kişinin KENDİ kitaplığında (başkasının
-// profilini görüntülerken değil) gösteriliyor.
+// Book window for an item in "My books": cover, title, author and one button that moves
+// the book one step forward (want to read -> reading now -> finished). Finished books
+// have no button. Only shown for the member's own library.
 function showBhBookInfo(b, uid, gridId, collectionName){
   const body = document.getElementById('bookInfoModalBody');
   document.getElementById('bookInfoModal').style.display='flex';
@@ -160,9 +151,8 @@ function showBhBookInfo(b, uid, gridId, collectionName){
         renderBookHistoryGrid(currentUid, gridId, true, collectionName);
         const destGridId = destCollection==='readBooks' ? 'readBooksGrid' : 'bookHistoryGrid';
         if(document.getElementById(destGridId)) renderBookHistoryGrid(currentUid, destGridId, true, destCollection);
-        // "Şu an okuyorum"dan "Okudum"a taşınan bir kitap aylık hedefe sayılabilir — "Bugün"
-        // sekmesindeki hedef kartı bu ekrandan (Kitaplığım) tetiklenmediği için kendiliğinden
-        // yenilenmiyordu, burada elle tazeliyoruz. Aktif olmayan (admin/üye) varyant no-op.
+        // A finished book can count toward the monthly goal, so refresh the Today card's totals
+        // as well. The id that isn't on the current screen (admin vs member) is a no-op.
         renderTotalPagesCard('totalPagesNumber');
         renderTotalPagesCard('mTotalPagesNumber');
       }catch(err){ alert(window.BH_I18N.pick("Taşınamadı: ","Could not move: ")+(err.message||err)); btn.disabled = false; }

@@ -1,4 +1,5 @@
-/* ============ ORTAK: HEDİYE KİTAP ============ */
+/* Gift books tab: the member's gift requests (form, "sent" / "received" confirmations),
+   the shared-book gift card, gift statistics and the grid of received books. */
 
 import {
   collection, doc, getDoc, getDocs, query, setDoc, updateDoc, where
@@ -6,20 +7,17 @@ import {
 import { createPost } from "./feed.js";
 import { attachBookAutocompleteEl, showBookInfo } from "./books.js";
 import { notifyUser } from "./notifications.js";
-// app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
-// açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
+// Circular import: app.js imports this module too. These names are only used inside
+// functions (after startup), never while the module is being evaluated, so the cycle is safe.
 import {
   avatarHtmlFromProfile, checkAndPostDethrone, currentUid, db, drawsCache, escapeHtml, fmtShort,
   keepOrLoading, loadDraws, markLoaded, materialBookCover, myProfile, pickGiftMessage, showToast,
   userChipHtml, usersCache
 } from "./app.js";
 
-// Tüm çekilişlerdeki (draws) her çift için tek bir "giftRequests/{id}" belgesi var. Eskiden bu
-// belgeler TEK TEK, birbirini bekleyerek (sequential await) çekiliyordu — hafta sayısı arttıkça
-// (kulüp ne kadar eskiyse o kadar çok hafta) bu, onlarca ardışık ağ gidiş-dönüşü demekti ve
-// "Hediye Kitap" sekmesi saniyelerce (bazı durumlarda 15-20 sn) donmuş gibi kalıyordu. Artık
-// hepsi TEK SEFERDE, aynı anda (Promise.all) çekiliyor — süre, en yavaş tek istek kadar oluyor,
-// hepsinin toplamı kadar değil.
+// Every pair in every draw has one giftRequests/{weekStart_giver_receiver} document.
+// Fetch them all in parallel, so the load time stays close to a single request however
+// many weeks the club has.
 async function fetchAllGiftRequests(){
   const reqIds = [];
   drawsCache.forEach(d=>{
@@ -27,10 +25,9 @@ async function fetchAllGiftRequests(){
       if(p.receiverUid) reqIds.push(`${d.weekStart}_${p.giverUid}_${p.receiverUid}`);
     });
   });
-  // Sorgu gerçekten başarısız olursa (ağ/izin hatası — belge yok dönmesi zaten hata fırlatmaz)
-  // bunu "istek yok/alınmadı" sanıp zaten tamamlanmış bir hediyeyi yeniden "bekliyor" göstermeyelim
-  // ve bunu kalıcı önbelleğe yazmayalım — hata yukarı (renderGiftsTab'a) yayılsın, ekran olduğu
-  // gibi kalsın.
+  // Let real failures (network, permissions) propagate to renderGiftsTab, which keeps the
+  // current screen; treating them as "no request" would show finished gifts as pending
+  // and cache that. A missing document is not an error.
   const snaps = await Promise.all(reqIds.map(id=> getDoc(doc(db,'giftRequests',id))));
   const map = {};
   reqIds.forEach((id,i)=>{
@@ -39,9 +36,9 @@ async function fetchAllGiftRequests(){
   });
   return map;
 }
-// 3 aylık ortak kitap hediyesi: haftalık hediye kurasından tamamen ayrı, kendi koleksiyonunda
-// (quarterlyGiftPending / quarterlyGiftRequests) tutuluyor. Sadece kullanıcının KENDİ ilgili
-// olduğu eşleşme(ler) varsa kart gösteriliyor, yoksa (ilgisi yoksa) kart tamamen gizli kalıyor.
+// Gift card for the quarterly shared book. It is separate from the weekly gift draw and
+// stored in quarterlyGiftPending / quarterlyGiftRequests; the card is only shown to
+// members who are part of a pairing.
 async function renderQpGiftCard(){
   const wrap = document.getElementById('qpGiftCardWrap');
   const content = document.getElementById('qpGiftContent');
@@ -121,8 +118,8 @@ async function renderQpGiftCard(){
     });
   });
 }
-// "Bugüne Kadar" kartı: kulüp kurulduğundan beri kim kaç hediye almış/vermiş — Rozet
-// Geçmişi'ndeki madalyon görünümüyle aynı stil, sadece 2 "rozet" (aldı/verdi) var.
+// "So far" card: how many gifts each member has received and given since the club
+// started, drawn like the badge history shelf with two "badges".
 function renderGiftStatsList(){
   const box = keepOrLoading('giftStatsList');
   const stats = {};
@@ -166,10 +163,8 @@ export async function renderGiftsTab(){
   const reqMap = await fetchAllGiftRequests();
 
   let personalHtml = '';
-  // Sadece EN SON haftaya değil, geçmişteki TÜM haftalara bakılıyor: bir önceki haftadan kalan
-  // henüz tamamlanmamış (teslim onaylanmamış) bir hediye, yeni bir kura çekilse bile buradan
-  // kaybolmasın — kişi işini bitirene kadar (alıcı "Kitabı Aldım" deyip onaylayana kadar) o
-  // haftanın kartı gösterilmeye devam ediyor.
+  // Look at every draw, not just the latest: a gift from an earlier week stays here until
+  // the receiver confirms it arrived, even after newer draws.
   for(const d of drawsCache){
     if(!d.pairs) continue;
     for(const p of d.pairs){
@@ -178,7 +173,7 @@ export async function renderGiftsTab(){
       if(!isReceiver && !isGiver) continue;
       const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
       const req = reqMap[reqId];
-      if(req && req.received) continue; // tamamlanmış, geçmişte görünür, burada tekrar gösterilmez
+      if(req && req.received) continue; // finished gifts are only listed in the history
       personalHtml += buildPersonalGiftHtml(d, isReceiver?p:null, isGiver?p:null, req);
     }
   }
@@ -216,7 +211,7 @@ function buildPersonalGiftHtml(draw, myPairAsReceiver, myPairAsGiver, reqForRece
     const reqId = `${latest.weekStart}_${p.giverUid}_${p.receiverUid}`;
     const req = reqForReceiver!==undefined ? reqForReceiver : null;
     if(req && req.received){
-      // tamamlandı, geçmişte görünür
+      // finished; listed in the history
     } else if(req && req.shipped){
       html += window.BH_I18N.template`<div class="receipt">
         <div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: <span class="giver">${userChipHtml(p.giverUid)}</span> kitabını gönderdi 📮</div>
@@ -263,7 +258,7 @@ function buildPersonalGiftHtml(draw, myPairAsReceiver, myPairAsGiver, reqForRece
     const reqId = `${latest.weekStart}_${p.giverUid}_${p.receiverUid}`;
     const req = reqForGiver!==undefined ? reqForGiver : reqForReceiver;
     if(req && req.received){
-      // tamamlandı, geçmişte görünür
+      // finished; listed in the history
     } else if(req && req.shipped){
       html += window.BH_I18N.template`<div class="receipt"><div class="rweek">${fmtShort(latest.weekStart)}–${fmtShort(latest.weekEnd)}: ${userChipHtml(p.receiverUid)}'e gönderdiğini işaretledin</div><div class="empty-note">📬 Alıcı onayı bekleniyor.</div></div>`;
     } else if(req){
@@ -287,7 +282,7 @@ function buildAdminPendingHtml(reqMap){
       if(!p.receiverUid) continue;
       const reqId = `${d.weekStart}_${p.giverUid}_${p.receiverUid}`;
       const req = reqMap[reqId];
-      if(req && req.received) continue; // tamamlanan geçmişte gösterilir
+      if(req && req.received) continue; // finished gifts are listed in the history
       html += `<div class="receipt"><div class="rweek"><span>${fmtShort(d.weekStart)}–${fmtShort(d.weekEnd)}: <span class="giver">${userChipHtml(p.giverUid)}</span> → <span class="receiver">${userChipHtml(p.receiverUid)}</span></span></div>`;
       if(req && req.shipped){
         html += window.BH_I18N.template`<div class="empty-note">📮 Gönderildi, alıcı onayı bekleniyor.</div>`;
@@ -344,8 +339,7 @@ function wireGiftFormHandlers(content){
           giverName: usersCache[giverUid]?.name||'', receiverName: usersCache[receiverUid]?.name||'',
           recipientName, bookTitle, bookCover, site, address, phone, shipped:false, received:false, updatedAt: new Date().toISOString()
         });
-        // Bildirim ve akış gönderisi, ana işlemin sonucunu ETKİLEMEDİĞİ için (ikisi de "yan
-        // etki") bekletmiyoruz — kullanıcı arka planda tamamlanırken hemen sonucu görüyor.
+        // The notification and feed post don't affect the result, so they run in the background.
         notifyUser(giverUid, `${myProfile.name} hediye kitap isteğini gönderdi: "${bookTitle}". "Hediye Kitap" sekmesinden bak.`, 'gifts');
         createPost('gift_requested', { giverUid, giverName: usersCache[giverUid]?.name||'', bookTitle, bookCover });
         showToast(window.BH_I18N.pick("İstek gönderildi.","Request sent."));
@@ -363,8 +357,8 @@ function wireGiftFormHandlers(content){
       btn.disabled = true;
       try{
         await updateDoc(doc(db,'giftRequests',btn.dataset.reqid), {shipped:true, shippedAt:new Date().toISOString()});
-        // Bildirim, sayaç güncellemesi ve rekor kontrolü asıl işlemin sonucunu etkilemiyor —
-        // arka planda tamamlanırken kullanıcı hemen sonucu görüyor.
+        // The notification, counter update and record check don't affect the result, so they run
+        // in the background.
         notifyUser(btn.dataset.receiver, `${myProfile.name} hediye kitabını gönderdi! Aldığında "Hediye Kitap" sekmesinden onaylamayı unutma.`, 'gifts');
         const myGivenCount = (myProfile.giftsGivenCount||0) + 1;
         updateDoc(doc(db,'users',currentUid), { giftsGivenCount: myGivenCount }).then(()=>{ usersCache[currentUid].giftsGivenCount = myGivenCount; }).catch(()=>{});

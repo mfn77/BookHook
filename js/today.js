@@ -1,20 +1,22 @@
-/* ============ ORTAK: "BUGÜN" — OKUMA TOPLAMLARI, KİŞİSEL HEDEFLER VE "OKUDUM" İŞARETLEME ============ */
+/* "Today" screen: the "Did you read today?" card with its instant "Read" button, the
+   page-count question, personal daily/monthly goals and reading totals. */
 
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { notifyAllMembers } from "./notifications.js";
 import { renderQpBookInBugun } from "./quarterly.js";
-// app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
-// açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
+// Circular import: app.js imports this module too. These names are only used inside
+// functions (after startup), never while the module is being evaluated, so the cycle is safe.
 import {
   CLUB_START_DATE, DOW, addDays, checkAndAwardBadges, computeStreak, currentUid, db, fromStr,
   hubPreviews, joinDateStrOf, markLoaded, myProfile, nowLogical, pad, showCachedOrPlaceholder,
   showToast, stampBtnInFlight, toStr, todayAnswers, todayStr, usersCache
 } from "./app.js";
 
-// "Okudum"a basınca ekran sunucuyu beklemeden anında güncelleniyor; kayıt arka planda giderken
-// başka bir üyenin işaretlemesi dinleyiciyi tetiklerse bu iyimser durum silinmesin diye tutuluyor.
+// "Read" updates the screen before the server confirms. While that write is in flight, a
+// snapshot triggered by someone else's check-in must not undo the optimistic state, so the
+// pending check-in is kept here (resubscribeToday in app.js re-applies it).
 export let selfReadPending = null;
 
 export async function renderTotalPagesCard(elId){
@@ -37,7 +39,7 @@ async function renderCompletedBooksCount(elId){
   const el=document.getElementById(elId);if(!el||!currentUid)return;
   const uid=currentUid;showCachedOrPlaceholder(el,'…');
   try{
-    // bookHistory = bitirilen kitaplar; readBooks = halen okunanlar.
+    // bookHistory = finished books, readBooks = currently reading
     const snap=await getDocs(collection(db,'users',uid,'bookHistory'));
     if(currentUid!==uid)return;
     el.textContent=snap.size.toLocaleString(window.BH_I18N.locale);markLoaded(el);
@@ -51,14 +53,13 @@ async function computeReadingTotals(uid){
   const dateStrs = [];
   let cursor = fromStr(startDs);
   while(toStr(cursor) <= toStr(today)){ dateStrs.push(toStr(cursor)); cursor = addDays(cursor,1); }
-  // Günleri tek tek sırayla değil, hepsini aynı anda (paralel) çekiyoruz — bu, uzun
-  // süredir üye olan biri için bile sonucu saniyelerden yüzlerce milisaniyeye indirir.
+  // Fetch all days in parallel; sequential reads were very slow for long-time members.
   const snaps = await Promise.all(dateStrs.map(ds => getDoc(doc(db,'days',ds,'answers',uid))));
   const totals={days:0,pages:0,records:{}};
   snaps.forEach((snap,i)=>{if(!snap.exists())return;const rec=snap.data();totals.records[dateStrs[i]]=rec;if(rec.status==='read'){totals.days++;totals.pages+=Number.isSafeInteger(rec.pages)&&rec.pages>=15?rec.pages:15;}});
   return totals;
 }
-/* İsteğe bağlı kişisel hedefler. Günler mevcut 06.00 sınırını kullanır. */
+/* Optional personal goals. Days follow the app's 06:00 day boundary. */
 function personalGoals(data){return {daily:data?.daily||[],monthly:data?.monthly||[]};}
 function dailyGoalAt(goals,day=todayStr()){
  return [...goals.daily].reverse().find(g=>g.start<=day&&(!g.end||day<g.end));
@@ -92,7 +93,7 @@ async function stopDailyGoal(){
  const ref=doc(db,'users',currentUid),day=todayStr();
  await runTransaction(db,async tx=>{
   const snap=await tx.get(ref),goals=personalGoals(snap.data()?.readingGoals),goal=dailyGoalAt(goals,day);
-  // Bugünün hedefi geçmişte korunsun; bırakma yarın 06.00'da yürürlüğe girer.
+  // Keep today's goal in the history; stopping takes effect at 06:00 tomorrow.
   if(goal&&!goal.end){goal.end=toStr(addDays(fromStr(day),1));tx.update(ref,{readingGoals:goals});}
  });
 }
@@ -126,11 +127,11 @@ async function updatePersonalGoal(kind,target,expected,uid,day,remove=false){
   }
   if(goal.target===target)return;
   if(kind==='daily'&&goal.start<day){
-   // Dünkü ve daha eski hedef sonuçları yeni hedefle yeniden hesaplanmasın.
+   // Don't re-evaluate earlier days against the new target.
    const next={start:day,target,...(goal.end?{end:goal.end}:{})};
    goal.end=day;goals.daily.push(next);
   }else goal.target=target;
-  // Aylık hedefte başlangıç, bitiş ve bitirilen kitaplar aynen korunur.
+  // A monthly goal keeps its start, end and finished books unchanged.
   tx.update(ref,{readingGoals:goals});
  });
 }
@@ -166,7 +167,8 @@ async function renderPersonalGoals(section,totals,uid=currentUid){
   const nextDay=fromStr(toStr(addDays(nowLogical(),1)));nextDay.setHours(6,0,0,0);
   section.dataset.goalRefreshAt=String(Math.min(nextDay.getTime(),monthly?Date.parse(monthly.end):Infinity));
   const rec=totals.records[day],pages=rec?.status==='read'?(Number.isSafeInteger(rec.pages)&&rec.pages>=15?rec.pages:15):0;
-  // Toplamlar sunucudan iyimser işaretlemeden önce okunmuş olabilir; düğmeyi geri çevirmesin.
+  // Totals may have been read before the optimistic check-in; don't let them flip the
+  // button back.
   updateSelfReadButton(section,todayAnswers[uid]==='read'&&rec?.status!=='read'?{...rec,status:'read'}:rec,daily);
   const dailyText=pages>=daily?.target?window.BH_I18N.template`Bugünkü hedefini ${pages} sayfayla tamamladın.`:pages?window.BH_I18N.template`Bugün ${pages} sayfa okudun. Hedefine ${Math.max(0,(daily?.target||0)-pages)} sayfa kaldı.`:window.BH_I18N.pick("Bugün henüz okuma kaydın yok.","You haven’t recorded any reading today.");
   grid.innerHTML=window.BH_I18N.template`<div class="card personal-goal"><span class="goal-symbol" aria-hidden="true">▤</span><h2>Günlük sayfa hedefi</h2>${daily?goalEditButton("daily"):""}${daily?window.BH_I18N.template`<strong class="goal-value">${daily.target} <small>sayfa / gün</small></strong>${goalProgress(pages,daily.target)}<p role="status">${dailyText}</p>${daily.end?window.BH_I18N.pick("<p class=\"muted\">Hedefin yarın 06.00’da sona erecek.</p>","<p class=\"muted\">Your goal will end tomorrow at 06:00.</p>"):window.BH_I18N.pick("<button type=\"button\" class=\"ai-text-action\" data-stop-goal>Hedefi yarından itibaren bırak</button>","<button type=\"button\" class=\"ai-text-action\" data-stop-goal>End goal from tomorrow</button>")}`:goalForm('daily')}<p class="muted">İsteğe bağlı</p></div>
@@ -192,8 +194,8 @@ function updateSelfReadButton(section,rec,daily){
  button.disabled=read&&!editable;button.classList.toggle('selected',read);
  button.classList.toggle('pages-editable',Boolean(editable));
  button.setAttribute('aria-pressed',String(read));
- // İçerik sadece durum gerçekten değişince yeniden yazılıyor; aynı duruma tekrar render
- // edilince (dinleyici, hedef kartı vb.) süren işaretleme animasyonu kesilmesin.
+ // Only rewrite the button when its state actually changes, so an ongoing check-in
+ // animation isn't cut short by an unrelated re-render.
  const state=editable?'edit:'+pages:read?'read':'idle';
  if(button.dataset.markState!==state){
   button.dataset.markState=state;
@@ -202,7 +204,8 @@ function updateSelfReadButton(section,rec,daily){
  button.title=editable?window.BH_I18N.pick("Bugün okuduğun toplam sayfa sayısını güncelle","Update your total pages read today"):read?window.BH_I18N.pick("Bugün okudun","You read today"):window.BH_I18N.pick("Okudum","Read");
 }
 const READ_CHECK_SVG='<svg class="mark-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-// Ağ beklemeden, dokunulan noktadan yayılan dolgu + kendini çizen tik + küçük kıvılcım patlaması.
+// Instant check-in feedback: a fill spreading from the tap point, a self-drawing tick and
+// a small burst of sparks. Runs without waiting for the network.
 function playReadMarkFx(btn,point){
  try{navigator.vibrate?.(12);}catch(_){}
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
@@ -214,7 +217,7 @@ function playReadMarkFx(btn,point){
  clearTimeout(btn._markFxTimer);btn._markFxTimer=setTimeout(()=>btn.classList.remove('just-marked'),1200);
  const layer=document.createElement('span');layer.className='mark-burst';
  layer.style.left=(r.left+x)+'px';layer.style.top=(r.top+y)+'px';
- // Hem koyu yeşil dolgunun hem de açık kartın üzerinde seçilebilen kutlama renkleri.
+ // Celebration colors that stay visible on both the dark green fill and the light card.
  const colors=['#F2B84B','#EF8A62','#9FD8A8','#B9A8E8'];
  for(let i=0;i<14;i++){
   const dot=document.createElement('i'),angle=(i/14)*Math.PI*2+Math.random()*.45,dist=42+Math.random()*36;
@@ -234,7 +237,7 @@ async function saveSelfReadTotal(uid,day,pages){
   if(wasRead&&(!daily||validReadPages(rec)>=daily.target))return false;
   if(daily&&(!Number.isSafeInteger(pages)||pages<15))throw Error('En az 15 tam sayfa girmelisin.');
   if(wasRead&&pages<validReadPages(rec))throw Error(window.BH_I18N.pick("Yeni toplam önceki sayfa sayısından az olamaz.","The new total cannot be less than the previous page count."));
-  // Bir güne ait toplamı değiştir; önceki sayının üzerine tekrar ekleme.
+  // Set the day's total (it replaces the previous count; it is not added to it).
   tx.set(ref,{status:'read',name:usersCache[uid]?.name||'',updatedAt:new Date().toISOString(),...(daily?{pages}:{})},{merge:true});
   return !wasRead;
  });
@@ -270,14 +273,13 @@ export async function moveBookWithGoal(b,collectionName,destCollection){
  });
  hubPreviews.invalidate('library');
 }
-// Uygulama açık kalırsa 06.00 / aylık dönem bitişi de görünümde güncellensin.
+// Refresh the view at 06:00 and when a monthly goal period ends while the app stays open.
 
-/* ============ ORTAK: "BUGÜN OKUDUN MU?" KENDİNİ İŞARETLEME KARTI ============ */
-// Hem üye hem yönetici "Bugün" sekmesinde aynı kendini işaretleme kartını görüyor; ikisi de aynı
-// mantığı kullanıyor, sadece farklı DOM id'lerine bağlanıyor (aynı sayfada aynı id iki kez olamaz).
-// Günün saatine ve o günkü işaretleme durumuna göre "Bugün" başlığı için sıcak ama abartısız
-// bir karşılama cümlesi seçer. Hem admin (tab-today) hem üye (tab-msurvey) ekranı aynı fonksiyonu
-// paylaştığı için burada tek yerden yönetiliyor.
+/* "Did you read today?" card */
+// Members and admins see the same check-in card on their own Today screens; it is wired
+// to different element ids because both screens exist in the page at the same time.
+//
+// Greeting for the card heading, based on the time of day and today's check-in status.
 function dailyGreetingText(status){
   const h = new Date().getHours();
   const part = h<6 ? 'gece' : h<11 ? 'sabah' : h<17 ? 'oglen' : h<21 ? 'aksam' : 'gece';
@@ -337,7 +339,8 @@ export function wireSelfMarkCard(ids){
     const uid=currentUid,day=todayStr(),prevStatus=todayAnswers[uid];
     let optimistic=false;
     try{
-      // Hedefler ve bugünkü durum zaten canlı dinleyicilerle elimizde; sunucuya gidip beklemiyoruz.
+      // Goals and today's status are already kept up to date by live listeners, so the click
+      // doesn't wait for the server.
       const goals=personalGoals((usersCache[uid]||myProfile)?.readingGoals);
       const daily=dailyGoalAt(goals,day),wasRead=prevStatus==='read';
       let previousPages=0;
@@ -364,7 +367,7 @@ export function wireSelfMarkCard(ids){
       render();
       if(created){
         notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', uid);
-        // Kayıt zaten başarılı; seri okunamazsa işaretlemeyi geri alma, rozet kontrolü sonra yapılır.
+        // The check-in is already saved; if the streak can't be read, badges are checked later.
         try{const streak=await computeStreak(uid);await checkAndAwardBadges(uid,streak);}catch(_){}
       }
     }catch(err){
@@ -394,7 +397,7 @@ export function playMarkFx(btn, type){
   ghost.style.zIndex = '500';
   ghost.style.pointerEvents = 'none';
   document.body.appendChild(ghost);
-  void ghost.offsetWidth; // reflow — animasyonu tetiklemek için
+  void ghost.offsetWidth; // force a reflow so the animation restarts
   ghost.classList.add(cls);
   setTimeout(()=> ghost.remove(), 700);
 }
