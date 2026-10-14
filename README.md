@@ -80,7 +80,7 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 │   ├── today.js             "Today" screen: the "Did you read today?" card and its instant "Read" button, page counts, personal goals, reading totals
 │   ├── reactions.js         Emoji reactions on posts, comments and recommendations (drawer, reaction bar, who reacted)
 │   ├── admin.js             Admin screens: today's check-ins, edit past days, weekly report, draws and "Why?", manual draw, members
-│   ├── goodreads.js         Admin tool: import a member's Goodreads CSV export into their library
+│   ├── library-import.js    Admin tool: import a member's reading-list CSV export into their library
 │   └── catalog.js           Curated Discover book catalog (data only)
 ├── css/
 │   └── style.css            Application styles (design tokens, components, layout)

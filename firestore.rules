@@ -25,7 +25,7 @@ service cloud.firestore {
       );
       allow delete: if isAdmin() && !isOwnerUid(uid);
 
-      // Admins can write to another member’s reading lists when importing a Goodreads library.
+      // Admins can write to another member’s reading lists when importing a library from a CSV file.
       match /bookHistory/{itemId} {
         allow read: if isSignedIn();
         allow create, update, delete: if isSignedIn() && (request.auth.uid == uid || (isAdmin() && !isOwnerUid(uid)));

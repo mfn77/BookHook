@@ -58,7 +58,7 @@ import {
 import { renderGiftsTab, renderGiftBooksGrid } from "./gifts.js";
 import { initRecs, renderRecsTab, renderAiRecCard } from "./recs.js";
 import { initWorms, renderAdminWorms, renderMemberWorms } from "./worms.js";
-import { renderGoodreadsImportTab } from "./goodreads.js";
+import { renderLibraryImportTab } from "./library-import.js";
 import {
   initAdmin, renderAdminToday, renderAdminOwnWeek, renderEditPastTab, renderWeekReportTable, renderAdminWeek,
   renderEditPastWeekReport, renderAdminDraws, renderManualTab, renderAdminMembers, setAdminWeekOffset, setEditPastWeekOffset
@@ -691,7 +691,7 @@ const HAMBURGER_ADMIN_EXTRA = [
   {id:'editpast', label:window.BH_I18N.pick("Geçmiş Düzenle","Edit history"), icon:'✎'},
   {id:'manual', label:window.BH_I18N.pick("Manuel Kura","Manual draw"), icon:'⚙'},
   {id:'qptest', label:window.BH_I18N.pick("Deneme: Ortak Kitap Seçimi","Test: Shared book selection"), icon:'🧪'},
-  {id:'goodreadsimport', label:window.BH_I18N.pick("Kütüphaneyi İçe Aktar","Import library"), icon:'📥'},
+  {id:'libraryimport', label:window.BH_I18N.pick("Kütüphaneyi İçe Aktar","Import library"), icon:'📥'},
   {id:'members', label:window.BH_I18N.pick("Üyeler","Members"), icon:'⚈'},
   {id:'rules', label:window.BH_I18N.pick("Grup Kuralları","Club rules"), icon:'§'},
   {id:'settings', label:window.BH_I18N.pick("Ayarlar","Settings"), icon:'⚒'},
@@ -1179,7 +1179,7 @@ export function renderTab(id){
   }
   else if(id==='manual') renderManualTab();
   else if(id==='qptest') renderQpTestTab();
-  else if(id==='goodreadsimport') renderGoodreadsImportTab();
+  else if(id==='libraryimport') renderLibraryImportTab();
   else if(id==='members') renderAdminMembers();
   else if(id==='worms') renderAdminWorms();
   else if(id==='msurvey') renderMemberSurvey();
@@ -2558,7 +2558,7 @@ function materialThemeSync(){
  const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=getComputedStyle(document.documentElement).getPropertyValue('--paper').trim();
 }
 // Find the primary navigation tab for a screen, including nested admin screens.
-const ADMIN_SUB_SCREENS = ['members','manual','qptest','editpast','whoreadtoday','goodreadsimport'];
+const ADMIN_SUB_SCREENS = ['members','manual','qptest','editpast','whoreadtoday','libraryimport'];
 function materialHubRoot(id){
  if(ADMIN_SUB_SCREENS.includes(id)) id = 'admin';
  if(['club','library','appsettings'].includes(id)) return id;
@@ -2618,7 +2618,7 @@ export function materialRenderPhase(qp){
 document.body.addEventListener('click',e=>{
  const route=e.target.closest('[data-material-route]');if(!route||!myProfile)return;
  const id=materialRoute(route.dataset.materialRoute);
- if(['admin','members','manual','qptest','editpast','whoreadtoday','goodreadsimport'].includes(id)&&myProfile.role!=='admin')return;
+ if(['admin','members','manual','qptest','editpast','whoreadtoday','libraryimport'].includes(id)&&myProfile.role!=='admin')return;
  switchTab(id);
 });
 // Keyboard support for dynamically rendered interactive cards without changing their actions.

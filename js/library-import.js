@@ -1,6 +1,8 @@
 /*
- * Imports a Goodreads CSV into a member’s reading lists. Titles and authors are preserved; book APIs
- * are used only to find covers. Cover requests are spaced out to respect service limits.
+ * Imports a reading-list CSV export into a member’s reading lists. The file needs the columns Title,
+ * Author, Exclusive Shelf, Date Read and Date Added, the format used by common book-tracking sites.
+ * Titles and authors are preserved; book APIs are used only to find covers. Cover requests are spaced
+ * out to respect service limits.
  */
 
 import { addDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -13,7 +15,7 @@ import {
   db, escapeHtml, showToast, sleep, usersCache
 } from "./app.js";
 
-function parseGoodreadsCSV(text){
+function parseLibraryCSV(text){
   const rows = [];
   let row = [], field = '', inQuotes = false;
   for(let i=0;i<text.length;i++){
@@ -44,19 +46,19 @@ function parseGoodreadsCSV(text){
  * "read" -> finished books, "currently-reading" -> reading now. Everything else (to-read,
  * did-not-finish, custom shelves) becomes "want to read"; rows with no shelf are skipped.
  */
-function goodreadsShelfToCollection(shelf){
+function shelfToCollection(shelf){
   if(shelf==='read') return 'bookHistory';
   if(shelf==='currently-reading') return 'readBooks';
   if(!shelf) return null;
   return 'wantToRead';
 }
-function goodreadsDateToIso(dateStr){
+function csvDateToIso(dateStr){
   if(!dateStr) return new Date().toISOString();
   const d = new Date(dateStr.replace(/\//g,'-'));
   return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
 }
 function bookDedupeKey(title, author){ return (title||'').trim().toLowerCase()+'|'+(author||'').trim().toLowerCase(); }
-async function findGoodreadsBookCover(title, author){
+async function findImportBookCover(title, author){
   try{
     const settled = await Promise.allSettled([
       searchGoogleBooks(`${title} ${author}`),
@@ -68,7 +70,7 @@ async function findGoodreadsBookCover(title, author){
     return withCover ? withCover.cover : '';
   }catch(e){ return ''; }
 }
-export function renderGoodreadsImportTab(){
+export function renderLibraryImportTab(){
   const select = document.getElementById('griUserSelect');
   const fileInput = document.getElementById('griFileInput');
   const startBtn = document.getElementById('griStartBtn');
@@ -100,19 +102,19 @@ export function renderGoodreadsImportTab(){
     const print = (s)=>{ lines.push(s); log.textContent = lines.join('\n'); log.scrollTop = log.scrollHeight; };
     try{
       const text = await file.text();
-      const rows = parseGoodreadsCSV(text);
+      const rows = parseLibraryCSV(text);
       print(`${rows.length} satır okundu.`);
       const grouped = { bookHistory:[], readBooks:[], wantToRead:[] };
       let skippedShelf = 0;
       rows.forEach(r=>{
         const shelf = (r['Exclusive Shelf']||'').trim();
-        const collectionName = goodreadsShelfToCollection(shelf);
+        const collectionName = shelfToCollection(shelf);
         const title = (r['Title']||'').trim();
         if(!collectionName || !title){ skippedShelf++; return; }
         grouped[collectionName].push({
           title,
           author: (r['Author']||'').trim() || 'Bilinmeyen Yazar',
-          addedAt: goodreadsDateToIso(shelf==='read' ? (r['Date Read']||r['Date Added']) : r['Date Added'])
+          addedAt: csvDateToIso(shelf==='read' ? (r['Date Read']||r['Date Added']) : r['Date Added'])
         });
       });
       print(`Atlanan (boş raf): ${skippedShelf}`);
@@ -131,7 +133,7 @@ export function renderGoodreadsImportTab(){
           const key = bookDedupeKey(item.title, item.author);
           if(existingKeys.has(key)){ dup++; continue; }
           existingKeys.add(key);
-          const cover = await findGoodreadsBookCover(item.title, item.author);
+          const cover = await findImportBookCover(item.title, item.author);
           if(cover) coverFound++; else failStreak++;
           await addDoc(collection(db,'users',targetUid,collectionName), {
             author: item.author, title: item.title, cover, addedAt: item.addedAt
