@@ -7,13 +7,14 @@ import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { createPost } from "./feed.js";
 import { renderQuarterlyPickCard } from "./quarterly.js";
 import { searchGoogleBooks } from "./books.js";
+import { renderMyBooksTab } from "./library.js";
 // app.js ile karşılıklı import: buradaki kod bu adları sadece fonksiyonların içinde (uygulama
 // açıldıktan sonra) kullanıyor, dosya yüklenirken değil; bu yüzden güvenli.
 import {
   activeUids, closeAddForm, closeModal, cloudFunctions, currentUid, db, escapeHtml,
   hubLayoutEnabled, hubPreviews, keepOrLoading, markLoaded, materialBookCover, myProfile,
-  notifyUser, pad, renderMyBooksTab, renderReactionBar, setPendingReactionRefresh, setupAddToggle,
-  showReactorsModal, showToast, syncAiHubLayout, toggleReactionDrawer, userChipHtml, usersCache
+  notifyUser, pad, renderReactionBar, setPendingReactionRefresh, setupAddToggle, showReactorsModal,
+  showToast, syncAiHubLayout, toggleReactionDrawer, userChipHtml, usersCache
 } from "./app.js";
 
 export async function renderRecsTab(){
