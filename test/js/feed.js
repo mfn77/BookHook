@@ -112,7 +112,7 @@ async function postParticipants(postId, commenters){
   const post = await getDoc(doc(db,'posts',postId)).catch(()=>null);
   const data = post && post.exists() ? post.data() : {};
   const reactors = Object.values(data.reactions||{}).flat();
-  const likers = (data.votes && data.votes.up) || [];
+  const likers = effectiveVotes(data).up;
   return [uids, reactors, likers];
 }
 
@@ -547,10 +547,20 @@ export function burstMyReactionBadge(target){
   const badge = document.querySelector(`[data-target="${target}"].reaction-add-btn`) || document.querySelector(`.my-reaction-badge[data-target="${target}"]`);
   if(badge){ badge.classList.add('reaction-burst'); setTimeout(()=>badge.classList.remove('reaction-burst'), 300); }
 }
+/*
+ * Up and down votes of a post. The author of a member post counts as having up-voted it from the start,
+ * so a new post shows 1. The first vote on the post stores that implicit vote (votesSeeded), after which
+ * the author can take it back like any other vote.
+ */
+function effectiveVotes(p){
+  const up = [...((p.votes && p.votes.up) || [])];
+  const down = [...((p.votes && p.votes.down) || [])];
+  if(MEMBER_POST_TYPES.includes(p.type) && !p.votesSeeded && p.uid && !up.includes(p.uid) && !down.includes(p.uid)) up.push(p.uid);
+  return { up, down };
+}
 // Up/down vote pill for posts (comments and recommendations use emoji reactions only).
 function postVoteRowHtml(p){
-  const up = (p.votes && p.votes.up) || [];
-  const down = (p.votes && p.votes.down) || [];
+  const { up, down } = effectiveVotes(p);
   const score = up.length - down.length;
   const myUp = up.includes(currentUid), myDown = down.includes(currentUid);
   return window.BH_I18N.template`<div class="post-vote-row" data-vote-rail="${p.id}">
@@ -609,14 +619,16 @@ async function setPostVote(postId, dir){
       const snap = await tx.get(ref);
       if(!snap.exists()) return;
       const data = snap.data();
-      const up = ((data.votes&&data.votes.up)||[]).filter(u=>u!==currentUid);
-      const down = ((data.votes&&data.votes.down)||[]).filter(u=>u!==currentUid);
-      const wasUp = ((data.votes&&data.votes.up)||[]).includes(currentUid);
-      const wasDown = ((data.votes&&data.votes.down)||[]).includes(currentUid);
+      const votes = effectiveVotes(data);
+      const up = votes.up.filter(u=>u!==currentUid);
+      const down = votes.down.filter(u=>u!==currentUid);
+      const wasUp = votes.up.includes(currentUid);
+      const wasDown = votes.down.includes(currentUid);
       if(dir==='up' && !wasUp) up.push(currentUid);
       if(dir==='down' && !wasDown) down.push(currentUid);
-      tx.update(ref, {'votes.up':up, 'votes.down':down});
-      if(dir==='up' && !wasUp) notifyUid = data.uid || '';
+      tx.update(ref, {'votes.up':up, 'votes.down':down, votesSeeded:true});
+      // The author re-adding their own vote is not news for anyone.
+      if(dir==='up' && !wasUp && data.uid!==currentUid) notifyUid = data.uid || '';
     });
     if(notifyUid!==null) notifyFeedActivity({ kind:'vote', postId, postUid: notifyUid });
   }catch(err){ alert('Oy verilemedi: '+(err.message||err)); }
