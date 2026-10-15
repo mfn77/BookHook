@@ -32,6 +32,7 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 ### Social (Feed and Discover)
 
 - A shared feed automatically posts reading check-ins, badges earned or lost, gift books won or received, new member sign-ups, book ratings/reviews, and library additions.
+- The feed has two views: "Kulüp" (what members wrote themselves: posts, polls and reading notes), which the feed always opens on, and "Etkinlikler" (the automatic posts listed above).
 - Members can also compose their own text or image posts.
 - Posts and comments support emoji reactions, including a custom emoji picker.
 - The feed loads the most recent posts first, with a "load older posts" control (up to five older batches) that switches to a date-jump picker for anything further back.
@@ -99,6 +100,7 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 ├── test/                    Test copy of the app (same layout; shares icons/ and functions/shared/ with the main app;
 │                            its own manifest.json installs it separately as "BookHook Test")
 ├── firestore.rules          Firestore security rules
+├── firestore.indexes.json   Firestore composite indexes
 ├── firebase.json            Firebase CLI config (points to the functions/ source folder)
 ├── .firebaserc              Firebase CLI project alias
 └── functions/
@@ -121,6 +123,7 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 1. Create a new Firebase project.
 2. Under **Authentication**, enable the Email/Password provider (and Google, if desired).
 3. Under **Firestore Database**, create a database, then paste the contents of `firestore.rules` into the Rules tab and publish.
+   Then create the composite indexes from `firestore.indexes.json` with `firebase deploy --only firestore:indexes` (the feed's "Kulüp" view needs the `posts` index).
 4. Under **Cloud Messaging**, generate a Web Push certificate (VAPID key).
 5. In `js/app.js`, replace the Firebase configuration object (`apiKey`, `authDomain`, `projectId`, etc.) and the VAPID key with the values from your own project.
 

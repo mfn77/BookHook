@@ -99,6 +99,10 @@ try {
     <section class="tab" id="tab-social" style="padding-bottom:0;">
       <div id="pinnedPostBar" style="display:none;"></div>
       <div id="socialFeedView">
+        <div class="segmented feed-view-switch" id="feedViewSwitch" role="tablist" aria-label="Akış bölümleri">
+          <button type="button" role="tab" data-feed-view="members" class="active" aria-selected="true">Kulüp</button>
+          <button type="button" role="tab" data-feed-view="club" aria-selected="false">Etkinlikler</button>
+        </div>
         <button type="button" id="joinConversationTrigger" class="join-conversation-bar">
           <span class="join-conversation-plus">+</span>
           <span>Konuşmaya Katıl</span>

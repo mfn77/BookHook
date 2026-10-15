@@ -623,3 +623,7 @@ html[lang="en"] .hub-layout-segmented button{font-size:11px}
 .mention-option{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;min-height:0;padding:8px 10px;border:0;border-radius:10px;background:none;color:var(--ink);text-align:left;font-size:14px;box-shadow:none}
 .mention-option span{font-size:12px;color:var(--ink-70)}
 .mention-option.active,.mention-option:hover{background:var(--primary-container)}
+
+/* Feed views: "Kulüp" (member posts) and "Etkinlikler" (automatic club posts). */
+.feed-view-switch{margin:0 0 14px}
+#socialFeedView.club-view .join-conversation-bar,#socialFeedView.club-view .join-conversation-form{display:none!important}

@@ -663,23 +663,84 @@ let timelinePostDocs = [];
 let timelineAllPosts = [];
 let timelineOlderClicks = 0;
 const TIMELINE_PAGE_SIZE = 50;
+
+/*
+ * The feed has two views: "members" (shown as "Kulüp") lists what members wrote themselves (posts, polls
+ * and reading notes), "club" (shown as "Etkinlikler") lists the automatic posts (badges, streak records,
+ * gifts, book ratings, shared-book news and so on). Opening the feed tab always starts on "members".
+ */
+const MEMBER_POST_TYPES = ['user_post','poll'];
+let timelineView = 'members';
+let timelineLoadToken = 0;
+const inTimelineView = (p)=> MEMBER_POST_TYPES.includes(p.type) === (timelineView==='members');
+
+export function resetTimelineView(){ setTimelineView('members'); }
+
+function setTimelineView(view){
+  timelineView = view;
+  document.querySelectorAll('#feedViewSwitch [data-feed-view]').forEach(b=>{
+    const on = b.dataset.feedView===view;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  const feedView = document.getElementById('socialFeedView');
+  if(feedView) feedView.classList.toggle('club-view', view==='club');
+}
+
+/*
+ * Reads one page of posts for the current view, newest first. The "members" view asks Firestore for the
+ * member post types only; that query needs the (type, createdAt) index from firestore.indexes.json, and
+ * until the index exists it falls back to reading all posts and filtering them here.
+ */
+async function fetchTimelinePage(...constraints){
+  const posts = collection(db,'posts');
+  if(timelineView==='members'){
+    try{
+      return (await getDocs(query(posts, where('type','in',MEMBER_POST_TYPES), orderBy('createdAt','desc'), ...constraints))).docs;
+    }catch(e){
+      if(e.code!=='failed-precondition') throw e;
+      console.warn('Akış dizini henüz yok, gönderiler tarayıcıda süzülüyor.');
+    }
+  }
+  return (await getDocs(query(posts, orderBy('createdAt','desc'), ...constraints))).docs;
+}
+function addTimelineDocs(docs){
+  docs.forEach(d=>{ timelinePostDocs.push(d); const p = {id:d.id, ...d.data()}; if(inTimelineView(p)) timelineAllPosts.push(p); });
+}
+
 export async function renderTimelineTab(){
   renderPinnedPostBar();
-  const feed = keepOrLoading('timelineFeed');
+  const feed = document.getElementById('timelineFeed');
+  const token = ++timelineLoadToken;
+  const loading = `<div class="empty-state">${window.BH_I18N.pick("Yükleniyor…","Loading…")}</div>`;
+  if(feed.dataset.view !== timelineView){
+    feed.dataset.view = timelineView;
+    delete feed.dataset.loaded;
+    // Only the default "members" view keeps a saved copy for instant display on the next app start.
+    if(timelineView!=='members'){ feed.innerHTML = loading; feed.dataset.loaded = '1'; }
+  }
+  keepOrLoading('timelineFeed');
+  let docs;
+  try{ docs = await fetchTimelinePage(limit(60)); }catch(e){ return; }
+  if(token!==timelineLoadToken) return;
   timelinePostDocs = [];
   timelineAllPosts = [];
   timelineOlderClicks = 0;
-  try{
-    const snap = await getDocs(query(collection(db,'posts'), orderBy('createdAt','desc'), limit(60)));
-    snap.forEach(d=>{ timelinePostDocs.push(d); timelineAllPosts.push({id:d.id, ...d.data()}); });
-  }catch(e){ return; }
-  if(!timelineAllPosts.length){ feed.innerHTML = window.BH_I18N.template`<div class="empty-state"><span class="big">📰</span>Henüz gönderi yok. Okuma işaretlemeleri, rozetler ve hediyeler burada görünecek.</div>`; markLoaded(feed); return; }
-  renderTimelineFeedHtml(feed);
-  markLoaded(feed);
+  addTimelineDocs(docs);
+  if(!timelineAllPosts.length && docs.length<60){
+    feed.innerHTML = timelineEmptyHtml();
+  } else {
+    renderTimelineFeedHtml(feed);
+  }
+  if(timelineView==='members') markLoaded(feed); else feed.dataset.loaded = '1';
+}
+function timelineEmptyHtml(){
+  return timelineView==='members'
+    ? `<div class="empty-state">${window.BH_I18N.pick("Henüz paylaşım yok. İlk paylaşımı sen yapabilirsin.","Nothing shared yet. You can be the first to post.")}</div>`
+    : window.BH_I18N.template`<div class="empty-state"><span class="big">📰</span>Henüz gönderi yok. Okuma işaretlemeleri, rozetler ve hediyeler burada görünecek.</div>`;
 }
 function renderTimelineFeedHtml(feed){
-  let html = timelineAllPosts.map(p=> renderPostCard(p)).join('');
-  const hasMore = timelinePostDocs.length>0 && timelinePostDocs[timelinePostDocs.length-1];
+  let html = timelineAllPosts.length ? timelineAllPosts.map(p=> renderPostCard(p)).join('') : timelineEmptyHtml();
   if(timelineOlderClicks < 5){
     html += window.BH_I18N.template`<div style="text-align:center; padding:16px 0;"><button type="button" class="secondary" id="timelineLoadOlderBtn">⬇️ Daha Eski Gönderileri Gör</button></div>`;
   } else {
@@ -696,12 +757,13 @@ function renderTimelineFeedHtml(feed){
     olderBtn.disabled = true;
     olderBtn.textContent = window.BH_I18N.pick("Yükleniyor…","Loading…");
     const lastDoc = timelinePostDocs[timelinePostDocs.length-1];
+    const token = timelineLoadToken;
     try{
-      const snap = await getDocs(query(collection(db,'posts'), orderBy('createdAt','desc'), startAfter(lastDoc), limit(TIMELINE_PAGE_SIZE)));
-      let gotAny = false;
-      snap.forEach(d=>{ gotAny = true; timelinePostDocs.push(d); timelineAllPosts.push({id:d.id, ...d.data()}); });
+      const docs = lastDoc ? await fetchTimelinePage(startAfter(lastDoc), limit(TIMELINE_PAGE_SIZE)) : [];
+      if(token!==timelineLoadToken) return;
+      addTimelineDocs(docs);
       timelineOlderClicks++;
-      if(!gotAny) showToast(window.BH_I18N.pick("Gösterilecek daha eski gönderi kalmadı.","No older posts to show."));
+      if(!docs.length) showToast(window.BH_I18N.pick("Gösterilecek daha eski gönderi kalmadı.","No older posts to show."));
       renderTimelineFeedHtml(feed);
     }catch(e){ alert(window.BH_I18N.pick("Yüklenemedi: ","Could not load: ")+(e.message||e)); olderBtn.disabled=false; olderBtn.textContent=window.BH_I18N.pick("⬇️ Daha Eski Gönderileri Gör","⬇️ View older posts"); }
   });
@@ -710,13 +772,15 @@ function renderTimelineFeedHtml(feed){
     const dateVal = document.getElementById('timelineJumpDateInput').value;
     if(!dateVal){ alert(window.BH_I18N.pick("Önce bir tarih seç.","Select a date first.")); return; }
     jumpBtn.disabled = true;
+    const token = timelineLoadToken;
     try{
       const cutoff = dateVal + 'T23:59:59.999Z';
-      const snap = await getDocs(query(collection(db,'posts'), orderBy('createdAt','desc'), where('createdAt','<=',cutoff), limit(60)));
+      const docs = await fetchTimelinePage(where('createdAt','<=',cutoff), limit(60));
+      if(token!==timelineLoadToken) return;
       timelinePostDocs = [];
       timelineAllPosts = [];
       timelineOlderClicks = 0;
-      snap.forEach(d=>{ timelinePostDocs.push(d); timelineAllPosts.push({id:d.id, ...d.data()}); });
+      addTimelineDocs(docs);
       if(!timelineAllPosts.length){ showToast(window.BH_I18N.pick("Bu tarihten önce gönderi bulunamadı.","No posts found before this date.")); jumpBtn.disabled=false; return; }
       renderTimelineFeedHtml(feed);
       showToast(`${dateVal} tarihine gidildi.`);
@@ -1151,6 +1215,12 @@ export async function shareReadingNote(text){
 }
 
 export function initFeed(){
+  document.getElementById('feedViewSwitch').addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-feed-view]');
+    if(!btn || btn.dataset.feedView===timelineView) return;
+    setTimelineView(btn.dataset.feedView);
+    renderTimelineTab();
+  });
   window.addEventListener('resize', positionPinnedPostBar);
   document.getElementById('joinConversationTrigger').addEventListener('click', jcExpand);
   document.getElementById('jcCancelBtn').addEventListener('click', jcCollapse);

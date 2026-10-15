@@ -50,7 +50,7 @@ import {
 import {
   initFeed, createPost, createOrBatchPost, pickVariantMessage, renderTimelineTab, renderPostCard,
   wirePostCards, openPostModal, positionPinnedPostBar, burstMyReactionBadge,
-  deleteReadPostsRetroactively, migrateBatchPostsRetroactively
+  deleteReadPostsRetroactively, migrateBatchPostsRetroactively, resetTimelineView
 } from "./feed.js";
 import {
   renderQuarterlyPickCard, renderQpBookInBugun, renderQpTestTab, qpDocRef
@@ -820,6 +820,8 @@ export function switchTab(id, { animate = true } = {}){
   if(oldIdx!==-1 && newIdx!==-1 && oldIdx!==newIdx){
     direction = newIdx > oldIdx ? 'right' : 'left';
   }
+  // The feed always opens on its "Kulüp" view (member posts).
+  if(id==='social' && activeTab!=='social') resetTimelineView();
   activeTab = id;
   document.querySelectorAll('nav.tabs button').forEach(b=> b.classList.toggle('active', b.dataset.tab===id));
   document.querySelectorAll('section.tab').forEach(s=> s.classList.remove('active','anim-from-right','anim-from-left','anim-fade'));
