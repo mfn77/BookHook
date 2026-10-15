@@ -91,8 +91,10 @@ export async function pickVariantMessage(type){
  * Feed notifications. Every member gets exactly one notification per event, picked in this order:
  * 1. members mentioned with @ (and everyone, when an admin writes @herkes),
  * 2. the author of the post or comment that received the comment, reaction or like,
- * 3. members who have commented on the post,
+ * 3. members who have commented on, reacted to or liked the post,
  * 4. everyone else, but only until FEED_BOOST_UNTIL: a launch period meant to get the feed going.
+ *    New posts reach their phones too; comments, reactions and likes only appear in the app's
+ *    notification list, so the launch period doesn't turn into a stream of phone notifications.
  * Members who turned off feed notifications in their settings get none (see notifyUser).
  */
 export const FEED_BOOST_UNTIL = Date.parse('2026-10-29T06:00:00+03:00');
@@ -100,11 +102,25 @@ export function feedBoostActive(){ return Date.now() < FEED_BOOST_UNTIL; }
 
 const snippet = (t)=>{ const s = String(t||'').replace(/\s+/g,' ').trim(); return s.length>70 ? s.slice(0,70)+'...' : s; };
 
+// Members who took part in a post: [commenters, reactors, likers], each without duplicates of earlier lists.
+async function postParticipants(postId, commenters){
+  let uids = commenters;
+  if(!uids){
+    const snap = await getDocs(collection(db,'posts',postId,'comments')).catch(()=>null);
+    uids = snap ? snap.docs.map(d=>d.data().uid) : [];
+  }
+  const post = await getDoc(doc(db,'posts',postId)).catch(()=>null);
+  const data = post && post.exists() ? post.data() : {};
+  const reactors = Object.values(data.reactions||{}).flat();
+  const likers = (data.votes && data.votes.up) || [];
+  return [uids, reactors, likers];
+}
+
 /*
  * kind: 'post' | 'comment' | 'reaction' | 'vote' | 'mentions' (only notify the mentions, e.g. after an edit).
  * postId and the post's author (postUid) identify the post; commentUid is set for a reaction on a comment.
- * text, mentions and mentionAll describe what was written; everyoneMessage is used for new posts.
- * commenters can be passed when already known; otherwise they are read when needed.
+ * text, mentions and mentionAll describe what was written; everyoneMessage replaces the default text for
+ * new posts. commenters can be passed when already known; otherwise they are read when needed.
  */
 export async function notifyFeedActivity({ kind, postId, postUid, commentUid, text, mentions, mentionAll, everyoneMessage, commenters }){
   try{
@@ -113,11 +129,11 @@ export async function notifyFeedActivity({ kind, postId, postUid, commentUid, te
     const quoted = snip ? `: "${snip}"` : '';
     const where = kind==='post' || kind==='mentions' ? 'bir gönderide' : 'bir yorumda';
     const recipients = new Map();
-    const add = (uid, message)=>{
+    const add = (uid, message, push = true)=>{
       if(!uid || uid===currentUid || recipients.has(uid)) return;
       const u = usersCache[uid];
       if(!u || u.banned || u.deleted) return;
-      recipients.set(uid, message);
+      recipients.set(uid, { message, push });
     };
     const members = Object.keys(usersCache);
 
@@ -130,26 +146,22 @@ export async function notifyFeedActivity({ kind, postId, postUid, commentUid, te
         : kind==='vote' ? `${actor} gönderini beğendi.`
         : commentUid ? `${actor} gönderindeki bir yoruma tepki verdi.` : `${actor} gönderine tepki verdi.`;
       add(postUid, ownerMessage);
-      if(!feedBoostActive() || commenters){
-        let uids = commenters;
-        if(!uids){
-          const snap = await getDocs(collection(db,'posts',postId,'comments')).catch(()=>null);
-          uids = snap ? snap.docs.map(d=>d.data().uid) : [];
-        }
-        const message = kind==='comment' ? `${actor} yorum yaptığın bir gönderiye yorum yaptı${quoted}`
-          : kind==='vote' ? `${actor} yorum yaptığın bir gönderiyi beğendi.` : `${actor} yorum yaptığın bir gönderiye tepki verdi.`;
-        uids.forEach(uid=> add(uid, message));
-      }
+      const action = kind==='comment' ? `yorum yaptı${quoted}` : kind==='vote' ? 'beğendi.' : 'tepki verdi.';
+      const [commented, reacted, liked] = await postParticipants(postId, commenters);
+      const object = kind==='vote' ? 'gönderiyi' : 'gönderiye';
+      commented.forEach(uid=> add(uid, `${actor} yorum yaptığın bir ${object} ${action}`));
+      reacted.forEach(uid=> add(uid, `${actor} tepki verdiğin bir ${object} ${action}`));
+      liked.forEach(uid=> add(uid, `${actor} beğendiğin bir ${object} ${action}`));
     }
 
     if(feedBoostActive() && kind!=='mentions'){
       const message = kind==='post' ? (everyoneMessage || `${actor} yeni bir gönderi paylaştı${quoted}`)
         : kind==='comment' ? `${actor} bir gönderiye yorum yaptı${quoted}`
         : kind==='vote' ? `${actor} bir gönderiyi beğendi.` : `${actor} bir gönderiye tepki verdi.`;
-      members.forEach(uid=> add(uid, message));
+      members.forEach(uid=> add(uid, message, kind==='post'));
     }
 
-    await Promise.all([...recipients].map(([uid, message])=> notifyUser(uid, message, 'social', postId)));
+    await Promise.all([...recipients].map(([uid, { message, push }])=> notifyUser(uid, message, 'social', postId, { push })));
   }catch(e){ console.error('Akış bildirimi gönderilemedi:', e); }
 }
 
@@ -1125,42 +1137,17 @@ export async function openPostModal(postId){
 }
 
 /*
- * Optional reading note, offered right after the first "Read" check-in of the day: a sentence the member
- * remembers or anything else they want to share. Sending it shares a post in the feed; closing the box
- * changes nothing about the check-in. The box is offered once per day.
+ * Shares the optional reading note written on the Today card after a check-in. It becomes an ordinary
+ * member post and is announced like one. Returns whether the post was created.
  */
-export function promptReadingNote(day){
-  const uid = currentUid;
-  const key = 'bh_reading_note_prompt_' + uid;
-  try{ if(localStorage.getItem(key)===day) return; localStorage.setItem(key, day); }catch(e){}
-  const T = window.BH_I18N;
-  const dialog = document.createElement('dialog');
-  dialog.className = 'reading-pages-dialog reading-note-dialog';
-  dialog.innerHTML = `<form novalidate>
-    <button type="button" class="icon-button reading-note-close" data-cancel aria-label="${T.pick('Kapat','Close')}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    <h2>${T.pick('Bugün okuduklarından aklında kalan bir cümle ya da paylaşmak istediğin bir şey','A sentence that stayed with you from today’s reading, or anything you’d like to share')}</h2>
-    <textarea name="note" maxlength="280" rows="4" data-mentions aria-label="${T.pick('Notun','Your note')}"></textarea>
-    <div class="row"><button type="submit" class="primary">${T.pick('Paylaş','Share')}</button></div>
-  </form>`;
-  const close = ()=>{ dialog.close(); dialog.remove(); };
-  dialog.querySelector('[data-cancel]').onclick = close;
-  dialog.oncancel = (e)=>{ e.preventDefault(); close(); };
-  dialog.querySelector('form').onsubmit = async (e)=>{
-    e.preventDefault();
-    const text = e.target.elements.note.value.trim();
-    if(!text){ close(); return; }
-    dialog.querySelector('button[type=submit]').disabled = true;
-    const tagged = extractMentions(text);
-    // Stored in Turkish: posts are shown to every member whatever their language.
-    const postId = await createPost('user_post', { title: 'Bugünkü okumamdan', text, image:'', readingNote:true, ...tagged });
-    close();
-    if(!postId){ showToast(T.pick('Not paylaşılamadı.','Could not share the note.')); return; }
-    notifyFeedActivity({ kind:'post', postId, text, ...tagged, everyoneMessage: `${myProfile.name} bugünkü okumasından bir not paylaştı: "${snippet(text)}"` });
-    if(activeTab==='social') renderTimelineTab();
-  };
-  document.body.appendChild(dialog);
-  dialog.showModal();
-  dialog.querySelector('textarea').focus();
+export async function shareReadingNote(text){
+  const tagged = extractMentions(text);
+  // Stored in Turkish: posts are shown to every member whatever their language.
+  const postId = await createPost('user_post', { title: 'Bugünkü okumamdan', text, image:'', readingNote:true, ...tagged });
+  if(!postId) return false;
+  notifyFeedActivity({ kind:'post', postId, text, ...tagged });
+  if(activeTab==='social') renderTimelineTab();
+  return true;
 }
 
 export function initFeed(){

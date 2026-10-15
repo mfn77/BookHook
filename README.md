@@ -36,9 +36,9 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 - Posts and comments support emoji reactions, including a custom emoji picker.
 - The feed loads the most recent posts first, with a "load older posts" control (up to five older batches) that switches to a date-jump picker for anything further back.
 - Commenting on a post notifies not just its owner but everyone else already in that comment thread; comments show a relative timestamp that steps from minutes to hours to days, falling back to a full date after 9 days.
-- After the first "Read" check-in of the day, members are offered an optional box to share a sentence or a feeling from that day's reading; a filled-in note is posted to the feed as a quote card.
+- After the first "Read" check-in of the day, the button on the Today card turns into an optional box for a sentence or anything else from that day's reading; a filled-in note is posted to the feed as a quote card. "Not now", switching tabs or leaving the app brings the button back.
 - Members can be tagged with `@Name` in posts and comments (with suggestions while typing); a tagged member is always notified. Admins can write `@herkes` to notify the whole club.
-- Feed notifications: reactions, comments and likes notify the post owner and everyone who commented on the post. During a two-week launch period (until 29 October 2026) every member-made post, comment, like and reaction also notifies the whole club; automatic posts (badges, check-ins, etc.) are not part of this.
+- Feed notifications: reactions, comments and likes notify the post owner and everyone who commented on, reacted to or liked the post. During a two-week launch period (until 29 October 2026) every member-made post, comment, like and reaction also notifies the whole club: new posts on their phones, everything else only in the in-app notification list. Automatic posts (badges, check-ins, etc.) are not part of this.
 - A Discover tab surfaces popular books by genre (via Open Library, with an internal English/original-title lookup to improve match rates on Turkish-titled catalog entries), highlights books the group has rated, and lets members submit a 1-10 rating and review, which is also shared to the feed.
 - Admins can tap a Discover book's cover to rescan for a better match, search manually, or paste a direct image URL, correcting bad covers on the spot.
 - A "Add to My Library" button is available anywhere a book's cover can be tapped (Discover, gifted-books history, another member's reading history).
@@ -137,7 +137,7 @@ firebase deploy --only functions
 
 This provisions four functions:
 
-- `sendPushOnNotification` - sends a push notification whenever an in-app notification document is created.
+- `sendPushOnNotification` - sends a push notification whenever an in-app notification document is created, unless the document is marked `push: false` (in-app only).
 - `readingReminderNoon` / `readingReminderNight` - scheduled functions that run daily at 14:00 and 22:00 (Europe/Istanbul time) and notify members who have not yet checked in for the day.
 - `profileCompletionReminderMorning` / `profileCompletionReminderEvening` - scheduled functions that run daily at 10:00 and 20:00 (Europe/Istanbul time) and notify any member with an incomplete profile (missing surname, phone, or address) until they fill it in. This exists only for members who joined before profile completion became mandatory at sign-up.
 

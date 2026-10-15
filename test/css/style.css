@@ -602,11 +602,17 @@ html[lang="en"] .hub-layout-segmented button{font-size:11px}
 @media(max-width:360px){#materialThemeChoices button{font-size:11px;padding-inline:2px}}
 
 
-/* Reading note dialog shown after the daily check-in, and reading-note posts in the feed. */
-.reading-note-dialog{position:relative}
-.reading-note-dialog h2{font-size:19px!important;line-height:1.4;margin:0 36px 16px 0!important}
-.reading-note-close{position:absolute;top:14px;right:14px;color:var(--ink-70)}
-.reading-note-dialog textarea{display:block;box-sizing:border-box;min-height:110px;margin:0}
+/* Reading note box that replaces the "Read" button after the daily check-in, and reading-note posts. */
+.daily-illustration{transition:width .3s var(--ease),opacity .2s var(--ease)}
+.daily-checkin.note-open .daily-illustration{width:0;opacity:0}
+.daily-checkin.note-open .daily-checkin-row{gap:0}
+.reading-note-box{overflow:hidden;margin-bottom:12px;padding:14px;border-radius:20px;background:var(--paper)}
+.reading-note-prompt{margin:0 0 10px;font-size:14px;font-weight:600;line-height:1.45}
+.reading-note-box textarea{display:block;box-sizing:border-box;min-height:84px;margin:0;background:var(--card)!important}
+.reading-note-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.reading-note-actions button{min-height:42px;padding:10px 18px}
+.reading-note-later{border-radius:999px;font-weight:600;font-size:14px;color:var(--gold-dark)}
+.reading-note-later:hover{background:var(--primary-container)}
 .reading-note-book{font-size:12px;font-weight:600;color:var(--gold-dark);margin:2px 0 6px}
 .reading-note-text{margin:6px 0 4px;padding:10px 14px;border-left:3px solid var(--gold);background:var(--primary-container);border-radius:0 14px 14px 0;font-style:italic;line-height:1.6;overflow-wrap:anywhere}
 

@@ -17,7 +17,11 @@ import {
 } from "./app.js";
 
 const NOTIF_CATEGORY_BY_TAB = { gifts:'gifts', social:'social', recs:'social' };
-export async function notifyUser(uid, message, linkTab, postId){
+/*
+ * Creates an in-app notification; the server also sends it to the member's phone unless push is false
+ * (see sendPushOnNotification).
+ */
+export async function notifyUser(uid, message, linkTab, postId, { push = true } = {}){
   if(!uid) return;
   const category = NOTIF_CATEGORY_BY_TAB[linkTab];
   if(category){
@@ -35,7 +39,7 @@ export async function notifyUser(uid, message, linkTab, postId){
     for(let i=0;i<message.length;i++) hash = (hash*31 + message.charCodeAt(i)) & 0xffffffff;
     const bucket = Math.floor(Date.now()/10000);
     const docId = `${bucket}_${Math.abs(hash)}`;
-    await setDoc(doc(db,'notifications',uid,'items',docId), { message, linkTab: linkTab||null, postId: postId||null, read:false, createdAt:new Date().toISOString() });
+    await setDoc(doc(db,'notifications',uid,'items',docId), { message, linkTab: linkTab||null, postId: postId||null, read:false, createdAt:new Date().toISOString(), ...(push ? {} : { push:false }) });
   }catch(e){ console.error('Bildirim gönderilemedi (notifyUser):', uid, e); }
 }
 export async function notifyAdmins(message, linkTab){

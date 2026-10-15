@@ -28,6 +28,11 @@ exports.sendPushOnNotification = onDocumentCreated(
       console.log("[push] Belge verisi boş, çıkılıyor.");
       return;
     }
+    // Notifications marked push: false only appear in the app's notification list.
+    if (data.push === false) {
+      console.log("[push] Sadece uygulama içi bildirim, telefona gönderilmiyor.");
+      return;
+    }
 
     const userSnap = await db.collection("users").doc(uid).get();
     if (!userSnap.exists) {

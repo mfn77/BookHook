@@ -4,7 +4,7 @@ import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { notifyAllMembers } from "./notifications.js";
-import { promptReadingNote } from "./feed.js";
+import { shareReadingNote } from "./feed.js";
 import { renderQpBookInBugun } from "./quarterly.js";
 /*
  * This module and app.js import each other. Shared values are only read inside functions after startup,
@@ -314,6 +314,66 @@ function dailyGreetingText(status){
   };
   return lines[part][status] || lines[part].none;
 }
+/*
+ * Optional reading note, offered on the Today card right after the first "Read" check-in of the day: the
+ * button gives way to a small text box. "Not now", sending, switching to another tab or leaving the app
+ * puts the button back. The box is offered once per day.
+ */
+function openReadingNoteBox(btn, day){
+  const key = 'bh_reading_note_prompt_' + currentUid;
+  try{ if(localStorage.getItem(key)===day) return; localStorage.setItem(key, day); }catch(_){}
+  const actions = btn.closest('.daily-actions'), card = btn.closest('.daily-checkin'), section = btn.closest('section.tab');
+  if(!actions || !card || !section || card.querySelector('.reading-note-box')) return;
+  const T = window.BH_I18N;
+  const prompt = T.pick('Bugün okuduklarından aklında kalan bir cümle ya da paylaşmak istediğin bir şey','A sentence that stayed with you from today’s reading, or anything you’d like to share');
+  const box = document.createElement('form');
+  box.className = 'reading-note-box';
+  box.noValidate = true;
+  box.innerHTML = `<p class="reading-note-prompt">${prompt}</p>
+    <textarea name="note" maxlength="280" rows="3" data-mentions aria-label="${prompt}"></textarea>
+    <div class="reading-note-actions"><button type="button" class="reading-note-later" data-note-later>${T.pick('Şimdi değil','Not now')}</button><button type="submit" class="primary">${T.pick('Gönder','Send')}</button></div>`;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let closed = false;
+  const watcher = new MutationObserver(()=>{ if(!section.classList.contains('active')) close(true); });
+  const onHide = ()=>{ if(document.visibilityState==='hidden') close(true); };
+  function close(instant){
+    if(closed) return;
+    closed = true;
+    watcher.disconnect();
+    document.removeEventListener('visibilitychange', onHide);
+    window.removeEventListener('pagehide', onHide);
+    const restore = ()=>{
+      box.remove(); actions.hidden = false; card.classList.remove('note-open');
+      if(!instant && !reduced) actions.animate([{opacity:0, transform:'scale(.96)'},{opacity:1, transform:'none'}], {duration:220, easing:'cubic-bezier(.2,0,0,1)'});
+    };
+    if(instant || reduced){ restore(); return; }
+    const anim = box.animate([{height:box.offsetHeight+'px', opacity:1},{height:actions.offsetHeight+'px', opacity:0}], {duration:220, easing:'cubic-bezier(.3,0,.8,.15)'});
+    anim.onfinish = restore;
+  }
+  box.querySelector('[data-note-later]').onclick = ()=> close(false);
+  box.onsubmit = async (e)=>{
+    e.preventDefault();
+    const text = box.elements.note.value.trim();
+    if(!text){ close(false); return; }
+    box.querySelectorAll('button').forEach(b=> b.disabled = true);
+    const shared = await shareReadingNote(text);
+    if(!shared) showToast(T.pick('Not paylaşılamadı.','Could not share the note.'));
+    close(false);
+  };
+  // Let the check-in animation play before the button makes room for the box.
+  setTimeout(()=>{
+    if(closed || !section.classList.contains('active') || document.visibilityState==='hidden'){ closed = true; return; }
+    const from = actions.offsetHeight;
+    card.classList.add('note-open');
+    actions.hidden = true;
+    actions.after(box);
+    watcher.observe(section, { attributes:true, attributeFilter:['class'] });
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', onHide);
+    if(!reduced) box.animate([{height:from+'px', opacity:0, borderRadius:'999px'},{height:box.offsetHeight+'px', opacity:1, borderRadius:'20px'}], {duration:340, easing:'cubic-bezier(.2,0,0,1)'});
+    box.elements.note.focus({ preventScroll:true });
+  }, 900);
+}
 export function wireSelfMarkCard(ids){
   function render(){
     const st = todayAnswers[currentUid];
@@ -375,7 +435,7 @@ export function wireSelfMarkCard(ids){
       hubPreviews.invalidate('club');
       render();
       if(created){
-        promptReadingNote(day);
+        openReadingNoteBox(btn, day);
         notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', uid);
         // The check-in is already saved; if the streak can't be read, badges are checked later.
         try{const streak=await computeStreak(uid);await checkAndAwardBadges(uid,streak);}catch(_){}
