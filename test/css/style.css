@@ -603,9 +603,10 @@ html[lang="en"] .hub-layout-segmented button{font-size:11px}
 
 
 /* Reading note dialog shown after the daily check-in, and reading-note posts in the feed. */
-.reading-note-dialog p.muted{font-size:13px;line-height:1.5;margin:-6px 0 16px}
-.reading-note-dialog select,.reading-note-dialog textarea{display:block;box-sizing:border-box;margin:8px 0 14px}
-.reading-note-dialog textarea{min-height:110px}
+.reading-note-dialog{position:relative}
+.reading-note-dialog h2{font-size:19px!important;line-height:1.4;margin:0 36px 16px 0!important}
+.reading-note-close{position:absolute;top:14px;right:14px;color:var(--ink-70)}
+.reading-note-dialog textarea{display:block;box-sizing:border-box;min-height:110px;margin:0}
 .reading-note-book{font-size:12px;font-weight:600;color:var(--gold-dark);margin:2px 0 6px}
 .reading-note-text{margin:6px 0 4px;padding:10px 14px;border-left:3px solid var(--gold);background:var(--primary-container);border-radius:0 14px 14px 0;font-style:italic;line-height:1.6;overflow-wrap:anywhere}
 

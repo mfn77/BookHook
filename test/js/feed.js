@@ -1126,29 +1126,21 @@ export async function openPostModal(postId){
 
 /*
  * Optional reading note, offered right after the first "Read" check-in of the day: a sentence the member
- * remembers or how the reading felt. Saving it shares a post in the feed; skipping it changes nothing
- * about the check-in. The box is offered once per day.
+ * remembers or anything else they want to share. Sending it shares a post in the feed; closing the box
+ * changes nothing about the check-in. The box is offered once per day.
  */
-export async function promptReadingNote(day){
+export function promptReadingNote(day){
   const uid = currentUid;
   const key = 'bh_reading_note_prompt_' + uid;
   try{ if(localStorage.getItem(key)===day) return; localStorage.setItem(key, day); }catch(e){}
-  let books = [];
-  try{
-    const snap = await getDocs(collection(db,'users',uid,'readBooks'));
-    snap.forEach(d=>{ const t = String(d.data().title||'').trim(); if(t) books.push(t); });
-  }catch(e){}
-  if(uid!==currentUid) return;
   const T = window.BH_I18N;
-  const bookField = books.length ? `<label>${T.pick('Hangi kitap?','Which book?')}<select name="book">${books.map(b=>`<option>${escapeHtml(b)}</option>`).join('')}<option value="">${T.pick('Belirtme','Leave it out')}</option></select></label>` : '';
   const dialog = document.createElement('dialog');
   dialog.className = 'reading-pages-dialog reading-note-dialog';
   dialog.innerHTML = `<form novalidate>
-    <h2>${T.pick('Bugün okuduklarından aklında kalan ne?','What stayed with you from today’s reading?')}</h2>
-    <p class="muted">${T.pick('Bir cümle, bir düşünce ya da hissettiklerin. Yazarsan akışta paylaşılır; yazmak zorunda değilsin.','A sentence, a thought or how it felt. If you write something it is shared in the feed; it is optional.')}</p>
-    ${bookField}
-    <label>${T.pick('Notun','Your note')}<textarea name="note" maxlength="280" rows="4" data-mentions placeholder="${T.pick('Aklında kalan bir cümle…','A sentence you remember…')}"></textarea></label>
-    <div class="row"><button type="button" data-cancel>${T.pick('Şimdi değil','Not now')}</button><button type="submit" class="primary">${T.pick('Paylaş','Share')}</button></div>
+    <button type="button" class="icon-button reading-note-close" data-cancel aria-label="${T.pick('Kapat','Close')}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h2>${T.pick('Bugün okuduklarından aklında kalan bir cümle ya da paylaşmak istediğin bir şey','A sentence that stayed with you from today’s reading, or anything you’d like to share')}</h2>
+    <textarea name="note" maxlength="280" rows="4" data-mentions aria-label="${T.pick('Notun','Your note')}"></textarea>
+    <div class="row"><button type="submit" class="primary">${T.pick('Paylaş','Share')}</button></div>
   </form>`;
   const close = ()=>{ dialog.close(); dialog.remove(); };
   dialog.querySelector('[data-cancel]').onclick = close;
@@ -1157,15 +1149,12 @@ export async function promptReadingNote(day){
     e.preventDefault();
     const text = e.target.elements.note.value.trim();
     if(!text){ close(); return; }
-    const book = e.target.elements.book ? e.target.elements.book.value : '';
-    const submit = dialog.querySelector('button[type=submit]');
-    submit.disabled = true;
+    dialog.querySelector('button[type=submit]').disabled = true;
     const tagged = extractMentions(text);
     // Stored in Turkish: posts are shown to every member whatever their language.
-    const postId = await createPost('user_post', { title: 'Bugünkü okumamdan', text, image:'', readingNote:true, noteBook: book, ...tagged });
+    const postId = await createPost('user_post', { title: 'Bugünkü okumamdan', text, image:'', readingNote:true, ...tagged });
     close();
     if(!postId){ showToast(T.pick('Not paylaşılamadı.','Could not share the note.')); return; }
-    showToast(T.pick('Notun akışta paylaşıldı.','Your note was shared in the feed.'));
     notifyFeedActivity({ kind:'post', postId, text, ...tagged, everyoneMessage: `${myProfile.name} bugünkü okumasından bir not paylaştı: "${snippet(text)}"` });
     if(activeTab==='social') renderTimelineTab();
   };
