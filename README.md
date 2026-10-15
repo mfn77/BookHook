@@ -36,6 +36,9 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 - Posts and comments support emoji reactions, including a custom emoji picker.
 - The feed loads the most recent posts first, with a "load older posts" control (up to five older batches) that switches to a date-jump picker for anything further back.
 - Commenting on a post notifies not just its owner but everyone else already in that comment thread; comments show a relative timestamp that steps from minutes to hours to days, falling back to a full date after 9 days.
+- After the first "Read" check-in of the day, members are offered an optional box to share a sentence or a feeling from that day's reading; a filled-in note is posted to the feed as a quote card.
+- Members can be tagged with `@Name` in posts and comments (with suggestions while typing); a tagged member is always notified. Admins can write `@herkes` to notify the whole club.
+- Feed notifications: reactions, comments and likes notify the post owner and everyone who commented on the post. During a two-week launch period (until 29 October 2026) every member-made post, comment, like and reaction also notifies the whole club; automatic posts (badges, check-ins, etc.) are not part of this.
 - A Discover tab surfaces popular books by genre (via Open Library, with an internal English/original-title lookup to improve match rates on Turkish-titled catalog entries), highlights books the group has rated, and lets members submit a 1-10 rating and review, which is also shared to the feed.
 - Admins can tap a Discover book's cover to rescan for a better match, search manually, or paste a direct image URL, correcting bad covers on the spot.
 - A "Add to My Library" button is available anywhere a book's cover can be tapped (Discover, gifted-books history, another member's reading history).
@@ -68,7 +71,9 @@ BookHook is a Firebase-based Progressive Web App (PWA) built for a private book 
 ├── js/
 │   ├── app.js               Application logic (ES module, entry point)
 │   ├── i18n.js              English translations and the language switch (loaded before first paint)
-│   ├── feed.js              Feed: automatic and member posts, polls, votes/reactions, comments, pinned posts
+│   ├── feed.js              Feed: automatic and member posts, polls, votes/reactions, comments, pinned posts,
+│   │                        reading notes after a check-in, and who is notified about feed activity
+│   ├── mentions.js          @mentions in posts and comments: suggestions while typing, highlighting, "@herkes" for admins
 │   ├── discover.js          Discover tab (category grid, book details, ratings, admin cover tools)
 │   ├── quarterly.js         Quarterly shared-book pick (nominations, objections, bracket voting, reading) and the admin test copy
 │   ├── gifts.js             Gift books tab (gift requests, shipping/receipt confirmations, gift stats, received-books grid)

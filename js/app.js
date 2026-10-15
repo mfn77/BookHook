@@ -59,6 +59,7 @@ import { renderGiftsTab, renderGiftBooksGrid } from "./gifts.js";
 import { initRecs, renderRecsTab, renderAiRecCard } from "./recs.js";
 import { initWorms, renderAdminWorms, renderMemberWorms } from "./worms.js";
 import { renderLibraryImportTab } from "./library-import.js";
+import { initMentions } from "./mentions.js";
 import {
   initAdmin, renderAdminToday, renderAdminOwnWeek, renderEditPastTab, renderWeekReportTable, renderAdminWeek,
   renderEditPastWeekReport, renderAdminDraws, renderManualTab, renderAdminMembers, setAdminWeekOffset, setEditPastWeekOffset
@@ -1954,6 +1955,7 @@ attachBookAutocomplete('recGroupBook', 'recGroupCover', 'recGroupBookSuggest');
 initLibrary();
 initReactions();
 initFeed();
+initMentions();
 /* Feed sub-tabs bar: switching sub-tabs, and hiding/showing the bar on scroll. */
 let lastSocialScrollY = 0;
 initDiscover();

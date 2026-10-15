@@ -4,6 +4,7 @@ import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { notifyAllMembers } from "./notifications.js";
+import { promptReadingNote } from "./feed.js";
 import { renderQpBookInBugun } from "./quarterly.js";
 /*
  * This module and app.js import each other. Shared values are only read inside functions after startup,
@@ -374,6 +375,7 @@ export function wireSelfMarkCard(ids){
       hubPreviews.invalidate('club');
       render();
       if(created){
+        promptReadingNote(day);
         notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', uid);
         // The check-in is already saved; if the streak can't be read, badges are checked later.
         try{const streak=await computeStreak(uid);await checkAndAwardBadges(uid,streak);}catch(_){}

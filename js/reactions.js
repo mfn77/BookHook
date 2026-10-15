@@ -6,7 +6,7 @@
 import {
   arrayRemove, arrayUnion, doc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { burstMyReactionBadge } from "./feed.js";
+import { burstMyReactionBadge, notifyFeedActivity } from "./feed.js";
 import { notifyUser } from "./notifications.js";
 /*
  * This module and app.js import each other. Shared values are only read inside functions after startup,
@@ -123,12 +123,16 @@ export async function setReaction(target, emoji){
     updates[`reactions.${emoji}`] = hasThis ? arrayRemove(currentUid) : arrayUnion(currentUid);
     await updateDoc(ref, updates);
     if(!hasThis){
-      const ownerUid = data.uid || data.fromUid;
-      if(ownerUid && ownerUid !== currentUid){
-        const kind = target.split(':')[0];
-        const tabHint = kind==='rec' ? 'recs' : 'social';
-        const postIdForNotif = (kind==='post' || kind==='postcomment') ? target.split(':')[1].split('|')[0] : null;
-        await notifyUser(ownerUid, `${myProfile.name} ${emoji} ile tepki verdi.`, tabHint, postIdForNotif);
+      const kind = target.split(':')[0];
+      if(kind==='post'){
+        await notifyFeedActivity({ kind:'reaction', postId: target.split(':')[1], postUid: data.uid });
+      } else if(kind==='postcomment'){
+        const postId = target.split(':')[1].split('|')[0];
+        const post = await getDoc(doc(db,'posts',postId)).catch(()=>null);
+        await notifyFeedActivity({ kind:'reaction', postId, postUid: post && post.exists() ? post.data().uid : null, commentUid: data.uid });
+      } else {
+        const ownerUid = data.uid || data.fromUid;
+        if(ownerUid && ownerUid !== currentUid) await notifyUser(ownerUid, kind==='rec' ? `${myProfile.name} önerine tepki verdi.` : `${myProfile.name} yorumuna tepki verdi.`, 'recs');
       }
     }
   }catch(e){

@@ -4,7 +4,8 @@ import {
   startAfter, updateDoc, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { renderReactionBar, setPendingReactionRefresh, showReactorsModal, toggleReactionDrawer } from "./reactions.js";
-import { notifyAllMembers, notifyUser } from "./notifications.js";
+import { notifyUser } from "./notifications.js";
+import { canMentionAll, extractMentions, highlightMentions } from "./mentions.js";
 /*
  * This module and app.js import each other. Shared values are only read inside functions after startup,
  * not while the modules are loading.
@@ -86,13 +87,80 @@ export async function pickVariantMessage(type){
   const finalPool = candidates.length ? candidates : pool;
   return finalPool[Math.floor(Math.random()*finalPool.length)];
 }
+/*
+ * Feed notifications. Every member gets exactly one notification per event, picked in this order:
+ * 1. members mentioned with @ (and everyone, when an admin writes @herkes),
+ * 2. the author of the post or comment that received the comment, reaction or like,
+ * 3. members who have commented on the post,
+ * 4. everyone else, but only until FEED_BOOST_UNTIL: a launch period meant to get the feed going.
+ * Members who turned off feed notifications in their settings get none (see notifyUser).
+ */
+export const FEED_BOOST_UNTIL = Date.parse('2026-10-29T06:00:00+03:00');
+export function feedBoostActive(){ return Date.now() < FEED_BOOST_UNTIL; }
+
+const snippet = (t)=>{ const s = String(t||'').replace(/\s+/g,' ').trim(); return s.length>70 ? s.slice(0,70)+'...' : s; };
+
+/*
+ * kind: 'post' | 'comment' | 'reaction' | 'vote' | 'mentions' (only notify the mentions, e.g. after an edit).
+ * postId and the post's author (postUid) identify the post; commentUid is set for a reaction on a comment.
+ * text, mentions and mentionAll describe what was written; everyoneMessage is used for new posts.
+ * commenters can be passed when already known; otherwise they are read when needed.
+ */
+export async function notifyFeedActivity({ kind, postId, postUid, commentUid, text, mentions, mentionAll, everyoneMessage, commenters }){
+  try{
+    const actor = myProfile.name;
+    const snip = snippet(text);
+    const quoted = snip ? `: "${snip}"` : '';
+    const where = kind==='post' || kind==='mentions' ? 'bir gönderide' : 'bir yorumda';
+    const recipients = new Map();
+    const add = (uid, message)=>{
+      if(!uid || uid===currentUid || recipients.has(uid)) return;
+      const u = usersCache[uid];
+      if(!u || u.banned || u.deleted) return;
+      recipients.set(uid, message);
+    };
+    const members = Object.keys(usersCache);
+
+    (mentions||[]).forEach(uid=> add(uid, `${actor} ${where} seni andı${quoted}`));
+    if(mentionAll && canMentionAll()) members.forEach(uid=> add(uid, `${actor} herkese seslendi${quoted}`));
+
+    if(kind==='comment' || kind==='reaction' || kind==='vote'){
+      if(kind==='reaction' && commentUid) add(commentUid, `${actor} yorumuna tepki verdi.`);
+      const ownerMessage = kind==='comment' ? `${actor} gönderine yorum yaptı${quoted}`
+        : kind==='vote' ? `${actor} gönderini beğendi.`
+        : commentUid ? `${actor} gönderindeki bir yoruma tepki verdi.` : `${actor} gönderine tepki verdi.`;
+      add(postUid, ownerMessage);
+      if(!feedBoostActive() || commenters){
+        let uids = commenters;
+        if(!uids){
+          const snap = await getDocs(collection(db,'posts',postId,'comments')).catch(()=>null);
+          uids = snap ? snap.docs.map(d=>d.data().uid) : [];
+        }
+        const message = kind==='comment' ? `${actor} yorum yaptığın bir gönderiye yorum yaptı${quoted}`
+          : kind==='vote' ? `${actor} yorum yaptığın bir gönderiyi beğendi.` : `${actor} yorum yaptığın bir gönderiye tepki verdi.`;
+        uids.forEach(uid=> add(uid, message));
+      }
+    }
+
+    if(feedBoostActive() && kind!=='mentions'){
+      const message = kind==='post' ? (everyoneMessage || `${actor} yeni bir gönderi paylaştı${quoted}`)
+        : kind==='comment' ? `${actor} bir gönderiye yorum yaptı${quoted}`
+        : kind==='vote' ? `${actor} bir gönderiyi beğendi.` : `${actor} bir gönderiye tepki verdi.`;
+      members.forEach(uid=> add(uid, message));
+    }
+
+    await Promise.all([...recipients].map(([uid, message])=> notifyUser(uid, message, 'social', postId)));
+  }catch(e){ console.error('Akış bildirimi gönderilemedi:', e); }
+}
+
 export async function createPost(type, data, forUid, forName){
   try{
-    await addDoc(collection(db,'posts'), {
+    const ref = await addDoc(collection(db,'posts'), {
       type, uid: forUid||currentUid, name: forName||myProfile.name,
       createdAt: new Date().toISOString(), commentCount: 0,
       ...data
     });
+    return ref.id;
   }catch(e){ console.error('Gönderi oluşturulamadı:', e); }
 }
 const BATCHABLE_TYPES = {
@@ -332,7 +400,11 @@ function postBodyHtml(p, expanded){
     }
     case 'book_review_batch': return window.BH_I18N.template`⭐ ${(p.items||[]).length} kitap puanlaması yaptı. <span class="muted" style="font-size:12px;">(detaylar için tıkla)</span>`;
     case 'user_post': {
-      const txt = p.text ? escapeHtml(p.text).replace(/\n/g,'<br/>') : '';
+      const txt = p.text ? highlightMentions(escapeHtml(p.text), p.mentions, p.mentionAll).replace(/\n/g,'<br/>') : '';
+      if(p.readingNote){
+        const book = p.noteBook ? `<div class="reading-note-book">${escapeHtml(p.noteBook)}</div>` : '';
+        return `${book}<blockquote class="reading-note-text">${txt}</blockquote>`;
+      }
       const img = p.image ? `<img src="${p.image}" alt="" style="max-width:100%; border-radius:10px; margin-top:8px; display:block;" />` : '';
       return `${txt}${img}`;
     }
@@ -532,9 +604,9 @@ async function setPostVote(postId, dir){
       if(dir==='up' && !wasUp) up.push(currentUid);
       if(dir==='down' && !wasDown) down.push(currentUid);
       tx.update(ref, {'votes.up':up, 'votes.down':down});
-      if(dir==='up' && !wasUp && data.uid && data.uid!==currentUid) notifyUid = data.uid;
+      if(dir==='up' && !wasUp) notifyUid = data.uid || '';
     });
-    if(notifyUid) notifyUser(notifyUid, `${myProfile.name} gönderini beğendi.`, 'social', postId);
+    if(notifyUid!==null) notifyFeedActivity({ kind:'vote', postId, postUid: notifyUid });
   }catch(err){ alert('Oy verilemedi: '+(err.message||err)); }
 }
 /*
@@ -568,7 +640,7 @@ export function renderPostCard(p){
         <div class="rec-comments-label">💬 Yorumlar</div>
         <div class="post-comments-list"><span class="muted">Yükleniyor…</span></div>
         <div class="row" style="margin-top:10px;">
-          <input type="text" class="post-comment-inline-input" placeholder="Yorum yaz..." />
+          <input type="text" class="post-comment-inline-input" placeholder="Yorum yaz..." data-mentions />
           <button type="button" class="secondary tiny post-comment-inline-send" style="flex:0 0 auto;">Gönder</button>
         </div>
       </div>
@@ -778,7 +850,7 @@ async function openEditPostModal(postId, refresh){
   showSimpleInfoModal(window.BH_I18N.template`
     <h2 style="margin-bottom:10px;">Gönderiyi Düzenle</h2>
     <input type="text" id="composeTitle" class="compose-poll-input" maxlength="100" placeholder="Başlık" value="${escapeHtml(p.title||'')}" style="margin-bottom:8px;" />
-    <textarea id="composeText" class="compose-textarea" maxlength="280">${escapeHtml(p.text||'')}</textarea>
+    <textarea id="composeText" class="compose-textarea" maxlength="280" data-mentions>${escapeHtml(p.text||'')}</textarea>
     <div class="muted" id="composeCharCount" style="text-align:right; font-size:11px; margin-top:2px;"></div>
     <div id="composeImagePreviewWrap" style="${p.image?'':'display:none;'} margin-top:10px; text-align:center;">
       <img id="composeImagePreview" src="${p.image||''}" style="max-width:100%; border-radius:10px;" />
@@ -823,7 +895,12 @@ async function openEditPostModal(postId, refresh){
     if(!title){ alert(window.BH_I18N.pick("Başlık yazmalısın.","Enter a title.")); return; }
     if(!text && !composeImageDataUrl){ alert(window.BH_I18N.pick("Bir şey yazmalısın veya görsel eklemelisin.","Write something or add an image.")); return; }
     try{
-      await updateDoc(doc(db,'posts',postId), { title, text, image: composeImageDataUrl||'' });
+      const tagged = extractMentions(title, text);
+      await updateDoc(doc(db,'posts',postId), { title, text, image: composeImageDataUrl||'', ...tagged });
+      // Only members added by this edit are notified.
+      const added = tagged.mentions.filter(uid=>!(p.mentions||[]).includes(uid));
+      const addedAll = tagged.mentionAll && !p.mentionAll;
+      if(added.length || addedAll) notifyFeedActivity({ kind:'mentions', postId, text: title, mentions: added, mentionAll: addedAll });
       closeModal('bookInfoModal');
       showToast(window.BH_I18N.pick("Gönderi güncellendi!","Post updated!"));
       refresh();
@@ -868,11 +945,12 @@ export function wirePostCards(container, refreshFn){
       const newCount = parseInt(panel.dataset.commentCount,10) + 1;
       sendBtn.disabled = true;
       try{
-        await addDoc(collection(db,'posts',postId,'comments'), { uid:currentUid, name:myProfile.name, text, createdAt:new Date().toISOString() });
+        const tagged = extractMentions(text);
+        await addDoc(collection(db,'posts',postId,'comments'), { uid:currentUid, name:myProfile.name, text, ...tagged, createdAt:new Date().toISOString() });
         await updateDoc(doc(db,'posts',postId), { commentCount: newCount });
         panel.dataset.commentCount = newCount;
         syncFeedCardCommentCount(postId, newCount);
-        if(postUid && postUid!==currentUid) notifyUser(postUid, `${myProfile.name} gönderine yorum yaptı.`, 'social', postId);
+        notifyFeedActivity({ kind:'comment', postId, postUid, text, ...tagged });
         input.value = '';
         renderPostCommentsPanel(postId);
       }catch(err){ alert(window.BH_I18N.pick("Yorum gönderilemedi: ","Could not send comment: ")+(err.message||err)); }
@@ -925,7 +1003,7 @@ async function renderPostCommentsPanel(postId){
     comments.sort((a,b)=> new Date(a.createdAt) - new Date(b.createdAt));
   }
   list.innerHTML = comments.length ? comments.map(c=>`<div class="rec-comment-row">
-    <div class="rec-comment-body">${userChipHtml(c.uid,18)}<span class="muted" style="font-size:11px; margin-left:4px;">· ${timeAgoLabel(c.createdAt)}</span><div style="margin-top:2px;">${escapeHtml(c.text)}</div>${renderReactionBar(c.reactions, `postcomment:${postId}|${c.id}`)}</div>
+    <div class="rec-comment-body">${userChipHtml(c.uid,18)}<span class="muted" style="font-size:11px; margin-left:4px;">· ${timeAgoLabel(c.createdAt)}</span><div style="margin-top:2px;">${highlightMentions(escapeHtml(c.text), c.mentions, c.mentionAll)}</div>${renderReactionBar(c.reactions, `postcomment:${postId}|${c.id}`)}</div>
     ${(c.uid===currentUid||myProfile.role==='admin')?`<button class="rec-comment-del" data-del-postcomment="${c.id}">✕</button>`:''}
   </div>`).join('') : window.BH_I18N.template`<span class="muted">Henüz yorum yok.</span>`;
   list.querySelectorAll('.reaction-pill').forEach(btn=>{
@@ -966,7 +1044,7 @@ export async function openPostModal(postId){
     comments.sort((a,b)=> new Date(a.createdAt) - new Date(b.createdAt));
   }
   const commentsHtml = comments.map(c=>`<div class="rec-comment-row">
-    <div class="rec-comment-body">${userChipHtml(c.uid,18)}<span class="muted" style="font-size:11px; margin-left:4px;">· ${timeAgoLabel(c.createdAt)}</span><div style="margin-top:2px;">${escapeHtml(c.text)}</div>${renderReactionBar(c.reactions, `postcomment:${postId}|${c.id}`)}</div>
+    <div class="rec-comment-body">${userChipHtml(c.uid,18)}<span class="muted" style="font-size:11px; margin-left:4px;">· ${timeAgoLabel(c.createdAt)}</span><div style="margin-top:2px;">${highlightMentions(escapeHtml(c.text), c.mentions, c.mentionAll)}</div>${renderReactionBar(c.reactions, `postcomment:${postId}|${c.id}`)}</div>
     ${(c.uid===currentUid||myProfile.role==='admin')?`<button class="rec-comment-del" data-del-postcomment="${c.id}">✕</button>`:''}
   </div>`).join('');
   const batchItemsHtml = (p.type==='book_review_batch' || p.type==='book_added_batch') ? `
@@ -992,7 +1070,7 @@ export async function openPostModal(postId){
     <div class="rec-comments-label">💬 ${comments.length} Yorum</div>
     <div id="postModalComments">${commentsHtml}</div>
     <div class="row" style="margin-top:10px;">
-      <input type="text" id="postCommentInput" placeholder="Yorum yaz..." />
+      <input type="text" id="postCommentInput" placeholder="Yorum yaz..." data-mentions />
       <button class="secondary tiny" id="postCommentSendBtn" style="flex:0 0 auto;">Gönder</button>
     </div>
   `;
@@ -1035,18 +1113,65 @@ export async function openPostModal(postId){
     sendBtn.disabled = true;
     try{
       const newCount = (p.commentCount||0)+1;
-      await addDoc(collection(db,'posts',postId,'comments'), { uid:currentUid, name:myProfile.name, text, createdAt:new Date().toISOString() });
+      const tagged = extractMentions(text);
+      await addDoc(collection(db,'posts',postId,'comments'), { uid:currentUid, name:myProfile.name, text, ...tagged, createdAt:new Date().toISOString() });
       await updateDoc(doc(db,'posts',postId), { commentCount: newCount });
       syncFeedCardCommentCount(postId, newCount);
       // Notifications don't affect the result, so they aren't awaited.
-      if(p.uid!==currentUid) notifyUser(p.uid, `${myProfile.name} gönderine yorum yaptı.`, 'social', p.id);
-      const priorCommenterUids = new Set(comments.map(c=>c.uid));
-      priorCommenterUids.delete(currentUid);
-      priorCommenterUids.delete(p.uid);
-      priorCommenterUids.forEach(uid=> notifyUser(uid, `${myProfile.name} de yorum yaptığın bir gönderiye yorum yaptı.`, 'social', p.id));
+      notifyFeedActivity({ kind:'comment', postId, postUid: p.uid, text, ...tagged, commenters: comments.map(c=>c.uid) });
       openPostModal(postId);
     }catch(err){ alert(window.BH_I18N.pick("Yorum gönderilemedi: ","Could not send comment: ")+(err.message||err)); sendBtn.disabled = false; }
   });
+}
+
+/*
+ * Optional reading note, offered right after the first "Read" check-in of the day: a sentence the member
+ * remembers or how the reading felt. Saving it shares a post in the feed; skipping it changes nothing
+ * about the check-in. The box is offered once per day.
+ */
+export async function promptReadingNote(day){
+  const uid = currentUid;
+  const key = 'bh_reading_note_prompt_' + uid;
+  try{ if(localStorage.getItem(key)===day) return; localStorage.setItem(key, day); }catch(e){}
+  let books = [];
+  try{
+    const snap = await getDocs(collection(db,'users',uid,'readBooks'));
+    snap.forEach(d=>{ const t = String(d.data().title||'').trim(); if(t) books.push(t); });
+  }catch(e){}
+  if(uid!==currentUid) return;
+  const T = window.BH_I18N;
+  const bookField = books.length ? `<label>${T.pick('Hangi kitap?','Which book?')}<select name="book">${books.map(b=>`<option>${escapeHtml(b)}</option>`).join('')}<option value="">${T.pick('Belirtme','Leave it out')}</option></select></label>` : '';
+  const dialog = document.createElement('dialog');
+  dialog.className = 'reading-pages-dialog reading-note-dialog';
+  dialog.innerHTML = `<form novalidate>
+    <h2>${T.pick('Bugün okuduklarından aklında kalan ne?','What stayed with you from today’s reading?')}</h2>
+    <p class="muted">${T.pick('Bir cümle, bir düşünce ya da hissettiklerin. Yazarsan akışta paylaşılır; yazmak zorunda değilsin.','A sentence, a thought or how it felt. If you write something it is shared in the feed; it is optional.')}</p>
+    ${bookField}
+    <label>${T.pick('Notun','Your note')}<textarea name="note" maxlength="280" rows="4" data-mentions placeholder="${T.pick('Aklında kalan bir cümle…','A sentence you remember…')}"></textarea></label>
+    <div class="row"><button type="button" data-cancel>${T.pick('Şimdi değil','Not now')}</button><button type="submit" class="primary">${T.pick('Paylaş','Share')}</button></div>
+  </form>`;
+  const close = ()=>{ dialog.close(); dialog.remove(); };
+  dialog.querySelector('[data-cancel]').onclick = close;
+  dialog.oncancel = (e)=>{ e.preventDefault(); close(); };
+  dialog.querySelector('form').onsubmit = async (e)=>{
+    e.preventDefault();
+    const text = e.target.elements.note.value.trim();
+    if(!text){ close(); return; }
+    const book = e.target.elements.book ? e.target.elements.book.value : '';
+    const submit = dialog.querySelector('button[type=submit]');
+    submit.disabled = true;
+    const tagged = extractMentions(text);
+    // Stored in Turkish: posts are shown to every member whatever their language.
+    const postId = await createPost('user_post', { title: 'Bugünkü okumamdan', text, image:'', readingNote:true, noteBook: book, ...tagged });
+    close();
+    if(!postId){ showToast(T.pick('Not paylaşılamadı.','Could not share the note.')); return; }
+    showToast(T.pick('Notun akışta paylaşıldı.','Your note was shared in the feed.'));
+    notifyFeedActivity({ kind:'post', postId, text, ...tagged, everyoneMessage: `${myProfile.name} bugünkü okumasından bir not paylaştı: "${snippet(text)}"` });
+    if(activeTab==='social') renderTimelineTab();
+  };
+  document.body.appendChild(dialog);
+  dialog.showModal();
+  dialog.querySelector('textarea').focus();
 }
 
 export function initFeed(){
@@ -1075,8 +1200,9 @@ export function initFeed(){
     const btn = document.getElementById('jcSendBtn');
     btn.disabled = true;
     try{
-      await createPost('user_post', { title, text, image: jcImageDataUrl||'' });
-      await notifyAllMembers(`${myProfile.name} yeni bir gönderi paylaştı.`, 'social', currentUid);
+      const tagged = extractMentions(title, text);
+      const postId = await createPost('user_post', { title, text, image: jcImageDataUrl||'', ...tagged });
+      if(postId) notifyFeedActivity({ kind:'post', postId, text: title, ...tagged });
       jcCollapse();
       showToast(window.BH_I18N.pick("Gönderi paylaşıldı!","Post shared!"));
       renderTimelineTab();
@@ -1094,7 +1220,7 @@ export function initFeed(){
       </div>
       <div id="composeTextMode">
         <input type="text" id="composeTitle" class="compose-poll-input" maxlength="100" placeholder="Başlık" style="margin-bottom:8px;" />
-        <textarea id="composeText" class="compose-textarea" maxlength="280" placeholder="Ne düşünüyorsun?"></textarea>
+        <textarea id="composeText" class="compose-textarea" maxlength="280" placeholder="Ne düşünüyorsun?" data-mentions></textarea>
         <div class="muted" id="composeCharCount" style="text-align:right; font-size:11px; margin-top:2px;"></div>
       </div>
       <div id="composePollMode" style="display:none;">
@@ -1173,8 +1299,9 @@ export function initFeed(){
         if(!question){ alert(window.BH_I18N.pick("Anket sorusu yazmalısın.","Enter a poll question.")); return; }
         if(options.length<2){ alert(window.BH_I18N.pick("En az 2 seçenek yazmalısın.","Enter at least 2 options.")); return; }
         try{
-          await createPost('poll', { question, options: options.map(text=>({text, voters:[]})), image: composeImageDataUrl||'' });
-          await notifyAllMembers(`${myProfile.name} bir anket paylaştı: "${question}"`, 'social', currentUid);
+          const tagged = extractMentions(question);
+          const postId = await createPost('poll', { question, options: options.map(text=>({text, voters:[]})), image: composeImageDataUrl||'', ...tagged });
+          if(postId) notifyFeedActivity({ kind:'post', postId, text: question, ...tagged, everyoneMessage: `${myProfile.name} bir anket paylaştı: "${snippet(question)}"` });
           closeModal('bookInfoModal');
           showToast(window.BH_I18N.pick("Anket paylaşıldı!","Poll shared!"));
           renderTimelineTab();
@@ -1186,8 +1313,9 @@ export function initFeed(){
       if(!title){ alert(window.BH_I18N.pick("Başlık yazmalısın.","Enter a title.")); return; }
       if(!text && !composeImageDataUrl){ alert(window.BH_I18N.pick("Bir şey yazmalısın veya görsel eklemelisin.","Write something or add an image.")); return; }
       try{
-        await createPost('user_post', { title, text, image: composeImageDataUrl||'' });
-        await notifyAllMembers(`${myProfile.name} yeni bir gönderi paylaştı.`, 'social', currentUid);
+        const tagged = extractMentions(title, text);
+        const postId = await createPost('user_post', { title, text, image: composeImageDataUrl||'', ...tagged });
+        if(postId) notifyFeedActivity({ kind:'post', postId, text: title, ...tagged });
         closeModal('bookInfoModal');
         showToast(window.BH_I18N.pick("Gönderi paylaşıldı!","Post shared!"));
         renderTimelineTab();
