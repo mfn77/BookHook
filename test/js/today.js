@@ -317,11 +317,9 @@ function dailyGreetingText(status){
 /*
  * Optional reading note, offered on the Today card right after the first "Read" check-in of the day: the
  * button gives way to a small text box. "Not now", sending, switching to another tab or leaving the app
- * puts the button back. The box is offered once per day.
+ * puts the button back. It is only called for the day's first check-in, so it appears once a day.
  */
-function openReadingNoteBox(btn, day){
-  const key = 'bh_reading_note_prompt_' + currentUid;
-  try{ if(localStorage.getItem(key)===day) return; localStorage.setItem(key, day); }catch(_){}
+function openReadingNoteBox(btn){
   const actions = btn.closest('.daily-actions'), card = btn.closest('.daily-checkin'), section = btn.closest('section.tab');
   if(!actions || !card || !section || card.querySelector('.reading-note-box')) return;
   const T = window.BH_I18N;
@@ -435,7 +433,7 @@ export function wireSelfMarkCard(ids){
       hubPreviews.invalidate('club');
       render();
       if(created){
-        openReadingNoteBox(btn, day);
+        openReadingNoteBox(btn);
         notifyAllMembers(`${myProfile.name} bugün "Okudum" işaretledi.`, 'week', uid);
         // The check-in is already saved; if the streak can't be read, badges are checked later.
         try{const streak=await computeStreak(uid);await checkAndAwardBadges(uid,streak);}catch(_){}
