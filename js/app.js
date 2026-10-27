@@ -60,6 +60,7 @@ import { initRecs, renderRecsTab, renderAiRecCard } from "./recs.js";
 import { initWorms, renderAdminWorms, renderMemberWorms } from "./worms.js";
 import { renderLibraryImportTab } from "./library-import.js";
 import { initMentions } from "./mentions.js";
+import { initDailyQuestions } from "./daily-questions.js";
 import {
   initAdmin, renderAdminToday, renderAdminOwnWeek, renderEditPastTab, renderWeekReportTable, renderAdminWeek,
   renderEditPastWeekReport, renderAdminDraws, renderManualTab, renderAdminMembers, setAdminWeekOffset, setEditPastWeekOffset
@@ -1063,7 +1064,7 @@ export function switchTab(id, { animate = true } = {}){
     releaseGesture();
     const t = e.target;
     // Let inner swipeable panels handle their own gestures instead of starting a page-level swipe.
-    if(!contentCol.contains(t) || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || (t.closest('.inner-pane-viewport')&&!t.closest('.hub-flat')) || (t.closest('#discoverFeed')&&hubLayoutMode('library')!=='primary')){
+    if(!contentCol.contains(t) || t.closest('input,textarea,select,[contenteditable=true]') || t.closest('header.top') || t.closest('nav.tabs') || t.closest('#profileModal') || t.closest('#notifModal') || t.closest('[data-own-swipe]') || (t.closest('.inner-pane-viewport')&&!t.closest('.hub-flat')) || (t.closest('#discoverFeed')&&hubLayoutMode('library')!=='primary')){
       touchStartX=null; return;
     }
     pointerId=e.pointerId;
@@ -1958,6 +1959,7 @@ initLibrary();
 initReactions();
 initFeed();
 initMentions();
+initDailyQuestions();
 /* Feed sub-tabs bar: switching sub-tabs, and hiding/showing the bar on scroll. */
 let lastSocialScrollY = 0;
 initDiscover();

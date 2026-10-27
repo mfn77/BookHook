@@ -627,3 +627,38 @@ html[lang="en"] .hub-layout-segmented button{font-size:11px}
 /* Feed views: "Kulüp" (member posts) and "Etkinlikler" (automatic club posts). */
 .feed-view-switch{margin:0 0 14px}
 #socialFeedView.club-view .join-conversation-bar,#socialFeedView.club-view .join-conversation-form{display:none!important}
+
+/* Daily questions: a stack of swipeable yes/no cards at the top of the "Kulüp" feed view. */
+.dq-card{background:var(--secondary-container);padding:18px 18px 12px;margin:0 0 14px}
+.dq-card[hidden],#socialFeedView.club-view .dq-card{display:none!important}
+.dq-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+.dq-head b{font-size:16px}
+.dq-count{font-size:13px;font-weight:600;color:var(--secondary-ink)}
+.dq-stack{position:relative;height:168px;margin:0 4px}
+.dq-q{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:22px 24px;border-radius:22px;background:var(--card);box-shadow:var(--shadow-lg);text-align:center;font-size:18px;font-weight:600;line-height:1.45;user-select:none;-webkit-user-select:none}
+.dq-top{touch-action:pan-y;cursor:grab;outline-offset:3px}
+.dq-top.dragging{cursor:grabbing;transition:none}
+.dq-next{transform:translateY(10px) scale(.94);opacity:.55;box-shadow:var(--shadow)}
+.dq-next span{visibility:hidden}
+.dq-stamp{position:absolute;top:14px;padding:3px 10px;border:2px solid currentColor;border-radius:10px;font-size:15px;letter-spacing:.06em;pointer-events:none}
+.dq-stamp-yes{left:14px;color:var(--forest);transform:rotate(-12deg);opacity:var(--dq-stamp-yes,0)}
+.dq-stamp-no{right:14px;color:var(--cloth-dark);transform:rotate(12deg);opacity:var(--dq-stamp-no,0)}
+.dq-actions{display:flex;align-items:center;gap:10px;margin-top:18px}
+.dq-btn{flex:1;min-height:46px;border-radius:999px;font-size:15px;font-weight:600}
+.dq-yes{background:var(--forest);color:var(--on-primary)}
+.dq-no{background:var(--error-container);color:var(--cloth-dark)}
+.dq-undo{flex:0 0 auto;min-height:40px;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:600;color:var(--secondary-ink)}
+.dq-undo:disabled{opacity:.4;cursor:default}
+.dq-hint{margin:10px 0 0;text-align:center;font-size:12px;color:var(--ink-70)}
+.dq-done{margin:4px 0 0;font-size:14px}
+
+/* A shared daily-questions post: each answer with how the club answered the same question. */
+.dq-answers{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:10px}
+.dq-answers li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:start}
+.dq-a-q{font-size:14px;line-height:1.45}
+.dq-a-chip{padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.dq-a-chip.yes{background:var(--primary-container);color:var(--forest-dark)}
+.dq-a-chip.no{background:var(--error-container);color:var(--cloth-dark)}
+.dq-a-stat{grid-column:1 / -1;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-70)}
+.dq-a-stat:empty{display:none}
+.dq-a-bar{flex:0 0 56px;height:6px;border-radius:999px;background:linear-gradient(90deg,var(--forest) var(--dq-yes),var(--line) var(--dq-yes))}

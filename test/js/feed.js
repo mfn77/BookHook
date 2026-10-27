@@ -6,6 +6,7 @@ import {
 import { renderReactionBar, setPendingReactionRefresh, showReactorsModal, toggleReactionDrawer } from "./reactions.js";
 import { notifyUser } from "./notifications.js";
 import { canMentionAll, extractMentions, highlightMentions } from "./mentions.js";
+import { dailyQuestionsPostBodyHtml, fillDailyQuestionStats, renderDailyQuestionsCard } from "./daily-questions.js";
 /*
  * This module and app.js import each other. Shared values are only read inside functions after startup,
  * not while the modules are loading.
@@ -355,6 +356,7 @@ function postTitleFor(p){
 
   if(p.type==='user_post') return p.title ? escapeHtml(p.title) : null;
   if(p.type==='poll') return `📊 ${escapeHtml(p.question||window.BH_I18N.pick("Anket","Poll"))}`;
+  if(p.type==='daily_questions') return window.BH_I18N.pick('Günün Soruları','Questions of the day');
   const T = {
     read: '✓ Bugün Okudu',
     skip: '😴 Bugün Okuyamadı',
@@ -435,6 +437,7 @@ function postBodyHtml(p, expanded){
       return window.BH_I18N.template`<div style="display:flex; gap:10px; align-items:center;">${cover}<div>✎ Gruba <b>${escapeHtml(p.bookTitle||'')}</b>'${recSuffix} önerdi.</div></div>`;
     }
     case 'poll': return pollBodyHtml(p, expanded);
+    case 'daily_questions': return dailyQuestionsPostBodyHtml(p);
     case 'quarterly_pick': {
       const sub = p.subtype;
       if(sub==='nominations_open') return `📚 Yeni ortak kitap önerileri başladı! ${p.days||2} gün içinde en fazla 3 kitap önerebilirsin. "Kulüp → Ortak kitap" bölümünden katılabilirsin.`;
@@ -677,11 +680,12 @@ let timelineOlderClicks = 0;
 const TIMELINE_PAGE_SIZE = 50;
 
 /*
- * The feed has two views: "members" (shown as "Kulüp") lists what members wrote themselves (posts, polls
- * and reading notes), "club" (shown as "Etkinlikler") lists the automatic posts (badges, streak records,
- * gifts, book ratings, shared-book news and so on). Opening the feed tab always starts on "members".
+ * The feed has two views: "members" (shown as "Kulüp") lists what members wrote themselves (posts, polls,
+ * reading notes and daily-question answers) under the daily questions card; "club" (shown as
+ * "Etkinlikler") lists the automatic posts (badges, streak records, gifts, book ratings, shared-book news
+ * and so on). Opening the feed tab always starts on "members".
  */
-const MEMBER_POST_TYPES = ['user_post','poll'];
+const MEMBER_POST_TYPES = ['user_post','poll','daily_questions'];
 let timelineView = 'members';
 let timelineLoadToken = 0;
 const inTimelineView = (p)=> MEMBER_POST_TYPES.includes(p.type) === (timelineView==='members');
@@ -722,6 +726,7 @@ function addTimelineDocs(docs){
 
 export async function renderTimelineTab(){
   renderPinnedPostBar();
+  if(timelineView==='members') renderDailyQuestionsCard();
   const feed = document.getElementById('timelineFeed');
   const token = ++timelineLoadToken;
   const loading = `<div class="empty-state">${window.BH_I18N.pick("Yükleniyor…","Loading…")}</div>`;
@@ -997,6 +1002,7 @@ async function openEditPostModal(postId, refresh){
 }
 export function wirePostCards(container, refreshFn){
   const refresh = refreshFn || renderTimelineTab;
+  fillDailyQuestionStats(container);
   container.querySelectorAll('[data-post-menu]').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
