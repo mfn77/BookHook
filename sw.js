@@ -1,6 +1,6 @@
-const CACHE = "kitap-kulubu-v24-folders";
+const CACHE = "kitap-kulubu-v25-dark-bar";
 // Precache only rarely changing assets. Check HTML, JavaScript, and CSS with the server on each load.
-const ASSETS = ["./manifest.json?v=brand-2", "./icons/logo-mark.png", "./icons/icon-192.png?v=brand-2", "./icons/icon-512.png?v=brand-2", "./icons/favicon.png?v=brand-2", "./icons/apple-touch-icon.png?v=brand-2"];
+const ASSETS = ["./manifest.json?v=dark-bar-1", "./icons/logo-mark.png", "./icons/icon-192.png?v=brand-2", "./icons/icon-512.png?v=brand-2", "./icons/favicon.png?v=brand-2", "./icons/apple-touch-icon.png?v=brand-2"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
