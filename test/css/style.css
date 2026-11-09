@@ -552,8 +552,11 @@ body{background:var(--paper)}
  .sidebar-tabs.many-tabs button>span:last-child{max-width:100%;min-height:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 }
 
-/* Badge shelves scroll vertically; keep horizontal gestures available to primary navigation. */
-:is(#tab-mworms,#tab-worms).hub-primary-section .libcard{touch-action:pan-y}
+/*
+ * Record tables and badge shelves can scroll sideways on their own (.libcard), which would take horizontal
+ * gestures away from swiping between primary tabs. Keep those gestures for tab navigation.
+ */
+:is(#tab-mtoday,#tab-week,#tab-mworms,#tab-worms).hub-primary-section .libcard{touch-action:pan-y}
 
 
 .hub-layout-choice{display:grid;gap:10px;margin-top:20px}
