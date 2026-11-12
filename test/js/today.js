@@ -5,6 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { notifyAllMembers } from "./notifications.js";
 import { shareReadingNote } from "./feed.js";
+import { playCheckInCelebration } from "./celebration.js";
 import { renderQpBookInBugun } from "./quarterly.js";
 /*
  * This module and app.js import each other. Shared values are only read inside functions after startup,
@@ -13,7 +14,7 @@ import { renderQpBookInBugun } from "./quarterly.js";
 import {
   CLUB_START_DATE, DOW, addDays, checkAndAwardBadges, computeStreak, currentUid, db, fromStr,
   hubPreviews, joinDateStrOf, markLoaded, myProfile, nowLogical, pad, readDayRecord, showCachedOrPlaceholder,
-  showToast, stampBtnInFlight, toStr, todayAnswers, todayStr, usersCache
+  setTextAnimated, showToast, stampBtnInFlight, toStr, todayAnswers, todayStr, usersCache
 } from "./app.js";
 
 /*
@@ -35,8 +36,8 @@ export async function renderTotalPagesCard(elId){
   if(uid!==currentUid)return;
   const totalReadDays=totals.days;
   renderPersonalGoals(pagesEl.closest("section.tab"),totals,uid);
-  pagesEl.textContent = totals.pages.toLocaleString(window.BH_I18N.locale);
-  if(daysEl){daysEl.textContent=totalReadDays.toLocaleString(window.BH_I18N.locale);markLoaded(daysEl);}
+  setTextAnimated(pagesEl, totals.pages.toLocaleString(window.BH_I18N.locale));
+  if(daysEl){setTextAnimated(daysEl, totalReadDays.toLocaleString(window.BH_I18N.locale));markLoaded(daysEl);}
   markLoaded(pagesEl);
 }
 async function renderCompletedBooksCount(elId){
@@ -210,8 +211,8 @@ function updateSelfReadButton(section,rec,daily){
 }
 const READ_CHECK_SVG='<svg class="mark-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 /*
- * Instant check-in feedback: a fill spreading from the tap point, a self-drawing tick and a small burst
- * of sparks. Runs without waiting for the network.
+ * Instant check-in feedback: a fill spreading from the tap point and a self-drawing tick on the button,
+ * then a celebration across the whole screen (see celebration.js). Runs without waiting for the network.
  */
 function playReadMarkFx(btn,point){
  try{navigator.vibrate?.(12);}catch(_){}
@@ -222,17 +223,13 @@ function playReadMarkFx(btn,point){
  btn.style.setProperty('--fx-r',Math.hypot(Math.max(x,r.width-x),Math.max(y,r.height-y))+'px');
  btn.classList.remove('just-marked');void btn.offsetWidth;btn.classList.add('just-marked');
  clearTimeout(btn._markFxTimer);btn._markFxTimer=setTimeout(()=>btn.classList.remove('just-marked'),1200);
- const layer=document.createElement('span');layer.className='mark-burst';
- layer.style.left=(r.left+x)+'px';layer.style.top=(r.top+y)+'px';
- // Celebration colors that stay visible on both the dark green fill and the light card.
- const colors=['#F2B84B','#EF8A62','#9FD8A8','#B9A8E8'];
- for(let i=0;i<14;i++){
-  const dot=document.createElement('i'),angle=(i/14)*Math.PI*2+Math.random()*.45,dist=42+Math.random()*36;
-  dot.style.background=colors[i%colors.length];if(i%3===0)dot.classList.add('streak');
-  layer.appendChild(dot);
-  dot.animate([{transform:`rotate(${angle}rad) translateX(0) scale(1)`,opacity:1},{transform:`rotate(${angle}rad) translateX(${dist}px) scale(.2)`,opacity:0}],{duration:680+Math.random()*200,delay:60,easing:'cubic-bezier(.15,.8,.3,1)',fill:'both'});
+ // The whole screen joins in: wave, glow and confetti from the tap point, and the cards hop in turn.
+ playCheckInCelebration(r.left+x,r.top+y);
+ const section=btn.closest('section.tab');
+ if(section){
+  section.classList.remove('checkin-celebrating');void section.offsetWidth;section.classList.add('checkin-celebrating');
+  clearTimeout(section._celebrateTimer);section._celebrateTimer=setTimeout(()=>section.classList.remove('checkin-celebrating'),1300);
  }
- document.body.appendChild(layer);setTimeout(()=>layer.remove(),1000);
 }
 async function saveSelfReadTotal(uid,day,pages){
  const ref=doc(db,'days',day,'answers',uid),userRef=doc(db,'users',uid);
@@ -377,7 +374,7 @@ export function wireSelfMarkCard(ids){
     const st = todayAnswers[currentUid];
     updateSelfReadButton(document.getElementById(ids.readBtn).closest('section.tab'),{status:st},null);
     if(ids.heading){
-      document.getElementById(ids.heading).textContent = dailyGreetingText(st==='read'?'read':st==='skip'?'skip':'none');
+      setTextAnimated(document.getElementById(ids.heading), dailyGreetingText(st==='read'?'read':st==='skip'?'skip':'none'));
     }
     const ld = nowLogical();
     const dowLabel = DOW[ld.getDay()===0?6:ld.getDay()-1];
@@ -391,7 +388,7 @@ export function wireSelfMarkCard(ids){
       st==='skip' ? window.BH_I18N.pick("Bugün için okuma kaydın yok.","You haven’t recorded any reading today.") :
       window.BH_I18N.pick("Bugün için henüz işaretleme yapmadın.","You haven’t checked in today.");
     computeStreak(currentUid).then(s=>{
-      document.getElementById(ids.streakNote).textContent = window.BH_I18N.template`${s} gün`;
+      setTextAnimated(document.getElementById(ids.streakNote), window.BH_I18N.template`${s} gün`);
     }).catch(()=>{});
     renderTotalPagesCard(ids.pagesNumber);
     if(ids.qpBook) renderQpBookInBugun(ids.qpBook);

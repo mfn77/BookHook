@@ -448,11 +448,12 @@ export function closeModal(id){
   const card = el.querySelector('.modal-card-anim') || el.querySelector('.lightbox-img-anim');
   el.classList.add('closing');
   if(card) card.classList.add('closing');
+  // Matches the closing animations in style.css (modalOut / sheetOut / overlayOut).
   setTimeout(()=>{
     el.style.display='none';
     el.classList.remove('closing');
     if(card) card.classList.remove('closing');
-  }, 120);
+  }, 170);
 }
 export function showAnchoredPopover(anchorEl, html){
   const pop = document.getElementById('anchoredPopover');
@@ -578,9 +579,29 @@ export function showToast(msg){
   const el = document.createElement('div');
   el.className='toast';
   el.innerHTML = window.BH_I18N.template`<span>${msg}</span><button aria-label="Kapat">KAPAT</button>`;
-  el.querySelector('button').onclick = ()=> el.remove();
+  // Sinks away (toastOut in style.css) before it is removed.
+  const dismiss = ()=>{
+    if(!el.parentNode || el.classList.contains('leaving')) return;
+    el.classList.add('leaving');
+    setTimeout(()=> el.remove(), 180);
+  };
+  el.querySelector('button').onclick = dismiss;
   host.appendChild(el);
-  setTimeout(()=>{ if(el.parentNode) el.remove(); }, 9000);
+  setTimeout(dismiss, 9000);
+}
+/*
+ * Sets an element's text and, when the text really changed, replays a short "new value" animation.
+ * The first value put into an empty or placeholder element is not animated.
+ */
+export function setTextAnimated(el, text){
+  if(!el) return;
+  const before = el.textContent;
+  if(before === text) return;
+  el.textContent = text;
+  if(!before || before==='…' || before==='–') return;
+  el.classList.remove('value-changed');
+  void el.offsetWidth;
+  el.classList.add('value-changed');
 }
 
 initNotifications();

@@ -90,14 +90,19 @@ export function toggleReactionDrawer(btn, target){
   closeReactionDrawer();
   const drawer = document.getElementById('reactionDrawer');
   const r = btn.getBoundingClientRect();
-  const availableWidth = window.innerWidth - r.right - 16;
   drawer.style.display = 'flex';
   drawer.classList.remove('open');
-  renderDrawerEmojiRow(target, availableWidth);
-  drawer.style.left = (r.right + 8) + 'px';
+  renderDrawerEmojiRow(target, window.innerWidth - 40);
+  // Above the button when there is room, otherwise below it, and always inside the screen sideways.
+  const width = drawer.offsetWidth, height = drawer.offsetHeight;
+  const left = Math.max(10, Math.min(r.right - width, window.innerWidth - width - 10));
+  const above = r.top - height - 8 >= 10;
+  drawer.style.left = left + 'px';
   drawer.style.removeProperty('right');
-  drawer.style.top = (r.top + r.height/2) + 'px';
-  requestAnimationFrame(()=>{ drawer.classList.add('open'); });
+  drawer.style.top = (above ? r.top - height - 8 : r.bottom + 8) + 'px';
+  // Grows out of the button. Reading the size above settled the closed state, so adding "open" animates.
+  drawer.style.transformOrigin = `${Math.round(r.left + r.width/2 - left)}px ${above ? '100%' : '0'}`;
+  drawer.classList.add('open');
   btn.classList.add('expanded');
   currentReactionDrawerBtn = btn;
 }

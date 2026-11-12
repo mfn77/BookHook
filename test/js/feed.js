@@ -595,6 +595,9 @@ function applyOptimisticVoteUI(railEl, dir){
     else { score -= wasUp ? 2 : 1; downBtn.classList.add('active'); upBtn.classList.remove('active'); }
   }
   scoreEl.textContent = score;
+  // Replay the small "vote landed" animations on the pressed arrow and the score.
+  const pressed = dir==='up' ? upBtn : downBtn;
+  [[pressed,'just-voted'],[scoreEl,'tick']].forEach(([el,cls])=>{ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); });
   scoreEl.classList.remove('voted-up','voted-down');
   if(upBtn.classList.contains('active')) scoreEl.classList.add('voted-up');
   if(downBtn.classList.contains('active')) scoreEl.classList.add('voted-down');
