@@ -12,7 +12,7 @@ import { renderQpBookInBugun } from "./quarterly.js";
  */
 import {
   CLUB_START_DATE, DOW, addDays, checkAndAwardBadges, computeStreak, currentUid, db, fromStr,
-  hubPreviews, joinDateStrOf, markLoaded, myProfile, nowLogical, pad, showCachedOrPlaceholder,
+  hubPreviews, joinDateStrOf, markLoaded, myProfile, nowLogical, pad, readDayRecord, showCachedOrPlaceholder,
   showToast, stampBtnInFlight, toStr, todayAnswers, todayStr, usersCache
 } from "./app.js";
 
@@ -57,10 +57,10 @@ async function computeReadingTotals(uid){
   const dateStrs = [];
   let cursor = fromStr(startDs);
   while(toStr(cursor) <= toStr(today)){ dateStrs.push(toStr(cursor)); cursor = addDays(cursor,1); }
-  // Fetch all days in parallel; sequential reads were very slow for long-time members.
-  const snaps = await Promise.all(dateStrs.map(ds => getDoc(doc(db,'days',ds,'answers',uid))));
+  // All days in parallel; past days come from readDayRecord's memory after the first time.
+  const records = await Promise.all(dateStrs.map(ds => readDayRecord(uid, ds)));
   const totals={days:0,pages:0,records:{}};
-  snaps.forEach((snap,i)=>{if(!snap.exists())return;const rec=snap.data();totals.records[dateStrs[i]]=rec;if(rec.status==='read'){totals.days++;totals.pages+=Number.isSafeInteger(rec.pages)&&rec.pages>=15?rec.pages:15;}});
+  records.forEach((rec,i)=>{if(!rec)return;totals.records[dateStrs[i]]=rec;if(rec.status==='read'){totals.days++;totals.pages+=Number.isSafeInteger(rec.pages)&&rec.pages>=15?rec.pages:15;}});
   return totals;
 }
 /* Optional personal goals. Days follow the app's 06:00 day boundary. */

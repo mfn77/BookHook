@@ -1215,6 +1215,53 @@ function renderHeader(){
 
 /* Firestore helpers */
 function dayAnswersCol(dateStr){ return collection(db,'days',dateStr,'answers'); }
+/*
+ * A member's check-in record for one day: its data, or null when there is none. Rejects when the read
+ * fails, so a failed read is never mistaken for a missed day.
+ *
+ * Past days are remembered for a while. They only change when an admin edits them, but the streak and
+ * the reading totals need every day since the member joined and are recomputed on each re-render, which
+ * used to mean hundreds of reads per tap. Today's record is always read from the server.
+ */
+const PAST_DAY_RECORD_TTL_MS = 30*60*1000;
+const pastDayRecords = new Map(); // "uid|YYYY-MM-DD" -> { promise, at }
+export function readDayRecord(uid, dateStr){
+  const read = ()=> getDoc(doc(db,'days',dateStr,'answers',uid)).then(snap=> snap.exists() ? snap.data() : null);
+  if(dateStr >= todayStr()) return read();
+  const key = uid+'|'+dateStr;
+  const known = pastDayRecords.get(key);
+  if(known && Date.now()-known.at < PAST_DAY_RECORD_TTL_MS) return known.promise;
+  const promise = read();
+  pastDayRecords.set(key, { promise, at: Date.now() });
+  promise.catch(()=>{ if(pastDayRecords.get(key)?.promise===promise) pastDayRecords.delete(key); });
+  return promise;
+}
+// Call after changing a past day's record, so the next read sees the change.
+export function forgetDayRecord(uid, dateStr){ pastDayRecords.delete(uid+'|'+dateStr); }
+/*
+ * Reads every member's records for the last `days` past days with one query per day and remembers them
+ * like readDayRecord does. Screens that need all members' streaks call this first; otherwise each member
+ * would cost one read per day. A day that can't be read here is simply read per member later.
+ */
+const primedPastDays = new Map(); // "YYYY-MM-DD" -> time of the last whole-day read
+export async function primeRecentDayRecords(days=31){
+  const dates = [];
+  for(let i=1;i<days;i++){
+    const ds = toStr(addDays(nowLogical(), -i));
+    if(ds >= CLUB_START_DATE && !(Date.now()-(primedPastDays.get(ds)||0) < PAST_DAY_RECORD_TTL_MS)) dates.push(ds);
+  }
+  await Promise.all(dates.map(ds=> readPastDayForEveryone(ds).catch(()=>{})));
+}
+// One query for a whole past day: returns {uid: record} and remembers it for readDayRecord.
+async function readPastDayForEveryone(dateStr){
+  const snap = await getDocs(dayAnswersCol(dateStr));
+  const byUid = {};
+  snap.forEach(d=>{ byUid[d.id] = d.data(); });
+  const at = Date.now();
+  Object.keys(usersCache).forEach(uid=> pastDayRecords.set(uid+'|'+dateStr, { promise: Promise.resolve(byUid[uid] || null), at }));
+  primedPastDays.set(dateStr, at);
+  return byUid;
+}
 export async function fetchDayAnswers(dateStr){
   const snap = await getDocs(dayAnswersCol(dateStr));
   const map = {};
@@ -1274,25 +1321,23 @@ async function autoFillPastDays(daysBack){
   daysBack = daysBack || 30;
   const uids = activeUids();
   if(uids.length===0) return 0;
-  // Fetch every day x member combination in parallel.
-  const tasks = [];
+  const dates = [];
   for(let i=1;i<=daysBack;i++){
     const ds = toStr(addDays(nowLogical(), -i));
-    if(ds < CLUB_START_DATE) continue; // never fill days before the club started
-    uids.forEach(uid=>{
-      const joinDs = joinDateStrOf(uid);
-      if(joinDs && ds < joinDs) return; // never fill days before the member joined
-      tasks.push({ds, uid});
-    });
+    if(ds >= CLUB_START_DATE) dates.push(ds); // never fill days before the club started
   }
-  const results = await Promise.all(tasks.map(async ({ds,uid})=>{
-    const ref = doc(db,'days',ds,'answers',uid);
-    const snap = await getDoc(ref);
-    if(!snap.exists()){
-      await setDoc(ref, { status:'skip', name: usersCache[uid]?.name || '', updatedAt: new Date().toISOString(), auto:true });
-      return 1;
-    }
-    return 0;
+  // One query per day (not one read per member per day), all days in parallel.
+  const results = await Promise.all(dates.map(async ds=>{
+    const byUid = await readPastDayForEveryone(ds);
+    const missing = uids.filter(uid=>{
+      const joinDs = joinDateStrOf(uid);
+      return !(joinDs && ds < joinDs) && !byUid[uid]; // never fill days before the member joined
+    });
+    await Promise.all(missing.map(async uid=>{
+      await setDoc(doc(db,'days',ds,'answers',uid), { status:'skip', name: usersCache[uid]?.name || '', updatedAt: new Date().toISOString(), auto:true });
+      forgetDayRecord(uid, ds);
+    }));
+    return missing.length;
   }));
   return results.reduce((a,b)=>a+b,0);
 }
@@ -1316,6 +1361,7 @@ export async function cleanupBadAutoFills(daysBack){
         const snap = await getDoc(ref);
         if(snap.exists() && snap.data().auto){
           await deleteDoc(ref);
+          forgetDayRecord(uid, ds);
           deleted++;
         }
       }catch(e){}
@@ -1405,7 +1451,7 @@ export async function loadDraws(){
  * count as missed.
  */
 export function computeStreak(uid){
-  return countStreak(todayStr(), ds=> getDoc(doc(db,'days',ds,'answers',uid)).then(snap=> snap.exists() ? snap.data().status : null), {startMayBeUnmarked:true});
+  return countStreak(todayStr(), ds=> readDayRecord(uid, ds).then(rec=> rec ? rec.status : null), {startMayBeUnmarked:true});
 }
 
 
@@ -2924,6 +2970,7 @@ onAuthStateChanged(auth, async (user)=>{
   if(unsubUsers){ unsubUsers(); unsubUsers=null; }
   if(unsubToday){ unsubToday(); unsubToday=null; subscribedTodayKey=null; }
   unsubscribeNotifs();
+  pastDayRecords.clear(); primedPastDays.clear();
 
   if(!user){
     currentUid = null; myProfile = null;

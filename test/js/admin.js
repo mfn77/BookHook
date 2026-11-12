@@ -17,7 +17,7 @@ import { playMarkFx, renderTotalPagesCard } from "./today.js";
 import {
   activeTab, activeUids, addDays, buildWeekHistoryHTML, checkDrawRules, cleanupBadAutoFills,
   cloudFunctions, CLUB_START_DATE, computeWeekStats, currentUid, db, DOW, drawHistory, drawsCache,
-  escapeHtml, fetchDayAnswers, finalizeWeek, fmtShort, fromStr, getMonday, hubPreviews,
+  escapeHtml, fetchDayAnswers, finalizeWeek, fmtShort, forgetDayRecord, fromStr, getMonday, hubPreviews,
   joinDateStrOf, joinedAtOf, keepOrLoading, loadDraws, LOTTERY_ALGO, markLoaded, markStatus,
   nowLogical, pad, renderTab, resetAndRecomputeAllBadges, runLottery, showCachedOrPlaceholder,
   showToast, stampBtnInFlight, todayAnswers, todayStr, toStr, userChipHtml, usersCache, weekDates
@@ -109,6 +109,7 @@ async function markStatusForDate(uid, dateStr, status){
   } else {
     await setDoc(ref, { status, name: usersCache[uid]?.name || '', updatedAt: new Date().toISOString() });
   }
+  forgetDayRecord(uid, dateStr);
 }
 const editPastDateInput = document.getElementById('editPastDate');
 export async function renderEditPastTab(){

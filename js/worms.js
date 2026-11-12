@@ -9,7 +9,8 @@
  */
 import {
   BADGE_DEFS, activeUids, avatarHtmlFromProfile, badgeIllustration, checkAndAwardBadges, computeStreak,
-  currentUid, escapeHtml, keepOrLoading, markLoaded, shadeHexColor, userChipHtml, usersCache
+  currentUid, escapeHtml, keepOrLoading, markLoaded, primeRecentDayRecords, shadeHexColor, userChipHtml,
+  usersCache
 } from "./app.js";
 
 /*
@@ -91,6 +92,8 @@ async function renderWormsShared(myStreakContainerId, clubStreaksContainerId, hi
   if(historyBox) bindBadgeShelfClicks(historyBox);
   const uids = activeUids();
   let failed = false;
+  // One read per day for everyone, rather than one per member per day.
+  await primeRecentDayRecords();
   const results = await Promise.all(uids.map(async uid=>{
     try{
       const streak = await computeStreak(uid);

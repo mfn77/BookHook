@@ -1,7 +1,8 @@
 /* In-app notifications, unread counts, and phone notifications through Firebase Cloud Messaging. */
 
 import {
-  arrayUnion, collection, doc, getDocs, limit, onSnapshot, orderBy, query, setDoc, updateDoc
+  arrayUnion, collection, doc, getDocs, limit, onSnapshot, orderBy, query, setDoc, updateDoc, where,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getMessaging, getToken, onMessage, isSupported as isMessagingSupported
@@ -53,15 +54,27 @@ export async function notifyAllMembers(message, linkTab, excludeUid){
 let unsubNotifs = null;
 // Called by app.js on sign-out.
 export function unsubscribeNotifs(){ if(unsubNotifs){ unsubNotifs(); unsubNotifs=null; } }
+/*
+ * The unread badge only needs unread notifications, and never more than it can show ("99+"). Listening
+ * to the whole collection would download every notification the member ever received on each start.
+ */
+const UNREAD_BADGE_LIMIT = 100;
+const unreadNotifsQuery = (max)=> query(collection(db,'notifications',currentUid,'items'), where('read','==',false), limit(max));
+function showUnreadBadge(unread){
+  const badge = document.getElementById('hamburgerBadge');
+  if(unread>0){ badge.style.display='inline-block'; badge.textContent = unread>99?'99+':String(unread); }
+  else { badge.style.display='none'; }
+}
+let notifsRenderTimer = null;
 export function subscribeNotifs(){
   if(unsubNotifs) unsubNotifs();
-  unsubNotifs = onSnapshot(collection(db,'notifications',currentUid,'items'), (snap)=>{
-    let unread=0;
-    snap.forEach(d=>{ if(!d.data().read) unread++; });
-    const badge = document.getElementById('hamburgerBadge');
-    if(unread>0){ badge.style.display='inline-block'; badge.textContent = unread>99?'99+':String(unread); }
-    else { badge.style.display='none'; }
-    if(document.getElementById('notifModal').style.display==='flex') renderNotifsTab();
+  unsubNotifs = onSnapshot(unreadNotifsQuery(UNREAD_BADGE_LIMIT), (snap)=>{
+    showUnreadBadge(snap.size);
+    // Several changes can arrive close together (marking all as read); refresh the open list once.
+    clearTimeout(notifsRenderTimer);
+    notifsRenderTimer = setTimeout(()=>{
+      if(document.getElementById('notifModal').style.display==='flex') renderNotifsTab();
+    }, 250);
   });
 }
 export function openNotifModal(){
@@ -158,11 +171,12 @@ async function renderNotifsTab(){
     </div>`;
   }).join('');
   box.querySelectorAll('.notif-row[data-notif-tab]').forEach(row=>{
-    row.addEventListener('click', async ()=>{
+    row.addEventListener('click', ()=>{
       const tab = resolveNotifTab(row.dataset.notifTab);
       const id = row.dataset.notifId;
       const postId = row.dataset.notifPost;
-      try{ await updateDoc(doc(db,'notifications',currentUid,'items',id), {read:true}); }catch(e){}
+      // Marked as read in the background; opening the target doesn't wait for the server.
+      updateDoc(doc(db,'notifications',currentUid,'items',id), {read:true}).catch(()=>{});
       closeModal('notifModal');
       if(document.getElementById('tab-'+tab)) switchTab(tab);
       if(postId) setTimeout(()=> openPostModal(postId), 250);
@@ -175,10 +189,26 @@ export function initNotifications(){
   document.getElementById('notifModalClose').addEventListener('click', ()=>{ closeModal('notifModal'); });
   document.getElementById('notifModal').addEventListener('click', (e)=>{ if(e.target.id==='notifModal') closeModal('notifModal'); });
   document.getElementById('enablePushBtn').addEventListener('click', enablePushNotifications);
+  let markingAllRead = false;
   document.getElementById('markAllReadBtn').addEventListener('click', async ()=>{
-    let snap;
-    try{ snap = await getDocs(collection(db,'notifications',currentUid,'items')); }catch(e){ return; }
-    await Promise.all(snap.docs.map(d=> updateDoc(d.ref, {read:true}).catch(()=>{})));
+    if(markingAllRead) return;
+    markingAllRead = true;
+    // Show the result right away; the writes follow in the background.
+    document.querySelectorAll('#notifsList .notif-row').forEach(row=>{ row.style.opacity = '0.55'; });
+    showUnreadBadge(0);
+    try{
+      // Only unread notifications are touched, a few hundred per write (a batch holds at most 500).
+      const BATCH = 400;
+      for(;;){
+        const snap = await getDocs(unreadNotifsQuery(BATCH));
+        if(snap.empty) break;
+        const batch = writeBatch(db);
+        snap.docs.forEach(d=> batch.update(d.ref, {read:true}));
+        await batch.commit();
+        if(snap.size < BATCH) break;
+      }
+    }catch(e){ console.error('Bildirimler okundu olarak işaretlenemedi:', e); }
+    markingAllRead = false;
     renderNotifsTab();
   });
 }
